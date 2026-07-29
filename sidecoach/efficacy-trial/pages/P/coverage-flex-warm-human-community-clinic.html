@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Clinic Appointment Guide - Harbor Street Health</title>
+<style>
+  :root {
+    --cream: #fbf6ee;
+    --cream-deep: #f3e9d7;
+    --terracotta: #c9682f;
+    --terracotta-deep: #a3521f;
+    --sage: #6f8a6b;
+    --sage-deep: #4f6a4c;
+    --ink: #2e2620;
+    --ink-soft: #5a4f43;
+    --line: #e4d7c1;
+    --white: #ffffff;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 8px;
+    --shadow-soft: 0 6px 20px rgba(64, 45, 20, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    line-height: 1.6;
+    font-size: 17px;
+  }
+
+  a { color: var(--terracotta-deep); }
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 3px solid var(--sage-deep);
+    outline-offset: 3px;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--ink);
+    color: var(--white);
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    z-index: 100;
+  }
+  .skip-link:focus {
+    left: 12px;
+    top: 12px;
+  }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Header */
+  header.site-header {
+    background: linear-gradient(160deg, var(--terracotta) 0%, var(--terracotta-deep) 100%);
+    color: var(--cream);
+    padding: 36px 0 44px;
+    border-bottom: 6px solid var(--sage-deep);
+  }
+
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .brand-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--cream);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .brand-mark::before {
+    content: "";
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    background: var(--sage);
+  }
+
+  .brand-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  header.site-header h1 {
+    margin: 0 0 12px;
+    font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+    line-height: 1.2;
+    max-width: 18ch;
+  }
+
+  header.site-header p.lede {
+    margin: 0;
+    max-width: 56ch;
+    font-size: 1.1rem;
+    color: #fdf1e4;
+  }
+
+  .reassure-banner {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 20px 24px;
+    margin-top: -26px;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    border: 1px solid var(--line);
+  }
+
+  .reassure-banner .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--sage);
+    margin-top: 8px;
+    flex-shrink: 0;
+  }
+
+  .reassure-banner p {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  .reassure-banner strong {
+    color: var(--ink);
+  }
+
+  main { padding-top: 40px; padding-bottom: 20px; }
+
+  section {
+    margin-bottom: 48px;
+  }
+
+  section h2 {
+    font-size: 1.5rem;
+    color: var(--terracotta-deep);
+    margin: 0 0 6px;
+  }
+
+  section .section-sub {
+    margin: 0 0 22px;
+    color: var(--ink-soft);
+    max-width: 62ch;
+  }
+
+  /* Services */
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+  }
+
+  .service-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 20px;
+  }
+
+  .service-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    color: var(--ink);
+  }
+
+  .service-card p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.97rem;
+  }
+
+  /* Eligibility / payment */
+  .payment-panel {
+    background: var(--cream-deep);
+    border-radius: var(--radius-lg);
+    padding: 26px;
+    border: 1px solid var(--line);
+  }
+
+  .payment-panel ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  .payment-panel li {
+    margin-bottom: 12px;
+  }
+
+  .payment-panel li:last-child { margin-bottom: 0; }
+
+  .no-coverage-note {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--line);
+    font-weight: 600;
+    color: var(--sage-deep);
+  }
+
+  /* Appointment options */
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+
+  .option-card {
+    background: var(--white);
+    border: 2px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 22px;
+  }
+
+  .option-card.recommended {
+    border-color: var(--sage);
+  }
+
+  .option-tag {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--sage-deep);
+    background: #eaf0e8;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+
+  .option-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+  }
+
+  .option-card p {
+    margin: 0 0 14px;
+    color: var(--ink-soft);
+  }
+
+  .option-card .cta {
+    display: inline-block;
+    background: var(--terracotta);
+    color: var(--white);
+    text-decoration: none;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+  }
+  .option-card .cta:hover { background: var(--terracotta-deep); }
+
+  .option-card .cta.secondary {
+    background: transparent;
+    color: var(--terracotta-deep);
+    border: 2px solid var(--terracotta);
+    padding: 8px 16px;
+  }
+
+  /* Walk-in */
+  .walkin-panel {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 26px;
+    border: 1px solid var(--line);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .walkin-times {
+    flex: 1 1 220px;
+    background: var(--cream-deep);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+  }
+
+  .walkin-times h3 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+
+  .walkin-times dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+  }
+  .walkin-times dt { font-weight: 700; color: var(--ink-soft); }
+  .walkin-times dd { margin: 0; }
+
+  .walkin-note {
+    flex: 2 1 320px;
+  }
+  .walkin-note p { margin: 0 0 12px; }
+  .walkin-note p:last-child { margin-bottom: 0; }
+
+  /* Language support */
+  .language-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .language-list li {
+    background: var(--sage);
+    color: var(--white);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  /* What to bring */
+  .bring-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .bring-list li {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px 14px 44px;
+    position: relative;
+  }
+
+  .bring-list li::before {
+    content: "";
+    position: absolute;
+    left: 16px;
+    top: 17px;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 2px solid var(--sage-deep);
+  }
+
+  .bring-note {
+    margin-top: 16px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  /* Contact / footer */
+  footer.contact-footer {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 40px 0 32px;
+    margin-top: 20px;
+  }
+
+  footer.contact-footer h2 {
+    color: var(--cream);
+    font-size: 1.4rem;
+    margin: 0 0 18px;
+  }
+
+  .contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 22px;
+    margin-bottom: 24px;
+  }
+
+  .contact-grid h3 {
+    margin: 0 0 6px;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #d7c9ae;
+  }
+
+  .contact-grid p, .contact-grid a {
+    margin: 0;
+    color: var(--cream);
+  }
+
+  footer.contact-footer a { color: var(--cream); text-decoration: underline; }
+
+  .footer-bottom {
+    border-top: 1px solid #4a4239;
+    padding-top: 18px;
+    font-size: 0.9rem;
+    color: #c9bda3;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .option-card, .service-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+    .option-card:hover, .service-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-soft);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .reassure-banner { flex-direction: column; }
+    body { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand-row">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Harbor Street Health</span>
+    </div>
+    <h1>Community Clinic Appointment Guide</h1>
+    <p class="lede">Everything you need to know about getting care at Harbor Street Health, in plain language - what we offer, what it costs, and how to book a visit.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="reassure-banner">
+    <span class="dot" aria-hidden="true"></span>
+    <p><strong>Not sure where to start? That's okay.</strong> You do not need insurance, a diagnosis, or an appointment already booked to read this page or to call us. This guide will help you figure out if we're the right fit and what to do next.</p>
+  </div>
+</div>
+
+<main id="main-content" class="wrap">
+
+  <section aria-labelledby="services-heading">
+    <h2 id="services-heading">Services we offer</h2>
+    <p class="section-sub">Harbor Street Health is a primary care clinic. Here's what we can help with.</p>
+    <div class="services-grid">
+      <div class="service-card">
+        <h3>Primary and preventive care</h3>
+        <p>Checkups, physicals, vaccinations, and ongoing care for chronic conditions like diabetes or high blood pressure.</p>
+      </div>
+      <div class="service-card">
+        <h3>Urgent, non-emergency concerns</h3>
+        <p>Colds, infections, minor injuries, and other issues that need attention soon but aren't life-threatening.</p>
+      </div>
+      <div class="service-card">
+        <h3>Women's and reproductive health</h3>
+        <p>Well-woman exams, birth control counseling, and pregnancy testing.</p>
+      </div>
+      <div class="service-card">
+        <h3>Behavioral health support</h3>
+        <p>Screening and referrals for anxiety, depression, and stress-related concerns.</p>
+      </div>
+      <div class="service-card">
+        <h3>Basic labs and screenings</h3>
+        <p>Bloodwork, blood pressure checks, and common screenings ordered on site.</p>
+      </div>
+      <div class="service-card">
+        <h3>Help finding specialty care</h3>
+        <p>If you need a specialist, our staff will help you find one and make the referral.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="eligibility-heading">
+    <h2 id="eligibility-heading">Eligibility and payment</h2>
+    <p class="section-sub">We do not turn people away for lack of insurance or lack of funds.</p>
+    <div class="payment-panel">
+      <ul>
+        <li><strong>Everyone is welcome.</strong> You do not need to be a citizen or show immigration status to be seen.</li>
+        <li><strong>Insured?</strong> We accept Medicaid, Medicare, and most major private insurance plans. Bring your insurance card if you have one.</li>
+        <li><strong>Uninsured or underinsured?</strong> We offer a sliding-scale fee based on household income - the less you make, the less you pay. Fees can be as low as a few dollars per visit.</li>
+        <li><strong>Can't pay at all today?</strong> Tell the front desk. We will still see you and work out payment afterward.</li>
+      </ul>
+      <p class="no-coverage-note">No one is denied care here because of an inability to pay.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="appointments-heading">
+    <h2 id="appointments-heading">Appointment options</h2>
+    <p class="section-sub">Choose whichever way feels easiest for you.</p>
+    <div class="options-grid">
+      <div class="option-card recommended">
+        <span class="option-tag">Fastest to book</span>
+        <h3>Call the front desk</h3>
+        <p>Speak with a real person, ask questions before you commit, and get the next available time. Interpreters are available by phone if you need one.</p>
+        <a class="cta" href="tel:+15551234500">Call (555) 123-4500</a>
+      </div>
+      <div class="option-card">
+        <span class="option-tag">No phone call needed</span>
+        <h3>Request online</h3>
+        <p>Fill out a short form with your name, contact info, and reason for visit. Our staff will call you back within one business day to confirm a time.</p>
+        <a class="cta secondary" href="#contact-heading">See request details</a>
+      </div>
+      <div class="option-card">
+        <span class="option-tag">In person</span>
+        <h3>Stop by the front desk</h3>
+        <p>Come to 214 Harbor Street any time we're open and ask to schedule. Staff can book you on the spot or point you to a walk-in slot.</p>
+        <a class="cta secondary" href="#hours-heading">See our hours</a>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="walkin-heading">
+    <h2 id="walkin-heading">Walk-in guidance</h2>
+    <p class="section-sub">No appointment? You can still be seen.</p>
+    <div class="walkin-panel">
+      <div class="walkin-times" id="hours-heading">
+        <h3>Walk-in hours</h3>
+        <dl>
+          <dt>Mon-Fri</dt>
+          <dd>8:00 AM - 4:00 PM</dd>
+          <dt>Saturday</dt>
+          <dd>9:00 AM - 12:00 PM</dd>
+          <dt>Sunday</dt>
+          <dd>Closed</dd>
+        </dl>
+      </div>
+      <div class="walkin-note">
+        <p>Walk-ins are seen in the order they arrive, alongside scheduled appointments, so there may be a short wait. Arriving earlier in the day usually means a shorter wait.</p>
+        <p>Walk-in visits are best for things that need attention soon but are not emergencies - a cold that won't go away, a minor injury, or a new symptom you're worried about.</p>
+        <p><strong>If this feels like a medical emergency</strong> (chest pain, trouble breathing, severe bleeding, or anything life-threatening), please call 911 or go to the nearest emergency room instead of waiting for a walk-in slot.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="language-heading">
+    <h2 id="language-heading">Language support</h2>
+    <p class="section-sub">Care should make sense to you, in the language you're most comfortable in.</p>
+    <ul class="language-list">
+      <li>English</li>
+      <li>Spanish</li>
+      <li>Haitian Creole</li>
+      <li>Vietnamese</li>
+      <li>Mandarin</li>
+      <li>American Sign Language</li>
+    </ul>
+    <p>Free interpreter services are available for these languages and many others, in person and by phone, for every visit. Just let us know your preferred language when you call or check in - there is no extra cost and no need to bring your own interpreter.</p>
+  </section>
+
+  <section aria-labelledby="bring-heading">
+    <h2 id="bring-heading">What to bring</h2>
+    <p class="section-sub">Bring what you have - missing something is not a reason to reschedule.</p>
+    <ul class="bring-list">
+      <li>A photo ID, if you have one (not required)</li>
+      <li>Insurance card, if you have coverage</li>
+      <li>A list of current medications, or the bottles themselves</li>
+      <li>Any recent medical records you may have</li>
+      <li>A list of questions or concerns you want to cover</li>
+      <li>A friend or family member for support, if that helps</li>
+    </ul>
+    <p class="bring-note">If you don't have any of these, come anyway. We'll work with what you have.</p>
+  </section>
+
+</main>
+
+<footer class="contact-footer" aria-labelledby="contact-heading">
+  <div class="wrap">
+    <h2 id="contact-heading">Contact Harbor Street Health</h2>
+    <div class="contact-grid">
+      <div>
+        <h3>Phone</h3>
+        <p><a href="tel:+15551234500">(555) 123-4500</a></p>
+      </div>
+      <div>
+        <h3>Address</h3>
+        <p>214 Harbor Street<br>Riverside, ST 00000</p>
+      </div>
+      <div>
+        <h3>Email</h3>
+        <p><a href="mailto:frontdesk@harborstreethealth.org">frontdesk@harborstreethealth.org</a></p>
+      </div>
+      <div>
+        <h3>Hours</h3>
+        <p>Mon-Fri 8:00 AM - 4:00 PM<br>Sat 9:00 AM - 12:00 PM</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Harbor Street Health welcomes every resident, regardless of insurance status, income, or immigration status. If you're unsure whether we can help, call us - that conversation is always free.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

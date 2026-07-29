@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteSignal Risk | Climate Risk Analytics Product Overview</title>
+<style>
+  :root {
+    --ink-900: #0b1220;
+    --ink-800: #131c2e;
+    --ink-700: #1e2a41;
+    --ink-600: #2c3c58;
+    --ink-500: #48597a;
+    --ink-400: #6b7a99;
+    --ink-300: #9aa7c0;
+    --ink-100: #e7ebf3;
+    --paper-0: #ffffff;
+    --paper-50: #f6f8fb;
+    --paper-100: #eef1f7;
+    --line: #d9e0eb;
+    --accent-700: #0d5c63;
+    --accent-600: #10767f;
+    --accent-500: #14919b;
+    --accent-100: #e0f2f3;
+    --risk-low: #2e8b57;
+    --risk-low-bg: #e6f4ec;
+    --risk-mod: #b8860b;
+    --risk-mod-bg: #fbf1dc;
+    --risk-high: #c1561a;
+    --risk-high-bg: #fcece0;
+    --risk-severe: #b3261e;
+    --risk-severe-bg: #fbe6e5;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--ink-800);
+    background: var(--paper-50);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent-700); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent-500);
+    outline-offset: 2px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    background: var(--ink-900);
+    color: var(--paper-0);
+    border-bottom: 1px solid var(--ink-700);
+  }
+  .topbar-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    gap: 20px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .brand-mark {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, var(--accent-500), var(--accent-700));
+    flex-shrink: 0;
+    position: relative;
+  }
+  .brand-mark::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1.5px solid rgba(255,255,255,0.85);
+    border-radius: 2px;
+  }
+  .brand small {
+    display: block;
+    font-weight: 400;
+    font-size: 10.5px;
+    color: var(--ink-300);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .topnav {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .topnav a {
+    color: var(--ink-100);
+    text-decoration: none;
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .topnav a:hover { background: var(--ink-700); color: #fff; }
+  .topbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent-500); color: #04211f; }
+  .btn-primary:hover { background: var(--accent-600); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--paper-0); border-color: var(--ink-600); }
+  .btn-ghost:hover { border-color: var(--ink-400); }
+  .btn-outline { background: var(--paper-0); color: var(--accent-700); border-color: var(--line); }
+  .btn-outline:hover { border-color: var(--accent-500); }
+  .btn-lg { padding: 12px 22px; font-size: 14px; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background: linear-gradient(180deg, var(--ink-900) 0%, var(--ink-800) 100%);
+    color: var(--paper-0);
+    padding: 40px 24px 28px;
+  }
+  .hero-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 40px;
+    align-items: end;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-500);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-500); }
+  .hero h1 {
+    margin: 0 0 12px;
+    font-size: 34px;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .hero p.lede {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--ink-100);
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+  .hero-meta {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    font-size: 12px;
+    color: var(--ink-300);
+  }
+  .hero-meta span strong { color: var(--paper-0); font-weight: 600; }
+
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: var(--ink-700);
+    border: 1px solid var(--ink-700);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .kpi {
+    background: var(--ink-800);
+    padding: 14px 14px 12px;
+  }
+  .kpi-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--paper-0);
+    line-height: 1;
+  }
+  .kpi-label {
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: var(--ink-300);
+    letter-spacing: 0.02em;
+    line-height: 1.35;
+  }
+
+  /* ---------- Layout ---------- */
+  .shell {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  .toc {
+    position: sticky;
+    top: 20px;
+    border: 1px solid var(--line);
+    background: var(--paper-0);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .toc-title {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-400);
+    font-weight: 700;
+    margin: 0 0 10px;
+  }
+  .toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: toc;
+  }
+  .toc li {
+    counter-increment: toc;
+    margin-bottom: 2px;
+  }
+  .toc a {
+    display: flex;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--ink-600);
+    font-size: 12.5px;
+    padding: 6px 8px;
+    border-radius: 6px;
+  }
+  .toc a:hover { background: var(--paper-100); color: var(--accent-700); }
+  .toc a::before {
+    content: counter(toc, decimal-leading-zero);
+    font-family: var(--font-mono);
+    color: var(--ink-300);
+    font-size: 11px;
+  }
+  .toc-legend {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--ink-600);
+    margin-bottom: 6px;
+  }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .swatch.low { background: var(--risk-low); }
+  .swatch.mod { background: var(--risk-mod); }
+  .swatch.high { background: var(--risk-high); }
+  .swatch.severe { background: var(--risk-severe); }
+
+  main { min-width: 0; }
+
+  section.block {
+    background: var(--paper-0);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 26px 28px 28px;
+    margin-bottom: 22px;
+    scroll-margin-top: 20px;
+  }
+  .block-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .block-head h2 {
+    margin: 0;
+    font-size: 19px;
+    letter-spacing: -0.01em;
+    color: var(--ink-900);
+  }
+  .block-sub {
+    margin: 4px 0 0;
+    color: var(--ink-500);
+    font-size: 13px;
+    max-width: 68ch;
+  }
+  .block-tag {
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent-700);
+    background: var(--accent-100);
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  p { margin: 0 0 12px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    min-width: 640px;
+  }
+  thead th {
+    text-align: left;
+    background: var(--paper-100);
+    color: var(--ink-600);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--paper-100);
+    vertical-align: top;
+    color: var(--ink-700);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--paper-50); }
+  td.mono, .cell-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-800); }
+  td.center { text-align: center; }
+  .cell-name { font-weight: 600; color: var(--ink-900); }
+  .cell-note { color: var(--ink-400); font-size: 11.5px; }
+
+  .pill {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .pill-low { background: var(--risk-low-bg); color: var(--risk-low); }
+  .pill-mod { background: var(--risk-mod-bg); color: var(--risk-mod); }
+  .pill-high { background: var(--risk-high-bg); color: var(--risk-high); }
+  .pill-severe { background: var(--risk-severe-bg); color: var(--risk-severe); }
+  .pill-neutral { background: var(--paper-100); color: var(--ink-500); }
+  .pill-accent { background: var(--accent-100); color: var(--accent-700); }
+
+  .check { color: var(--accent-600); font-weight: 700; }
+  .dash { color: var(--ink-300); }
+
+  /* ---------- Risk category grid ---------- */
+  .risk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .risk-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px 16px;
+    position: relative;
+  }
+  .risk-bar { height: 4px; border-radius: 3px; margin-bottom: 12px; }
+  .risk-bar.flood { background: linear-gradient(90deg, var(--risk-mod), var(--risk-severe)); }
+  .risk-bar.wildfire { background: linear-gradient(90deg, var(--risk-high), var(--risk-severe)); }
+  .risk-bar.heat { background: linear-gradient(90deg, var(--risk-mod), var(--risk-high)); }
+  .risk-bar.slr { background: linear-gradient(90deg, var(--accent-500), var(--risk-mod)); }
+  .risk-bar.wind { background: linear-gradient(90deg, var(--risk-low), var(--risk-high)); }
+  .risk-bar.water { background: linear-gradient(90deg, var(--risk-low), var(--risk-mod)); }
+  .risk-card h3 {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: var(--ink-900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .risk-card p { font-size: 12.5px; color: var(--ink-500); margin-bottom: 10px; }
+  .risk-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 11.5px;
+    color: var(--ink-600);
+    border-top: 1px solid var(--paper-100);
+    padding-top: 10px;
+  }
+  .risk-meta div { display: flex; justify-content: space-between; gap: 10px; }
+  .risk-meta b { font-weight: 600; color: var(--ink-800); font-family: var(--font-mono); }
+
+  /* ---------- Reporting outputs ---------- */
+  .output-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .output-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 15px 16px;
+    background: var(--paper-50);
+  }
+  .output-card h3 {
+    margin: 0 0 6px;
+    font-size: 13.5px;
+    color: var(--ink-900);
+  }
+  .output-card p { font-size: 12px; color: var(--ink-500); margin-bottom: 10px; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--paper-0);
+    border: 1px solid var(--line);
+    color: var(--ink-500);
+    font-family: var(--font-mono);
+  }
+
+  /* ---------- Questions (details/summary) ---------- */
+  .qa {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .qa:last-child { margin-bottom: 0; }
+  .qa summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-800);
+    background: var(--paper-50);
+  }
+  .qa summary::-webkit-details-marker { display: none; }
+  .qa summary::after {
+    content: "+";
+    font-family: var(--font-mono);
+    font-weight: 400;
+    color: var(--ink-400);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .qa[open] summary::after { content: "\2212"; }
+  .qa[open] summary { border-bottom: 1px solid var(--line); }
+  .qa-body {
+    padding: 13px 16px 15px;
+    font-size: 12.5px;
+    color: var(--ink-600);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: start;
+  }
+  .qa-body .qa-source { text-align: right; white-space: nowrap; }
+  .qa-source .pill { margin-bottom: 4px; }
+  .qa-source div { font-size: 10.5px; color: var(--ink-400); }
+
+  /* ---------- Roles ---------- */
+  .role-summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .role-card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 13px;
+  }
+  .role-card h4 {
+    margin: 0 0 4px;
+    font-size: 12.5px;
+    color: var(--ink-900);
+  }
+  .role-card p { font-size: 11px; color: var(--ink-500); margin: 0; }
+
+  /* ---------- CTA ---------- */
+  .cta-block {
+    background: linear-gradient(135deg, var(--ink-900), var(--ink-700));
+    color: var(--paper-0);
+    border-radius: 12px;
+    padding: 30px 32px;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 28px;
+    align-items: center;
+  }
+  .cta-block h2 { margin: 0 0 8px; font-size: 21px; }
+  .cta-block p { color: var(--ink-100); font-size: 13px; max-width: 52ch; }
+  .cta-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .cta-fine {
+    border-left: 1px solid var(--ink-600);
+    padding-left: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cta-fine div { font-size: 11.5px; color: var(--ink-300); display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--ink-700); padding-bottom: 8px; }
+  .cta-fine div:last-child { border-bottom: none; padding-bottom: 0; }
+  .cta-fine b { color: var(--paper-0); font-weight: 600; font-family: var(--font-mono); }
+
+  footer {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+    color: var(--ink-400);
+    font-size: 11.5px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--line);
+  }
+  footer .disclaimer { max-width: 70ch; }
+
+  @media (max-width: 1100px) {
+    .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+    .risk-grid, .output-grid { grid-template-columns: repeat(2, 1fr); }
+    .role-summary { grid-template-columns: repeat(3, 1fr); }
+    .cta-block { grid-template-columns: 1fr; }
+    .cta-fine { border-left: none; border-top: 1px solid var(--ink-600); padding-left: 0; padding-top: 16px; }
+  }
+
+  @media (max-width: 900px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .shell { grid-template-columns: 1fr; }
+    .toc { position: static; }
+  }
+
+  @media (max-width: 640px) {
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .risk-grid, .output-grid { grid-template-columns: 1fr; }
+    .role-summary { grid-template-columns: repeat(2, 1fr); }
+    .qa-body { grid-template-columns: 1fr; }
+    .qa-body .qa-source { text-align: left; }
+    section.block { padding: 20px 18px 22px; }
+    .topbar-inner { height: auto; padding: 10px 16px; flex-wrap: wrap; }
+    .topnav { order: 3; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>SiteSignal Risk<small>Climate Analytics for Real Assets</small></span>
+    </div>
+    <nav class="topnav" aria-label="Section navigation">
+      <a href="#overview">Overview</a>
+      <a href="#datasets">Datasets</a>
+      <a href="#risk-categories">Risk Categories</a>
+      <a href="#questions">Portfolio Questions</a>
+      <a href="#reporting">Reporting</a>
+      <a href="#cadence">Refresh Cadence</a>
+      <a href="#roles">Roles &amp; Permissions</a>
+      <a href="#demo">Demo</a>
+    </nav>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost" href="#roles">Permissions</a>
+      <a class="btn btn-primary" href="#demo">Request a Demo</a>
+    </div>
+  </div>
+</div>
+
+<header class="hero" id="overview">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>Product Overview</div>
+      <h1>Physical climate risk analytics for real estate portfolios, priced and reported at the asset level.</h1>
+      <p class="lede">SiteSignal Risk quantifies flood, wildfire, extreme heat, sea level rise, wind, and water stress exposure across a portfolio, tying each score to underlying public and licensed datasets so analysts and asset managers can defend every number in an investment committee or lender conversation.</p>
+      <div class="hero-meta">
+        <span><strong>8</strong> source datasets</span>
+        <span><strong>6</strong> physical risk categories</span>
+        <span><strong>Monthly&ndash;biennial</strong> refresh by source</span>
+        <span><strong>5</strong> reporting output formats</span>
+      </div>
+    </div>
+    <div class="kpi-strip" role="group" aria-label="Coverage summary">
+      <div class="kpi"><div class="kpi-value">8</div><div class="kpi-label">Datasets ingested</div></div>
+      <div class="kpi"><div class="kpi-value">6</div><div class="kpi-label">Risk categories scored</div></div>
+      <div class="kpi"><div class="kpi-value">1&ndash;100</div><div class="kpi-label">Asset risk index scale</div></div>
+      <div class="kpi"><div class="kpi-value">2100</div><div class="kpi-label">Longest projection horizon</div></div>
+      <div class="kpi"><div class="kpi-value">5</div><div class="kpi-label">Report &amp; export formats</div></div>
+      <div class="kpi"><div class="kpi-value">5</div><div class="kpi-label">Role-based access levels</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="toc" aria-label="On this page">
+    <p class="toc-title">On this page</p>
+    <ol>
+      <li><a href="#datasets">Key datasets covered</a></li>
+      <li><a href="#risk-categories">Risk categories</a></li>
+      <li><a href="#questions">Portfolio questions answered</a></li>
+      <li><a href="#reporting">Reporting outputs</a></li>
+      <li><a href="#cadence">Data refresh cadence</a></li>
+      <li><a href="#roles">User roles &amp; permissions</a></li>
+      <li><a href="#demo">Procurement &amp; demo</a></li>
+    </ol>
+    <div class="toc-legend">
+      <p class="toc-title">Risk severity key</p>
+      <div class="legend-row"><span class="swatch low" aria-hidden="true"></span>Low &mdash; monitor</div>
+      <div class="legend-row"><span class="swatch mod" aria-hidden="true"></span>Moderate &mdash; plan</div>
+      <div class="legend-row"><span class="swatch high" aria-hidden="true"></span>High &mdash; mitigate</div>
+      <div class="legend-row"><span class="swatch severe" aria-hidden="true"></span>Severe &mdash; act now</div>
+    </div>
+  </aside>
+
+  <main>
+
+    <section class="block" id="datasets">
+      <div class="block-head">
+        <div>
+          <h2>Key datasets covered</h2>
+          <p class="block-sub">Every score in SiteSignal Risk traces back to a named public, federal, or licensed source &mdash; no proprietary black-box modeling without a disclosed input.</p>
+        </div>
+        <span class="block-tag">8 sources</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Dataset</th>
+              <th scope="col">Source</th>
+              <th scope="col">Granularity</th>
+              <th scope="col">Geographic coverage</th>
+              <th scope="col">Refresh</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cell-name">National Flood Hazard Layer</td>
+              <td>FEMA</td>
+              <td>Parcel / flood zone polygon</td>
+              <td>United States, territories</td>
+              <td><span class="pill pill-neutral">Quarterly</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">SLOSH Storm Surge Model</td>
+              <td>NOAA National Hurricane Center</td>
+              <td>Surge zone by basin</td>
+              <td>US Atlantic &amp; Gulf coasts</td>
+              <td><span class="pill pill-neutral">Annual</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">Wildfire Hazard Potential</td>
+              <td>USGS / US Forest Service</td>
+              <td>270m raster grid</td>
+              <td>Contiguous United States</td>
+              <td><span class="pill pill-neutral">Annual</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">Extreme Heat Projections</td>
+              <td>NOAA / NASA Earth Exchange</td>
+              <td>County-level projection</td>
+              <td>United States</td>
+              <td><span class="pill pill-neutral">Annual</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">Aqueduct Water Risk Atlas</td>
+              <td>World Resources Institute</td>
+              <td>Watershed / basin</td>
+              <td>Global, US-weighted</td>
+              <td><span class="pill pill-neutral">Biennial</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">Sea Level Rise Viewer</td>
+              <td>NOAA Office for Coastal Management</td>
+              <td>Coastal elevation model</td>
+              <td>US coastal counties</td>
+              <td><span class="pill pill-neutral">Periodic (model refresh)</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">Parcel &amp; Zoning Records</td>
+              <td>County and municipal assessors</td>
+              <td>Parcel boundary</td>
+              <td>Covered metro markets</td>
+              <td><span class="pill pill-neutral">Monthly</span></td>
+            </tr>
+            <tr>
+              <td class="cell-name">Insurance Loss History</td>
+              <td>Client-supplied, ingested</td>
+              <td>Asset-level claim record</td>
+              <td>Client portfolio footprint</td>
+              <td><span class="pill pill-neutral">On ingestion</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="block" id="risk-categories">
+      <div class="block-head">
+        <div>
+          <h2>Risk categories</h2>
+          <p class="block-sub">Six physical risk categories are scored per asset on a 1&ndash;100 index, each backed by a stated methodology and projection horizon.</p>
+        </div>
+        <span class="block-tag">6 categories</span>
+      </div>
+      <div class="risk-grid">
+        <div class="risk-card">
+          <div class="risk-bar flood" aria-hidden="true"></div>
+          <h3>Flood Risk</h3>
+          <p>Riverine and pluvial flood exposure derived from FEMA flood zones plus first-floor elevation where available.</p>
+          <div class="risk-meta">
+            <div><span>Horizon</span><b>30 yr</b></div>
+            <div><span>Primary input</span><b>FEMA NFHL</b></div>
+          </div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-bar wildfire" aria-hidden="true"></div>
+          <h3>Wildfire Exposure</h3>
+          <p>Structure ignition potential from wildland-urban interface proximity and fuel load modeling.</p>
+          <div class="risk-meta">
+            <div><span>Horizon</span><b>10&ndash;20 yr</b></div>
+            <div><span>Primary input</span><b>USGS WHP</b></div>
+          </div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-bar heat" aria-hidden="true"></div>
+          <h3>Extreme Heat</h3>
+          <p>Projected days above regional heat thresholds and implications for cooling load and tenant comfort.</p>
+          <div class="risk-meta">
+            <div><span>Horizon</span><b>2040 / 2060</b></div>
+            <div><span>Primary input</span><b>NOAA / NASA NEX</b></div>
+          </div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-bar slr" aria-hidden="true"></div>
+          <h3>Sea Level Rise &amp; Coastal Inundation</h3>
+          <p>Chronic and episodic coastal flooding exposure under multiple sea level rise scenarios.</p>
+          <div class="risk-meta">
+            <div><span>Horizon</span><b>2050 / 2100</b></div>
+            <div><span>Primary input</span><b>NOAA SLR Viewer</b></div>
+          </div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-bar wind" aria-hidden="true"></div>
+          <h3>Hurricane &amp; Wind</h3>
+          <p>Peak gust probability and storm surge co-exposure for coastal and near-coastal assets.</p>
+          <div class="risk-meta">
+            <div><span>Horizon</span><b>Annualized</b></div>
+            <div><span>Primary input</span><b>NOAA SLOSH</b></div>
+          </div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-bar water" aria-hidden="true"></div>
+          <h3>Water Stress &amp; Drought</h3>
+          <p>Baseline water depletion and drought risk affecting operating cost and irrigation-dependent assets.</p>
+          <div class="risk-meta">
+            <div><span>Horizon</span><b>2030</b></div>
+            <div><span>Primary input</span><b>WRI Aqueduct</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="questions">
+      <div class="block-head">
+        <div>
+          <h2>Example portfolio questions this product answers</h2>
+          <p class="block-sub">Each question maps to a saved analysis template. Expand a question to see which datasets and risk categories back the answer.</p>
+        </div>
+        <span class="block-tag">6 templates</span>
+      </div>
+
+      <details class="qa">
+        <summary>Which assets fall within a FEMA Special Flood Hazard Area, and how did that change under the latest map revision?</summary>
+        <div class="qa-body">
+          <p>Compares current and prior FEMA NFHL vintages against the asset address book, flagging newly designated or de-designated parcels and the resulting change in flood risk index.</p>
+          <div class="qa-source">
+            <span class="pill pill-mod">Flood Risk</span>
+            <div>FEMA NFHL, parcel records</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>What share of assets under management face high or severe wildfire hazard potential within 10 years?</summary>
+        <div class="qa-body">
+          <p>Rolls up parcel-level Wildfire Hazard Potential scores to fund and portfolio level, weighted by asset value, and segments the result by market and sub-portfolio.</p>
+          <div class="qa-source">
+            <span class="pill pill-high">Wildfire Exposure</span>
+            <div>USGS WHP, parcel records</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Which markets show the steepest projected rise in extreme heat days by 2040, and what does that mean for capex planning?</summary>
+        <div class="qa-body">
+          <p>Ranks covered metro markets by projected change in days above the regional heat threshold and cross-references reported HVAC system age where available.</p>
+          <div class="qa-source">
+            <span class="pill pill-mod">Extreme Heat</span>
+            <div>NOAA / NASA NEX projections</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>How exposed is a target acquisition to sea level rise under a 1-meter rise scenario by 2100?</summary>
+        <div class="qa-body">
+          <p>Runs a single-asset scenario comparison across 0.5m, 1m, and 2m sea level rise projections against the NOAA coastal elevation model, output as a due-diligence one-pager.</p>
+          <div class="qa-source">
+            <span class="pill pill-severe">Sea Level Rise</span>
+            <div>NOAA SLR Viewer</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Which regional sub-portfolios have the highest concentration of water-stressed assets?</summary>
+        <div class="qa-body">
+          <p>Joins Aqueduct basin-level water stress scores to the asset book and correlates concentration against reported tenant industry mix for operational sensitivity.</p>
+          <div class="qa-source">
+            <span class="pill pill-low">Water Stress</span>
+            <div>WRI Aqueduct</div>
+          </div>
+        </div>
+      </details>
+
+      <details class="qa">
+        <summary>Where do climate risk scores diverge most from current insurance premiums?</summary>
+        <div class="qa-body">
+          <p>Compares the composite asset risk index against client-supplied premium data to surface assets that may be mispriced relative to modeled physical risk.</p>
+          <div class="qa-source">
+            <span class="pill pill-accent">Composite Index</span>
+            <div>All categories, loss history</div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="block" id="reporting">
+      <div class="block-head">
+        <div>
+          <h2>Reporting outputs</h2>
+          <p class="block-sub">Outputs are built for three audiences: analysts running the numbers, asset managers presenting them, and systems consuming them downstream.</p>
+        </div>
+        <span class="block-tag">5 formats</span>
+      </div>
+      <div class="output-grid">
+        <div class="output-card">
+          <h3>Portfolio Risk Summary</h3>
+          <p>Roll-up scores across all six risk categories, distribution charts, and period-over-period change.</p>
+          <div class="tag-row"><span class="tag">PDF</span><span class="tag">Quarterly</span></div>
+        </div>
+        <div class="output-card">
+          <h3>Asset Risk Profile</h3>
+          <p>Single-property detail sheet with per-category score, contributing datasets, and cited methodology notes.</p>
+          <div class="tag-row"><span class="tag">PDF</span><span class="tag">On-demand</span></div>
+        </div>
+        <div class="output-card">
+          <h3>Scenario Comparison Report</h3>
+          <p>Side-by-side physical risk projections across moderate and high-emissions pathways for a selected asset or fund.</p>
+          <div class="tag-row"><span class="tag">PDF</span><span class="tag">On-demand</span></div>
+        </div>
+        <div class="output-card">
+          <h3>Data Export</h3>
+          <p>Flat-file export of raw and normalized scores for use in internal BI tools and underwriting models.</p>
+          <div class="tag-row"><span class="tag">CSV</span><span class="tag">XLSX</span><span class="tag">Monthly</span></div>
+        </div>
+        <div class="output-card">
+          <h3>Programmatic Access</h3>
+          <p>Batch-pull integration endpoint for portfolio management systems, delivered on a scheduled sync, not a live stream.</p>
+          <div class="tag-row"><span class="tag">API</span><span class="tag">Scheduled</span></div>
+        </div>
+        <div class="output-card">
+          <h3>Executive Briefing Deck</h3>
+          <p>Board-ready summary translating category scores into planning and capital allocation implications.</p>
+          <div class="tag-row"><span class="tag">Slides</span><span class="tag">Quarterly</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="cadence">
+      <div class="block-head">
+        <div>
+          <h2>Data refresh cadence</h2>
+          <p class="block-sub">Cadence is set by the update frequency of the underlying source, not by a fixed internal schedule &mdash; a dataset is never refreshed faster than its origin publishes.</p>
+        </div>
+        <span class="block-tag">By category</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Risk category</th>
+              <th scope="col">Underlying dataset</th>
+              <th scope="col">Refresh cadence</th>
+              <th scope="col">Next scheduled refresh</th>
+              <th scope="col">Change alerting</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cell-name">Flood Risk</td>
+              <td>FEMA NFHL</td>
+              <td><span class="pill pill-neutral">Quarterly</span></td>
+              <td class="mono">Q4 cycle</td>
+              <td><span class="check">&#10003;</span> on zone change</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Wildfire Exposure</td>
+              <td>USGS Wildfire Hazard Potential</td>
+              <td><span class="pill pill-neutral">Annual</span></td>
+              <td class="mono">Fire season pre-brief</td>
+              <td><span class="check">&#10003;</span> on tier change</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Extreme Heat</td>
+              <td>NOAA / NASA NEX projections</td>
+              <td><span class="pill pill-neutral">Annual</span></td>
+              <td class="mono">Spring cycle</td>
+              <td class="dash">&mdash;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Sea Level Rise</td>
+              <td>NOAA SLR Viewer</td>
+              <td><span class="pill pill-neutral">Periodic</span></td>
+              <td class="mono">On model revision</td>
+              <td><span class="check">&#10003;</span> on scenario revision</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Hurricane &amp; Wind</td>
+              <td>NOAA SLOSH</td>
+              <td><span class="pill pill-neutral">Annual</span></td>
+              <td class="mono">Pre-hurricane season</td>
+              <td class="dash">&mdash;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Water Stress</td>
+              <td>WRI Aqueduct</td>
+              <td><span class="pill pill-neutral">Biennial</span></td>
+              <td class="mono">Next major release</td>
+              <td class="dash">&mdash;</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="block" id="roles">
+      <div class="block-head">
+        <div>
+          <h2>User roles and permissions</h2>
+          <p class="block-sub">Access is scoped by role at onboarding. Admins can adjust individual permissions within these defaults; raw data export is restricted by default.</p>
+        </div>
+        <span class="block-tag">5 roles</span>
+      </div>
+
+      <div class="role-summary">
+        <div class="role-card"><h4>Portfolio Analyst</h4><p>Runs analyses, builds scenarios, exports reports.</p></div>
+        <div class="role-card"><h4>Asset Manager</h4><p>Views dashboards, requests reports, no raw export.</p></div>
+        <div class="role-card"><h4>Sustainability Lead</h4><p>Views ESG overlays, downloads compliance exports.</p></div>
+        <div class="role-card"><h4>Administrator</h4><p>Manages users, data sources, and audit logs.</p></div>
+        <div class="role-card"><h4>Read-only Viewer</h4><p>Views published reports only, no analysis tools.</p></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Capability</th>
+              <th scope="col" class="center">Analyst</th>
+              <th scope="col" class="center">Asset Manager</th>
+              <th scope="col" class="center">Sustainability Lead</th>
+              <th scope="col" class="center">Administrator</th>
+              <th scope="col" class="center">Viewer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cell-name">View portfolio dashboards</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Run custom scenario analysis</td>
+              <td class="center check">&#10003;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center dash">&#8211;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Export raw and normalized data</td>
+              <td class="center check">&#10003;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center dash">&#8211;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Download published reports</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center check">&#10003;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Manage users and role assignment</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center dash">&#8211;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">Configure data source connections</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center dash">&#8211;</td>
+            </tr>
+            <tr>
+              <td class="cell-name">View audit and access logs</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center dash">&#8211;</td>
+              <td class="center check">&#10003;</td>
+              <td class="center dash">&#8211;</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="demo">
+      <div class="cta-block">
+        <div>
+          <h2>Evaluate SiteSignal Risk against your own portfolio</h2>
+          <p>Request a guided demo scoped to a sample of your covered markets, or route this overview to procurement for a seat-based licensing quote and security review packet.</p>
+          <div class="cta-actions">
+            <a class="btn btn-primary btn-lg" href="mailto:sales@sitesignalrisk.example?subject=SiteSignal%20Risk%20Demo%20Request">Request a Demo</a>
+            <a class="btn btn-ghost btn-lg" href="mailto:procurement@sitesignalrisk.example?subject=SiteSignal%20Risk%20Procurement%20Inquiry">Talk to Procurement</a>
+          </div>
+        </div>
+        <div class="cta-fine">
+          <div><span>Licensing model</span><b>Seat-based</b></div>
+          <div><span>Security review packet</span><b>Available on request</b></div>
+          <div><span>Typical onboarding</span><b>2&ndash;4 weeks</b></div>
+          <div><span>Sample data license</span><b>Included in demo</b></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="disclaimer">This overview is illustrative and does not draw on a live data connection. Figures, cadences, and scores shown are representative of product coverage, not a live client dataset. An active SiteSignal Risk subscription is required for current, asset-level analytics.</div>
+  <div>&copy; SiteSignal Risk &middot; Product Overview</div>
+</footer>
+
+</body>
+</html>

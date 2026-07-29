@@ -1,0 +1,42 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# product-data-dense-climate-risk-dashboard (coverage brief, Codex-authored)
+
+title: Climate Risk Analytics Product Overview
+register: product
+aestheticStyle: data-dense
+audience: Real estate portfolio analysts, asset managers, and sustainability teams.
+goal: Communicate the scope and business utility of a climate risk analytics product.
+requiredContent:
+- Product name: SiteSignal Risk
+- Key datasets covered
+- Example portfolio questions the product answers
+- Risk categories
+- Reporting outputs
+- Data refresh cadence
+- User roles and permissions
+- Procurement or demo action
+constraints:
+- audience: Users expect detail and need to evaluate analytical coverage.
+- brand-tone-in-words: Precise, informed, objective, and commercially relevant.
+- platform: Desktop-oriented product page with responsive support.
+- baseline: Must remain accessible and interpretable without live data connections.
+successCriteria:
+- Analysts can understand data coverage and decision use cases.
+- Business stakeholders can see how outputs support planning.
+- Dense information remains organized and scannable.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-product-data-dense-climate-risk-dashboard.html

@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pet Care Planner</title>
+<style>
+  :root {
+    --color-bg: #FFF8F1;
+    --color-surface: #FFFFFF;
+    --color-surface-alt: #FFF1E4;
+    --color-text: #2E2A26;
+    --color-text-muted: #7A7168;
+    --color-border: #F0E4D6;
+    --color-primary: #D6491F;
+    --color-primary-dark: #B33A17;
+    --color-primary-tint: #FDE7DE;
+    --color-accent: #FFC94D;
+    --color-accent-tint: #FFF3D6;
+    --color-success: #1F6F45;
+    --color-success-tint: #DEF5E6;
+    --color-danger: #B23A2E;
+    --color-danger-tint: #FBE3E0;
+    --color-info: #2A5D8C;
+    --color-info-tint: #E4EFF9;
+    --color-focus: #1B5FA8;
+    --avatar-dana: #4C5FAF;
+    --avatar-priya: #1F8F72;
+    --avatar-sam: #B4562F;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 999px;
+    --shadow-soft: 0 6px 20px rgba(46, 30, 15, 0.08);
+    --shadow-lift: 0 10px 28px rgba(214, 73, 31, 0.28);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --nav-height: 64px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #1D1A17;
+      --color-surface: #29241F;
+      --color-surface-alt: #332B22;
+      --color-text: #F5EFE7;
+      --color-text-muted: #B8AC9E;
+      --color-border: #3E362D;
+      --color-primary: #FF8A5B;
+      --color-primary-dark: #FFA278;
+      --color-primary-tint: #4A2A1C;
+      --color-accent: #FFD87A;
+      --color-accent-tint: #46381A;
+      --color-success: #6FDBA0;
+      --color-success-tint: #1E3A2A;
+      --color-danger: #FF8478;
+      --color-danger-tint: #452420;
+      --color-info: #8FC1F2;
+      --color-info-tint: #1F3546;
+      --color-focus: #8FC1F2;
+      --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.35);
+      --shadow-lift: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, p, ul, li, figure { margin: 0; padding: 0; }
+  ul { list-style: none; }
+  button { font-family: inherit; }
+
+  a.skip-link {
+    position: absolute;
+    left: 8px;
+    top: -60px;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    z-index: 200;
+    transition: top 0.15s ease;
+  }
+  a.skip-link:focus { top: 8px; }
+
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .app {
+    max-width: 460px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--color-bg);
+    padding-bottom: calc(var(--nav-height) + 24px);
+    position: relative;
+  }
+
+  @media (min-width: 720px) {
+    .app { max-width: 760px; }
+  }
+  @media (min-width: 1080px) {
+    .app { max-width: 980px; }
+  }
+
+  /* Header */
+  .app-header {
+    padding: 22px 20px 16px;
+    background: linear-gradient(160deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+    color: #fff;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: var(--shadow-lift);
+  }
+  .app-header .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+  }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .app-header h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-top: 14px;
+  }
+  .app-header .date-line {
+    margin-top: 4px;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.88);
+  }
+  .app-header .tagline {
+    margin-top: 10px;
+    font-size: 0.92rem;
+    color: rgba(255,255,255,0.94);
+    max-width: 46ch;
+  }
+
+  main { padding: 20px 20px 8px; }
+
+  section { margin-bottom: 34px; scroll-margin-top: 16px; }
+
+  .section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  .section-heading h2 {
+    font-size: 1.12rem;
+    font-weight: 800;
+  }
+  .section-heading .section-sub {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+  }
+
+  .inline-add-btn {
+    border: none;
+    background: var(--color-primary-tint);
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .inline-add-btn:hover { background: var(--color-accent-tint); }
+  .inline-add-btn:active { transform: scale(0.96); }
+
+  /* Pet cards */
+  .pet-scroll {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding: 4px 2px 10px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pet-card {
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    width: 208px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    box-shadow: var(--shadow-soft);
+  }
+  .pet-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .pet-card .avatar { background: var(--pet-color, var(--avatar-dana)); }
+  .pet-card h3 { font-size: 1rem; font-weight: 800; }
+  .pet-card .pet-breed { font-size: 0.78rem; color: var(--color-text-muted); }
+  .pet-card dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 8px;
+    margin-top: 12px;
+    font-size: 0.78rem;
+  }
+  .pet-card dt { color: var(--color-text-muted); }
+  .pet-card dd { font-weight: 600; text-align: right; }
+  .pet-next {
+    margin-top: 12px;
+    font-size: 0.76rem;
+    background: var(--color-accent-tint);
+    color: #6b5108;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+  @media (prefers-color-scheme: dark) {
+    .pet-next { color: #FFE9A8; }
+  }
+
+  /* Status pills */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .pill-completed { background: var(--color-success-tint); color: var(--color-success); }
+  .pill-overdue { background: var(--color-danger-tint); color: var(--color-danger); }
+  .pill-due-soon { background: var(--color-accent-tint); color: #6b5108; }
+  @media (prefers-color-scheme: dark) { .pill-due-soon { color: #FFE9A8; } }
+  .pill-upcoming { background: var(--color-info-tint); color: var(--color-info); }
+
+  /* Task list */
+  .task-list, .med-list, .appt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-soft);
+    transition: border-color 0.15s ease, opacity 0.15s ease;
+  }
+  .task-item.status-overdue { border-left-color: var(--color-danger); }
+  .task-item.status-due-soon { border-left-color: var(--color-accent); }
+  .task-item.status-completed { border-left-color: var(--color-success); opacity: 0.85; }
+  .task-item.status-upcoming { border-left-color: var(--color-info); }
+
+  .check-wrap {
+    display: flex;
+    align-items: center;
+    padding-top: 2px;
+  }
+  .check-wrap input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    border: 2px solid var(--color-border);
+    background: var(--color-surface);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .check-wrap input[type="checkbox"]:checked {
+    background: var(--color-success);
+    border-color: var(--color-success);
+  }
+  .check-wrap input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg);
+  }
+  .check-wrap input[type="checkbox"]:focus-visible { outline-offset: 3px; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-top-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .task-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  .status-completed .task-name {
+    text-decoration: line-through;
+    color: var(--color-text-muted);
+  }
+  .task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    align-items: center;
+  }
+  .tag {
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    padding: 2px 9px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .mini-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Medication rows */
+  .med-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-soft);
+  }
+  .med-item.status-overdue { border-left-color: var(--color-danger); }
+  .med-item.status-completed { border-left-color: var(--color-success); opacity: 0.85; }
+  .med-item.status-upcoming { border-left-color: var(--color-info); }
+  .med-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--color-primary-tint);
+    color: var(--color-primary);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Appointment rows */
+  .appt-item {
+    display: flex;
+    gap: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-soft);
+    align-items: center;
+  }
+  .appt-date-block {
+    flex-shrink: 0;
+    width: 54px;
+    text-align: center;
+    background: var(--color-surface-alt);
+    border-radius: var(--radius-sm);
+    padding: 6px 4px;
+  }
+  .appt-date-block .day { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); }
+  .appt-date-block .num { font-size: 1.1rem; font-weight: 800; }
+  .appt-body { flex: 1; min-width: 0; }
+  .appt-body h3 { font-size: 0.94rem; font-weight: 700; }
+  .appt-meta { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 3px; }
+  .confirm-btn {
+    border: 1.5px solid var(--color-primary);
+    background: transparent;
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: 0.76rem;
+    padding: 7px 12px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .confirm-btn[aria-pressed="true"] {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: #fff;
+  }
+
+  /* Caregivers */
+  .caregiver-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .caregiver-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    box-shadow: var(--shadow-soft);
+  }
+  .caregiver-card .avatar { width: 40px; height: 40px; font-size: 0.9rem; }
+  .caregiver-card h3 { font-size: 0.92rem; font-weight: 800; margin-top: 10px; }
+  .caregiver-role { font-size: 0.74rem; color: var(--color-text-muted); }
+  .caregiver-count {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    right: max(20px, calc((100vw - 460px) / 2 + 20px));
+    bottom: calc(var(--nav-height) + 18px);
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    box-shadow: var(--shadow-lift);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 60;
+    transition: transform 0.15s ease;
+  }
+  .fab:hover { transform: scale(1.05); }
+  .fab:active { transform: scale(0.94); }
+  @media (min-width: 720px) {
+    .fab { right: max(28px, calc((100vw - 760px) / 2 + 28px)); }
+  }
+  @media (min-width: 1080px) {
+    .fab { right: max(32px, calc((100vw - 980px) / 2 + 32px)); }
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--nav-height);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: center;
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .bottom-nav ul {
+    display: flex;
+    width: 100%;
+    max-width: 980px;
+    justify-content: space-around;
+  }
+  .bottom-nav a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 10px 4px 6px;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    font-size: 0.66rem;
+    font-weight: 700;
+  }
+  .bottom-nav a.active,
+  .bottom-nav a[aria-current="true"] {
+    color: var(--color-primary);
+  }
+  .bottom-nav svg { width: 22px; height: 22px; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--nav-height) + 18px);
+    transform: translateX(-50%) translateY(12px);
+    background: var(--color-text);
+    color: var(--color-bg);
+    padding: 10px 18px;
+    border-radius: var(--radius-pill);
+    font-size: 0.84rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-soft);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 120;
+    max-width: 80vw;
+    text-align: center;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 20, 12, 0.42);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-overlay[hidden] { display: none; }
+  @media (min-width: 640px) {
+    .modal-overlay { align-items: center; }
+  }
+  .modal-panel {
+    background: var(--color-surface);
+    width: 100%;
+    max-width: 460px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: 22px 22px calc(22px + env(safe-area-inset-bottom, 0));
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.2);
+  }
+  @media (min-width: 640px) {
+    .modal-panel { border-radius: var(--radius-lg); }
+  }
+  .modal-panel h2 { font-size: 1.15rem; font-weight: 800; margin-bottom: 4px; }
+  .modal-sub { font-size: 0.84rem; color: var(--color-text-muted); margin-bottom: 18px; }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.92rem;
+    font-family: inherit;
+  }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .btn {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: var(--radius-pill);
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-primary { background: var(--color-primary); color: #fff; }
+  .btn-secondary { background: var(--color-surface-alt); color: var(--color-text); }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .empty-note {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    padding: 10px 2px;
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<div class="app">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="14" r="5"></circle>
+          <circle cx="6" cy="7" r="2"></circle>
+          <circle cx="18" cy="7" r="2"></circle>
+          <circle cx="12" cy="4.5" r="2"></circle>
+        </svg>
+      </span>
+      <span>PawPlan</span>
+    </div>
+    <h1>Good day, Alvarez household</h1>
+    <p class="date-line" id="today-date"></p>
+    <p class="tagline">Everyone's on the same page for Biscuit, Luna and Pepper today. Nothing gets missed when it's shared.</p>
+  </header>
+
+  <main id="main-content">
+
+    <!-- PET PROFILE SUMMARY -->
+    <section id="pets" aria-labelledby="pets-heading">
+      <div class="section-heading">
+        <h2 id="pets-heading">Your pets</h2>
+        <span class="section-sub">3 profiles</span>
+      </div>
+      <div class="pet-scroll" role="list">
+        <article class="pet-card" role="listitem">
+          <div class="pet-card-top">
+            <div class="avatar" style="--pet-color:#4C5FAF" aria-hidden="true">B</div>
+            <div>
+              <h3>Biscuit</h3>
+              <p class="pet-breed">Golden Retriever - 4 yrs</p>
+            </div>
+          </div>
+          <dl>
+            <dt>Weight</dt><dd>62 lbs</dd>
+            <dt>Diet</dt><dd>Grain-free, 2x daily</dd>
+          </dl>
+          <p class="pet-next">Next: Dinner at 6:00 PM</p>
+        </article>
+
+        <article class="pet-card" role="listitem">
+          <div class="pet-card-top">
+            <div class="avatar" style="--pet-color:#1F8F72" aria-hidden="true">L</div>
+            <div>
+              <h3>Luna</h3>
+              <p class="pet-breed">Domestic Shorthair - 2 yrs</p>
+            </div>
+          </div>
+          <dl>
+            <dt>Weight</dt><dd>9 lbs</dd>
+            <dt>Diet</dt><dd>Indoor formula</dd>
+          </dl>
+          <p class="pet-next">Next: Thyroid tablet, 8:00 PM</p>
+        </article>
+
+        <article class="pet-card" role="listitem">
+          <div class="pet-card-top">
+            <div class="avatar" style="--pet-color:#B4562F" aria-hidden="true">P</div>
+            <div>
+              <h3>Pepper</h3>
+              <p class="pet-breed">Mini Dachshund - 7 yrs, senior</p>
+            </div>
+          </div>
+          <dl>
+            <dt>Weight</dt><dd>11 lbs</dd>
+            <dt>Diet</dt><dd>Joint-support formula</dd>
+          </dl>
+          <p class="pet-next">Next: Afternoon walk, 4:00 PM</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- TODAY'S CARE TASKS -->
+    <section id="tasks" aria-labelledby="tasks-heading">
+      <div class="section-heading">
+        <h2 id="tasks-heading">Today's care tasks</h2>
+        <button type="button" class="inline-add-btn" data-open-modal>+ Add task</button>
+      </div>
+      <ul class="task-list" id="task-list">
+
+        <li class="task-item status-completed" data-time="07:00" data-completed="true">
+          <span class="check-wrap">
+            <input type="checkbox" id="task-1" checked>
+          </span>
+          <span class="task-body">
+            <label class="task-name" for="task-1">Morning feeding - Biscuit and Luna</label>
+            <span class="task-meta">
+              <span class="tag">Feeding</span>
+              <span class="mini-avatar" style="background:var(--avatar-dana)" title="Dana">D</span>
+              <span>7:00 AM</span>
+              <span class="pill pill-completed" data-status-pill>Completed</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="task-item status-completed" data-time="08:00" data-completed="true">
+          <span class="check-wrap">
+            <input type="checkbox" id="task-2" checked>
+          </span>
+          <span class="task-body">
+            <label class="task-name" for="task-2">Morning walk - Biscuit</label>
+            <span class="task-meta">
+              <span class="tag">Exercise</span>
+              <span class="mini-avatar" style="background:var(--avatar-sam)" title="Sam">S</span>
+              <span>8:00 AM</span>
+              <span class="pill pill-completed" data-status-pill>Completed</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="task-item" data-time="12:30">
+          <span class="check-wrap">
+            <input type="checkbox" id="task-3">
+          </span>
+          <span class="task-body">
+            <label class="task-name" for="task-3">Litter box refresh - Luna</label>
+            <span class="task-meta">
+              <span class="tag">Hygiene</span>
+              <span class="mini-avatar" style="background:var(--avatar-priya)" title="Priya">P</span>
+              <span>12:30 PM</span>
+              <span class="pill" data-status-pill>Upcoming</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="task-item" data-time="16:00">
+          <span class="check-wrap">
+            <input type="checkbox" id="task-4">
+          </span>
+          <span class="task-body">
+            <label class="task-name" for="task-4">Afternoon walk - Pepper</label>
+            <span class="task-meta">
+              <span class="tag">Exercise</span>
+              <span class="mini-avatar" style="background:var(--avatar-dana)" title="Dana">D</span>
+              <span>4:00 PM</span>
+              <span class="pill" data-status-pill>Upcoming</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="task-item" data-time="18:00">
+          <span class="check-wrap">
+            <input type="checkbox" id="task-5">
+          </span>
+          <span class="task-body">
+            <label class="task-name" for="task-5">Evening feeding - all three</label>
+            <span class="task-meta">
+              <span class="tag">Feeding</span>
+              <span class="mini-avatar" style="background:var(--avatar-dana)" title="Dana">D</span>
+              <span>6:00 PM</span>
+              <span class="pill" data-status-pill>Upcoming</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="task-item" data-time="20:00">
+          <span class="check-wrap">
+            <input type="checkbox" id="task-6">
+          </span>
+          <span class="task-body">
+            <label class="task-name" for="task-6">Evening play and cuddle - Pepper</label>
+            <span class="task-meta">
+              <span class="tag">Enrichment</span>
+              <span class="mini-avatar" style="background:var(--avatar-sam)" title="Sam">S</span>
+              <span>8:00 PM</span>
+              <span class="pill" data-status-pill>Upcoming</span>
+            </span>
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- MEDICATION REMINDERS -->
+    <section id="medications" aria-labelledby="meds-heading">
+      <div class="section-heading">
+        <h2 id="meds-heading">Medication reminders</h2>
+        <span class="section-sub">2 active</span>
+      </div>
+      <ul class="med-list" id="med-list">
+
+        <li class="med-item status-completed" data-time="08:00" data-completed="true">
+          <span class="med-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="9" width="18" height="6" rx="3"></rect>
+              <line x1="12" y1="9" x2="12" y2="15"></line>
+            </svg>
+          </span>
+          <span class="task-body">
+            <span class="check-wrap" style="display:inline-flex; margin-right:8px;">
+              <input type="checkbox" id="med-1" checked aria-describedby="med-1-desc">
+            </span>
+            <label class="task-name" for="med-1">Luna - Thyroid tablet, 0.5 mg</label>
+            <span class="task-meta" id="med-1-desc">
+              <span>Given at 8:00 AM by Priya</span>
+              <span class="pill pill-completed" data-status-pill>Given</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="med-item" data-time="18:00">
+          <span class="med-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="9" width="18" height="6" rx="3"></rect>
+              <line x1="12" y1="9" x2="12" y2="15"></line>
+            </svg>
+          </span>
+          <span class="task-body">
+            <span class="check-wrap" style="display:inline-flex; margin-right:8px;">
+              <input type="checkbox" id="med-2" aria-describedby="med-2-desc">
+            </span>
+            <label class="task-name" for="med-2">Pepper - Joint supplement, 1 chew</label>
+            <span class="task-meta" id="med-2-desc">
+              <span>Due 6:00 PM</span>
+              <span class="pill" data-status-pill>Upcoming</span>
+            </span>
+          </span>
+        </li>
+
+        <li class="med-item status-upcoming">
+          <span class="med-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="9" width="18" height="6" rx="3"></rect>
+              <line x1="12" y1="9" x2="12" y2="15"></line>
+            </svg>
+          </span>
+          <span class="task-body">
+            <span class="task-name" style="cursor:default;">Biscuit - Flea and tick preventative</span>
+            <span class="task-meta">
+              <span>Monthly dose - due in 3 days</span>
+              <span class="pill pill-upcoming">Upcoming</span>
+            </span>
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- UPCOMING APPOINTMENTS -->
+    <section id="appointments" aria-labelledby="appt-heading">
+      <div class="section-heading">
+        <h2 id="appt-heading">Upcoming appointments</h2>
+        <span class="section-sub">3 scheduled</span>
+      </div>
+      <ul class="appt-list">
+        <li class="appt-item">
+          <div class="appt-date-block" aria-hidden="true"><div class="day">Tue</div><div class="num">29</div></div>
+          <div class="appt-body">
+            <h3>Biscuit - Annual wellness exam</h3>
+            <p class="appt-meta">Dr. Alvarez - Maple Street Vet - 10:30 AM</p>
+          </div>
+          <button type="button" class="confirm-btn" aria-pressed="false" data-confirm-btn>Confirm</button>
+        </li>
+        <li class="appt-item">
+          <div class="appt-date-block" aria-hidden="true"><div class="day">Thu</div><div class="num">31</div></div>
+          <div class="appt-body">
+            <h3>Luna - Dental cleaning</h3>
+            <p class="appt-meta">Riverside Animal Hospital - 2:00 PM</p>
+          </div>
+          <button type="button" class="confirm-btn" aria-pressed="true" data-confirm-btn>Confirmed</button>
+        </li>
+        <li class="appt-item">
+          <div class="appt-date-block" aria-hidden="true"><div class="day">Sat</div><div class="num">2</div></div>
+          <div class="appt-body">
+            <h3>Pepper - Grooming trim</h3>
+            <p class="appt-meta">Fluff and Fold - 11:00 AM</p>
+          </div>
+          <button type="button" class="confirm-btn" aria-pressed="false" data-confirm-btn>Confirm</button>
+        </li>
+      </ul>
+    </section>
+
+    <!-- SHARED CAREGIVER ASSIGNMENTS -->
+    <section id="caregivers" aria-labelledby="caregivers-heading">
+      <div class="section-heading">
+        <h2 id="caregivers-heading">Shared with</h2>
+        <span class="section-sub">3 caregivers</span>
+      </div>
+      <div class="caregiver-grid">
+        <div class="caregiver-card">
+          <div class="avatar" style="background:var(--avatar-dana)" aria-hidden="true">D</div>
+          <h3>Dana</h3>
+          <p class="caregiver-role">Primary caregiver</p>
+          <p class="caregiver-count">3 tasks today</p>
+        </div>
+        <div class="caregiver-card">
+          <div class="avatar" style="background:var(--avatar-priya)" aria-hidden="true">P</div>
+          <h3>Priya</h3>
+          <p class="caregiver-role">Co-caregiver</p>
+          <p class="caregiver-count">2 tasks plus 1 medication</p>
+        </div>
+        <div class="caregiver-card">
+          <div class="avatar" style="background:var(--avatar-sam)" aria-hidden="true">S</div>
+          <h3>Sam</h3>
+          <p class="caregiver-role">Junior helper</p>
+          <p class="caregiver-count">2 tasks today</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- FAB entry point -->
+<button type="button" class="fab" data-open-modal aria-haspopup="dialog" aria-controls="add-task-modal">
+  <span class="visually-hidden">Add a new care task</span>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+</button>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav" aria-label="Section navigation">
+  <ul>
+    <li><a href="#pets" data-nav-link aria-hidden="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="14" r="5"></circle><circle cx="6" cy="7" r="2"></circle><circle cx="18" cy="7" r="2"></circle><circle cx="12" cy="4.5" r="2"></circle></svg>
+      Pets
+    </a></li>
+    <li><a href="#tasks" data-nav-link>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"></rect><polyline points="8 12 11 15 16 9"></polyline></svg>
+      Tasks
+    </a></li>
+    <li><a href="#medications" data-nav-link>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="3"></rect><line x1="12" y1="9" x2="12" y2="15"></line></svg>
+      Meds
+    </a></li>
+    <li><a href="#appointments" data-nav-link>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="16" y1="2" x2="16" y2="6"></line></svg>
+      Calendar
+    </a></li>
+    <li><a href="#caregivers" data-nav-link>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.4"></circle><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"></path><path d="M14.5 20c0-2.4 1.6-4.4 3.8-5"></path></svg>
+      Family
+    </a></li>
+  </ul>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Add task modal -->
+<div class="modal-overlay" id="add-task-modal" hidden>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title" id="modal-panel">
+    <h2 id="modal-title">Add a care task</h2>
+    <p class="modal-sub">It will show up on today's list for everyone right away.</p>
+    <form id="add-task-form">
+      <div class="field">
+        <label for="field-name">Task name</label>
+        <input type="text" id="field-name" name="name" required placeholder="e.g. Give Luna her brushing">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="field-pet">Pet</label>
+          <select id="field-pet" name="pet">
+            <option>Biscuit</option>
+            <option>Luna</option>
+            <option>Pepper</option>
+            <option>All pets</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="field-time">Time</label>
+          <input type="time" id="field-time" name="time" required value="17:00">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="field-category">Category</label>
+          <select id="field-category" name="category">
+            <option>Feeding</option>
+            <option>Exercise</option>
+            <option>Hygiene</option>
+            <option>Enrichment</option>
+            <option>Appointment prep</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="field-assignee">Assign to</label>
+          <select id="field-assignee" name="assignee">
+            <option>Dana</option>
+            <option>Priya</option>
+            <option>Sam</option>
+            <option>Whoever's free</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Add to today's list</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<noscript>
+  <p style="text-align:center; padding:14px; color:#7A7168;">This planner works best with JavaScript enabled, which powers live status updates and the add-task form.</p>
+</noscript>
+
+<script>
+(function () {
+  "use strict";
+
+  var avatarInitialFor = {
+    "Biscuit": { initial: "B", color: "#4C5FAF" },
+    "Luna": { initial: "L", color: "#1F8F72" },
+    "Pepper": { initial: "P", color: "#B4562F" },
+    "All pets": { initial: "*", color: "#6b5108" }
+  };
+  var assigneeColor = {
+    "Dana": "var(--avatar-dana)",
+    "Priya": "var(--avatar-priya)",
+    "Sam": "var(--avatar-sam)",
+    "Whoever's free": "var(--avatar-dana)"
+  };
+
+  function todayDateLabel() {
+    var now = new Date();
+    var opts = { weekday: "long", month: "long", day: "numeric" };
+    return now.toLocaleDateString(undefined, opts);
+  }
+  var dateEl = document.getElementById("today-date");
+  if (dateEl) { dateEl.textContent = todayDateLabel(); }
+
+  function parseTodayTime(hhmm) {
+    var parts = hhmm.split(":");
+    var d = new Date();
+    d.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+    return d;
+  }
+
+  function computeStatus(el) {
+    var timeStr = el.getAttribute("data-time");
+    var checkbox = el.querySelector("input[type='checkbox']");
+    var isCompleted = checkbox ? checkbox.checked : el.getAttribute("data-completed") === "true";
+
+    el.classList.remove("status-completed", "status-overdue", "status-due-soon", "status-upcoming");
+
+    if (isCompleted) {
+      el.classList.add("status-completed");
+      return { key: "completed", label: el.querySelector(".med-icon") ? "Given" : "Completed" };
+    }
+    if (!timeStr) {
+      el.classList.add("status-upcoming");
+      return { key: "upcoming", label: "Upcoming" };
+    }
+    var target = parseTodayTime(timeStr);
+    var now = new Date();
+    var diffMinutes = (target.getTime() - now.getTime()) / 60000;
+
+    if (diffMinutes < 0) {
+      el.classList.add("status-overdue");
+      return { key: "overdue", label: "Overdue" };
+    }
+    if (diffMinutes <= 60) {
+      el.classList.add("status-due-soon");
+      return { key: "due-soon", label: "Due soon" };
+    }
+    el.classList.add("status-upcoming");
+    return { key: "upcoming", label: "Upcoming" };
+  }
+
+  function refreshItem(el) {
+    var result = computeStatus(el);
+    var pill = el.querySelector("[data-status-pill]");
+    if (pill) {
+      pill.className = "pill pill-" + result.key;
+      pill.textContent = result.label;
+    }
+  }
+
+  function refreshAll() {
+    var items = document.querySelectorAll(".task-item, .med-item[data-time]");
+    items.forEach(refreshItem);
+  }
+
+  refreshAll();
+  setInterval(refreshAll, 60000);
+
+  document.addEventListener("change", function (e) {
+    var target = e.target;
+    if (target.matches(".task-item input[type='checkbox'], .med-item input[type='checkbox']")) {
+      var item = target.closest(".task-item, .med-item");
+      if (item) { refreshItem(item); }
+    }
+  });
+
+  // Toast
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+  function showToast(message) {
+    if (!toastEl) { return; }
+    toastEl.textContent = message;
+    toastEl.classList.add("show");
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () {
+      toastEl.classList.remove("show");
+    }, 3200);
+  }
+
+  // Appointment confirm toggles
+  document.querySelectorAll("[data-confirm-btn]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var pressed = btn.getAttribute("aria-pressed") === "true";
+      btn.setAttribute("aria-pressed", String(!pressed));
+      btn.textContent = !pressed ? "Confirmed" : "Confirm";
+      showToast(!pressed ? "Appointment confirmed." : "Confirmation removed.");
+    });
+  });
+
+  // Modal handling
+  var modal = document.getElementById("add-task-modal");
+  var panel = document.getElementById("modal-panel");
+  var form = document.getElementById("add-task-form");
+  var lastFocused = null;
+
+  function focusableIn(container) {
+    return Array.prototype.slice.call(
+      container.querySelectorAll('a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    );
+  }
+
+  function openModal(triggerEl) {
+    lastFocused = triggerEl || document.activeElement;
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    var focusables = focusableIn(panel);
+    if (focusables.length) { focusables[0].focus(); }
+    document.addEventListener("keydown", onModalKeydown);
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    document.body.style.overflow = "";
+    document.removeEventListener("keydown", onModalKeydown);
+    if (lastFocused && typeof lastFocused.focus === "function") {
+      lastFocused.focus();
+    }
+  }
+
+  function onModalKeydown(e) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeModal();
+      return;
+    }
+    if (e.key === "Tab") {
+      var focusables = focusableIn(panel);
+      if (!focusables.length) { return; }
+      var first = focusables[0];
+      var last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+
+  document.querySelectorAll("[data-open-modal]").forEach(function (btn) {
+    btn.addEventListener("click", function () { openModal(btn); });
+  });
+  document.querySelectorAll("[data-close-modal]").forEach(function (btn) {
+    btn.addEventListener("click", closeModal);
+  });
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) { closeModal(); }
+  });
+
+  var taskIdCounter = 6;
+  var taskList = document.getElementById("task-list");
+
+  function to12Hour(hhmm) {
+    var parts = hhmm.split(":");
+    var h = parseInt(parts[0], 10);
+    var m = parts[1];
+    var period = h >= 12 ? "PM" : "AM";
+    var h12 = h % 12;
+    if (h12 === 0) { h12 = 12; }
+    return h12 + ":" + m + " " + period;
+  }
+
+  function createTaskItem(data) {
+    taskIdCounter += 1;
+    var id = "task-" + taskIdCounter;
+    var li = document.createElement("li");
+    li.className = "task-item";
+    li.setAttribute("data-time", data.time);
+
+    var avatarColor = assigneeColor[data.assignee] || "var(--avatar-dana)";
+    var assigneeInitial = data.assignee.charAt(0);
+
+    li.innerHTML =
+      '<span class="check-wrap"><input type="checkbox" id="' + id + '"></span>' +
+      '<span class="task-body">' +
+        '<label class="task-name" for="' + id + '"></label>' +
+        '<span class="task-meta">' +
+          '<span class="tag"></span>' +
+          '<span class="mini-avatar" style="background:' + avatarColor + '" title=""></span>' +
+          '<span class="time-text"></span>' +
+          '<span class="pill" data-status-pill>Upcoming</span>' +
+        '</span>' +
+      '</span>';
+
+    li.querySelector(".task-name").textContent = data.name + " - " + data.pet;
+    li.querySelector(".tag").textContent = data.category;
+    var miniAvatar = li.querySelector(".mini-avatar");
+    miniAvatar.textContent = assigneeInitial;
+    miniAvatar.setAttribute("title", data.assignee);
+    li.querySelector(".time-text").textContent = to12Hour(data.time);
+
+    return li;
+  }
+
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var formData = new FormData(form);
+      var name = (formData.get("name") || "").toString().trim();
+      var pet = (formData.get("pet") || "Biscuit").toString();
+      var time = (formData.get("time") || "17:00").toString();
+      var category = (formData.get("category") || "Feeding").toString();
+      var assignee = (formData.get("assignee") || "Dana").toString();
+
+      if (!name) { return; }
+
+      var li = createTaskItem({ name: name, pet: pet, time: time, category: category, assignee: assignee });
+      taskList.appendChild(li);
+      refreshItem(li);
+
+      form.reset();
+      form.querySelector("#field-time").value = "17:00";
+      closeModal();
+      showToast("Added " + name + " to today's list.");
+    });
+  }
+
+  // Bottom nav active-section highlighting
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll(".bottom-nav a"));
+  var sections = ["pets", "tasks", "medications", "appointments", "caregivers"]
+    .map(function (id) { return document.getElementById(id); })
+    .filter(Boolean);
+
+  function setActive(id) {
+    navLinks.forEach(function (link) {
+      var isActive = link.getAttribute("href") === "#" + id;
+      link.classList.toggle("active", isActive);
+      if (isActive) {
+        link.setAttribute("aria-current", "true");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  }
+
+  if ("IntersectionObserver" in window && sections.length) {
+    var observer = new IntersectionObserver(function (entries) {
+      var visible = entries.filter(function (en) { return en.isIntersecting; });
+      if (visible.length) {
+        visible.sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; });
+        setActive(visible[0].target.id);
+      }
+    }, { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] });
+    sections.forEach(function (s) { observer.observe(s); });
+    setActive("pets");
+  }
+})();
+</script>
+</body>
+</html>

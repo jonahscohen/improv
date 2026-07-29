@@ -1,0 +1,42 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# flex-high-energy-youth-campus-event (coverage brief, Codex-authored)
+
+title: Student Innovation Weekend
+register: flex
+aestheticStyle: high-energy/youth
+audience: College students considering whether to attend a weekend innovation event.
+goal: Encourage students from different majors to register for a collaborative campus challenge.
+requiredContent:
+- Event name: BuildBurst Weekend
+- Event dates and location
+- Who should attend
+- Schedule overview
+- Team formation information
+- Prizes and support resources
+- FAQ
+- Registration action
+constraints:
+- audience: Students may be new to events like this and unsure whether they qualify.
+- brand-tone-in-words: Direct, upbeat, inclusive, and motivating.
+- platform: Responsive event page.
+- baseline: Must meet common accessibility expectations and use fictional event details.
+successCriteria:
+- Students understand the commitment and benefits.
+- Participation feels open to varied skill levels.
+- Registration details and event logistics are easy to find.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-flex-high-energy-youth-campus-event.html

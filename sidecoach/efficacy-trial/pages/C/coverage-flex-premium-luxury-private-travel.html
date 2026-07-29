@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meridian Private Travel - Private Travel Concierge</title>
+<style>
+  :root{
+    --ink:#12161f;
+    --ink-soft:#2b3140;
+    --ivory:#faf6ef;
+    --ivory-dim:#f1ebdf;
+    --line:#ddd3c0;
+    --brass:#9c7a3f;
+    --brass-light:#c7a05f;
+    --navy:#0e1522;
+    --navy-deep:#080c14;
+    --max:1120px;
+    --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  *, *::before, *::after{ box-sizing: border-box; }
+
+  html{ scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior: auto; }
+    *, *::before, *::after{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+  }
+
+  body{
+    margin:0;
+    background: var(--ivory);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  img, svg{ display:block; max-width:100%; }
+
+  a{ color: inherit; }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+
+  .skip-link{
+    position:absolute; left:1rem; top:-3rem;
+    background: var(--navy); color: var(--ivory);
+    padding: 0.75rem 1.25rem; border-radius: 2px;
+    z-index: 200; transition: top 0.2s ease;
+    font-size: 0.9rem; letter-spacing: 0.02em;
+  }
+  .skip-link:focus{ top: 1rem; }
+
+  :focus-visible{
+    outline: 2px solid var(--brass);
+    outline-offset: 3px;
+  }
+
+  h1, h2, h3, h4{
+    font-family: var(--serif);
+    font-weight: 500;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  p{ margin: 0 0 1rem; }
+  p:last-child{ margin-bottom: 0; }
+
+  .eyebrow{
+    display:block;
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--brass);
+    font-weight: 600;
+    margin-bottom: 0.9rem;
+  }
+
+  .wrap{
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+  }
+
+  .rule{
+    width: 56px;
+    height: 2px;
+    background: var(--brass);
+    border: 0;
+    margin: 1.4rem 0 1.6rem;
+  }
+  .rule.center{ margin-left:auto; margin-right:auto; }
+
+  /* ---------- Header ---------- */
+  header.site{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(250, 246, 239, 0.92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+  .site-bar{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 1rem clamp(1.25rem, 4vw, 2.5rem);
+    max-width: var(--max);
+    margin: 0 auto;
+    gap: 1.5rem;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap: 0.7rem;
+    text-decoration:none;
+    color: var(--ink);
+  }
+  .brand-mark{
+    width: 36px; height:36px;
+    border: 1px solid var(--brass);
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    color: var(--brass);
+    flex: none;
+  }
+  .brand-name{
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    letter-spacing: 0.03em;
+    line-height: 1.1;
+  }
+  .brand-name small{
+    display:block;
+    font-family: var(--sans);
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin-top: 0.2rem;
+  }
+
+  nav.primary{
+    display:flex;
+    align-items:center;
+    gap: clamp(1rem, 2vw, 1.8rem);
+  }
+  nav.primary a{
+    text-decoration:none;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    padding: 0.3rem 0.1rem;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  nav.primary a:hover, nav.primary a:focus-visible{
+    color: var(--ink);
+    border-color: var(--brass);
+  }
+
+  .btn{
+    display:inline-block;
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    text-decoration:none;
+    padding: 0.85rem 1.6rem;
+    border-radius: 2px;
+    cursor:pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    border: 1px solid transparent;
+    text-align:center;
+  }
+  .btn-primary{
+    background: var(--navy);
+    color: var(--ivory);
+    border-color: var(--navy);
+  }
+  .btn-primary:hover, .btn-primary:focus-visible{
+    background: var(--brass);
+    border-color: var(--brass);
+    color: var(--navy-deep);
+  }
+  .btn-ghost{
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--ink-soft);
+  }
+  .btn-ghost:hover, .btn-ghost:focus-visible{
+    border-color: var(--brass);
+    color: var(--brass);
+  }
+  .btn-nav{
+    padding: 0.6rem 1.1rem;
+    font-size: 0.78rem;
+  }
+
+  .menu-toggle{
+    display:none;
+    background: none;
+    border: 1px solid var(--ink-soft);
+    color: var(--ink);
+    padding: 0.5rem 0.7rem;
+    border-radius: 2px;
+    cursor:pointer;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(199,160,95,0.18), transparent 55%),
+      linear-gradient(180deg, var(--navy-deep) 0%, var(--navy) 55%, #10192a 100%);
+    color: var(--ivory);
+    padding: clamp(4.5rem, 9vw, 7rem) 0 clamp(4rem, 8vw, 6rem);
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid #1c2434;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    inset: auto -20% -60% -20%;
+    height: 70%;
+    background: radial-gradient(ellipse at center, rgba(156,122,63,0.14), transparent 65%);
+    pointer-events:none;
+  }
+  .hero-inner{
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+    position:relative;
+    z-index: 1;
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.62fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items:center;
+  }
+  .hero h1{
+    color: var(--ivory);
+    font-size: clamp(2.1rem, 4.4vw, 3.4rem);
+    line-height: 1.14;
+    max-width: 18ch;
+  }
+  .hero .eyebrow{ color: var(--brass-light); }
+  .hero-lede{
+    font-size: 1.08rem;
+    color: #d8dbe4;
+    max-width: 46ch;
+    margin: 1.4rem 0 2rem;
+  }
+  .hero-actions{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items:center;
+  }
+  .hero-actions .btn-ghost{
+    color: var(--ivory);
+    border-color: rgba(250,246,239,0.4);
+  }
+  .hero-actions .btn-ghost:hover, .hero-actions .btn-ghost:focus-visible{
+    border-color: var(--brass-light);
+    color: var(--brass-light);
+  }
+  .hero-note{
+    margin-top: 1.6rem;
+    font-size: 0.82rem;
+    color: #99a0b3;
+    letter-spacing: 0.02em;
+  }
+
+  .hero-panel{
+    border: 1px solid rgba(250,246,239,0.18);
+    background: rgba(250,246,239,0.04);
+    padding: clamp(1.6rem, 3vw, 2.2rem);
+    border-radius: 2px;
+  }
+  .hero-panel h2{
+    font-size: 1.05rem;
+    color: var(--brass-light);
+    margin-bottom: 1rem;
+  }
+  .hero-panel ul{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:grid;
+    gap: 0.9rem;
+  }
+  .hero-panel li{
+    display:flex;
+    gap: 0.7rem;
+    font-size: 0.92rem;
+    color: #dcdfe7;
+    align-items:baseline;
+  }
+  .hero-panel li::before{
+    content:"";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--brass-light);
+    margin-top: 0.45em;
+  }
+
+  /* ---------- Sections generic ---------- */
+  section{
+    padding: clamp(3.5rem, 7vw, 5.5rem) 0;
+  }
+  section.alt{
+    background: var(--ivory-dim);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .section-head{
+    max-width: 62ch;
+    margin-bottom: clamp(2rem, 4vw, 3rem);
+  }
+  .section-head h2{
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    line-height: 1.2;
+  }
+  .section-head .lede{
+    margin-top: 1rem;
+    font-size: 1.02rem;
+    color: var(--ink-soft);
+  }
+
+  /* Promise */
+  .promise-grid{
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: clamp(2.5rem, 5vw, 4rem);
+    align-items:start;
+  }
+  .promise-quote{
+    font-family: var(--serif);
+    font-size: clamp(1.35rem, 2.4vw, 1.8rem);
+    line-height: 1.45;
+    color: var(--ink);
+    border-left: 2px solid var(--brass);
+    padding-left: 1.6rem;
+  }
+  .promise-copy p{
+    color: var(--ink-soft);
+    font-size: 1rem;
+  }
+
+  /* Journeys grid */
+  .journey-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  .journey-card{
+    background: var(--ivory);
+    border: 1px solid var(--line);
+    padding: 1.9rem 1.7rem;
+    border-radius: 2px;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  section.alt .journey-card{ background: #fffdf9; }
+  .journey-card:hover{
+    border-color: var(--brass);
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px -20px rgba(18,22,31,0.35);
+  }
+  .journey-card .num{
+    font-family: var(--serif);
+    font-size: 0.85rem;
+    color: var(--brass);
+    letter-spacing: 0.08em;
+    display:block;
+    margin-bottom: 0.9rem;
+  }
+  .journey-card h3{
+    font-size: 1.15rem;
+    margin-bottom: 0.6rem;
+  }
+  .journey-card p{
+    font-size: 0.94rem;
+    color: var(--ink-soft);
+  }
+
+  /* Process */
+  .process-list{
+    display:grid;
+    gap: 0;
+  }
+  .process-item{
+    display:grid;
+    grid-template-columns: 84px 1fr;
+    gap: 1.6rem;
+    padding: 1.6rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .process-item:first-child{ padding-top: 0; }
+  .process-item:last-child{ border-bottom: 0; }
+  .process-step{
+    font-family: var(--serif);
+    font-size: 1.9rem;
+    color: var(--brass);
+    line-height: 1;
+  }
+  .process-body h3{
+    font-size: 1.1rem;
+    margin-bottom: 0.45rem;
+  }
+  .process-body p{
+    color: var(--ink-soft);
+    font-size: 0.96rem;
+    max-width: 62ch;
+  }
+
+  /* Itineraries */
+  .itin-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+  }
+  .itin-card{
+    display:flex;
+    flex-direction:column;
+    background: var(--navy);
+    color: var(--ivory);
+    border-radius: 2px;
+    overflow:hidden;
+  }
+  .itin-media{
+    height: 132px;
+    background: linear-gradient(135deg, var(--navy-deep), var(--navy) 60%, #1c2434 100%);
+    position:relative;
+  }
+  .itin-media.a{ background: linear-gradient(135deg, #1c2b1f, #12261e 55%, #0d1913); }
+  .itin-media.b{ background: linear-gradient(135deg, #241a12, #2b2015 55%, #17110b); }
+  .itin-media.c{ background: linear-gradient(135deg, #14202c, #1a2836 55%, #0d1620); }
+  .itin-media::after{
+    content:"";
+    position:absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(45deg, rgba(250,246,239,0.05) 0 1px, transparent 1px 14px);
+  }
+  .itin-media .tag{
+    position:absolute;
+    left: 1.2rem;
+    bottom: 1rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--brass-light);
+    font-weight: 600;
+  }
+  .itin-body{
+    padding: 1.5rem 1.5rem 1.7rem;
+    flex: 1;
+    display:flex;
+    flex-direction:column;
+  }
+  .itin-body h3{
+    color: var(--ivory);
+    font-size: 1.08rem;
+    margin-bottom: 0.6rem;
+  }
+  .itin-body p{
+    color: #c7cbd6;
+    font-size: 0.92rem;
+    flex: 1;
+  }
+  .itin-meta{
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: #8b93a6;
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(250,246,239,0.12);
+  }
+  .fictional-note{
+    margin-top: 1.75rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+
+  /* Membership */
+  .membership-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.75rem;
+  }
+  .tier-card{
+    border: 1px solid var(--line);
+    background: #fffdf9;
+    padding: 2rem 1.9rem;
+    border-radius: 2px;
+    display:flex;
+    flex-direction:column;
+  }
+  .tier-card.featured{
+    border-color: var(--brass);
+    box-shadow: 0 18px 34px -26px rgba(156,122,63,0.55);
+  }
+  .tier-head{
+    display:flex;
+    justify-content: space-between;
+    align-items:baseline;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+  }
+  .tier-head h3{ font-size: 1.2rem; }
+  .tier-tag{
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--brass);
+    font-weight: 700;
+    border: 1px solid var(--brass);
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .tier-card p{
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+  .tier-list{
+    list-style:none;
+    margin: 1.1rem 0 0;
+    padding:0;
+    display:grid;
+    gap: 0.65rem;
+    flex: 1;
+  }
+  .tier-list li{
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    display:flex;
+    gap: 0.6rem;
+  }
+  .tier-list li::before{
+    content: "-";
+    color: var(--brass);
+    flex: none;
+  }
+  .membership-note{
+    margin-top: 1.75rem;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  /* Standards */
+  .standards-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  .standard-item{
+    padding: 1.6rem 0 1.6rem 1.5rem;
+    border-left: 2px solid var(--line);
+    transition: border-color 0.2s ease;
+  }
+  .standard-item:hover{ border-color: var(--brass); }
+  .standard-item h3{
+    font-size: 1.02rem;
+    margin-bottom: 0.5rem;
+  }
+  .standard-item p{
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+  }
+
+  /* Contact / consultation */
+  .contact-section{
+    background: var(--navy);
+    color: var(--ivory);
+  }
+  .contact-grid{
+    display:grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: clamp(2.5rem, 5vw, 4rem);
+    align-items:start;
+  }
+  .contact-intro .eyebrow{ color: var(--brass-light); }
+  .contact-intro h2{
+    color: var(--ivory);
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    margin-bottom: 1.1rem;
+  }
+  .contact-intro p{
+    color: #c7cbd6;
+    max-width: 42ch;
+  }
+  .contact-detail{
+    margin-top: 2rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid rgba(250,246,239,0.15);
+    font-size: 0.92rem;
+    color: #c7cbd6;
+  }
+  .contact-detail strong{ color: var(--ivory); font-weight: 600; }
+  .contact-detail p{ margin-bottom: 0.5rem; }
+
+  form.consult{
+    background: rgba(250,246,239,0.04);
+    border: 1px solid rgba(250,246,239,0.16);
+    padding: clamp(1.6rem, 3vw, 2.3rem);
+    border-radius: 2px;
+  }
+  .form-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.1rem;
+    margin-bottom: 1.1rem;
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap: 0.45rem;
+    margin-bottom: 1.1rem;
+  }
+  .form-row .field{ margin-bottom: 0; }
+  .field label{
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #a9afc0;
+    font-weight: 600;
+  }
+  .field .req{ color: var(--brass-light); }
+  .field input,
+  .field select,
+  .field textarea{
+    background: rgba(250,246,239,0.06);
+    border: 1px solid rgba(250,246,239,0.28);
+    color: var(--ivory);
+    padding: 0.75rem 0.9rem;
+    border-radius: 2px;
+    font-family: var(--sans);
+    font-size: 0.94rem;
+  }
+  .field input::placeholder,
+  .field textarea::placeholder{ color: #7b8296; }
+  .field input:focus-visible,
+  .field select:focus-visible,
+  .field textarea:focus-visible{
+    outline: 2px solid var(--brass-light);
+    outline-offset: 2px;
+    border-color: var(--brass-light);
+  }
+  .field textarea{ resize: vertical; min-height: 100px; }
+  .field-hint{ font-size: 0.78rem; color: #8b93a6; }
+
+  .consult-submit{
+    display:flex;
+    align-items:center;
+    gap: 1.1rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+  }
+  .consult-submit .btn-primary{
+    background: var(--brass);
+    border-color: var(--brass);
+    color: var(--navy-deep);
+  }
+  .consult-submit .btn-primary:hover,
+  .consult-submit .btn-primary:focus-visible{
+    background: var(--brass-light);
+    border-color: var(--brass-light);
+  }
+  .privacy-note{
+    font-size: 0.8rem;
+    color: #8b93a6;
+  }
+
+  .confirm-panel{
+    display:none;
+    text-align:center;
+    padding: 2.4rem 1.6rem;
+  }
+  .confirm-panel.show{ display:block; }
+  form.consult.hide{ display:none; }
+  .confirm-mark{
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--brass-light);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin: 0 auto 1.2rem;
+    color: var(--brass-light);
+    font-family: var(--serif);
+    font-size: 1.3rem;
+  }
+  .confirm-panel h3{
+    color: var(--ivory);
+    font-size: 1.2rem;
+    margin-bottom: 0.6rem;
+  }
+  .confirm-panel p{
+    color: #c7cbd6;
+    max-width: 42ch;
+    margin-left:auto;
+    margin-right:auto;
+  }
+
+  [role="alert"].error-list{
+    background: rgba(178, 62, 62, 0.12);
+    border: 1px solid rgba(214,92,92,0.5);
+    color: #f3c9c9;
+    padding: 0.9rem 1.1rem;
+    border-radius: 2px;
+    font-size: 0.86rem;
+    margin-bottom: 1.1rem;
+    display:none;
+  }
+  [role="alert"].error-list.show{ display:block; }
+
+  /* Footer */
+  footer.site{
+    background: var(--navy-deep);
+    color: #8b93a6;
+    padding: 2.6rem 0;
+    font-size: 0.85rem;
+  }
+  .footer-grid{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .footer-grid .brand-name{ color: var(--ivory); }
+  .footer-links{
+    display:flex;
+    gap: 1.4rem;
+    flex-wrap: wrap;
+  }
+  .footer-links a{ text-decoration:none; color: #8b93a6; }
+  .footer-links a:hover, .footer-links a:focus-visible{ color: var(--brass-light); }
+  .footer-fine{
+    margin-top: 1.6rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid rgba(250,246,239,0.08);
+    font-size: 0.78rem;
+    line-height: 1.7;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px){
+    .promise-grid,
+    .contact-grid{ grid-template-columns: 1fr; }
+    .journey-grid,
+    .itin-grid,
+    .standards-grid{ grid-template-columns: repeat(2, 1fr); }
+    .membership-grid{ grid-template-columns: 1fr; }
+    .hero-inner{ grid-template-columns: 1fr; }
+    .hero-panel{ order: 2; }
+  }
+
+  @media (max-width: 720px){
+    nav.primary{ display:none; }
+    .menu-toggle{ display:inline-flex; align-items:center; gap:0.4rem; }
+    nav.primary.open{
+      display:flex;
+      position:absolute;
+      top: 100%;
+      left:0; right:0;
+      background: var(--ivory);
+      border-bottom: 1px solid var(--line);
+      flex-direction:column;
+      align-items:flex-start;
+      padding: 1rem clamp(1.25rem, 4vw, 2.5rem) 1.4rem;
+      gap: 0.9rem;
+    }
+    .journey-grid,
+    .itin-grid,
+    .standards-grid{ grid-template-columns: 1fr; }
+    .form-row{ grid-template-columns: 1fr; }
+    .site-bar .btn-nav{ display:none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site">
+  <div class="site-bar">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true">M</span>
+      <span class="brand-name">Meridian Private Travel<small>Private Travel Concierge</small></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" id="menu-toggle">
+      Menu
+    </button>
+    <nav class="primary" aria-label="Primary" id="primary-nav">
+      <a href="#service">Service</a>
+      <a href="#journeys">Journeys</a>
+      <a href="#process">Process</a>
+      <a href="#itineraries">Itineraries</a>
+      <a href="#membership">Membership</a>
+      <a href="#standards">Standards</a>
+      <a class="btn btn-primary btn-nav" href="#contact">Request a Consultation</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="top">
+    <div class="hero-inner">
+      <div>
+        <span class="eyebrow">Meridian Private Travel</span>
+        <h1>Extraordinary journeys, arranged with quiet precision.</h1>
+        <p class="hero-lede">
+          Meridian designs and manages complex, highly personal travel for clients who expect
+          discretion, expertise, and a single advisor who understands their preferences before
+          they have to explain them.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#contact">Request a Consultation</a>
+          <a class="btn btn-ghost" href="#service">Learn how we work</a>
+        </div>
+        <p class="hero-note">By private consultation. Every engagement begins with a conversation, not a booking form.</p>
+      </div>
+      <aside class="hero-panel" aria-label="What to expect">
+        <h2>What to expect</h2>
+        <ul>
+          <li>One dedicated advisor for the life of your itinerary</li>
+          <li>Itineraries built around access, pacing, and detail, not packages</li>
+          <li>Direct, confidential support before, during, and after travel</li>
+          <li>Planning fees agreed in advance, with no surprises</li>
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <section id="service">
+    <div class="wrap">
+      <div class="promise-grid">
+        <div>
+          <span class="eyebrow">The Meridian Promise</span>
+          <p class="promise-quote">
+            We design one journey, for one client, and refine it until it is right,
+            then stand behind it for as long as you are travelling.
+          </p>
+        </div>
+        <div class="promise-copy">
+          <p>
+            Meridian exists for travelers whose itineraries cannot be assembled from a search bar.
+            We build journeys around access, timing, and detail that come from a dedicated advisor
+            with standing relationships across the destinations we serve: private guides, small
+            hotels with no public allotment, restaurants that do not take walk-ins, and operators
+            who answer our calls first.
+          </p>
+          <p>
+            We do not publish packages, and we do not promise outcomes we cannot guarantee.
+            What we promise is attentive, expert planning; realistic expectations set early; and a
+            single point of contact from your first conversation with us to the day you return home.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="journeys">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Journeys We Curate</span>
+        <h2>Built for the trips that resist a template</h2>
+        <p class="lede">
+          Each category below reflects a different kind of complexity, logistical, emotional,
+          or both. Advisors are matched to your journey based on the destinations and occasion involved.
+        </p>
+      </div>
+      <div class="journey-grid">
+        <article class="journey-card">
+          <span class="num">01</span>
+          <h3>Bespoke Grand Tours</h3>
+          <p>Multi-country itineraries assembled around a client's interests: architecture, wine, art, or history, with private guides and considered pacing between stops.</p>
+        </article>
+        <article class="journey-card">
+          <span class="num">02</span>
+          <h3>Family Legacy Journeys</h3>
+          <p>Multi-generational trips that balance different ages, energy levels, and interests inside a single, coherent itinerary rather than a compromise.</p>
+        </article>
+        <article class="journey-card">
+          <span class="num">03</span>
+          <h3>Milestone &amp; Celebration Travel</h3>
+          <p>Anniversaries, significant birthdays, and honeymoons planned around a specific date, with the occasion treated as the itinerary's organizing detail.</p>
+        </article>
+        <article class="journey-card">
+          <span class="num">04</span>
+          <h3>Private Expeditions</h3>
+          <p>Remote or logistically demanding travel, polar regions, high altitude, or far-flung islands, arranged with specialist operators and appropriate contingency planning.</p>
+        </article>
+        <article class="journey-card">
+          <span class="num">05</span>
+          <h3>Culinary &amp; Cellar Journeys</h3>
+          <p>Itineraries built around chefs' tables, harvest season, and private cellar access, sequenced so each meal informs the next.</p>
+        </article>
+        <article class="journey-card">
+          <span class="num">06</span>
+          <h3>Residential Retreats</h3>
+          <p>Extended stays in a single private residence or villa, supported by an on-site service team arranged for the length of your stay.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="process">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">How a Journey Comes Together</span>
+        <h2>A planning process built on conversation, not checkboxes</h2>
+        <p class="lede">
+          Most engagements move through the following stages. Timelines vary with the complexity
+          of the journey and how far in advance you begin planning.
+        </p>
+      </div>
+      <div class="process-list">
+        <div class="process-item">
+          <span class="process-step">01</span>
+          <div class="process-body">
+            <h3>Introductory consultation</h3>
+            <p>A private conversation to understand your travel history, priorities, and non-negotiables. No itinerary is proposed at this stage.</p>
+          </div>
+        </div>
+        <div class="process-item">
+          <span class="process-step">02</span>
+          <div class="process-body">
+            <h3>Proposal &amp; concept</h3>
+            <p>Your advisor returns with a considered itinerary concept built specifically for your trip, along with an estimated range of investment.</p>
+          </div>
+        </div>
+        <div class="process-item">
+          <span class="process-step">03</span>
+          <div class="process-body">
+            <h3>Refinement</h3>
+            <p>The itinerary is adjusted through direct conversation, covering pacing, accommodations, and experiences, until every detail reflects your expectations.</p>
+          </div>
+        </div>
+        <div class="process-item">
+          <span class="process-step">04</span>
+          <div class="process-body">
+            <h3>Confirmation &amp; documentation</h3>
+            <p>Bookings, travel documentation, and logistics are confirmed on your behalf, with a written itinerary and contingency notes provided ahead of departure.</p>
+          </div>
+        </div>
+        <div class="process-item">
+          <span class="process-step">05</span>
+          <div class="process-body">
+            <h3>In-journey support</h3>
+            <p>A direct line to your advisor and vetted on-the-ground contacts for the duration of travel, should plans need to change.</p>
+          </div>
+        </div>
+        <div class="process-item">
+          <span class="process-step">06</span>
+          <div class="process-body">
+            <h3>Return &amp; reflection</h3>
+            <p>A short follow-up conversation after you return, to record preferences that inform how we plan your next journey.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="itineraries">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Recent Journeys</span>
+        <h2>A sense of the itineraries we design</h2>
+        <p class="lede">
+          The examples below are illustrative, representative of the kind of journey Meridian
+          designs, not a record of a specific client trip.
+        </p>
+      </div>
+      <div class="itin-grid">
+        <article class="itin-card">
+          <div class="itin-media a"><span class="tag">Grand Tour</span></div>
+          <div class="itin-body">
+            <h3>Sixteen Days: Kyoto to the Amalfi Coast</h3>
+            <p>A slow-paced grand tour connecting a private tea ceremony and temple access in Kyoto to a week in a cliffside villa above Positano, arranged around two clients' shared interest in ceramics.</p>
+            <div class="itin-meta">Illustrative itinerary &middot; Two travelers &middot; 16 days</div>
+          </div>
+        </article>
+        <article class="itin-card">
+          <div class="itin-media b"><span class="tag">Family Legacy</span></div>
+          <div class="itin-body">
+            <h3>A Family Gathering in the Scottish Highlands</h3>
+            <p>A private estate booked for three generations, with a mix of gentle hillwalking, a working distillery visit, and childcare support built into the daily schedule so parents could also rest.</p>
+            <div class="itin-meta">Illustrative itinerary &middot; Twelve travelers &middot; 7 days</div>
+          </div>
+        </article>
+        <article class="itin-card">
+          <div class="itin-media c"><span class="tag">Expedition</span></div>
+          <div class="itin-body">
+            <h3>Ten Days Across the Atacama and the Andes</h3>
+            <p>A high-altitude route built with a specialist expedition operator, including acclimatization days, a private stargazing session, and a medical contingency plan reviewed before departure.</p>
+            <div class="itin-meta">Illustrative itinerary &middot; Two travelers &middot; 10 days</div>
+          </div>
+        </article>
+      </div>
+      <p class="fictional-note">Destinations, durations, and details above are illustrative examples used to describe our planning style; they do not represent guaranteed outcomes for future journeys.</p>
+    </div>
+  </section>
+
+  <section id="membership">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Engagement &amp; Membership</span>
+        <h2>Two ways to work with Meridian</h2>
+        <p class="lede">
+          Every relationship begins with a consultation. From there, most clients choose one of
+          the following arrangements, discussed and confirmed before any planning fee is charged.
+        </p>
+      </div>
+      <div class="membership-grid">
+        <div class="tier-card">
+          <div class="tier-head">
+            <h3>Journey Engagement</h3>
+            <span class="tier-tag">Per Trip</span>
+          </div>
+          <p>A single, dedicated engagement for one upcoming journey, from initial concept through your return.</p>
+          <ul class="tier-list">
+            <li>One advisor assigned for the full planning cycle</li>
+            <li>Itinerary concept, refinement, and documentation</li>
+            <li>In-journey support for the duration of travel</li>
+            <li>Planning fee confirmed in writing before work begins</li>
+          </ul>
+        </div>
+        <div class="tier-card featured">
+          <div class="tier-head">
+            <h3>Annual Membership</h3>
+            <span class="tier-tag">Ongoing</span>
+          </div>
+          <p>Standing access to your advisor across the year, for clients who travel privately several times per year.</p>
+          <ul class="tier-list">
+            <li>Everything in Journey Engagement, for multiple trips</li>
+            <li>A standing preference profile that carries between journeys</li>
+            <li>Priority scheduling during high-demand travel windows</li>
+            <li>Annual planning conversation to review upcoming travel</li>
+          </ul>
+        </div>
+      </div>
+      <p class="membership-note">
+        Meridian does not publish fixed pricing for either arrangement, as the appropriate structure
+        depends on the complexity and frequency of your travel. Specifics are discussed plainly during
+        your consultation, and no planning fee is charged before you have agreed to it.
+      </p>
+    </div>
+  </section>
+
+  <section class="alt" id="standards">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Client Service Standards</span>
+        <h2>What we hold ourselves to</h2>
+      </div>
+      <div class="standards-grid">
+        <div class="standard-item">
+          <h3>A single point of contact</h3>
+          <p>One advisor is assigned to your journey and remains your point of contact throughout, with no hand-offs between departments.</p>
+        </div>
+        <div class="standard-item">
+          <h3>Confidentiality as standard practice</h3>
+          <p>Client details, itineraries, and preferences are treated as confidential by default, not as an exception granted on request.</p>
+        </div>
+        <div class="standard-item">
+          <h3>A vetted partner network</h3>
+          <p>Guides, drivers, and properties are selected from relationships Meridian maintains directly, reviewed on an ongoing basis.</p>
+        </div>
+        <div class="standard-item">
+          <h3>Direct availability while traveling</h3>
+          <p>A reachable line to your advisor or an on-the-ground contact for the duration of your trip, not a shared support queue.</p>
+        </div>
+        <div class="standard-item">
+          <h3>Transparent fees, agreed in advance</h3>
+          <p>Planning fees are discussed and confirmed in writing before any work begins, with no undisclosed markups added later.</p>
+        </div>
+        <div class="standard-item">
+          <h3>Contingency built into every itinerary</h3>
+          <p>Each journey includes a plan for foreseeable disruptions, such as weather, closures, or changes of mind, reviewed with you before departure.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="contact-section" id="contact">
+    <div class="wrap">
+      <div class="contact-grid">
+        <div class="contact-intro">
+          <span class="eyebrow">Begin a Conversation</span>
+          <h2>Request a private consultation</h2>
+          <p>
+            Share a few details below and your advisor will follow up directly, in confidence,
+            to schedule an introductory conversation. There is no obligation, and no planning fee
+            is charged at this stage.
+          </p>
+          <div class="contact-detail">
+            <p><strong>Consultations</strong><br>By appointment, arranged after your inquiry.</p>
+            <p><strong>Correspondence</strong><br>consult@meridianprivatetravel.example</p>
+            <p><strong>Direct line</strong><br>+1 (555) 019-2044</p>
+          </div>
+        </div>
+
+        <div>
+          <form class="consult" id="consult-form" novalidate>
+            <div class="error-list" role="alert" id="form-error">
+              Please complete your name, email address, and a short note about your journey before submitting.
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="full-name">Full name <span class="req">*</span></label>
+                <input type="text" id="full-name" name="full-name" autocomplete="name" required>
+              </div>
+              <div class="field">
+                <label for="email">Email <span class="req">*</span></label>
+                <input type="email" id="email" name="email" autocomplete="email" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="phone">Phone (optional)</label>
+                <input type="tel" id="phone" name="phone" autocomplete="tel">
+              </div>
+              <div class="field">
+                <label for="travel-window">Preferred travel window</label>
+                <input type="text" id="travel-window" name="travel-window" placeholder="e.g. Spring 2027">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="journey-type">Type of journey</label>
+              <select id="journey-type" name="journey-type">
+                <option value="">Select one (optional)</option>
+                <option value="grand-tour">Bespoke Grand Tour</option>
+                <option value="family-legacy">Family Legacy Journey</option>
+                <option value="milestone">Milestone &amp; Celebration Travel</option>
+                <option value="expedition">Private Expedition</option>
+                <option value="culinary">Culinary &amp; Cellar Journey</option>
+                <option value="residential">Residential Retreat</option>
+                <option value="undecided">Not yet decided</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="notes">Tell us about the journey you have in mind <span class="req">*</span></label>
+              <textarea id="notes" name="notes" placeholder="Destinations, occasion, number of travelers, or anything else your advisor should know." required></textarea>
+              <span class="field-hint">A few sentences is plenty; your advisor will ask follow-up questions during the consultation.</span>
+            </div>
+
+            <div class="consult-submit">
+              <button type="submit" class="btn btn-primary">Request a Consultation</button>
+              <span class="privacy-note">Your details are kept confidential and used only to arrange your consultation.</span>
+            </div>
+          </form>
+
+          <div class="confirm-panel" id="confirm-panel" role="status">
+            <div class="confirm-mark" aria-hidden="true">M</div>
+            <h3>Thank you. Your inquiry has been received.</h3>
+            <p>A Meridian advisor will be in touch directly within two business days to arrange your introductory consultation. This request has not been shared with any third party.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="footer-grid">
+      <span class="brand-name">Meridian Private Travel</span>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="#service">Service</a>
+        <a href="#journeys">Journeys</a>
+        <a href="#membership">Membership</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+    <p class="footer-fine">
+      &copy; 2026 Meridian Private Travel. Meridian Private Travel is a private travel concierge service;
+      itinerary examples throughout this page are illustrative and do not describe specific past clients.
+      Planning fees, terms, and availability are confirmed individually during your consultation.
+    </p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+
+    var toggle = document.getElementById("menu-toggle");
+    var nav = document.getElementById("primary-nav");
+
+    if (toggle && nav) {
+      toggle.addEventListener("click", function () {
+        var isOpen = nav.classList.toggle("open");
+        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      });
+
+      nav.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          nav.classList.remove("open");
+          toggle.setAttribute("aria-expanded", "false");
+        });
+      });
+    }
+
+    var form = document.getElementById("consult-form");
+    var confirmPanel = document.getElementById("confirm-panel");
+    var errorBox = document.getElementById("form-error");
+
+    if (form && confirmPanel && errorBox) {
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        var name = document.getElementById("full-name");
+        var email = document.getElementById("email");
+        var notes = document.getElementById("notes");
+
+        var valid = true;
+        [name, email, notes].forEach(function (field) {
+          if (!field.value || !field.value.trim()) {
+            valid = false;
+          }
+        });
+
+        if (email.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+          valid = false;
+        }
+
+        if (!valid) {
+          errorBox.classList.add("show");
+          errorBox.focus();
+          return;
+        }
+
+        errorBox.classList.remove("show");
+        form.classList.add("hide");
+        confirmPanel.classList.add("show");
+        confirmPanel.setAttribute("tabindex", "-1");
+        confirmPanel.focus();
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>

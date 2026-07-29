@@ -1,0 +1,138 @@
+{
+  "measure": "M1b visual (SECONDARY - same model family as producer, batched judging)",
+  "analysedAt": "2026-07-28T23:50:41.912Z",
+  "contrast": "S-vs-P",
+  "favouredArm": "S",
+  "comparisons": 17,
+  "wins": 1,
+  "losses": 16,
+  "ties": 0,
+  "decided": 17,
+  "winRate": 0.058823529411764705,
+  "ci95": [
+    0.0014881743912666182,
+    0.2868893966672209
+  ],
+  "p": 0.0002746582031250026,
+  "perPair": [
+    {
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-flex-warm-human-community-clinic",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-forms-minimal-medical-intake",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "A": "S",
+      "B": "P",
+      "verdict": "A",
+      "winnerArm": "S"
+    },
+    {
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-product-minimal-utility-password-manager",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "sidecoach-efficacy-trial",
+  "private": true,
+  "type": "module",
+  "description": "Held-out trial: does sidecoach guidance improve generated pages? See PREREGISTRATION.md.",
+  "dependencies": {
+    "axe-core": "4.12.1"
+  }
+}

@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendor Onboarding Application</title>
+<style>
+  /* ---------------------------------------------------------------------
+     TOKENS
+  --------------------------------------------------------------------- */
+  :root{
+    color-scheme: light;
+
+    /* Color - OKLCH, tinted neutrals toward a procurement blue hue (250) */
+    --hue-brand: 250;
+    --color-bg:            oklch(98.2% 0.006 var(--hue-brand));
+    --color-surface:       oklch(99% 0.004 var(--hue-brand));
+    --color-surface-sunken: oklch(95.5% 0.009 var(--hue-brand));
+    --color-border:        oklch(87% 0.014 var(--hue-brand));
+    --color-border-strong: oklch(74% 0.02 var(--hue-brand));
+    --color-text:          oklch(24% 0.02 var(--hue-brand));
+    --color-text-muted:    oklch(42% 0.024 var(--hue-brand));
+    --color-primary:       oklch(42% 0.135 var(--hue-brand));
+    --color-primary-hover: oklch(37% 0.14 var(--hue-brand));
+    --color-primary-active: oklch(33% 0.145 var(--hue-brand));
+    --color-primary-tint:  oklch(93% 0.03 var(--hue-brand));
+    --color-focus-ring:    oklch(58% 0.16 var(--hue-brand));
+    --color-success:       oklch(45% 0.13 148);
+    --color-success-tint:  oklch(94% 0.05 148);
+    --color-error:         oklch(48% 0.18 26);
+    --color-error-tint:    oklch(95% 0.04 26);
+    --color-on-primary:    oklch(99% 0.004 var(--hue-brand));
+
+    /* Type */
+    --font-heading: Baskerville, Cambria, serif;
+    --font-body: Avenir, Optima, sans-serif;
+
+    --text-body: 1rem;
+    --text-body-lh: 1.6;
+    --text-label: clamp(1.25rem, 1.2rem + 0.2vw, 1.375rem);
+    --text-h3: clamp(1.625rem, 1.5rem + 0.6vw, 1.875rem);
+    --text-h2: clamp(2.0625rem, 1.9rem + 1vw, 2.375rem);
+    --text-h1: clamp(2.625rem, 2.4rem + 1.4vw, 3.125rem);
+
+    /* 4pt spatial grid */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    /* Radius - concentric relationships */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    /* Motion - prescribed named easings only */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-feedback: 100ms;
+    --dur-state: 150ms;
+    --dur-entrance: 200ms;
+    --dur-exit: 150ms;
+
+    --shadow-card: 0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08);
+    --shadow-raised: 0 2px 6px rgba(0,0,0,0.1);
+  }
+
+  /* ---------------------------------------------------------------------
+     RESET
+  --------------------------------------------------------------------- */
+  *, *::before, *::after{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+  body{
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--text-body-lh);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,h2,h3,legend{ font-family: var(--font-heading); font-weight: 700; margin: 0; line-height: 1.2; }
+  p{ margin: 0 0 var(--space-4); }
+  ul, ol{ margin:0; padding:0; }
+  button{ font-family: inherit; }
+  img{ max-width:100%; display:block; }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+
+  .skip-link{
+    position:absolute; left:var(--space-4); top:-100px;
+    background: var(--color-primary); color: var(--color-on-primary);
+    padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm);
+    z-index: 100; transition: top var(--dur-state) var(--ease-out);
+    text-decoration:none; font-weight:600;
+  }
+  .skip-link:focus{ top: var(--space-4); }
+
+  /* ---------------------------------------------------------------------
+     LAYOUT SHELL
+  --------------------------------------------------------------------- */
+  .app-header{
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-6) var(--space-4);
+  }
+  .app-header__inner{
+    max-width: 960px; margin: 0 auto;
+    display:flex; flex-direction:column; gap: var(--space-2);
+  }
+  .app-header__eyebrow{
+    font-size: var(--text-body);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-weight: 600;
+  }
+  .app-header h1{ font-size: var(--text-h1); color: var(--color-text); text-wrap: balance; }
+  .app-header__sub{ color: var(--color-text-muted); max-width: 60ch; }
+
+  main{ max-width: 960px; margin: 0 auto; padding: var(--space-8) var(--space-4) var(--space-24); }
+
+  .app-footer{
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-8) var(--space-4);
+    color: var(--color-text-muted);
+  }
+  .app-footer__inner{ max-width: 960px; margin:0 auto; display:flex; flex-wrap:wrap; gap: var(--space-4); justify-content: space-between; }
+
+  /* ---------------------------------------------------------------------
+     STEPPER
+  --------------------------------------------------------------------- */
+  .stepper-wrap{ margin-bottom: var(--space-8); }
+  .stepper-mobile{ display:block; }
+  .stepper-mobile__label{ font-weight:600; margin-bottom: var(--space-2); }
+  .stepper-mobile__track{
+    height: 8px; border-radius: 999px; background: var(--color-surface-sunken);
+    border: 1px solid var(--color-border); overflow:hidden;
+  }
+  .stepper-mobile__fill{
+    height:100%; background: var(--color-primary); border-radius: inherit;
+    transition: width var(--dur-entrance) var(--ease-out);
+    width: 0%;
+  }
+
+  .stepper{
+    display:none;
+    list-style:none;
+    counter-reset: step;
+  }
+  .stepper__item{
+    counter-increment: step;
+    display:flex; align-items:center; gap: var(--space-3);
+    flex: 1;
+    position:relative;
+  }
+  .stepper__item:not(:last-child)::after{
+    content:"";
+    flex:1;
+    height:2px;
+    background: var(--color-border);
+    margin: 0 var(--space-2);
+  }
+  .stepper__item[data-status="complete"]:not(:last-child)::after{ background: var(--color-primary); }
+
+  .stepper__btn{
+    display:flex; align-items:center; gap: var(--space-2);
+    background:none; border:none; padding: var(--space-1) 0; cursor:pointer;
+    color: var(--color-text-muted); font-weight:600; text-align:left;
+    border-radius: var(--radius-sm);
+  }
+  .stepper__btn:disabled{ cursor:not-allowed; opacity: 0.55; }
+  .stepper__badge{
+    width: 32px; height:32px; border-radius:50%; flex-shrink:0;
+    border: 2px solid var(--color-border-strong);
+    display:flex; align-items:center; justify-content:center;
+    font-size: var(--text-body); font-weight:700;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    transition: background-color var(--dur-state) var(--ease-in-out),
+                border-color var(--dur-state) var(--ease-in-out),
+                color var(--dur-state) var(--ease-in-out);
+  }
+  .stepper__item[data-status="current"] .stepper__badge{
+    border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-tint);
+  }
+  .stepper__item[data-status="current"] .stepper__btn{ color: var(--color-text); }
+  .stepper__item[data-status="complete"] .stepper__badge{
+    border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary);
+  }
+  .stepper__label{ display:none; font-size: var(--text-body); }
+
+  .stepper__btn:hover:not(:disabled) .stepper__badge{ border-color: var(--color-primary); }
+  .stepper__btn:focus-visible{
+    outline: 3px solid var(--color-focus-ring); outline-offset: 2px;
+  }
+  .stepper__btn:active:not(:disabled){ transform: scale(0.96); }
+
+  @media (min-width: 768px){
+    .stepper-mobile{ display:none; }
+    .stepper{ display:flex; }
+    .stepper__label{ display:block; }
+  }
+
+  /* ---------------------------------------------------------------------
+     WIZARD PANELS
+  --------------------------------------------------------------------- */
+  .wizard{ position:relative; }
+  .step-panel{
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8) var(--space-6);
+    box-shadow: var(--shadow-card);
+  }
+  .step-panel[hidden]{ display:none; }
+  .step-panel.is-entering{
+    animation: panel-enter var(--dur-entrance) var(--ease-out) both;
+  }
+  @keyframes panel-enter{
+    from{ opacity:0; transform: translateY(8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+
+  .step-panel h2{ font-size: var(--text-h2); margin-bottom: var(--space-2); }
+  .step-panel h2:focus-visible{ outline:none; }
+  .step-intro{ color: var(--color-text-muted); max-width: 65ch; margin-bottom: var(--space-8); }
+
+  .field-group{ margin-bottom: var(--space-6); }
+  .field-row{
+    display:grid; grid-template-columns: 1fr; gap: var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+  @media (min-width: 1024px){
+    .field-row.cols-2{ grid-template-columns: 1fr 1fr; }
+    .field-row.cols-3{ grid-template-columns: 1fr 1fr 1fr; }
+  }
+
+  fieldset{ border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-6); margin: 0 0 var(--space-6); }
+  legend{ font-size: var(--text-label); padding: 0 var(--space-2); }
+  .fieldset-hint{ color: var(--color-text-muted); margin: 0 0 var(--space-4); }
+
+  label, .field-label{
+    display:block; font-weight:600; margin-bottom: var(--space-2);
+  }
+  .field-optional{ font-weight:400; color: var(--color-text-muted); }
+  .field-hint{ color: var(--color-text-muted); margin-top: var(--space-2); }
+
+  input[type="text"], input[type="email"], input[type="tel"], input[type="url"],
+  input[type="number"], select, textarea, input[type="file"]{
+    width:100%;
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    min-height: 44px;
+    transition: border-color var(--dur-state) var(--ease-in-out),
+                box-shadow var(--dur-state) var(--ease-in-out),
+                background-color var(--dur-state) var(--ease-in-out);
+  }
+  textarea{ min-height: 120px; resize: vertical; }
+  select{ cursor:pointer; }
+
+  input:hover, select:hover, textarea:hover{ border-color: var(--color-text-muted); }
+  input:focus-visible, select:focus-visible, textarea:focus-visible{
+    outline: 3px solid var(--color-focus-ring); outline-offset: 2px; border-color: var(--color-primary);
+  }
+  input:disabled, select:disabled, textarea:disabled{
+    background: var(--color-surface-sunken); color: var(--color-text-muted); cursor:not-allowed;
+  }
+  input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]{
+    border-color: var(--color-error); background: var(--color-error-tint);
+  }
+  input.is-valid, select.is-valid{ border-color: var(--color-success); }
+
+  .field-error{
+    display:flex; gap: var(--space-2); align-items:flex-start;
+    color: var(--color-error); font-weight:600; margin-top: var(--space-2);
+  }
+  .field-error[hidden]{ display:none; }
+
+  .checkbox-row, .radio-row{
+    display:flex; align-items:flex-start; gap: var(--space-3); margin-bottom: var(--space-4);
+    min-height: 44px;
+  }
+  .checkbox-row input, .radio-row input{
+    width: 20px; height:20px; margin-top: 2px; flex-shrink:0; accent-color: var(--color-primary);
+    min-height: 0;
+  }
+  .checkbox-row label, .radio-row label{ font-weight: 500; margin:0; }
+  .checkbox-row:last-child, .radio-row:last-child{ margin-bottom:0; }
+
+  /* Upload zones */
+  .upload-zone{
+    border: 2px dashed var(--color-border-strong);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    text-align:center;
+    background: var(--color-surface-sunken);
+    transition: border-color var(--dur-state) var(--ease-in-out), background-color var(--dur-state) var(--ease-in-out);
+  }
+  .upload-zone:focus-within{ border-color: var(--color-primary); }
+  .upload-zone__title{ font-weight:700; margin-bottom: var(--space-1); }
+  .upload-zone__hint{ color: var(--color-text-muted); margin-bottom: var(--space-4); }
+  .upload-zone input[type="file"]{ background: var(--color-surface); }
+  .upload-zone__filename{ margin-top: var(--space-3); font-weight:600; color: var(--color-success); }
+  .upload-zone__filename[hidden]{ display:none; }
+
+  /* ---------------------------------------------------------------------
+     BUTTONS
+  --------------------------------------------------------------------- */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap: var(--space-2);
+    min-height: 44px; padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-sm);
+    font-weight:700; font-size: var(--text-body);
+    border: 2px solid transparent; cursor:pointer;
+    transition: background-color var(--dur-feedback) var(--ease-out),
+                border-color var(--dur-feedback) var(--ease-out),
+                color var(--dur-feedback) var(--ease-out),
+                transform var(--dur-feedback) var(--ease-out);
+  }
+  .btn:active:not(:disabled){ transform: scale(0.96); }
+  .btn:focus-visible{ outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .btn:disabled{ cursor:not-allowed; opacity: 0.5; }
+
+  .btn-primary{ background: var(--color-primary); color: var(--color-on-primary); }
+  .btn-primary:hover:not(:disabled){ background: var(--color-primary-hover); }
+  .btn-primary:active:not(:disabled){ background: var(--color-primary-active); }
+
+  .btn-secondary{ background: var(--color-surface); color: var(--color-text); border-color: var(--color-border-strong); }
+  .btn-secondary:hover:not(:disabled){ border-color: var(--color-primary); color: var(--color-primary); }
+
+  .btn-ghost{ background:transparent; color: var(--color-text-muted); border-color: transparent; padding: var(--space-3) var(--space-4); }
+  .btn-ghost:hover:not(:disabled){ color: var(--color-text); background: var(--color-surface-sunken); }
+
+  .btn[aria-busy="true"]{ position:relative; color: transparent; }
+  .btn-spinner{
+    display:none; position:absolute; inset:0; margin:auto; width:20px; height:20px;
+    border: 3px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius:50%;
+    animation: spin 700ms linear infinite;
+  }
+  .btn[aria-busy="true"] .btn-spinner{ display:block; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .btn-success{ background: var(--color-success) !important; border-color: var(--color-success) !important; }
+
+  .wizard-actions{
+    display:flex; flex-wrap:wrap; gap: var(--space-4); justify-content:space-between;
+    margin-top: var(--space-8);
+  }
+  .wizard-actions__primary{ display:flex; gap: var(--space-4); margin-left:auto; }
+
+  /* ---------------------------------------------------------------------
+     REVIEW STEP
+  --------------------------------------------------------------------- */
+  .review-list{ list-style:none; display:flex; flex-direction:column; gap: var(--space-4); margin-bottom: var(--space-6); }
+  .review-card{
+    container-type: inline-size;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-6);
+    background: var(--color-bg);
+  }
+  .review-card__head{ display:flex; align-items:center; justify-content:space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
+  .review-card__head h3{ font-size: var(--text-label); }
+  .review-card dl{ display:grid; grid-template-columns: 1fr; gap: var(--space-2) var(--space-6); margin:0; }
+  @container (min-width: 480px){
+    .review-card dl{ grid-template-columns: 1fr 1fr; }
+  }
+  .review-card dt{ font-weight:600; color: var(--color-text-muted); }
+  .review-card dd{ margin:0 0 var(--space-3); }
+  .review-card dd:empty::before{ content:"Not provided"; color: var(--color-text-muted); font-style:italic; }
+
+  /* ---------------------------------------------------------------------
+     CONFIRMATION
+  --------------------------------------------------------------------- */
+  .confirmation{ text-align:center; padding: var(--space-8) 0; }
+  .confirmation__badge{
+    width:72px; height:72px; border-radius:50%;
+    background: var(--color-success-tint); color: var(--color-success);
+    display:flex; align-items:center; justify-content:center;
+    font-size: var(--text-h3); font-weight:700;
+    margin: 0 auto var(--space-6);
+    border: 2px solid var(--color-success);
+    animation: panel-enter var(--dur-entrance) var(--ease-out) both;
+  }
+  .confirmation h2{ margin-bottom: var(--space-3); }
+  .confirmation__ref{
+    display:inline-block; font-weight:700; letter-spacing:0.04em;
+    background: var(--color-surface-sunken); border:1px solid var(--color-border);
+    border-radius: var(--radius-sm); padding: var(--space-2) var(--space-4);
+    margin: var(--space-4) 0 var(--space-6); font-variant-numeric: tabular-nums;
+  }
+  .confirmation__steps{ text-align:left; max-width: 52ch; margin: 0 auto var(--space-8); }
+  .confirmation__steps li{ margin-bottom: var(--space-3); }
+
+  /* ---------------------------------------------------------------------
+     BANNERS / TOASTS
+  --------------------------------------------------------------------- */
+  .draft-banner{
+    display:flex; flex-wrap:wrap; align-items:center; gap: var(--space-4);
+    justify-content:space-between; background: var(--color-primary-tint);
+    border: 1px solid var(--color-primary); border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-6); margin-bottom: var(--space-6);
+  }
+  .draft-banner[hidden]{ display:none; }
+  .draft-banner p{ margin:0; }
+  .draft-banner__actions{ display:flex; gap: var(--space-3); }
+
+  .toast{
+    position: fixed; left:50%; bottom: var(--space-8); transform: translateX(-50%);
+    background: var(--color-text); color: var(--color-surface);
+    padding: var(--space-3) var(--space-6); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-raised); font-weight:600; z-index: 50;
+    opacity:0; pointer-events:none;
+    transition: opacity var(--dur-state) var(--ease-out);
+  }
+  .toast.is-visible{ opacity:1; }
+
+  .error-summary{
+    border: 1px solid var(--color-error); background: var(--color-error-tint);
+    border-radius: var(--radius-md); padding: var(--space-4) var(--space-6);
+    margin-bottom: var(--space-6);
+  }
+  .error-summary[hidden]{ display:none; }
+  .error-summary h3{ font-size: var(--text-label); color: var(--color-error); margin-bottom: var(--space-2); }
+  .error-summary ul{ list-style:disc; padding-left: var(--space-6); }
+  .error-summary a{ color: var(--color-error); font-weight:600; }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    .step-panel.is-entering{ animation: none; }
+    .stepper-mobile__fill{ transition: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#wizard-heading">Skip to application form</a>
+
+<header class="app-header">
+  <div class="app-header__inner">
+    <span class="app-header__eyebrow">Supplier Relations</span>
+    <h1 id="wizard-heading" tabindex="-1">Vendor Onboarding Application</h1>
+    <p class="app-header__sub">Complete each section below to apply to work with our procurement team. You can save your progress and return later - nothing is lost if you need to gather information from another department first.</p>
+  </div>
+</header>
+
+<main>
+  <div class="wizard" id="wizard">
+
+    <div class="draft-banner" id="draft-banner" hidden role="region" aria-label="Saved application found">
+      <p id="draft-banner-text">You have a saved application in progress.</p>
+      <div class="draft-banner__actions">
+        <button type="button" class="btn btn-primary" id="btn-resume-draft">Resume application</button>
+        <button type="button" class="btn btn-ghost" id="btn-discard-draft">Discard and start over</button>
+      </div>
+    </div>
+
+    <div class="stepper-wrap" id="stepper-wrap">
+      <div class="stepper-mobile" aria-hidden="false">
+        <p class="stepper-mobile__label" id="stepper-mobile-label">Step 1 of 6: Company profile</p>
+        <div class="stepper-mobile__track">
+          <div class="stepper-mobile__fill" id="stepper-mobile-fill"></div>
+        </div>
+      </div>
+      <ol class="stepper" aria-label="Application progress">
+        <li class="stepper__item" data-status="current" data-step="1">
+          <button type="button" class="stepper__btn" data-goto="1" aria-current="step">
+            <span class="stepper__badge" aria-hidden="true">1</span>
+            <span class="stepper__label">Company profile</span>
+          </button>
+        </li>
+        <li class="stepper__item" data-status="upcoming" data-step="2">
+          <button type="button" class="stepper__btn" data-goto="2" disabled>
+            <span class="stepper__badge" aria-hidden="true">2</span>
+            <span class="stepper__label">Primary contact</span>
+          </button>
+        </li>
+        <li class="stepper__item" data-status="upcoming" data-step="3">
+          <button type="button" class="stepper__btn" data-goto="3" disabled>
+            <span class="stepper__badge" aria-hidden="true">3</span>
+            <span class="stepper__label">Compliance</span>
+          </button>
+        </li>
+        <li class="stepper__item" data-status="upcoming" data-step="4">
+          <button type="button" class="stepper__btn" data-goto="4" disabled>
+            <span class="stepper__badge" aria-hidden="true">4</span>
+            <span class="stepper__label">Tax &amp; payment</span>
+          </button>
+        </li>
+        <li class="stepper__item" data-status="upcoming" data-step="5">
+          <button type="button" class="stepper__btn" data-goto="5" disabled>
+            <span class="stepper__badge" aria-hidden="true">5</span>
+            <span class="stepper__label">Documents</span>
+          </button>
+        </li>
+        <li class="stepper__item" data-status="upcoming" data-step="6">
+          <button type="button" class="stepper__btn" data-goto="6" disabled>
+            <span class="stepper__badge" aria-hidden="true">6</span>
+            <span class="stepper__label">Review</span>
+          </button>
+        </li>
+      </ol>
+    </div>
+
+    <form id="vendor-form" novalidate>
+
+      <!-- STEP 0: OVERVIEW -->
+      <section class="step-panel" data-step="0" aria-labelledby="step0-heading">
+        <h2 id="step0-heading" tabindex="-1">Before you begin</h2>
+        <p class="step-intro">This application has six short sections. Most applicants finish in about 15 minutes, though you may want a few documents on hand from your finance and compliance teams before you start.</p>
+        <ol class="confirmation__steps">
+          <li><strong>Company profile</strong> - legal name, entity type, and business address.</li>
+          <li><strong>Primary contact</strong> - the person we should reach about this application.</li>
+          <li><strong>Compliance attestations</strong> - confirmations required for supplier approval.</li>
+          <li><strong>Tax &amp; payment details</strong> - tax classification and banking information for payment setup.</li>
+          <li><strong>Document uploads</strong> - tax form, insurance certificate, and business license.</li>
+          <li><strong>Review</strong> - confirm everything before you submit.</li>
+        </ol>
+        <p class="field-hint">You can select <strong>Save progress</strong> at any point and return to this page later - your answers stay on this device until you submit or discard them.</p>
+        <div class="wizard-actions">
+          <span></span>
+          <div class="wizard-actions__primary">
+            <button type="button" class="btn btn-primary" data-begin>Begin application</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 1: COMPANY PROFILE -->
+      <section class="step-panel" data-step="1" hidden aria-labelledby="step1-heading">
+        <h2 id="step1-heading" tabindex="-1">Company profile</h2>
+        <p class="step-intro">Tell us about your company. This information is used to verify your business and set up your supplier record.</p>
+
+        <div class="field-row cols-2">
+          <div class="field-group">
+            <label for="company-legal-name">Legal company name</label>
+            <input type="text" id="company-legal-name" name="companyLegalName" autocomplete="organization" required aria-describedby="company-legal-name-error">
+            <p class="field-error" id="company-legal-name-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+          <div class="field-group">
+            <label for="company-dba">Doing-business-as name <span class="field-optional">(optional)</span></label>
+            <input type="text" id="company-dba" name="companyDba" autocomplete="off">
+          </div>
+        </div>
+
+        <div class="field-row cols-2">
+          <div class="field-group">
+            <label for="entity-type">Business entity type</label>
+            <select id="entity-type" name="entityType" required aria-describedby="entity-type-error">
+              <option value="">Select an entity type</option>
+              <option value="corporation">Corporation</option>
+              <option value="llc">Limited liability company (LLC)</option>
+              <option value="partnership">Partnership</option>
+              <option value="sole-proprietorship">Sole proprietorship</option>
+              <option value="other">Other</option>
+            </select>
+            <p class="field-error" id="entity-type-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+          <div class="field-group">
+            <label for="tax-ein">Tax ID / EIN</label>
+            <input type="text" id="tax-ein" name="taxEin" inputmode="numeric" spellcheck="false" placeholder="12-3456789" required aria-describedby="tax-ein-hint tax-ein-error">
+            <p class="field-hint" id="tax-ein-hint">Format: 12-3456789</p>
+            <p class="field-error" id="tax-ein-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <div class="field-row cols-2">
+          <div class="field-group">
+            <label for="years-in-business">Years in business</label>
+            <input type="number" id="years-in-business" name="yearsInBusiness" min="0" max="150" inputmode="numeric" required aria-describedby="years-in-business-error">
+            <p class="field-error" id="years-in-business-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+          <div class="field-group">
+            <label for="employee-count">Number of employees</label>
+            <select id="employee-count" name="employeeCount" required aria-describedby="employee-count-error">
+              <option value="">Select a range</option>
+              <option value="1-9">1 to 9</option>
+              <option value="10-49">10 to 49</option>
+              <option value="50-249">50 to 249</option>
+              <option value="250-999">250 to 999</option>
+              <option value="1000+">1,000+</option>
+            </select>
+            <p class="field-error" id="employee-count-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="company-website">Company website <span class="field-optional">(optional)</span></label>
+          <input type="url" id="company-website" name="companyWebsite" autocomplete="url" spellcheck="false" placeholder="https://www.example.com">
+        </div>
+
+        <fieldset>
+          <legend>Primary business address</legend>
+          <div class="field-row cols-2">
+            <div class="field-group" style="grid-column: 1 / -1;">
+              <label for="address-line1">Street address</label>
+              <input type="text" id="address-line1" name="addressLine1" autocomplete="address-line1" required aria-describedby="address-line1-error">
+              <p class="field-error" id="address-line1-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+          </div>
+          <div class="field-row cols-3">
+            <div class="field-group">
+              <label for="address-city">City</label>
+              <input type="text" id="address-city" name="addressCity" autocomplete="address-level2" required aria-describedby="address-city-error">
+              <p class="field-error" id="address-city-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+            <div class="field-group">
+              <label for="address-state">State / province</label>
+              <input type="text" id="address-state" name="addressState" autocomplete="address-level1" required aria-describedby="address-state-error">
+              <p class="field-error" id="address-state-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+            <div class="field-group">
+              <label for="address-postal">Postal code</label>
+              <input type="text" id="address-postal" name="addressPostal" autocomplete="postal-code" inputmode="numeric" required aria-describedby="address-postal-error">
+              <p class="field-error" id="address-postal-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label for="address-country">Country</label>
+            <input type="text" id="address-country" name="addressCountry" autocomplete="country-name" required aria-describedby="address-country-error">
+            <p class="field-error" id="address-country-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </fieldset>
+
+        <div class="field-group">
+          <label for="company-notes">Additional context <span class="field-optional">(optional)</span></label>
+          <textarea id="company-notes" name="companyNotes" spellcheck="true"></textarea>
+          <p class="field-hint">Anything else that helps us understand your business.</p>
+        </div>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-secondary" data-back>Back</button>
+          <div class="wizard-actions__primary">
+            <button type="button" class="btn btn-ghost" data-save>Save progress</button>
+            <button type="button" class="btn btn-primary" data-continue>Continue to primary contact</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: PRIMARY CONTACT -->
+      <section class="step-panel" data-step="2" hidden aria-labelledby="step2-heading">
+        <h2 id="step2-heading" tabindex="-1">Primary contact</h2>
+        <p class="step-intro">This is the person our procurement team will reach out to about this application.</p>
+
+        <div class="field-row cols-2">
+          <div class="field-group">
+            <label for="contact-name">Full name</label>
+            <input type="text" id="contact-name" name="contactName" autocomplete="name" required aria-describedby="contact-name-error">
+            <p class="field-error" id="contact-name-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+          <div class="field-group">
+            <label for="contact-title">Job title</label>
+            <input type="text" id="contact-title" name="contactTitle" autocomplete="organization-title" required aria-describedby="contact-title-error">
+            <p class="field-error" id="contact-title-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <div class="field-row cols-2">
+          <div class="field-group">
+            <label for="contact-email">Email address</label>
+            <input type="email" id="contact-email" name="contactEmail" autocomplete="email" spellcheck="false" required aria-describedby="contact-email-error">
+            <p class="field-error" id="contact-email-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+          <div class="field-group">
+            <label for="contact-phone">Phone number</label>
+            <input type="tel" id="contact-phone" name="contactPhone" autocomplete="tel" inputmode="tel" required aria-describedby="contact-phone-error">
+            <p class="field-error" id="contact-phone-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <fieldset>
+          <legend>Preferred contact method</legend>
+          <div class="radio-row">
+            <input type="radio" id="contact-pref-email" name="contactPreference" value="email" checked>
+            <label for="contact-pref-email">Email</label>
+          </div>
+          <div class="radio-row">
+            <input type="radio" id="contact-pref-phone" name="contactPreference" value="phone">
+            <label for="contact-pref-phone">Phone</label>
+          </div>
+        </fieldset>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-secondary" data-back>Back</button>
+          <div class="wizard-actions__primary">
+            <button type="button" class="btn btn-ghost" data-save>Save progress</button>
+            <button type="button" class="btn btn-primary" data-continue>Continue to compliance</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 3: COMPLIANCE ATTESTATIONS -->
+      <section class="step-panel" data-step="3" hidden aria-labelledby="step3-heading">
+        <h2 id="step3-heading" tabindex="-1">Compliance attestations</h2>
+        <p class="step-intro">Please confirm each statement below. These attestations are required for supplier approval.</p>
+
+        <fieldset>
+          <legend>Required attestations</legend>
+          <div class="checkbox-row">
+            <input type="checkbox" id="attest-debarment" name="attestDebarment" required aria-describedby="attest-debarment-error">
+            <label for="attest-debarment">Our company is not on any government debarment or exclusion list.</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="attest-insurance" name="attestInsurance" required aria-describedby="attest-insurance-error">
+            <label for="attest-insurance">We carry general liability insurance meeting the buyer's minimum coverage requirements.</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="attest-conduct" name="attestConduct" required aria-describedby="attest-conduct-error">
+            <label for="attest-conduct">We agree to comply with the buyer's supplier code of conduct.</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="attest-accuracy" name="attestAccuracy" required aria-describedby="attest-accuracy-error">
+            <label for="attest-accuracy">All information provided in this application is accurate to the best of our knowledge.</label>
+          </div>
+          <p class="field-error" id="attest-debarment-error" hidden><span aria-hidden="true">&#9888;</span><span>Please confirm each required attestation before continuing.</span></p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Certifications held <span class="field-optional">(optional)</span></legend>
+          <p class="fieldset-hint">Select any that apply. This helps us route your application to the right supplier-diversity programs.</p>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cert-mbe" name="certifications" value="minority-owned">
+            <label for="cert-mbe">Minority-owned business</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cert-wbe" name="certifications" value="woman-owned">
+            <label for="cert-wbe">Woman-owned business</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cert-vbe" name="certifications" value="veteran-owned">
+            <label for="cert-vbe">Veteran-owned business</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cert-sb" name="certifications" value="small-business">
+            <label for="cert-sb">Small business</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cert-iso9001" name="certifications" value="iso-9001">
+            <label for="cert-iso9001">ISO 9001</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="cert-iso27001" name="certifications" value="iso-27001">
+            <label for="cert-iso27001">ISO 27001</label>
+          </div>
+        </fieldset>
+
+        <div class="field-group">
+          <label for="attest-signature">Authorized signature (type your full legal name)</label>
+          <input type="text" id="attest-signature" name="attestSignature" autocomplete="name" required aria-describedby="attest-signature-hint attest-signature-error">
+          <p class="field-hint" id="attest-signature-hint">Typing your name here serves as your electronic signature on these attestations.</p>
+          <p class="field-error" id="attest-signature-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+        </div>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-secondary" data-back>Back</button>
+          <div class="wizard-actions__primary">
+            <button type="button" class="btn btn-ghost" data-save>Save progress</button>
+            <button type="button" class="btn btn-primary" data-continue>Continue to tax &amp; payment</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 4: TAX AND PAYMENT DETAILS -->
+      <section class="step-panel" data-step="4" hidden aria-labelledby="step4-heading">
+        <h2 id="step4-heading" tabindex="-1">Tax &amp; payment details</h2>
+        <p class="step-intro">These details are used to configure how your company is paid once approved. Double-check them against your bank records before continuing.</p>
+
+        <fieldset>
+          <legend>Tax classification</legend>
+          <div class="radio-row">
+            <input type="radio" id="tax-class-domestic" name="taxClassification" value="w9-domestic" checked>
+            <label for="tax-class-domestic">Domestic entity (W-9)</label>
+          </div>
+          <div class="radio-row">
+            <input type="radio" id="tax-class-foreign" name="taxClassification" value="w8-foreign">
+            <label for="tax-class-foreign">Foreign entity (W-8BEN)</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Banking information</legend>
+          <p class="fieldset-hint">Used only to set up vendor payments once your application is approved.</p>
+          <div class="field-row cols-2">
+            <div class="field-group">
+              <label for="bank-name">Bank name</label>
+              <input type="text" id="bank-name" name="bankName" required aria-describedby="bank-name-error">
+              <p class="field-error" id="bank-name-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+            <div class="field-group">
+              <label for="bank-account-holder">Account holder name</label>
+              <input type="text" id="bank-account-holder" name="bankAccountHolder" autocomplete="name" required aria-describedby="bank-account-holder-error">
+              <p class="field-error" id="bank-account-holder-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+          </div>
+          <div class="field-row cols-2">
+            <div class="field-group">
+              <label for="bank-account-number">Account number</label>
+              <input type="text" id="bank-account-number" name="bankAccountNumber" inputmode="numeric" spellcheck="false" required aria-describedby="bank-account-number-error">
+              <p class="field-error" id="bank-account-number-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+            <div class="field-group">
+              <label for="bank-routing-number">Routing number</label>
+              <input type="text" id="bank-routing-number" name="bankRoutingNumber" inputmode="numeric" spellcheck="false" required aria-describedby="bank-routing-number-error">
+              <p class="field-error" id="bank-routing-number-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="field-row cols-2">
+          <div class="field-group">
+            <label for="payment-currency">Payment currency</label>
+            <select id="payment-currency" name="paymentCurrency" required aria-describedby="payment-currency-error">
+              <option value="">Select a currency</option>
+              <option value="USD">USD, US Dollar</option>
+              <option value="CAD">CAD, Canadian Dollar</option>
+              <option value="EUR">EUR, Euro</option>
+              <option value="GBP">GBP, British Pound</option>
+            </select>
+            <p class="field-error" id="payment-currency-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+          <div class="field-group">
+            <label for="payment-terms">Preferred payment terms</label>
+            <select id="payment-terms" name="paymentTerms" required aria-describedby="payment-terms-error">
+              <option value="">Select payment terms</option>
+              <option value="net-30">Net 30</option>
+              <option value="net-45">Net 45</option>
+              <option value="net-60">Net 60</option>
+            </select>
+            <p class="field-error" id="payment-terms-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-secondary" data-back>Back</button>
+          <div class="wizard-actions__primary">
+            <button type="button" class="btn btn-ghost" data-save>Save progress</button>
+            <button type="button" class="btn btn-primary" data-continue>Continue to documents</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 5: DOCUMENT UPLOADS -->
+      <section class="step-panel" data-step="5" hidden aria-labelledby="step5-heading">
+        <h2 id="step5-heading" tabindex="-1">Document uploads</h2>
+        <p class="step-intro">Attach the following documents. Accepted formats: PDF, JPG, or PNG.</p>
+
+        <div class="field-group">
+          <div class="upload-zone">
+            <p class="upload-zone__title">Tax form (W-9 or W-8BEN)</p>
+            <p class="upload-zone__hint">Required</p>
+            <label class="visually-hidden" for="upload-tax-form">Upload tax form</label>
+            <input type="file" id="upload-tax-form" name="uploadTaxForm" accept=".pdf,.jpg,.jpeg,.png" required aria-describedby="upload-tax-form-error">
+            <p class="upload-zone__filename" id="upload-tax-form-filename" hidden></p>
+            <p class="field-error" id="upload-tax-form-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="upload-zone">
+            <p class="upload-zone__title">Certificate of insurance</p>
+            <p class="upload-zone__hint">Required</p>
+            <label class="visually-hidden" for="upload-insurance">Upload certificate of insurance</label>
+            <input type="file" id="upload-insurance" name="uploadInsurance" accept=".pdf,.jpg,.jpeg,.png" required aria-describedby="upload-insurance-error">
+            <p class="upload-zone__filename" id="upload-insurance-filename" hidden></p>
+            <p class="field-error" id="upload-insurance-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="upload-zone">
+            <p class="upload-zone__title">Business license</p>
+            <p class="upload-zone__hint">Required</p>
+            <label class="visually-hidden" for="upload-license">Upload business license</label>
+            <input type="file" id="upload-license" name="uploadLicense" accept=".pdf,.jpg,.jpeg,.png" required aria-describedby="upload-license-error">
+            <p class="upload-zone__filename" id="upload-license-filename" hidden></p>
+            <p class="field-error" id="upload-license-error" hidden><span aria-hidden="true">&#9888;</span><span></span></p>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="upload-zone">
+            <p class="upload-zone__title">Voided check or bank letter <span class="field-optional">(optional)</span></p>
+            <p class="upload-zone__hint">Speeds up payment setup, but not required today</p>
+            <label class="visually-hidden" for="upload-bank-letter">Upload voided check or bank letter</label>
+            <input type="file" id="upload-bank-letter" name="uploadBankLetter" accept=".pdf,.jpg,.jpeg,.png">
+            <p class="upload-zone__filename" id="upload-bank-letter-filename" hidden></p>
+          </div>
+        </div>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-secondary" data-back>Back</button>
+          <div class="wizard-actions__primary">
+            <button type="button" class="btn btn-ghost" data-save>Save progress</button>
+            <button type="button" class="btn btn-primary" data-continue>Continue to review</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 6: REVIEW -->
+      <section class="step-panel" data-step="6" hidden aria-labelledby="step6-heading">
+        <h2 id="step6-heading" tabindex="-1">Review your application</h2>
+        <p class="step-intro">Check every section below before you submit. Select "Edit" to jump back to a section and make changes.</p>
+
+        <div class="error-summary" id="submit-error-summary" hidden tabindex="-1">
+          <h3>We need a few more details</h3>
+          <ul id="submit-error-list"></ul>
+        </div>
+
+        <ul class="review-list" id="review-list"></ul>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="final-consent" name="finalConsent" required aria-describedby="final-consent-error">
+          <label for="final-consent">I confirm the information above is accurate and complete, and I am authorized to submit this application on behalf of my company.</label>
+        </div>
+        <p class="field-error" id="final-consent-error" hidden><span aria-hidden="true">&#9888;</span><span>Please confirm this statement before submitting.</span></p>
+
+        <div class="wizard-actions">
+          <button type="button" class="btn btn-secondary" data-back>Back</button>
+          <div class="wizard-actions__primary">
+            <button type="button" class="btn btn-ghost" data-save>Save progress</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit">
+              <span class="btn-spinner" aria-hidden="true"></span>
+              <span class="btn-submit-label">Submit application</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </form>
+
+    <!-- STEP 7: CONFIRMATION (shown after submission, outside the form) -->
+    <section class="step-panel confirmation" data-step="7" hidden aria-labelledby="step7-heading">
+      <div class="confirmation__badge" aria-hidden="true">&#10003;</div>
+      <h2 id="step7-heading" tabindex="-1">Application submitted</h2>
+      <p>Thank you. Your vendor onboarding application has been received.</p>
+      <div class="confirmation__ref" id="confirmation-ref"></div>
+      <ol class="confirmation__steps">
+        <li>Our procurement team will review your submission within <strong>5 business days</strong>.</li>
+        <li>We may follow up using the contact details you provided if anything needs clarification.</li>
+        <li>You'll receive an email once a decision has been made on your application.</li>
+      </ol>
+      <p class="field-hint">Questions in the meantime? Contact supplier relations at <strong>vendors@procurement.example</strong>.</p>
+    </section>
+
+  </div>
+</main>
+
+<footer class="app-footer">
+  <div class="app-footer__inner">
+    <p>Vendor Onboarding Application - Supplier Relations Team</p>
+    <p>All submissions are handled per company data-handling policy.</p>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "vendorOnboardingDraft";
+  var TOTAL_FORM_STEPS = 6; // steps 1-6 are numbered; 0 = overview, 7 = confirmation
+  var currentStep = 0;
+  var furthestStep = 0;
+
+  var form = document.getElementById("vendor-form");
+  var panels = Array.prototype.slice.call(document.querySelectorAll(".step-panel"));
+  var stepperItems = Array.prototype.slice.call(document.querySelectorAll(".stepper__item"));
+  var stepperBtns = Array.prototype.slice.call(document.querySelectorAll(".stepper__btn"));
+  var mobileLabel = document.getElementById("stepper-mobile-label");
+  var mobileFill = document.getElementById("stepper-mobile-fill");
+  var toast = document.getElementById("toast");
+  var stepLabels = { 1: "Company profile", 2: "Primary contact", 3: "Compliance", 4: "Tax & payment", 5: "Documents", 6: "Review" };
+
+  function panelFor(step){
+    return panels.filter(function(p){ return p.getAttribute("data-step") === String(step); })[0];
+  }
+
+  function showToast(message){
+    toast.textContent = message;
+    toast.classList.add("is-visible");
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(function(){ toast.classList.remove("is-visible"); }, 2600);
+  }
+
+  function updateStepperUI(){
+    if (currentStep >= 1 && currentStep <= TOTAL_FORM_STEPS){
+      mobileLabel.textContent = "Step " + currentStep + " of " + TOTAL_FORM_STEPS + ": " + stepLabels[currentStep];
+      mobileFill.style.width = Math.round((currentStep / TOTAL_FORM_STEPS) * 100) + "%";
+    } else if (currentStep === 0){
+      mobileLabel.textContent = "Getting started";
+      mobileFill.style.width = "0%";
+    } else {
+      mobileLabel.textContent = "Application complete";
+      mobileFill.style.width = "100%";
+    }
+
+    stepperItems.forEach(function(item){
+      var step = parseInt(item.getAttribute("data-step"), 10);
+      var status = "upcoming";
+      if (step < currentStep || (step <= furthestStep && step !== currentStep)) status = "complete";
+      if (step === currentStep) status = "current";
+      item.setAttribute("data-status", status);
+      var btn = item.querySelector(".stepper__btn");
+      var badge = item.querySelector(".stepper__badge");
+      if (step === currentStep){
+        btn.setAttribute("aria-current", "step");
+      } else {
+        btn.removeAttribute("aria-current");
+      }
+      if (step <= furthestStep){
+        btn.removeAttribute("disabled");
+      } else {
+        btn.setAttribute("disabled", "disabled");
+      }
+      if (status === "complete"){
+        badge.textContent = "✓";
+      } else {
+        badge.textContent = String(step);
+      }
+    });
+  }
+
+  function goToStep(step){
+    var previousPanel = panelFor(currentStep);
+    var nextPanel = panelFor(step);
+    if (!nextPanel) return;
+
+    if (previousPanel) previousPanel.hidden = true;
+    nextPanel.hidden = false;
+    nextPanel.classList.remove("is-entering");
+    // Force reflow so the entrance animation replays each time.
+    void nextPanel.offsetWidth;
+    nextPanel.classList.add("is-entering");
+
+    currentStep = step;
+    if (step > furthestStep) furthestStep = step;
+
+    var stepperWrap = document.getElementById("stepper-wrap");
+    stepperWrap.style.display = (step === 0 || step === 7) ? "none" : "";
+
+    if (step === 6) renderReview();
+
+    updateStepperUI();
+
+    var heading = nextPanel.querySelector("h2[tabindex]");
+    if (heading) heading.focus();
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function fieldWrapErrorEl(input){
+    var describedBy = input.getAttribute("aria-describedby") || "";
+    var id = describedBy.split(" ").filter(function(x){ return x.indexOf("-error") !== -1; })[0];
+    return id ? document.getElementById(id) : null;
+  }
+
+  function setFieldError(input, message){
+    input.setAttribute("aria-invalid", "true");
+    input.classList.remove("is-valid");
+    var errorEl = fieldWrapErrorEl(input);
+    if (errorEl){
+      errorEl.hidden = false;
+      var span = errorEl.querySelector("span:last-child");
+      if (span) span.textContent = message;
+    }
+  }
+
+  function clearFieldError(input){
+    input.removeAttribute("aria-invalid");
+    if (input.value || input.checked) input.classList.add("is-valid");
+    var errorEl = fieldWrapErrorEl(input);
+    if (errorEl) errorEl.hidden = true;
+  }
+
+  function validateInput(input){
+    if (input.disabled) return true;
+    if (input.type === "checkbox" && input.required){
+      if (!input.checked){ setFieldError(input, "This confirmation is required to continue."); return false; }
+      clearFieldError(input); return true;
+    }
+    if (input.type === "radio") return true;
+    if (input.required && !input.value.trim()){
+      setFieldError(input, "This field is required."); return false;
+    }
+    if (input.type === "email" && input.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value)){
+      setFieldError(input, "Enter a valid email address."); return false;
+    }
+    if (input.type === "url" && input.value && !/^https?:\/\/.+/.test(input.value)){
+      setFieldError(input, "Enter a full URL starting with http:// or https://."); return false;
+    }
+    if (input.type === "file" && input.required && input.files.length === 0){
+      setFieldError(input, "Please attach this document."); return false;
+    }
+    clearFieldError(input);
+    return true;
+  }
+
+  // Validate on blur, not keystroke.
+  form.addEventListener("blur", function(e){
+    var t = e.target;
+    if (t.matches && t.matches("input, select, textarea")) validateInput(t);
+  }, true);
+
+  form.addEventListener("change", function(e){
+    var t = e.target;
+    if (t.matches && (t.matches("input[type=checkbox]") || t.matches("input[type=file]") || t.matches("select"))) validateInput(t);
+    if (t.matches && t.matches("input[type=file]")){
+      var wrap = t.closest(".upload-zone");
+      var out = wrap ? wrap.querySelector(".upload-zone__filename") : null;
+      if (out){
+        if (t.files.length){
+          out.hidden = false;
+          out.textContent = "Attached: " + t.files[0].name;
+        } else {
+          out.hidden = true;
+        }
+      }
+    }
+  });
+
+  function validateStep(step){
+    var panel = panelFor(step);
+    var inputs = Array.prototype.slice.call(panel.querySelectorAll("input, select, textarea"));
+    var firstInvalid = null;
+    var allValid = true;
+
+    inputs.forEach(function(input){
+      var ok = validateInput(input);
+      if (!ok){
+        allValid = false;
+        if (!firstInvalid) firstInvalid = input;
+      }
+    });
+
+    if (!allValid && firstInvalid){
+      firstInvalid.focus();
+    }
+    return allValid;
+  }
+
+  // Navigation.
+  document.querySelectorAll("[data-begin]").forEach(function(btn){
+    btn.addEventListener("click", function(){ goToStep(1); });
+  });
+
+  document.querySelectorAll("[data-continue]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      if (validateStep(currentStep)) goToStep(currentStep + 1);
+    });
+  });
+
+  document.querySelectorAll("[data-back]").forEach(function(btn){
+    btn.addEventListener("click", function(){ goToStep(Math.max(0, currentStep - 1)); });
+  });
+
+  stepperBtns.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var target = parseInt(btn.getAttribute("data-goto"), 10);
+      if (target <= furthestStep) goToStep(target);
+    });
+  });
+
+  // Save progress (local only, no network calls).
+  function collectData(){
+    var data = {};
+    var elements = Array.prototype.slice.call(form.elements);
+    elements.forEach(function(el){
+      if (!el.name) return;
+      if (el.type === "file") return; // files aren't persisted to storage
+      if (el.type === "checkbox"){
+        if (el.name === "certifications"){
+          data[el.name] = data[el.name] || [];
+          if (el.checked) data[el.name].push(el.value);
+        } else {
+          data[el.name] = el.checked;
+        }
+      } else if (el.type === "radio"){
+        if (el.checked) data[el.name] = el.value;
+      } else {
+        data[el.name] = el.value;
+      }
+    });
+    return data;
+  }
+
+  function applyData(data){
+    Object.keys(data).forEach(function(name){
+      var value = data[name];
+      if (name === "certifications" && Array.isArray(value)){
+        form.querySelectorAll('input[name="certifications"]').forEach(function(cb){
+          cb.checked = value.indexOf(cb.value) !== -1;
+        });
+        return;
+      }
+      var el = form.elements.namedItem(name);
+      if (!el) return;
+      if (el instanceof RadioNodeList){
+        Array.prototype.forEach.call(el, function(radio){ radio.checked = (radio.value === value); });
+      } else if (el.type === "checkbox"){
+        el.checked = !!value;
+      } else {
+        el.value = value;
+      }
+    });
+  }
+
+  document.querySelectorAll("[data-save]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      try {
+        var payload = { data: collectData(), step: currentStep, savedAt: new Date().toISOString() };
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        showToast("Progress saved. You can safely return to this later.");
+      } catch (err){
+        showToast("Could not save progress on this device.");
+      }
+    });
+  });
+
+  // Resume / discard draft banner.
+  var draftBanner = document.getElementById("draft-banner");
+  var draftBannerText = document.getElementById("draft-banner-text");
+  var savedDraft = null;
+  try {
+    var raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw) savedDraft = JSON.parse(raw);
+  } catch (err){ savedDraft = null; }
+
+  if (savedDraft){
+    var savedDate = new Date(savedDraft.savedAt);
+    var dateLabel = isNaN(savedDate.getTime()) ? "earlier" : savedDate.toLocaleString();
+    draftBannerText.textContent = "You have a saved application from " + dateLabel + ".";
+    draftBanner.hidden = false;
+  }
+
+  document.getElementById("btn-resume-draft").addEventListener("click", function(){
+    if (!savedDraft) return;
+    applyData(savedDraft.data || {});
+    draftBanner.hidden = true;
+    var resumeStep = savedDraft.step && savedDraft.step >= 1 ? savedDraft.step : 1;
+    furthestStep = Math.max(furthestStep, resumeStep);
+    goToStep(resumeStep);
+    showToast("Application resumed.");
+  });
+
+  document.getElementById("btn-discard-draft").addEventListener("click", function(){
+    window.localStorage.removeItem(STORAGE_KEY);
+    savedDraft = null;
+    draftBanner.hidden = true;
+  });
+
+  // Review rendering.
+  function labelForSelect(select){
+    var opt = select.options[select.selectedIndex];
+    return opt ? opt.textContent : "";
+  }
+
+  function renderReview(){
+    var list = document.getElementById("review-list");
+    list.innerHTML = "";
+
+    var sections = [
+      {
+        title: "Company profile", step: 1,
+        rows: [
+          ["Legal company name", form.companyLegalName.value],
+          ["Doing-business-as name", form.companyDba.value],
+          ["Entity type", labelForSelect(form.entityType)],
+          ["Tax ID / EIN", form.taxEin.value],
+          ["Years in business", form.yearsInBusiness.value],
+          ["Number of employees", labelForSelect(form.employeeCount)],
+          ["Website", form.companyWebsite.value],
+          ["Address", [form.addressLine1.value, form.addressCity.value, form.addressState.value, form.addressPostal.value, form.addressCountry.value].filter(Boolean).join(", ")]
+        ]
+      },
+      {
+        title: "Primary contact", step: 2,
+        rows: [
+          ["Full name", form.contactName.value],
+          ["Job title", form.contactTitle.value],
+          ["Email", form.contactEmail.value],
+          ["Phone", form.contactPhone.value],
+          ["Preferred contact method", form.contactPreference.value === "phone" ? "Phone" : "Email"]
+        ]
+      },
+      {
+        title: "Compliance attestations", step: 3,
+        rows: [
+          ["Attestations confirmed", (form.attestDebarment.checked && form.attestInsurance.checked && form.attestConduct.checked && form.attestAccuracy.checked) ? "Yes, all four confirmed" : "Incomplete"],
+          ["Certifications held", Array.prototype.slice.call(form.querySelectorAll('input[name="certifications"]:checked')).map(function(c){ return c.nextElementSibling.textContent; }).join(", ")],
+          ["Authorized signature", form.attestSignature.value]
+        ]
+      },
+      {
+        title: "Tax & payment details", step: 4,
+        rows: [
+          ["Tax classification", form.taxClassification.value === "w8-foreign" ? "Foreign entity (W-8BEN)" : "Domestic entity (W-9)"],
+          ["Bank name", form.bankName.value],
+          ["Account holder", form.bankAccountHolder.value],
+          ["Account number", form.bankAccountNumber.value ? ("****" + form.bankAccountNumber.value.slice(-4)) : ""],
+          ["Routing number", form.bankRoutingNumber.value],
+          ["Payment currency", form.paymentCurrency.value],
+          ["Payment terms", labelForSelect(form.paymentTerms)]
+        ]
+      },
+      {
+        title: "Document uploads", step: 5,
+        rows: [
+          ["Tax form", form.uploadTaxForm.files.length ? form.uploadTaxForm.files[0].name : ""],
+          ["Certificate of insurance", form.uploadInsurance.files.length ? form.uploadInsurance.files[0].name : ""],
+          ["Business license", form.uploadLicense.files.length ? form.uploadLicense.files[0].name : ""],
+          ["Voided check / bank letter", form.uploadBankLetter.files.length ? form.uploadBankLetter.files[0].name : ""]
+        ]
+      }
+    ];
+
+    sections.forEach(function(section, i){
+      var li = document.createElement("li");
+      li.className = "review-card";
+      li.style.setProperty("--i", i);
+
+      var head = document.createElement("div");
+      head.className = "review-card__head";
+      var h3 = document.createElement("h3");
+      h3.textContent = section.title;
+      var editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "btn btn-ghost";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", function(){ goToStep(section.step); });
+      head.appendChild(h3);
+      head.appendChild(editBtn);
+
+      var dl = document.createElement("dl");
+      section.rows.forEach(function(row){
+        var dt = document.createElement("dt");
+        dt.textContent = row[0];
+        var dd = document.createElement("dd");
+        dd.textContent = row[1] || "";
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+
+      li.appendChild(head);
+      li.appendChild(dl);
+      list.appendChild(li);
+    });
+  }
+
+  // Submission.
+  var submitting = false;
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    if (submitting) return; // idempotent submit guard
+
+    var stepValid = validateStep(6);
+    var errorSummary = document.getElementById("submit-error-summary");
+    var errorList = document.getElementById("submit-error-list");
+
+    if (!stepValid){
+      errorList.innerHTML = "";
+      var invalids = Array.prototype.slice.call(panelFor(6).querySelectorAll('[aria-invalid="true"]'));
+      invalids.forEach(function(input){
+        var li = document.createElement("li");
+        var a = document.createElement("a");
+        a.href = "#" + input.id;
+        a.textContent = (input.closest(".field-group, .checkbox-row") && input.closest(".field-group, .checkbox-row").querySelector("label")) ?
+          input.closest(".field-group, .checkbox-row").querySelector("label").textContent : "Field requires attention";
+        a.addEventListener("click", function(evt){ evt.preventDefault(); input.focus(); });
+        li.appendChild(a);
+        errorList.appendChild(li);
+      });
+      errorSummary.hidden = false;
+      errorSummary.focus();
+      return;
+    }
+
+    errorSummary.hidden = true;
+    submitting = true;
+
+    var submitBtn = document.getElementById("btn-submit");
+    var label = submitBtn.querySelector(".btn-submit-label");
+    submitBtn.setAttribute("aria-busy", "true");
+    submitBtn.disabled = true;
+    label.textContent = "Submitting application...";
+
+    window.setTimeout(function(){
+      submitBtn.removeAttribute("aria-busy");
+      submitBtn.classList.add("btn-success");
+      label.textContent = "Submitted";
+
+      window.setTimeout(function(){
+        try { window.localStorage.removeItem(STORAGE_KEY); } catch (err){ /* no-op */ }
+        var ref = "VEN-" + new Date().getFullYear() + "-" + Math.floor(100000 + Math.random() * 900000);
+        document.getElementById("confirmation-ref").textContent = "Reference number: " + ref;
+        goToStep(7);
+      }, 500);
+    }, 900);
+  });
+
+  // Initial state.
+  updateStepperUI();
+  document.getElementById("stepper-wrap").style.display = "none";
+})();
+</script>
+</body>
+</html>

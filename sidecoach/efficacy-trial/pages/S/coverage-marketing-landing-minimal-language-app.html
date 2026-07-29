@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f7f8fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1d24" media="(prefers-color-scheme: dark)">
+<meta name="description" content="DailyPhrase is a daily language-practice subscription for busy adults who want a calm, efficient habit, not another app to feel behind on.">
+<title>DailyPhrase — Build a language habit in minutes a day</title>
+<style>
+  :root {
+    --hue: 235;
+
+    --bg: oklch(98% 0.01 var(--hue));
+    --surface: oklch(96% 0.012 var(--hue));
+    --surface-2: oklch(93% 0.014 var(--hue));
+    --border: oklch(87% 0.016 var(--hue));
+    --text: oklch(24% 0.02 var(--hue));
+    --text-muted: oklch(42% 0.02 var(--hue));
+
+    --accent: oklch(52% 0.14 var(--hue));
+    --accent-strong: oklch(43% 0.15 var(--hue));
+    --accent-soft: oklch(90% 0.045 var(--hue));
+    --on-accent: oklch(98% 0.01 var(--hue));
+
+    --success: oklch(46% 0.13 150);
+    --success-soft: oklch(94% 0.05 150);
+    --error: oklch(46% 0.18 25);
+    --error-soft: oklch(94% 0.045 25);
+
+    --font-heading: Baskerville, 'Baskerville Old Face', 'Hoefler Text', 'Iowan Old Style', serif;
+    --font-body: Avenir, 'Avenir Next', Optima, -apple-system, sans-serif;
+
+    --text-small: 0.875rem;
+    --text-body: 1rem;
+    --text-lede: clamp(1.15rem, 1.1rem + 0.25vw, 1.3rem);
+    --text-h3: clamp(1.375rem, 1.25rem + 0.6vw, 1.625rem);
+    --text-h2: clamp(1.875rem, 1.6rem + 1.4vw, 2.5rem);
+    --text-hero: clamp(3.125rem, 2.4rem + 3.5vw, 5rem);
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-24: 6rem;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    --dur-feedback: 120ms;
+    --dur-state: 220ms;
+    --dur-entrance: 600ms;
+    --dur-exit: 450ms;
+
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: oklch(20% 0.015 var(--hue));
+      --surface: oklch(24% 0.018 var(--hue));
+      --surface-2: oklch(28% 0.02 var(--hue));
+      --border: oklch(34% 0.022 var(--hue));
+      --text: oklch(94% 0.012 var(--hue));
+      --text-muted: oklch(76% 0.02 var(--hue));
+
+      --accent: oklch(74% 0.12 var(--hue));
+      --accent-strong: oklch(82% 0.11 var(--hue));
+      --accent-soft: oklch(32% 0.05 var(--hue));
+      --on-accent: oklch(16% 0.02 var(--hue));
+
+      --success: oklch(76% 0.13 150);
+      --success-soft: oklch(28% 0.06 150);
+      --error: oklch(76% 0.15 25);
+      --error-soft: oklch(30% 0.06 25);
+
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    font-size: 100%;
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.6;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    color: var(--text);
+    line-height: 1.2;
+    margin: 0 0 var(--space-4);
+    text-wrap: balance;
+  }
+
+  p { margin: 0 0 var(--space-4); }
+  p:last-child { margin-bottom: 0; }
+
+  .measure { max-width: 68ch; }
+
+  a { color: var(--accent); }
+
+  img, svg { max-width: 100%; display: block; }
+
+  .container {
+    max-width: 75rem;
+    margin-inline: auto;
+    padding-inline: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    .container { padding-inline: var(--space-8); }
+  }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -3rem;
+    background: var(--accent);
+    color: var(--on-accent);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    z-index: 100;
+    transition: top var(--dur-state) var(--ease-out);
+  }
+
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ---------- Buttons ---------- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-3) var(--space-6);
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--dur-state) var(--ease-out),
+                color var(--dur-state) var(--ease-out),
+                border-color var(--dur-state) var(--ease-out),
+                box-shadow var(--dur-state) var(--ease-out),
+                transform var(--dur-feedback) var(--ease-out);
+  }
+
+  .btn:active { transform: scale(0.96); }
+
+  .btn--primary {
+    background: var(--accent);
+    color: var(--on-accent);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn--primary:hover { background: var(--accent-strong); box-shadow: var(--shadow-md); }
+
+  .btn--primary[aria-disabled="true"] {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .btn--primary[aria-disabled="true"]:active { transform: none; }
+
+  .btn--secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .btn--secondary:hover { background: var(--surface); border-color: var(--accent); }
+
+  .btn--small { min-height: 40px; padding: var(--space-2) var(--space-4); font-size: var(--text-small); }
+
+  .btn__spinner {
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    animation: spin 700ms linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn__spinner { animation: none; opacity: 0.6; }
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Header ---------- */
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-block: var(--space-4);
+  }
+
+  .logo {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3);
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .nav-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    font: inherit;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: background-color var(--dur-state) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+
+  .nav-toggle:hover { background: var(--surface); }
+  .nav-toggle:active { transform: scale(0.96); }
+
+  .primary-nav {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-1);
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-4) var(--space-6) var(--space-6);
+  }
+
+  .primary-nav.is-open { display: flex; }
+
+  .primary-nav a {
+    color: var(--text);
+    text-decoration: none;
+    padding: var(--space-3) var(--space-2);
+    border-radius: var(--radius-sm);
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    transition: background-color var(--dur-state) var(--ease-out);
+  }
+
+  .primary-nav a:hover { background: var(--surface); }
+
+  @media (min-width: 768px) {
+    .nav-toggle { display: none; }
+
+    .primary-nav {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      position: static;
+      border-bottom: none;
+      padding: 0;
+      gap: var(--space-6);
+      background: transparent;
+    }
+
+    .primary-nav a { padding: var(--space-2); }
+  }
+
+  /* ---------- Hero ---------- */
+
+  .hero {
+    padding-block: var(--space-16) var(--space-16);
+  }
+
+  .hero__grid {
+    display: grid;
+    gap: var(--space-12);
+    align-items: center;
+  }
+
+  @media (min-width: 1024px) {
+    .hero__grid { grid-template-columns: 1.1fr 0.9fr; }
+  }
+
+  .hero h1 {
+    font-size: var(--text-hero);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+
+  .hero__promise {
+    font-size: var(--text-lede);
+    color: var(--text-muted);
+  }
+
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+  }
+
+  .hero__reassurance {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+  }
+
+  /* Lesson preview card, used in hero and lesson section */
+
+  .lesson-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-md);
+  }
+
+  .lesson-card__eyebrow {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: var(--space-3);
+  }
+
+  .lesson-card__phrase {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3);
+    margin-bottom: var(--space-1);
+  }
+
+  .lesson-card__translation {
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+  }
+
+  .lesson-card__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-block: var(--space-3);
+  }
+
+  .lesson-card__row + .lesson-card__row {
+    border-top: 1px solid var(--border);
+  }
+
+  .play-button {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color var(--dur-state) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+
+  .play-button:hover { background: var(--accent); }
+  .play-button:hover .play-button__shape { border-left-color: var(--on-accent); }
+  .play-button:active { transform: scale(0.96); }
+
+  .play-button__shape {
+    width: 0;
+    height: 0;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 11px solid var(--accent);
+    margin-left: 3px;
+    transition: border-color var(--dur-state) var(--ease-out);
+  }
+
+  /* ---------- Section shell ---------- */
+
+  section {
+    padding-block: var(--space-16);
+    border-top: 1px solid var(--border);
+  }
+
+  .section-head {
+    max-width: 42rem;
+    margin-bottom: var(--space-12);
+  }
+
+  .section-head p {
+    color: var(--text-muted);
+    font-size: var(--text-lede);
+  }
+
+  /* ---------- Reveal on scroll ---------- */
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity var(--dur-entrance) var(--ease-out),
+                transform var(--dur-entrance) var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 50ms);
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      transform: none;
+      transition: opacity 0ms;
+      transition-delay: 0ms;
+    }
+  }
+
+  /* ---------- Benefits ---------- */
+
+  .benefits-grid {
+    display: grid;
+    gap: var(--space-8);
+    grid-template-columns: 1fr;
+    counter-reset: benefit;
+  }
+
+  @media (min-width: 768px) {
+    .benefits-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (min-width: 1024px) {
+    .benefits-grid { grid-template-columns: repeat(4, 1fr); gap: var(--space-6); }
+  }
+
+  .benefit {
+    counter-increment: benefit;
+  }
+
+  .benefit__index {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3);
+    color: var(--accent);
+    margin-bottom: var(--space-3);
+  }
+
+  .benefit__index::before {
+    content: counter(benefit, decimal-leading-zero);
+  }
+
+  .benefit h3 { font-size: var(--text-h3); }
+
+  .benefit p { color: var(--text-muted); }
+
+  /* ---------- Lesson section ---------- */
+
+  .lesson-section__grid {
+    display: grid;
+    gap: var(--space-12);
+    align-items: start;
+  }
+
+  @media (min-width: 1024px) {
+    .lesson-section__grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  .lesson-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .lesson-steps li {
+    padding-block: var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+
+  .lesson-steps li:first-child { border-top: none; padding-top: 0; }
+
+  .lesson-steps strong {
+    display: block;
+    margin-bottom: var(--space-1);
+  }
+
+  .lesson-steps span { color: var(--text-muted); }
+
+  /* ---------- Pricing ---------- */
+
+  .pricing-grid {
+    display: grid;
+    gap: var(--space-8);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 768px) {
+    .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .pricing-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .pricing-card--featured {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  .pricing-card__tag {
+    align-self: flex-start;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-size: var(--text-small);
+    font-weight: 600;
+    padding: var(--space-1) var(--space-3);
+    border-radius: calc(var(--radius-lg) - var(--space-4));
+  }
+
+  .price {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .price__amount {
+    font-family: var(--font-heading);
+    font-size: var(--text-h2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .price__period { color: var(--text-muted); }
+
+  .pricing-card__note { color: var(--text-muted); font-size: var(--text-small); }
+
+  .feature-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .feature-list__mark {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    border-bottom: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    transform: rotate(45deg) translate(-3px, -3px);
+  }
+
+  /* ---------- Testimonials ---------- */
+
+  .testimonials-grid {
+    display: grid;
+    gap: var(--space-8);
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 768px) {
+    .testimonials-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .testimonial-card {
+    container-type: inline-size;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .testimonial-card blockquote {
+    margin: 0;
+    font-size: var(--text-body);
+  }
+
+  .testimonial-card__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .testimonial-card__badge {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-weight: 700;
+  }
+
+  .testimonial-card__name { font-weight: 600; }
+  .testimonial-card__role { color: var(--text-muted); font-size: var(--text-small); }
+
+  @container (max-width: 260px) {
+    .testimonial-card__meta { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ---------- Sign-up ---------- */
+
+  .signup {
+    background: var(--surface);
+  }
+
+  .signup__grid {
+    display: grid;
+    gap: var(--space-12);
+  }
+
+  @media (min-width: 1024px) {
+    .signup__grid { grid-template-columns: 0.9fr 1.1fr; }
+  }
+
+  fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  legend {
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+    padding: 0;
+  }
+
+  .plan-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .plan-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    cursor: pointer;
+    min-height: 44px;
+    transition: border-color var(--dur-state) var(--ease-out), background-color var(--dur-state) var(--ease-out);
+  }
+
+  .plan-option:hover { background: var(--bg); }
+
+  .plan-option:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--bg);
+  }
+
+  .plan-option input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .plan-option__label { font-weight: 600; }
+  .plan-option__price { color: var(--text-muted); font-size: var(--text-small); }
+
+  .field { margin-bottom: var(--space-2); }
+
+  .field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+  }
+
+  .field__hint {
+    color: var(--text-muted);
+    font-size: var(--text-small);
+    margin-bottom: var(--space-2);
+  }
+
+  .field input[type="email"] {
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    transition: border-color var(--dur-state) var(--ease-out), box-shadow var(--dur-state) var(--ease-out);
+  }
+
+  .field input[type="email"]:hover { border-color: var(--text-muted); }
+
+  .field input[type="email"][aria-invalid="true"] {
+    border-color: var(--error);
+  }
+
+  .form-error {
+    color: var(--error);
+    background: var(--error-soft);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    margin-top: var(--space-2);
+    font-size: var(--text-small);
+  }
+
+  .form-error:empty { display: none; }
+
+  .form-status {
+    color: var(--success);
+    background: var(--success-soft);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    margin-top: var(--space-4);
+    font-size: var(--text-small);
+  }
+
+  .form-status:empty { display: none; padding: 0; margin-top: 0; }
+
+  .signup-form__submit-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+    flex-wrap: wrap;
+  }
+
+  .signup__legal {
+    color: var(--text-muted);
+    font-size: var(--text-small);
+    margin-top: var(--space-4);
+  }
+
+  /* ---------- Footer ---------- */
+
+  .site-footer {
+    padding-block: var(--space-12);
+    border-top: 1px solid var(--border);
+  }
+
+  .site-footer__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 768px) {
+    .site-footer__inner {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  .footer-links {
+    display: flex;
+    gap: var(--space-6);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .footer-links a:hover { color: var(--text); }
+
+  .site-footer small { color: var(--text-muted); }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="site-header__inner container">
+    <a class="logo" href="#top" id="top">DailyPhrase</a>
+    <div class="header-actions">
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="primary-nav">Menu</button>
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        <a href="#benefits">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#testimonials">Reviews</a>
+        <a href="#signup" class="btn btn--primary btn--small">Start free trial</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="container hero__grid">
+      <div>
+        <h1 id="hero-heading">Build a language habit in minutes a day</h1>
+        <p class="hero__promise measure">DailyPhrase turns ten spare minutes into a language habit you actually keep — one short lesson a day, paced for a full life.</p>
+        <div class="hero__actions">
+          <a href="#signup" class="btn btn--primary">Start your free trial</a>
+          <span class="hero__reassurance">14 days free. No credit card needed to start.</span>
+        </div>
+      </div>
+      <div class="lesson-card reveal" style="--i: 1">
+        <p class="lesson-card__eyebrow">Today's lesson · Spanish · Day 12</p>
+        <p class="lesson-card__phrase">Un café con leche, por favor.</p>
+        <p class="lesson-card__translation">A coffee with milk, please.</p>
+        <div class="lesson-card__row">
+          <button type="button" class="play-button" aria-label="Play pronunciation of Un café con leche, por favor">
+            <span class="play-button__shape" aria-hidden="true"></span>
+          </button>
+          <span>Stress falls on the last syllable of <em>café</em> — kah-<strong>FEH</strong>.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="benefits" aria-labelledby="benefits-heading">
+    <div class="container">
+      <div class="section-head reveal">
+        <h2 id="benefits-heading">Made for a full day, not a syllabus</h2>
+        <p>Every part of DailyPhrase is built around the fact that you already have a full schedule.</p>
+      </div>
+      <div class="benefits-grid">
+        <div class="benefit reveal" style="--i: 1">
+          <p class="benefit__index" aria-hidden="true"></p>
+          <h3>Built around your day, not a syllabus</h3>
+          <p>Each lesson runs two to five minutes, so it fits before coffee, on a commute, or between meetings.</p>
+        </div>
+        <div class="benefit reveal" style="--i: 2">
+          <p class="benefit__index" aria-hidden="true"></p>
+          <h3>Progress you can hear</h3>
+          <p>Short spoken practice follows every new phrase, so you're ready to say it out loud, not just recognize it on a screen.</p>
+        </div>
+        <div class="benefit reveal" style="--i: 3">
+          <p class="benefit__index" aria-hidden="true"></p>
+          <h3>Missing a day doesn't reset you</h3>
+          <p>Your streak accounts for real life. Skip a day and pick up exactly where the lesson left off.</p>
+        </div>
+        <div class="benefit reveal" style="--i: 4">
+          <p class="benefit__index" aria-hidden="true"></p>
+          <h3>Clear about what you're paying for</h3>
+          <p>One subscription covers every language in the library, with no upsells inside the lesson.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="lesson-heading">
+    <div class="container">
+      <div class="section-head reveal">
+        <h2 id="lesson-heading">See a real lesson</h2>
+        <p>This is a full day of practice, start to finish, not a preview stitched together for this page.</p>
+      </div>
+      <div class="lesson-section__grid">
+        <ol class="lesson-steps reveal" style="--i: 1">
+          <li>
+            <strong>Warm-up</strong>
+            <span>A ten-second review of yesterday's phrase: "¿Dónde está el baño?"</span>
+          </li>
+          <li>
+            <strong>New phrase</strong>
+            <span>"Un café con leche, por favor" — introduced with its translation and a pronunciation note.</span>
+          </li>
+          <li>
+            <strong>Practice</strong>
+            <span>Record yourself ordering three drinks. DailyPhrase listens for rhythm, not perfection.</span>
+          </li>
+          <li>
+            <strong>Wrap-up</strong>
+            <span>Two minutes done. Tomorrow's lesson builds directly on today's phrase.</span>
+          </li>
+        </ol>
+        <div class="lesson-card reveal" style="--i: 2">
+          <p class="lesson-card__eyebrow">Practice prompt</p>
+          <p class="lesson-card__phrase">"Un café con leche, por favor."</p>
+          <p class="lesson-card__translation">Say it once at your own pace, then once more like you mean it.</p>
+          <div class="lesson-card__row">
+            <button type="button" class="play-button" aria-label="Play a native-speaker sample of the practice phrase">
+              <span class="play-button__shape" aria-hidden="true"></span>
+            </button>
+            <span>Native-speaker sample, slowed to half speed on request.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" aria-labelledby="pricing-heading">
+    <div class="container">
+      <div class="section-head reveal">
+        <h2 id="pricing-heading">Simple pricing</h2>
+        <p>Two ways to pay for the same lesson library. Cancel from your account page anytime.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="pricing-card reveal" style="--i: 1">
+          <h3>Monthly</h3>
+          <div class="price">
+            <span class="price__amount">$14</span>
+            <span class="price__period">/ month</span>
+          </div>
+          <p class="pricing-card__note">Billed monthly. Cancel anytime.</p>
+          <ul class="feature-list">
+            <li><span class="feature-list__mark" aria-hidden="true"></span><span>Full lesson library, every language</span></li>
+            <li><span class="feature-list__mark" aria-hidden="true"></span><span>Daily lesson plus spaced review</span></li>
+            <li><span class="feature-list__mark" aria-hidden="true"></span><span>Progress tracking across devices</span></li>
+          </ul>
+          <button type="button" class="btn btn--secondary" data-select-plan="monthly">Start free trial</button>
+        </div>
+        <div class="pricing-card pricing-card--featured reveal" style="--i: 2">
+          <span class="pricing-card__tag">Best value</span>
+          <h3>Annual</h3>
+          <div class="price">
+            <span class="price__amount">$9</span>
+            <span class="price__period">/ month</span>
+          </div>
+          <p class="pricing-card__note">$108 billed annually. Save 35%.</p>
+          <ul class="feature-list">
+            <li><span class="feature-list__mark" aria-hidden="true"></span><span>Everything in the Monthly plan</span></li>
+            <li><span class="feature-list__mark" aria-hidden="true"></span><span>Offline lesson downloads</span></li>
+            <li><span class="feature-list__mark" aria-hidden="true"></span><span>Streak insurance: one protected skip a month</span></li>
+          </ul>
+          <button type="button" class="btn btn--primary" data-select-plan="annual">Start free trial</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="testimonials" aria-labelledby="testimonials-heading">
+    <div class="container">
+      <div class="section-head reveal">
+        <h2 id="testimonials-heading">What learners are saying</h2>
+        <p>Placeholder testimonials from three kinds of learners DailyPhrase is built for.</p>
+      </div>
+      <div class="testimonials-grid">
+        <figure class="testimonial-card reveal" style="--i: 1">
+          <blockquote>"Ten minutes before the kids wake up is the only quiet I get, and it's enough. Three months in, I can hold a real conversation with my in-laws in Hindi."</blockquote>
+          <figcaption class="testimonial-card__meta">
+            <span class="testimonial-card__badge" aria-hidden="true">P</span>
+            <span>
+              <span class="testimonial-card__name">Priya R.</span><br>
+              <span class="testimonial-card__role">New parent, learning Hindi</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure class="testimonial-card reveal" style="--i: 2">
+          <blockquote>"I tried four apps that made me feel behind by day three. DailyPhrase just continues. My French is finally catching up to my job."</blockquote>
+          <figcaption class="testimonial-card__meta">
+            <span class="testimonial-card__badge" aria-hidden="true">M</span>
+            <span>
+              <span class="testimonial-card__name">Marcus T.</span><br>
+              <span class="testimonial-card__role">Marketing manager, learning French</span>
+            </span>
+          </figcaption>
+        </figure>
+        <figure class="testimonial-card reveal" style="--i: 3">
+          <blockquote>"I'm learning Italian for a trip I'm not taking for another year. The pace matches my life instead of demanding my life match it."</blockquote>
+          <figcaption class="testimonial-card__meta">
+            <span class="testimonial-card__badge" aria-hidden="true">E</span>
+            <span>
+              <span class="testimonial-card__name">Elena K.</span><br>
+              <span class="testimonial-card__role">Retired teacher, learning Italian</span>
+            </span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="signup" class="signup" aria-labelledby="signup-heading">
+    <div class="container signup__grid">
+      <div class="reveal" style="--i: 1">
+        <h2 id="signup-heading">Start your free trial</h2>
+        <p class="measure">Pick a plan, add your email, and your first lesson is ready today. Cancel before the trial ends and you won't be charged.</p>
+      </div>
+      <form id="signup-form" novalidate class="reveal" style="--i: 2">
+        <fieldset>
+          <legend>Choose a plan</legend>
+          <div class="plan-options">
+            <label class="plan-option">
+              <input type="radio" name="plan" value="monthly" checked>
+              <span>
+                <span class="plan-option__label">Monthly</span><br>
+                <span class="plan-option__price">$14 / month, cancel anytime</span>
+              </span>
+            </label>
+            <label class="plan-option">
+              <input type="radio" name="plan" value="annual">
+              <span>
+                <span class="plan-option__label">Annual</span><br>
+                <span class="plan-option__price">$9 / month, billed at $108/year</span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="email">Email address</label>
+          <p class="field__hint" id="email-hint">We'll send your first lesson here.</p>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="name@example.com"
+            required
+            autocomplete="email"
+            inputmode="email"
+            spellcheck="false"
+            aria-describedby="email-hint email-error"
+          >
+          <p class="form-error" id="email-error" role="alert"></p>
+        </div>
+
+        <div class="signup-form__submit-row">
+          <button type="submit" class="btn btn--primary" id="signup-submit">
+            <span id="signup-submit-label">Start free trial</span>
+          </button>
+        </div>
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        <p class="signup__legal">No pressure and no hidden charge: your card is only charged after the 14-day trial, and only if you keep your subscription.</p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div>
+      <p class="logo" style="font-size: var(--text-body); margin-bottom: var(--space-1);">DailyPhrase</p>
+      <small>A daily language habit for people with a full day.</small>
+    </div>
+    <ul class="footer-links">
+      <li><a href="#">Privacy</a></li>
+      <li><a href="#">Terms</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    'use strict';
+
+    // Mobile navigation disclosure
+    var toggle = document.getElementById('nav-toggle');
+    var nav = document.getElementById('primary-nav');
+
+    function closeNav() {
+      nav.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.textContent = 'Menu';
+    }
+
+    function openNav() {
+      nav.classList.add('is-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.textContent = 'Close';
+    }
+
+    toggle.addEventListener('click', function () {
+      if (nav.classList.contains('is-open')) {
+        closeNav();
+      } else {
+        openNav();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && nav.classList.contains('is-open')) {
+        closeNav();
+        toggle.focus();
+      }
+    });
+
+    nav.addEventListener('click', function (event) {
+      if (event.target.tagName === 'A' && window.matchMedia('(max-width: 767px)').matches) {
+        closeNav();
+      }
+    });
+
+    // Scroll reveal
+    var revealEls = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15 });
+      revealEls.forEach(function (el) { observer.observe(el); });
+    } else {
+      revealEls.forEach(function (el) { el.classList.add('is-visible'); });
+    }
+
+    // Pricing card CTA selects plan and scrolls to sign-up
+    var planButtons = document.querySelectorAll('[data-select-plan]');
+    planButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        var plan = button.getAttribute('data-select-plan');
+        var radio = document.querySelector('input[name="plan"][value="' + plan + '"]');
+        if (radio) { radio.checked = true; }
+        var signupSection = document.getElementById('signup');
+        signupSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(function () {
+          document.getElementById('email').focus();
+        }, 400);
+      });
+    });
+
+    // Sign-up form: client-side only simulation (no network calls)
+    var form = document.getElementById('signup-form');
+    var emailInput = document.getElementById('email');
+    var emailError = document.getElementById('email-error');
+    var formStatus = document.getElementById('form-status');
+    var submitButton = document.getElementById('signup-submit');
+    var submitLabel = document.getElementById('signup-submit-label');
+    var isSubmitting = false;
+
+    function setError(message) {
+      emailError.textContent = message;
+      emailInput.setAttribute('aria-invalid', 'true');
+    }
+
+    function clearError() {
+      emailError.textContent = '';
+      emailInput.removeAttribute('aria-invalid');
+    }
+
+    function isValidEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+
+      if (isSubmitting) { return; }
+
+      formStatus.textContent = '';
+      var value = emailInput.value.trim();
+
+      if (!value || !isValidEmail(value)) {
+        setError('Enter a valid email address so we know where to send your first lesson.');
+        emailInput.focus();
+        return;
+      }
+
+      clearError();
+      isSubmitting = true;
+      submitButton.setAttribute('aria-disabled', 'true');
+      submitButton.setAttribute('aria-busy', 'true');
+      submitLabel.textContent = 'Starting your trial…';
+      var spinner = document.createElement('span');
+      spinner.className = 'btn__spinner';
+      spinner.setAttribute('aria-hidden', 'true');
+      submitButton.appendChild(spinner);
+
+      window.setTimeout(function () {
+        isSubmitting = false;
+        submitButton.removeAttribute('aria-disabled');
+        submitButton.removeAttribute('aria-busy');
+        submitLabel.textContent = 'Start free trial';
+        if (spinner.parentNode) { spinner.parentNode.removeChild(spinner); }
+        formStatus.textContent = 'Check your inbox — your first lesson is on its way.';
+      }, 900);
+    });
+
+    emailInput.addEventListener('input', function () {
+      if (emailInput.getAttribute('aria-invalid') === 'true' && isValidEmail(emailInput.value.trim())) {
+        clearError();
+      }
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,1567 @@
+<title>Vendor Onboarding Application</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Multi-step supplier onboarding application for company profile, contact, compliance, tax, and document submission." />
+<style>
+  :root {
+    --navy-900: #0f2540;
+    --navy-700: #1c3a5e;
+    --blue-600: #2f6fed;
+    --blue-700: #2557c4;
+    --blue-50: #eef3fe;
+    --gray-50: #f7f8fa;
+    --gray-100: #eef1f5;
+    --gray-200: #dde2e8;
+    --gray-300: #c7cfd8;
+    --gray-400: #9aa5b1;
+    --gray-600: #5b6570;
+    --gray-800: #2b3138;
+    --white: #ffffff;
+    --success-600: #1a7f4e;
+    --success-100: #e6f4ec;
+    --error-600: #b3261e;
+    --error-100: #fbeaea;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 14px;
+    --shadow-card: 0 1px 2px rgba(15,37,64,0.06), 0 8px 24px rgba(15,37,64,0.08);
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--gray-800);
+    background: var(--gray-50);
+    line-height: 1.5;
+    font-size: 16px;
+  }
+
+  h1, h2, h3, p, ol, ul, fieldset { margin: 0; padding: 0; }
+  fieldset { border: none; }
+  legend { padding: 0; }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    background: var(--navy-900);
+    color: var(--white);
+    padding: var(--space-3) var(--space-4);
+    border-radius: 0 0 var(--radius-sm) 0;
+    font-weight: 600;
+  }
+  .skip-link:focus {
+    left: 0;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--blue-600);
+    outline-offset: 2px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .app {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-5) 0 var(--space-6);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    background: var(--navy-900);
+    color: var(--white);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    font-size: 0.95rem;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--blue-700);
+    margin-bottom: var(--space-1);
+  }
+
+  .app-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy-900);
+  }
+
+  /* Stepper */
+  .stepper {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+    overflow-x: auto;
+  }
+
+  .stepper ol {
+    list-style: none;
+    display: flex;
+    align-items: flex-start;
+    min-width: 640px;
+  }
+
+  .stepper li {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    position: relative;
+  }
+
+  .stepper li:not(:last-child)::after {
+    content: "";
+    flex: 1;
+    height: 2px;
+    background: var(--gray-200);
+    margin: 0 var(--space-2);
+    align-self: center;
+  }
+
+  .stepper li[data-state="done"]:not(:last-child)::after {
+    background: var(--success-600);
+  }
+
+  .step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.875rem;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 2px solid var(--gray-200);
+    flex-shrink: 0;
+  }
+
+  .stepper li[data-state="current"] .step-badge {
+    background: var(--blue-600);
+    border-color: var(--blue-600);
+    color: var(--white);
+  }
+
+  .stepper li[data-state="done"] .step-badge {
+    background: var(--success-600);
+    border-color: var(--success-600);
+    color: var(--white);
+  }
+
+  .step-check {
+    display: inline-block;
+    transform: rotate(45deg) translate(-1px, -1px);
+    width: 8px;
+    height: 12px;
+    border-bottom: 2px solid currentColor;
+    border-right: 2px solid currentColor;
+  }
+
+  .step-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    white-space: nowrap;
+  }
+
+  .stepper li[data-state="current"] .step-label {
+    color: var(--navy-900);
+  }
+
+  .progress-bar-mobile {
+    display: none;
+  }
+
+  /* Panels */
+  main {
+    display: block;
+  }
+
+  .panel {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-6);
+  }
+
+  .panel-heading {
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .panel-heading h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--navy-900);
+  }
+
+  .panel-heading p {
+    color: var(--gray-600);
+    margin-top: var(--space-2);
+    font-size: 0.9375rem;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4) var(--space-5);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .field.full { grid-column: 1 / -1; }
+
+  .field label,
+  fieldset > legend.field-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--navy-900);
+  }
+
+  .field .hint {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+  }
+
+  .required-mark {
+    color: var(--error-600);
+    margin-left: var(--space-1);
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    font: inherit;
+    color: var(--gray-800);
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    width: 100%;
+  }
+
+  textarea { resize: vertical; min-height: 88px; }
+
+  input:invalid[data-touched="true"],
+  .field[data-invalid="true"] input,
+  .field[data-invalid="true"] select,
+  .field[data-invalid="true"] textarea {
+    border-color: var(--error-600);
+    background: var(--error-100);
+  }
+
+  .field-error {
+    font-size: 0.8125rem;
+    color: var(--error-600);
+    font-weight: 600;
+    display: none;
+  }
+
+  .field[data-invalid="true"] .field-error {
+    display: block;
+  }
+
+  .checkbox-row,
+  .radio-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .checkbox-row:last-child,
+  .radio-row:last-child { border-bottom: none; }
+
+  .checkbox-row input,
+  .radio-row input {
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .checkbox-row label,
+  .radio-row label {
+    font-size: 0.9375rem;
+  }
+
+  fieldset.attestations {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-5);
+  }
+
+  fieldset.attestations legend.field-label {
+    padding: 0 var(--space-2);
+  }
+
+  .upload-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .upload-item {
+    border: 2px dashed var(--gray-300);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    background: var(--gray-50);
+  }
+
+  .upload-item[data-filled="true"] {
+    border-style: solid;
+    border-color: var(--success-600);
+    background: var(--success-100);
+  }
+
+  .upload-item-info h3 {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--navy-900);
+    margin-bottom: var(--space-1);
+  }
+
+  .upload-item-info p {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+  }
+
+  .upload-filename {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--success-600);
+  }
+
+  .btn {
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-5);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn { transition: none; }
+  }
+
+  .btn-primary {
+    background: var(--blue-600);
+    color: var(--white);
+  }
+  .btn-primary:hover { background: var(--blue-700); }
+  .btn-primary:disabled {
+    background: var(--gray-300);
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--white);
+    border-color: var(--gray-300);
+    color: var(--navy-900);
+  }
+  .btn-secondary:hover { background: var(--gray-100); }
+
+  .btn-text {
+    background: transparent;
+    border-color: transparent;
+    color: var(--blue-700);
+    padding: var(--space-2) var(--space-3);
+  }
+  .btn-text:hover { text-decoration: underline; }
+
+  .btn-file {
+    background: var(--white);
+    border-color: var(--gray-300);
+    color: var(--navy-900);
+    white-space: nowrap;
+  }
+  .btn-file:hover { background: var(--gray-100); }
+
+  .app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+  }
+
+  .app-footer .footer-right {
+    display: flex;
+    gap: var(--space-3);
+  }
+
+  .overview-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: var(--space-5) 0;
+  }
+
+  .overview-list li {
+    display: flex;
+    gap: var(--space-4);
+    align-items: flex-start;
+    padding: var(--space-3);
+    border: 1px solid var(--gray-100);
+    border-radius: var(--radius-md);
+  }
+
+  .overview-list .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--blue-50);
+    color: var(--blue-700);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    flex-shrink: 0;
+  }
+
+  .overview-list h3 {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--navy-900);
+  }
+
+  .overview-list p {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+    margin-top: 2px;
+  }
+
+  .resume-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    background: var(--blue-50);
+    border: 1px solid var(--blue-600);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  .resume-banner p { font-size: 0.9375rem; color: var(--navy-900); }
+  .resume-banner .actions { display: flex; gap: var(--space-3); }
+
+  .save-toast {
+    position: fixed;
+    bottom: var(--space-5);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy-900);
+    color: var(--white);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-card);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 50;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .save-toast { transition: none; }
+  }
+
+  .save-toast[data-visible="true"] {
+    opacity: 1;
+  }
+
+  /* Review */
+  .review-group {
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-5);
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .review-group:last-of-type { border-bottom: none; }
+
+  .review-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+  }
+
+  .review-group-head h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy-900);
+  }
+
+  .review-rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3) var(--space-5);
+  }
+
+  .review-rows dt {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gray-600);
+    font-weight: 700;
+  }
+
+  .review-rows dd {
+    margin: var(--space-1) 0 0;
+    font-size: 0.9375rem;
+    color: var(--gray-800);
+    word-break: break-word;
+  }
+
+  .review-rows dd:empty::before {
+    content: "Not provided";
+    color: var(--gray-400);
+    font-style: italic;
+  }
+
+  /* Confirmation */
+  .confirmation {
+    text-align: center;
+    padding: var(--space-7) var(--space-5);
+  }
+
+  .confirmation-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--success-100);
+    color: var(--success-600);
+    margin-bottom: var(--space-5);
+  }
+
+  .confirmation-mark .step-check {
+    width: 20px;
+    height: 32px;
+    border-width: 4px;
+  }
+
+  .confirmation h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy-900);
+    margin-bottom: var(--space-3);
+  }
+
+  .confirmation p {
+    color: var(--gray-600);
+    max-width: 480px;
+    margin: 0 auto var(--space-2);
+  }
+
+  .reference-id {
+    display: inline-block;
+    margin: var(--space-4) 0;
+    padding: var(--space-3) var(--space-5);
+    background: var(--gray-100);
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--navy-900);
+  }
+
+  @media (max-width: 720px) {
+    .field-grid,
+    .review-rows { grid-template-columns: 1fr; }
+    .stepper .step-label { display: none; }
+    .stepper ol { min-width: 0; }
+    .app-footer { flex-direction: column-reverse; align-items: stretch; }
+    .app-footer .footer-right { flex-direction: column-reverse; }
+    .app-header { flex-wrap: wrap; }
+  }
+</style>
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<div class="app">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">VA</span>
+      <div>
+        <p class="eyebrow">Procurement &middot; Supplier Onboarding</p>
+        <h1>Vendor Onboarding Application</h1>
+      </div>
+    </div>
+  </header>
+
+  <nav class="stepper" aria-label="Application progress" id="stepper">
+    <ol id="stepper-list"></ol>
+  </nav>
+
+  <div aria-live="polite" class="sr-only" id="step-announcer"></div>
+
+  <main id="main-content">
+    <!-- Overview -->
+    <section class="panel" data-panel="overview">
+      <div class="resume-banner" id="resume-banner" hidden>
+        <p>We found a saved application from a previous visit. Resume where you left off, or start a new application.</p>
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" id="btn-start-new">Start New</button>
+          <button type="button" class="btn btn-primary" id="btn-resume">Resume Draft</button>
+        </div>
+      </div>
+      <div class="panel-heading">
+        <h2>Before you begin</h2>
+        <p>This application gathers the information our procurement team needs to review and approve your company as an approved supplier. Plan for 15&ndash;20 minutes. You can save your progress and return at any time.</p>
+      </div>
+      <ol class="overview-list">
+        <li>
+          <span class="num" aria-hidden="true">1</span>
+          <div>
+            <h3>Company Profile</h3>
+            <p>Legal entity details, registered address, and business classification.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">2</span>
+          <div>
+            <h3>Primary Contact</h3>
+            <p>The person our team should reach for questions about this application.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">3</span>
+          <div>
+            <h3>Compliance Attestations</h3>
+            <p>Acknowledgement of our anti-bribery, data protection, and conduct policies.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">4</span>
+          <div>
+            <h3>Tax &amp; Payment Details</h3>
+            <p>Tax identification, preferred payment method, and banking information.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">5</span>
+          <div>
+            <h3>Supporting Documents</h3>
+            <p>Tax form, certificate of insurance, and business registration.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num" aria-hidden="true">6</span>
+          <div>
+            <h3>Review &amp; Submit</h3>
+            <p>Confirm everything is accurate before sending it to our procurement team.</p>
+          </div>
+        </li>
+      </ol>
+      <p class="hint">You may need to gather information from your finance, legal, and compliance departments before continuing. Fields marked <span class="required-mark" aria-hidden="true">*</span> are required.</p>
+    </section>
+
+    <form id="onboarding-form" novalidate>
+      <!-- Step 1: Company Profile -->
+      <section class="panel" data-panel="company" hidden>
+        <div class="panel-heading">
+          <h2>Company Profile</h2>
+          <p>Tell us about your organization as it is legally registered.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field full" data-invalid="false">
+            <label for="company-legal-name">Legal company name<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="company-legal-name" name="companyLegalName" required aria-describedby="err-company-legal-name" autocomplete="organization" />
+            <p class="field-error" id="err-company-legal-name" role="alert">Enter your company's legal name.</p>
+          </div>
+          <div class="field full" data-invalid="false">
+            <label for="company-dba">Doing-business-as (DBA) name</label>
+            <input type="text" id="company-dba" name="companyDba" />
+            <p class="hint">Only if different from the legal name above.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="entity-type">Entity type<span class="required-mark" aria-hidden="true">*</span></label>
+            <select id="entity-type" name="entityType" required aria-describedby="err-entity-type">
+              <option value="">Select an entity type</option>
+              <option value="corporation">Corporation</option>
+              <option value="llc">Limited Liability Company (LLC)</option>
+              <option value="partnership">Partnership</option>
+              <option value="sole-proprietorship">Sole Proprietorship</option>
+              <option value="other">Other</option>
+            </select>
+            <p class="field-error" id="err-entity-type" role="alert">Select your entity type.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="industry">Primary industry<span class="required-mark" aria-hidden="true">*</span></label>
+            <select id="industry" name="industry" required aria-describedby="err-industry">
+              <option value="">Select an industry</option>
+              <option value="manufacturing">Manufacturing</option>
+              <option value="logistics">Logistics &amp; Distribution</option>
+              <option value="professional-services">Professional Services</option>
+              <option value="technology">Technology</option>
+              <option value="facilities">Facilities &amp; Maintenance</option>
+              <option value="raw-materials">Raw Materials</option>
+              <option value="other">Other</option>
+            </select>
+            <p class="field-error" id="err-industry" role="alert">Select your primary industry.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="company-website">Company website</label>
+            <input type="url" id="company-website" name="companyWebsite" placeholder="https://" autocomplete="url" />
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="employee-count">Number of employees<span class="required-mark" aria-hidden="true">*</span></label>
+            <select id="employee-count" name="employeeCount" required aria-describedby="err-employee-count">
+              <option value="">Select a range</option>
+              <option value="1-10">1&ndash;10</option>
+              <option value="11-50">11&ndash;50</option>
+              <option value="51-200">51&ndash;200</option>
+              <option value="201-1000">201&ndash;1,000</option>
+              <option value="1000+">1,000+</option>
+            </select>
+            <p class="field-error" id="err-employee-count" role="alert">Select your company size.</p>
+          </div>
+          <div class="field full" data-invalid="false">
+            <label for="address-street">Registered address<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="address-street" name="addressStreet" required placeholder="Street address" aria-describedby="err-address-street" autocomplete="street-address" />
+            <p class="field-error" id="err-address-street" role="alert">Enter a street address.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="address-city">City<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="address-city" name="addressCity" required aria-describedby="err-address-city" autocomplete="address-level2" />
+            <p class="field-error" id="err-address-city" role="alert">Enter a city.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="address-region">State / Province<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="address-region" name="addressRegion" required aria-describedby="err-address-region" autocomplete="address-level1" />
+            <p class="field-error" id="err-address-region" role="alert">Enter a state or province.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="address-postal">Postal code<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="address-postal" name="addressPostal" required aria-describedby="err-address-postal" autocomplete="postal-code" />
+            <p class="field-error" id="err-address-postal" role="alert">Enter a postal code.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="address-country">Country<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="address-country" name="addressCountry" required aria-describedby="err-address-country" autocomplete="country-name" />
+            <p class="field-error" id="err-address-country" role="alert">Enter a country.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Primary Contact -->
+      <section class="panel" data-panel="contact" hidden>
+        <div class="panel-heading">
+          <h2>Primary Contact</h2>
+          <p>The person our procurement team should reach with questions about this application.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field" data-invalid="false">
+            <label for="contact-first-name">First name<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="contact-first-name" name="contactFirstName" required aria-describedby="err-contact-first-name" autocomplete="given-name" />
+            <p class="field-error" id="err-contact-first-name" role="alert">Enter a first name.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="contact-last-name">Last name<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="contact-last-name" name="contactLastName" required aria-describedby="err-contact-last-name" autocomplete="family-name" />
+            <p class="field-error" id="err-contact-last-name" role="alert">Enter a last name.</p>
+          </div>
+          <div class="field full" data-invalid="false">
+            <label for="contact-title">Job title<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="contact-title" name="contactTitle" required aria-describedby="err-contact-title" autocomplete="organization-title" />
+            <p class="field-error" id="err-contact-title" role="alert">Enter a job title.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="contact-email">Email address<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="email" id="contact-email" name="contactEmail" required aria-describedby="err-contact-email" autocomplete="email" />
+            <p class="field-error" id="err-contact-email" role="alert">Enter a valid email address.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="contact-phone">Phone number<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="tel" id="contact-phone" name="contactPhone" required aria-describedby="err-contact-phone" autocomplete="tel" />
+            <p class="field-error" id="err-contact-phone" role="alert">Enter a phone number.</p>
+          </div>
+          <div class="field full" data-invalid="false">
+            <fieldset>
+              <legend class="field-label">Preferred contact method<span class="required-mark" aria-hidden="true">*</span></legend>
+              <div class="radio-row">
+                <input type="radio" id="contact-pref-email" name="contactPreference" value="email" required />
+                <label for="contact-pref-email">Email</label>
+              </div>
+              <div class="radio-row">
+                <input type="radio" id="contact-pref-phone" name="contactPreference" value="phone" />
+                <label for="contact-pref-phone">Phone</label>
+              </div>
+            </fieldset>
+            <p class="field-error" id="err-contact-preference" role="alert">Select a preferred contact method.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Compliance Attestations -->
+      <section class="panel" data-panel="compliance" hidden>
+        <div class="panel-heading">
+          <h2>Compliance Attestations</h2>
+          <p>Please review and acknowledge each policy below on behalf of your organization.</p>
+        </div>
+        <div class="field full" data-invalid="false">
+          <fieldset class="attestations">
+            <legend class="field-label">Required attestations<span class="required-mark" aria-hidden="true">*</span></legend>
+            <div class="checkbox-row">
+              <input type="checkbox" id="attest-anti-bribery" name="attestAntiBribery" required />
+              <label for="attest-anti-bribery">Our company agrees to comply with the buyer's Anti-Bribery and Anti-Corruption Policy for the duration of any engagement.</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="attest-data-protection" name="attestDataProtection" required />
+              <label for="attest-data-protection">Our company agrees to the Data Protection and Confidentiality Addendum governing any shared information.</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="attest-conflict" name="attestConflict" required />
+              <label for="attest-conflict">Our company confirms that no undisclosed conflict of interest exists with current employees of the buyer's organization.</label>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="attest-conduct" name="attestConduct" required />
+              <label for="attest-conduct">Our company agrees to abide by the Supplier Code of Conduct.</label>
+            </div>
+          </fieldset>
+          <p class="field-error" id="err-attestations" role="alert">All four attestations must be acknowledged to continue.</p>
+        </div>
+        <div class="field full" data-invalid="false">
+          <label for="conflict-disclosure">Disclose any potential conflicts of interest</label>
+          <textarea id="conflict-disclosure" name="conflictDisclosure" placeholder="Describe any relationship that could be perceived as a conflict of interest, or leave blank if none apply."></textarea>
+          <p class="hint">Optional. A disclosure does not disqualify your application.</p>
+        </div>
+      </section>
+
+      <!-- Step 4: Tax and Payment -->
+      <section class="panel" data-panel="tax" hidden>
+        <div class="panel-heading">
+          <h2>Tax &amp; Payment Details</h2>
+          <p>This information is used to set up your company as a payable vendor.</p>
+        </div>
+        <div class="field-grid">
+          <div class="field" data-invalid="false">
+            <label for="tax-id">Tax identification number (EIN or equivalent)<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="tax-id" name="taxId" required aria-describedby="err-tax-id" />
+            <p class="field-error" id="err-tax-id" role="alert">Enter a tax identification number.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="tax-form-type">Tax form on file<span class="required-mark" aria-hidden="true">*</span></label>
+            <select id="tax-form-type" name="taxFormType" required aria-describedby="err-tax-form-type">
+              <option value="">Select a tax form</option>
+              <option value="w9">W-9 (U.S. entity)</option>
+              <option value="w8ben">W-8BEN (foreign individual)</option>
+              <option value="w8bene">W-8BEN-E (foreign entity)</option>
+              <option value="other">Other</option>
+            </select>
+            <p class="field-error" id="err-tax-form-type" role="alert">Select the tax form your company will submit.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="payment-method">Preferred payment method<span class="required-mark" aria-hidden="true">*</span></label>
+            <select id="payment-method" name="paymentMethod" required aria-describedby="err-payment-method">
+              <option value="">Select a payment method</option>
+              <option value="ach">ACH / Direct Deposit</option>
+              <option value="wire">Wire Transfer</option>
+              <option value="check">Paper Check</option>
+            </select>
+            <p class="field-error" id="err-payment-method" role="alert">Select a preferred payment method.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="payment-currency">Preferred currency<span class="required-mark" aria-hidden="true">*</span></label>
+            <select id="payment-currency" name="paymentCurrency" required aria-describedby="err-payment-currency">
+              <option value="">Select a currency</option>
+              <option value="usd">USD &mdash; U.S. Dollar</option>
+              <option value="eur">EUR &mdash; Euro</option>
+              <option value="gbp">GBP &mdash; British Pound</option>
+              <option value="cad">CAD &mdash; Canadian Dollar</option>
+              <option value="other">Other</option>
+            </select>
+            <p class="field-error" id="err-payment-currency" role="alert">Select a preferred currency.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="bank-name">Bank name<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="bank-name" name="bankName" required aria-describedby="err-bank-name" />
+            <p class="field-error" id="err-bank-name" role="alert">Enter your bank's name.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="account-holder">Account holder name<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="account-holder" name="accountHolder" required aria-describedby="err-account-holder" />
+            <p class="field-error" id="err-account-holder" role="alert">Enter the name on the account.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="account-number">Account number<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="password" id="account-number" name="accountNumber" required aria-describedby="err-account-number account-number-hint" autocomplete="off" />
+            <p class="hint" id="account-number-hint">Masked for your protection. Stored encrypted upon submission.</p>
+            <p class="field-error" id="err-account-number" role="alert">Enter an account number.</p>
+          </div>
+          <div class="field" data-invalid="false">
+            <label for="routing-number">Routing / SWIFT number<span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="routing-number" name="routingNumber" required aria-describedby="err-routing-number" />
+            <p class="field-error" id="err-routing-number" role="alert">Enter a routing or SWIFT number.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 5: Documents -->
+      <section class="panel" data-panel="documents" hidden>
+        <div class="panel-heading">
+          <h2>Supporting Documents</h2>
+          <p>Upload the documents below. Accepted formats: PDF, JPG, or PNG, up to 10&nbsp;MB each.</p>
+        </div>
+        <div class="upload-list">
+          <div class="upload-item" data-filled="false" data-upload="taxForm">
+            <div class="upload-item-info">
+              <h3>Signed tax form<span class="required-mark" aria-hidden="true">*</span></h3>
+              <p>The W-9 or equivalent form matching your selection in the previous step.</p>
+              <p class="upload-filename" data-filename></p>
+            </div>
+            <div>
+              <label class="btn btn-file" for="upload-tax-form">Choose file</label>
+              <input class="sr-only" type="file" id="upload-tax-form" name="uploadTaxForm" accept=".pdf,.jpg,.jpeg,.png" />
+            </div>
+          </div>
+          <div class="upload-item" data-filled="false" data-upload="insurance">
+            <div class="upload-item-info">
+              <h3>Certificate of insurance<span class="required-mark" aria-hidden="true">*</span></h3>
+              <p>Current general liability certificate naming your coverage limits.</p>
+              <p class="upload-filename" data-filename></p>
+            </div>
+            <div>
+              <label class="btn btn-file" for="upload-insurance">Choose file</label>
+              <input class="sr-only" type="file" id="upload-insurance" name="uploadInsurance" accept=".pdf,.jpg,.jpeg,.png" />
+            </div>
+          </div>
+          <div class="upload-item" data-filled="false" data-upload="registration">
+            <div class="upload-item-info">
+              <h3>Business license or registration</h3>
+              <p>Proof of registration in your operating jurisdiction. Optional if not applicable.</p>
+              <p class="upload-filename" data-filename></p>
+            </div>
+            <div>
+              <label class="btn btn-file" for="upload-registration">Choose file</label>
+              <input class="sr-only" type="file" id="upload-registration" name="uploadRegistration" accept=".pdf,.jpg,.jpeg,.png" />
+            </div>
+          </div>
+        </div>
+        <p class="field-error" id="err-documents" role="alert" style="margin-top: var(--space-4);">Upload the signed tax form and certificate of insurance to continue.</p>
+      </section>
+
+      <!-- Step 6: Review -->
+      <section class="panel" data-panel="review" hidden>
+        <div class="panel-heading">
+          <h2>Review &amp; Submit</h2>
+          <p>Confirm the details below are accurate. Use Edit to return to any section.</p>
+        </div>
+
+        <div class="review-group">
+          <div class="review-group-head">
+            <h3>Company Profile</h3>
+            <button type="button" class="btn btn-text" data-edit-step="company">Edit</button>
+          </div>
+          <dl class="review-rows">
+            <div><dt>Legal name</dt><dd data-review="companyLegalName"></dd></div>
+            <div><dt>DBA name</dt><dd data-review="companyDba"></dd></div>
+            <div><dt>Entity type</dt><dd data-review="entityType"></dd></div>
+            <div><dt>Industry</dt><dd data-review="industry"></dd></div>
+            <div><dt>Website</dt><dd data-review="companyWebsite"></dd></div>
+            <div><dt>Employees</dt><dd data-review="employeeCount"></dd></div>
+            <div class="full"><dt>Registered address</dt><dd data-review="fullAddress"></dd></div>
+          </dl>
+        </div>
+
+        <div class="review-group">
+          <div class="review-group-head">
+            <h3>Primary Contact</h3>
+            <button type="button" class="btn btn-text" data-edit-step="contact">Edit</button>
+          </div>
+          <dl class="review-rows">
+            <div><dt>Name</dt><dd data-review="contactFullName"></dd></div>
+            <div><dt>Title</dt><dd data-review="contactTitle"></dd></div>
+            <div><dt>Email</dt><dd data-review="contactEmail"></dd></div>
+            <div><dt>Phone</dt><dd data-review="contactPhone"></dd></div>
+            <div><dt>Preferred contact</dt><dd data-review="contactPreference"></dd></div>
+          </dl>
+        </div>
+
+        <div class="review-group">
+          <div class="review-group-head">
+            <h3>Compliance Attestations</h3>
+            <button type="button" class="btn btn-text" data-edit-step="compliance">Edit</button>
+          </div>
+          <dl class="review-rows">
+            <div><dt>Attestations acknowledged</dt><dd data-review="attestationsSummary"></dd></div>
+            <div><dt>Conflict of interest disclosure</dt><dd data-review="conflictDisclosure"></dd></div>
+          </dl>
+        </div>
+
+        <div class="review-group">
+          <div class="review-group-head">
+            <h3>Tax &amp; Payment</h3>
+            <button type="button" class="btn btn-text" data-edit-step="tax">Edit</button>
+          </div>
+          <dl class="review-rows">
+            <div><dt>Tax ID</dt><dd data-review="taxId"></dd></div>
+            <div><dt>Tax form</dt><dd data-review="taxFormType"></dd></div>
+            <div><dt>Payment method</dt><dd data-review="paymentMethod"></dd></div>
+            <div><dt>Currency</dt><dd data-review="paymentCurrency"></dd></div>
+            <div><dt>Bank name</dt><dd data-review="bankName"></dd></div>
+            <div><dt>Account holder</dt><dd data-review="accountHolder"></dd></div>
+            <div><dt>Account number</dt><dd data-review="accountNumberMasked"></dd></div>
+            <div><dt>Routing / SWIFT</dt><dd data-review="routingNumber"></dd></div>
+          </dl>
+        </div>
+
+        <div class="review-group">
+          <div class="review-group-head">
+            <h3>Supporting Documents</h3>
+            <button type="button" class="btn btn-text" data-edit-step="documents">Edit</button>
+          </div>
+          <dl class="review-rows">
+            <div><dt>Signed tax form</dt><dd data-review="uploadTaxForm"></dd></div>
+            <div><dt>Certificate of insurance</dt><dd data-review="uploadInsurance"></dd></div>
+            <div><dt>Business registration</dt><dd data-review="uploadRegistration"></dd></div>
+          </dl>
+        </div>
+
+        <div class="field full" data-invalid="false" style="margin-top: var(--space-2);">
+          <div class="checkbox-row">
+            <input type="checkbox" id="certify-accurate" name="certifyAccurate" required />
+            <label for="certify-accurate">I certify that the information provided in this application is accurate and complete to the best of my knowledge.<span class="required-mark" aria-hidden="true">*</span></label>
+          </div>
+          <p class="field-error" id="err-certify-accurate" role="alert">Please certify the accuracy of your application before submitting.</p>
+        </div>
+      </section>
+    </form>
+
+    <!-- Confirmation -->
+    <section class="panel confirmation" data-panel="confirmation" hidden>
+      <div class="confirmation-mark" aria-hidden="true"><span class="step-check"></span></div>
+      <h2>Application Submitted</h2>
+      <p>Thank you. Your vendor onboarding application has been received and is queued for procurement review. Most applications are reviewed within 5&ndash;7 business days.</p>
+      <div class="reference-id">Reference: <span id="reference-id"></span></div>
+      <p>A confirmation has been recorded for <strong id="confirmation-email"></strong>. Keep your reference number for any follow-up questions.</p>
+    </section>
+  </main>
+
+  <footer class="app-footer" id="app-footer">
+    <button type="button" class="btn btn-secondary" id="btn-back">Back</button>
+    <div class="footer-right">
+      <button type="button" class="btn btn-secondary" id="btn-save">Save Draft</button>
+      <button type="button" class="btn btn-primary" id="btn-next">Continue</button>
+    </div>
+  </footer>
+</div>
+
+<div class="save-toast" id="save-toast" role="status" aria-live="polite">Your progress has been saved.</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "vendorOnboardingDraft";
+
+  var steps = [
+    { key: "company", label: "Company" },
+    { key: "contact", label: "Contact" },
+    { key: "compliance", label: "Compliance" },
+    { key: "tax", label: "Tax & Payment" },
+    { key: "documents", label: "Documents" },
+    { key: "review", label: "Review" }
+  ];
+
+  // panelKey values in order of the full flow, including overview/confirmation
+  var flow = ["overview"].concat(steps.map(function (s) { return s.key; })).concat(["confirmation"]);
+  var currentIndex = 0;
+
+  var form = document.getElementById("onboarding-form");
+  var footer = document.getElementById("app-footer");
+  var btnBack = document.getElementById("btn-back");
+  var btnNext = document.getElementById("btn-next");
+  var btnSave = document.getElementById("btn-save");
+  var announcer = document.getElementById("step-announcer");
+  var saveToast = document.getElementById("save-toast");
+  var stepperList = document.getElementById("stepper-list");
+
+  function panelEl(key) {
+    return document.querySelector('[data-panel="' + key + '"]');
+  }
+
+  function buildStepper() {
+    stepperList.innerHTML = "";
+    steps.forEach(function (step, i) {
+      var li = document.createElement("li");
+      li.setAttribute("data-step", String(i + 1));
+      li.setAttribute("data-key", step.key);
+      var badge = document.createElement("span");
+      badge.className = "step-badge";
+      badge.setAttribute("aria-hidden", "true");
+      badge.textContent = String(i + 1);
+      var label = document.createElement("span");
+      label.className = "step-label";
+      label.textContent = step.label;
+      li.appendChild(badge);
+      li.appendChild(label);
+      stepperList.appendChild(li);
+    });
+  }
+
+  function updateStepper() {
+    var currentKey = flow[currentIndex];
+    var currentStepPos = steps.map(function (s) { return s.key; }).indexOf(currentKey);
+    var items = stepperList.querySelectorAll("li");
+    items.forEach(function (li, i) {
+      var badge = li.querySelector(".step-badge");
+      if (currentKey === "confirmation") {
+        li.setAttribute("data-state", "done");
+        badge.innerHTML = '<span class="step-check"></span>';
+        return;
+      }
+      if (i < currentStepPos) {
+        li.setAttribute("data-state", "done");
+        badge.innerHTML = '<span class="step-check"></span>';
+      } else if (i === currentStepPos) {
+        li.setAttribute("data-state", "current");
+        li.setAttribute("aria-current", "step");
+        badge.textContent = String(i + 1);
+      } else {
+        li.removeAttribute("data-state");
+        li.removeAttribute("aria-current");
+        badge.textContent = String(i + 1);
+      }
+    });
+  }
+
+  function showPanel(key) {
+    flow.forEach(function (k) {
+      var el = panelEl(k);
+      if (!el) { return; }
+      el.hidden = k !== key;
+    });
+  }
+
+  function isStepperVisible(key) {
+    return key !== "overview" && key !== "confirmation";
+  }
+
+  function updateFooter() {
+    var key = flow[currentIndex];
+    document.getElementById("stepper").hidden = !isStepperVisible(key);
+
+    if (key === "confirmation") {
+      footer.hidden = true;
+      return;
+    }
+    footer.hidden = false;
+
+    btnBack.disabled = currentIndex === 0;
+    btnBack.style.visibility = currentIndex === 0 ? "hidden" : "visible";
+
+    btnSave.hidden = key === "overview";
+
+    if (key === "overview") {
+      btnNext.textContent = "Begin Application";
+    } else if (key === "review") {
+      btnNext.textContent = "Submit Application";
+    } else {
+      btnNext.textContent = "Continue";
+    }
+  }
+
+  function announce(message) {
+    announcer.textContent = "";
+    window.setTimeout(function () { announcer.textContent = message; }, 30);
+  }
+
+  function focusPanelHeading(key) {
+    var panel = panelEl(key);
+    if (!panel) { return; }
+    var heading = panel.querySelector("h2");
+    if (heading) {
+      heading.setAttribute("tabindex", "-1");
+      heading.focus();
+    }
+  }
+
+  function goToIndex(newIndex, opts) {
+    opts = opts || {};
+    currentIndex = newIndex;
+    var key = flow[currentIndex];
+    showPanel(key);
+    updateStepper();
+    updateFooter();
+    if (!opts.silent) {
+      announce("Now on step: " + (steps.filter(function (s) { return s.key === key; })[0] || { label: key === "overview" ? "Overview" : key === "confirmation" ? "Confirmation" : key }).label);
+    }
+    if (key === "review") {
+      populateReview();
+    }
+    window.scrollTo({ top: 0, behavior: "auto" });
+    focusPanelHeading(key);
+  }
+
+  function goToKey(key, opts) {
+    var idx = flow.indexOf(key);
+    if (idx > -1) { goToIndex(idx, opts); }
+  }
+
+  function currentStepPanel() {
+    var key = flow[currentIndex];
+    return panelEl(key);
+  }
+
+  function setFieldInvalid(fieldEl, invalid) {
+    if (!fieldEl) { return; }
+    fieldEl.setAttribute("data-invalid", invalid ? "true" : "false");
+  }
+
+  function validateStep(key) {
+    var panel = panelEl(key);
+    if (!panel) { return true; }
+    var valid = true;
+    var firstInvalid = null;
+
+    var fields = panel.querySelectorAll(".field, fieldset.attestations");
+    fields.forEach(function (fieldEl) {
+      var required = fieldEl.querySelectorAll("[required]");
+      if (required.length === 0) { return; }
+
+      var groupInvalid = false;
+
+      if (fieldEl.matches("fieldset.attestations")) {
+        required.forEach(function (input) {
+          if (!input.checked) { groupInvalid = true; }
+        });
+        var wrapper = fieldEl.closest(".field");
+        setFieldInvalid(wrapper, groupInvalid);
+        if (groupInvalid && !firstInvalid) { firstInvalid = fieldEl.querySelector("input"); }
+      } else {
+        var input = fieldEl.querySelector("input, select, textarea");
+        if (!input) { return; }
+
+        if (input.type === "radio") {
+          var radios = fieldEl.querySelectorAll('input[name="' + input.name + '"]');
+          var anyChecked = Array.prototype.some.call(radios, function (r) { return r.checked; });
+          groupInvalid = !anyChecked;
+        } else if (input.type === "checkbox") {
+          groupInvalid = !input.checked;
+        } else {
+          groupInvalid = input.value.trim() === "" || !input.checkValidity();
+        }
+        setFieldInvalid(fieldEl, groupInvalid);
+        if (groupInvalid && !firstInvalid) { firstInvalid = input; }
+      }
+
+      if (groupInvalid) { valid = false; }
+    });
+
+    if (key === "documents") {
+      var taxItem = panel.querySelector('[data-upload="taxForm"]');
+      var insItem = panel.querySelector('[data-upload="insurance"]');
+      var docsInvalid = taxItem.getAttribute("data-filled") !== "true" || insItem.getAttribute("data-filled") !== "true";
+      var docsError = document.getElementById("err-documents");
+      docsError.style.display = docsInvalid ? "block" : "none";
+      if (docsInvalid) {
+        valid = false;
+        if (!firstInvalid) { firstInvalid = panel.querySelector('input[type="file"]'); }
+      }
+    }
+
+    if (!valid && firstInvalid) {
+      firstInvalid.focus();
+      announce("This step has fields that need attention.");
+    }
+
+    return valid;
+  }
+
+  function fieldValue(name) {
+    var el = form.elements[name];
+    if (!el) { return ""; }
+    if (el.length !== undefined && el[0] && el[0].type === "radio") {
+      for (var i = 0; i < el.length; i++) {
+        if (el[i].checked) { return el[i].value; }
+      }
+      return "";
+    }
+    if (el.type === "checkbox") { return el.checked; }
+    return el.value;
+  }
+
+  function labelForSelect(name) {
+    var el = form.elements[name];
+    if (!el || el.tagName !== "SELECT") { return fieldValue(name); }
+    var opt = el.options[el.selectedIndex];
+    return opt ? opt.textContent : "";
+  }
+
+  function setReview(name, value) {
+    var el = document.querySelector('[data-review="' + name + '"]');
+    if (el) { el.textContent = value || ""; }
+  }
+
+  function populateReview() {
+    setReview("companyLegalName", fieldValue("companyLegalName"));
+    setReview("companyDba", fieldValue("companyDba"));
+    setReview("entityType", labelForSelect("entityType"));
+    setReview("industry", labelForSelect("industry"));
+    setReview("companyWebsite", fieldValue("companyWebsite"));
+    setReview("employeeCount", labelForSelect("employeeCount"));
+
+    var addressParts = [
+      fieldValue("addressStreet"),
+      fieldValue("addressCity") + (fieldValue("addressRegion") ? ", " + fieldValue("addressRegion") : ""),
+      fieldValue("addressPostal"),
+      fieldValue("addressCountry")
+    ].filter(function (p) { return p && p.trim() !== ""; });
+    setReview("fullAddress", addressParts.join(" • "));
+
+    var contactName = (fieldValue("contactFirstName") + " " + fieldValue("contactLastName")).trim();
+    setReview("contactFullName", contactName);
+    setReview("contactTitle", fieldValue("contactTitle"));
+    setReview("contactEmail", fieldValue("contactEmail"));
+    setReview("contactPhone", fieldValue("contactPhone"));
+    var prefRadio = form.querySelector('input[name="contactPreference"]:checked');
+    setReview("contactPreference", prefRadio ? (prefRadio.value === "email" ? "Email" : "Phone") : "");
+
+    var attestCount = ["attestAntiBribery", "attestDataProtection", "attestConflict", "attestConduct"].filter(function (n) {
+      return fieldValue(n) === true;
+    }).length;
+    setReview("attestationsSummary", attestCount + " of 4 attestations acknowledged");
+    setReview("conflictDisclosure", fieldValue("conflictDisclosure"));
+
+    setReview("taxId", fieldValue("taxId"));
+    setReview("taxFormType", labelForSelect("taxFormType"));
+    setReview("paymentMethod", labelForSelect("paymentMethod"));
+    setReview("paymentCurrency", labelForSelect("paymentCurrency"));
+    setReview("bankName", fieldValue("bankName"));
+    setReview("accountHolder", fieldValue("accountHolder"));
+    var acctVal = fieldValue("accountNumber");
+    setReview("accountNumberMasked", acctVal ? "Ending in " + acctVal.slice(-4) : "");
+    setReview("routingNumber", fieldValue("routingNumber"));
+
+    setReview("uploadTaxForm", uploadedFileNames.taxForm || "");
+    setReview("uploadInsurance", uploadedFileNames.insurance || "");
+    setReview("uploadRegistration", uploadedFileNames.registration || "");
+  }
+
+  // File upload placeholders (local only, no network transmission)
+  var uploadedFileNames = { taxForm: "", insurance: "", registration: "" };
+
+  function wireUploads() {
+    document.querySelectorAll(".upload-item").forEach(function (item) {
+      var uploadKey = item.getAttribute("data-upload");
+      var input = item.querySelector('input[type="file"]');
+      var filenameEl = item.querySelector("[data-filename]");
+      input.addEventListener("change", function () {
+        if (input.files && input.files.length > 0) {
+          var name = input.files[0].name;
+          uploadedFileNames[uploadKey] = name;
+          filenameEl.textContent = "Selected: " + name;
+          item.setAttribute("data-filled", "true");
+        } else {
+          uploadedFileNames[uploadKey] = "";
+          filenameEl.textContent = "";
+          item.setAttribute("data-filled", "false");
+        }
+      });
+    });
+  }
+
+  function serializeDraft() {
+    var data = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name) { return; }
+      if (el.type === "checkbox") {
+        data[el.name] = el.checked;
+      } else if (el.type === "radio") {
+        if (el.checked) { data[el.name] = el.value; }
+      } else if (el.type !== "file") {
+        data[el.name] = el.value;
+      }
+    });
+    return { fields: data, stepIndex: currentIndex, savedAt: new Date().toISOString() };
+  }
+
+  function applyDraft(draft) {
+    if (!draft || !draft.fields) { return; }
+    Object.keys(draft.fields).forEach(function (name) {
+      var el = form.elements[name];
+      if (!el) { return; }
+      var value = draft.fields[name];
+      if (el.type === "checkbox") {
+        el.checked = !!value;
+      } else if (el.length !== undefined && el[0] && el[0].type === "radio") {
+        for (var i = 0; i < el.length; i++) {
+          el[i].checked = el[i].value === value;
+        }
+      } else {
+        el.value = value;
+      }
+    });
+  }
+
+  function saveDraft(showToast) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeDraft()));
+      if (showToast) {
+        saveToast.setAttribute("data-visible", "true");
+        window.setTimeout(function () { saveToast.setAttribute("data-visible", "false"); }, 2200);
+      }
+    } catch (e) {
+      announce("Your progress could not be saved on this device.");
+    }
+  }
+
+  function loadDraftIfPresent() {
+    var raw;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (e) {
+      raw = null;
+    }
+    if (!raw) { return; }
+    var draft;
+    try {
+      draft = JSON.parse(raw);
+    } catch (e) {
+      return;
+    }
+    document.getElementById("resume-banner").hidden = false;
+
+    document.getElementById("btn-resume").addEventListener("click", function () {
+      applyDraft(draft);
+      document.getElementById("resume-banner").hidden = true;
+      var idx = typeof draft.stepIndex === "number" ? draft.stepIndex : 1;
+      goToIndex(Math.max(idx, 1));
+    });
+    document.getElementById("btn-start-new").addEventListener("click", function () {
+      try { window.localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+      document.getElementById("resume-banner").hidden = true;
+    });
+  }
+
+  function generateReferenceId() {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    var suffix = "";
+    for (var i = 0; i < 6; i++) {
+      suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return "VA-" + new Date().getFullYear() + "-" + suffix;
+  }
+
+  function submitApplication() {
+    document.getElementById("reference-id").textContent = generateReferenceId();
+    document.getElementById("confirmation-email").textContent = fieldValue("contactEmail") || "your provided contact";
+    try { window.localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    goToKey("confirmation");
+  }
+
+  btnNext.addEventListener("click", function () {
+    var key = flow[currentIndex];
+    if (key === "overview") {
+      goToIndex(currentIndex + 1);
+      return;
+    }
+    if (!validateStep(key)) { return; }
+    if (key === "review") {
+      submitApplication();
+      return;
+    }
+    goToIndex(currentIndex + 1);
+  });
+
+  btnBack.addEventListener("click", function () {
+    if (currentIndex > 0) { goToIndex(currentIndex - 1); }
+  });
+
+  btnSave.addEventListener("click", function () {
+    saveDraft(true);
+  });
+
+  document.querySelectorAll("[data-edit-step]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      goToKey(btn.getAttribute("data-edit-step"));
+    });
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+  });
+
+  buildStepper();
+  wireUploads();
+  loadDraftIfPresent();
+  goToIndex(0, { silent: true });
+})();
+</script>

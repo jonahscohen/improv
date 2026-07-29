@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#15121b">
+<title>The Sound Coming Up From the Wharf: A Wharf Quarter Scene Report | Undercurrent</title>
+<meta name="description" content="Inside Corvale's Wharf Quarter: three fictional artists, four venues, and the redevelopment pressure testing a DIY music scene built out of empty industrial buildings.">
+<style>
+  :root {
+    color-scheme: dark;
+    --surface-0: oklch(15% 0.02 280);
+    --surface-1: oklch(19% 0.022 280);
+    --surface-2: oklch(24% 0.024 280);
+    --surface-border: oklch(32% 0.026 280);
+    --text-primary: oklch(96% 0.01 280);
+    --text-body-color: oklch(89% 0.012 280);
+    --text-muted: oklch(74% 0.018 280);
+    --accent-violet: oklch(80% 0.15 280);
+    --accent-magenta: oklch(78% 0.19 350);
+    --accent-amber: oklch(80% 0.14 70);
+    --accent-cyan: oklch(80% 0.12 200);
+
+    --font-display: Baskerville, Cambria, Georgia, serif;
+    --font-body: Avenir, Optima, "Segoe UI", Roboto, sans-serif;
+
+    --text-h1: clamp(2.75rem, 2.2rem + 3vw, 4.5rem);
+    --text-h2: clamp(1.75rem, 1.55rem + 1.2vw, 2.5rem);
+    --text-h3: clamp(1.25rem, 1.15rem + 0.6vw, 1.5rem);
+    --text-standfirst: clamp(1.1875rem, 1.1rem + 0.5vw, 1.375rem);
+    --text-body: 1rem;
+    --text-meta: 0.875rem;
+    --text-small: 0.8125rem;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-24: 6rem;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 999px;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --shadow-md: 0 12px 32px rgba(0,0,0,0.4);
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    --content-max: 38rem;
+    --wide-max: 72rem;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    color: var(--text-body-color);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.7;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    color: var(--text-primary);
+    margin: 0;
+    text-wrap: balance;
+    font-weight: 700;
+  }
+  h1 { font-size: var(--text-h1); line-height: 1.05; letter-spacing: -0.01em; }
+  h2 { font-size: var(--text-h2); line-height: 1.15; margin-top: var(--space-16); margin-bottom: var(--space-4); }
+  h3 { font-size: var(--text-h3); line-height: 1.25; margin-bottom: var(--space-2); }
+
+  p { margin: 0 0 var(--space-4); max-width: 70ch; }
+  p:last-child { margin-bottom: 0; }
+
+  a { color: var(--accent-violet); text-decoration-thickness: 1px; text-underline-offset: 0.15em; transition: color 200ms var(--ease-out); }
+  a:hover { color: var(--text-primary); }
+
+  button { font-family: inherit; }
+
+  ul, ol { margin: 0; }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -4rem;
+    background: var(--surface-2);
+    color: var(--text-primary);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    z-index: 100;
+    transition: top 200ms var(--ease-out);
+    text-decoration: none;
+  }
+  .skip-link:focus { top: var(--space-4); }
+
+  *:focus { outline: none; }
+  *:focus-visible { outline: 3px solid var(--accent-violet); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  .masthead {
+    padding-block: max(var(--space-4), env(safe-area-inset-top)) var(--space-4);
+    padding-inline: clamp(1rem, 4vw, 3rem);
+    border-bottom: 1px solid var(--surface-border);
+  }
+  .masthead-inner {
+    max-width: var(--wide-max);
+    margin-inline: auto;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .wordmark { font-family: var(--font-display); font-size: 1.125rem; font-weight: 700; letter-spacing: 0.03em; color: var(--text-primary); margin: 0; }
+  .masthead-tagline { font-size: var(--text-small); color: var(--text-muted); margin: 0; }
+
+  .article-header {
+    max-width: var(--content-max);
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 4vw, 3rem);
+    padding-block: var(--space-16) var(--space-8);
+  }
+
+  .kicker { text-transform: uppercase; letter-spacing: 0.09em; font-size: var(--text-small); color: var(--text-muted); font-weight: 700; margin: 0 0 var(--space-4); }
+
+  .standfirst {
+    font-family: var(--font-body);
+    font-size: var(--text-standfirst);
+    line-height: 1.45;
+    color: var(--text-primary);
+    font-weight: 400;
+    margin: var(--space-6) 0 var(--space-8);
+    max-width: none;
+  }
+
+  .byline-row-container { container-type: inline-size; }
+  .byline-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4) 0;
+    border-top: 1px solid var(--surface-border);
+    border-bottom: 1px solid var(--surface-border);
+  }
+  @container (min-width: 480px) {
+    .byline-row { flex-direction: row; align-items: center; justify-content: space-between; }
+  }
+
+  .byline { display: flex; align-items: center; gap: var(--space-3); }
+  .byline-avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2.75rem; height: 2.75rem;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+    color: var(--accent-violet);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  .byline-text { font-size: var(--text-meta); color: var(--text-muted); }
+  .byline-text strong { color: var(--text-primary); font-weight: 600; }
+  .byline-meta { display: block; font-variant-numeric: tabular-nums; margin-top: 0.125rem; }
+
+  .byline-actions { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+  .copy-link-btn {
+    min-height: 44px;
+    padding-inline: var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--surface-border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font-size: var(--text-meta);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 200ms var(--ease-out), transform 100ms var(--ease-out), border-color 200ms var(--ease-out);
+  }
+  .copy-link-btn:hover { background: var(--surface-2); border-color: var(--accent-violet); will-change: transform; }
+  .copy-link-btn:active { transform: scale(0.96); }
+
+  .copy-feedback {
+    font-size: var(--text-small);
+    color: var(--accent-violet);
+    min-height: 1.2em;
+    opacity: 0;
+    margin: 0;
+    transition: opacity 300ms var(--ease-out);
+  }
+  .copy-feedback.is-visible { opacity: 1; }
+  .copy-feedback.is-error { color: var(--accent-amber); }
+
+  .jump-nav {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding: var(--space-4) 0 var(--space-2);
+    scrollbar-width: none;
+    margin-top: var(--space-2);
+  }
+  .jump-nav::-webkit-scrollbar { display: none; }
+  .jump-nav a {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: var(--space-4);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--surface-border);
+    font-size: var(--text-small);
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-muted);
+    transition: color 200ms var(--ease-out), border-color 200ms var(--ease-out), background-color 200ms var(--ease-out), transform 100ms var(--ease-out);
+  }
+  .jump-nav a:hover { color: var(--text-primary); border-color: var(--accent-violet); }
+  .jump-nav a:active { transform: scale(0.96); }
+  .jump-nav a[aria-current="true"] { color: var(--surface-0); background: var(--accent-violet); border-color: var(--accent-violet); }
+
+  .hero-visual {
+    position: relative;
+    overflow: hidden;
+    min-height: clamp(220px, 32dvh, 420px);
+    margin: 0 auto var(--space-16);
+    max-width: var(--wide-max);
+    border-radius: var(--radius-lg);
+    background: var(--surface-1);
+  }
+  .hero-blob {
+    position: absolute;
+    inset: -20%;
+    background:
+      radial-gradient(circle at 30% 30%, oklch(55% 0.16 350) 0%, transparent 45%),
+      radial-gradient(circle at 70% 60%, oklch(52% 0.12 200) 0%, transparent 50%),
+      radial-gradient(circle at 50% 85%, oklch(55% 0.13 70) 0%, transparent 55%);
+    animation: drift 24s var(--ease-in-out) infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate(-3%, -2%) scale(1); }
+    to { transform: translate(3%, 2%) scale(1.05); }
+  }
+
+  .section { padding-block: var(--space-16); padding-inline: clamp(1rem, 4vw, 3rem); }
+  .section:first-of-type { padding-top: 0; }
+  .section-wide { max-width: var(--wide-max); margin-inline: auto; }
+  .section-narrow { max-width: var(--content-max); margin-inline: auto; }
+  .section-head { margin-bottom: var(--space-8); }
+  .section-kicker { text-transform: uppercase; letter-spacing: 0.09em; font-size: var(--text-small); font-weight: 700; margin: 0 0 var(--space-2); }
+
+  .section--sound .section-kicker { color: var(--text-muted); }
+  .section--artists .section-kicker { color: var(--accent-magenta); }
+  .section--venues .section-kicker { color: var(--accent-amber); }
+  .section--voices .section-kicker { color: var(--accent-cyan); }
+  .section--listening .section-kicker { color: var(--accent-violet); }
+  .section--voices, .section--listening { background: var(--surface-1); }
+
+  .pull-quote {
+    margin: var(--space-8) 0;
+    padding-inline-start: var(--space-6);
+    font-family: var(--font-display);
+    font-size: clamp(1.375rem, 1.2rem + 1vw, 1.875rem);
+    line-height: 1.35;
+    color: var(--text-primary);
+    font-style: italic;
+    position: relative;
+  }
+  .pull-quote::before {
+    content: "\201C";
+    position: absolute;
+    left: -0.05em;
+    top: -0.2em;
+    font-size: 2.5em;
+    color: var(--accent-violet);
+    font-style: normal;
+    line-height: 1;
+    opacity: 0.5;
+  }
+  .pull-quote cite {
+    display: block;
+    font-family: var(--font-body);
+    font-style: normal;
+    font-size: var(--text-meta);
+    color: var(--text-muted);
+    margin-top: var(--space-3);
+  }
+
+  .artist-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-8); }
+  @media (min-width: 768px) { .artist-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .artist-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .artist-profile {
+    container-type: inline-size;
+    background: var(--surface-1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .profile-index {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-magenta);
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+    line-height: 1;
+    opacity: 0.6;
+  }
+  .profile-tag { text-transform: uppercase; letter-spacing: 0.07em; font-size: var(--text-small); font-weight: 700; margin: 0; color: var(--accent-magenta); }
+  .profile-hook { font-size: var(--text-meta); color: var(--text-muted); margin: 0; }
+  .profile-quote { margin: 0; font-style: italic; color: var(--text-primary); font-size: var(--text-meta); padding-block: var(--space-2); }
+  .profile-quote cite { display: block; font-style: normal; font-size: var(--text-small); color: var(--text-muted); margin-top: var(--space-1); }
+  .profile-bio { font-size: var(--text-meta); margin: 0; line-height: 1.65; }
+
+  @container (min-width: 380px) {
+    .profile-quote { padding-inline-start: var(--space-4); position: relative; }
+    .profile-quote::before { content: ""; position: absolute; left: 0; top: 0.3em; bottom: 0.3em; width: 2px; background: var(--surface-border); }
+  }
+
+  .venue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .venue-entry { padding-block: var(--space-6); border-top: 1px solid var(--surface-border); }
+  .venue-meta { text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--text-small); font-weight: 700; font-variant-numeric: tabular-nums; margin: 0 0 var(--space-2); color: var(--accent-amber); }
+  @media (min-width: 1024px) {
+    .venue-list { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: var(--space-12); }
+  }
+
+  .quote-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-6); }
+  @media (min-width: 768px) { .quote-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .quote-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .voice-quote {
+    margin: 0;
+    background: var(--surface-2);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    position: relative;
+  }
+  .voice-quote::before {
+    content: "\201C";
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-4);
+    font-size: 2rem;
+    color: var(--accent-cyan);
+    opacity: 0.5;
+    font-family: var(--font-display);
+  }
+  .voice-quote p { font-style: italic; font-size: var(--text-meta); color: var(--text-primary); margin: 0 0 var(--space-3); padding-top: var(--space-6); }
+  .voice-quote footer { font-style: normal; font-size: var(--text-small); font-weight: 600; color: var(--accent-cyan); }
+  .voice-quote footer span { display: block; font-weight: 400; color: var(--text-muted); }
+
+  .listening-list { list-style: none; counter-reset: listening; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-8); }
+  .listening-list li { counter-increment: listening; position: relative; padding-inline-start: var(--space-12); }
+  .listening-list li::before {
+    content: counter(listening, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--accent-violet);
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+  }
+  .listening-list h3 { margin-bottom: var(--space-1); }
+  .track-artist { font-size: var(--text-meta); color: var(--text-muted); margin: 0 0 var(--space-2); }
+  .listening-outro { margin-top: var(--space-12); font-size: var(--text-standfirst); font-family: var(--font-display); font-style: italic; color: var(--text-primary); max-width: none; }
+
+  .back-to-top { max-width: var(--wide-max); margin-inline: auto; padding-inline: clamp(1rem, 4vw, 3rem); padding-block: var(--space-8) 0; }
+  .back-to-top a { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--text-meta); font-weight: 600; }
+  .back-to-top a:active { transform: scale(0.96); display: inline-flex; }
+
+  .site-footer {
+    border-top: 1px solid var(--surface-border);
+    padding-block: var(--space-8) max(var(--space-8), env(safe-area-inset-bottom));
+    padding-inline: clamp(1rem, 4vw, 3rem);
+    margin-top: var(--space-16);
+  }
+  .footer-inner { max-width: var(--wide-max); margin-inline: auto; display: flex; flex-direction: column; gap: var(--space-2); }
+  .fiction-disclaimer, .footer-copyright { font-size: var(--text-small); color: var(--text-muted); margin: 0; max-width: none; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .entrance { animation: fadeInUp 600ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms); }
+
+  @media (min-width: 1440px) {
+    .masthead-inner, .section-wide, .back-to-top, .footer-inner { max-width: 80rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+    .hero-blob { transform: none !important; }
+  }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="wordmark">Undercurrent</p>
+    <p class="masthead-tagline">Dispatches from scenes still finding their footing.</p>
+  </div>
+</header>
+
+<main id="main">
+  <article>
+    <header class="article-header">
+      <p class="kicker entrance" style="--i:0">Scene Report - The Wharf Quarter</p>
+      <h1 class="entrance" style="--i:1">The Sound Coming Up From the Wharf</h1>
+      <p class="standfirst entrance" style="--i:2">In Corvale's flood-lit warehouses and back-room stages, a scene that outgrew its own secrecy is figuring out what comes next: one all-ages show, one shuttered tannery, one crowdfunded PA system at a time.</p>
+
+      <div class="byline-row-container entrance" style="--i:3">
+        <div class="byline-row">
+          <div class="byline">
+            <span class="byline-avatar" aria-hidden="true">RO</span>
+            <span class="byline-text">By <strong>Reyna Okafor</strong>
+              <span class="byline-meta"><time datetime="2026-07-28">July 28, 2026</time> &middot; 9 min read</span>
+            </span>
+          </div>
+          <div class="byline-actions">
+            <button type="button" class="copy-link-btn" id="copyLinkBtn" aria-describedby="copyFeedback">Copy link to this story</button>
+            <p class="copy-feedback" id="copyFeedback" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+
+      <nav class="jump-nav entrance" style="--i:4" aria-label="Article sections">
+        <a href="#the-sound">The Sound</a>
+        <a href="#the-artists">The Artists</a>
+        <a href="#the-venues">The Venues</a>
+        <a href="#the-voices">The Voices</a>
+        <a href="#keep-listening">Keep Listening</a>
+      </nav>
+    </header>
+
+    <div class="hero-visual" aria-hidden="true" role="presentation">
+      <div class="hero-blob"></div>
+    </div>
+
+    <section class="section section--sound" id="the-sound" aria-labelledby="the-sound-heading">
+      <div class="section-narrow">
+        <div class="section-head">
+          <p class="section-kicker">The Sound</p>
+          <h2 id="the-sound-heading">What Tuesday Night Actually Sounds Like</h2>
+        </div>
+
+        <p>By eleven on a Tuesday, the line outside the Tannery already wraps the loading dock, coats zipped against the wind coming off the water. Inside, the room still smells faintly like cured leather even though the tannery stopped running in the nineties. Marlowe Vex is testing a synth built from a gutted intercom system, and nobody flinches when it feeds back. This is what a Tuesday looks like now in Corvale's Wharf Quarter, a stretch of the city that spent decades being ignored hard enough to become interesting.</p>
+
+        <p>None of this is new, exactly. Cities have always grown scenes in the cracks nobody was watching: cheap rent, empty buildings, a handful of people with instruments and nowhere better to be. What's different this time is how fast word travels and how little of that speed comes from anywhere official. There's no algorithm sorting the Tannery's Tuesday lineup. There's a group chat, a stack of photocopied flyers taped to the same six telephone poles, and a shared understanding that if you found out about the show, you're supposed to actually show up.</p>
+
+        <h3>Built Out of What Was Already Broken</h3>
+
+        <p>The Wharf Quarter's version of a scene runs on borrowed and rebuilt equipment more than any single genre. Four venues quietly share a PA system nicknamed the Loaner, passed between load-in crews on a schedule kept in a spreadsheet nobody remembers starting. When the Anchor Room closed last spring, its lease tripled overnight, and the sound engineer who'd run the room for six years didn't disappear; he just started mixing for three other venues instead. The community absorbed the loss the way it has absorbed a dozen smaller ones.</p>
+
+        <p>That resilience is also the thing putting the scene at risk. Corvale's District 4 rezoning proposal, currently in front of the planning board, cites "cultural vibrancy" in the Wharf Quarter as a selling point for new mixed-use development: the same vibrancy that exists because rent has stayed low enough for a tannery to become a venue instead of a demolition site. Everyone in this scene has read that kind of language before. Nobody's pretending the timeline is generous.</p>
+
+        <h3>The Algorithm Doesn't Know What Tuesday Night Feels Like</h3>
+
+        <p>Ask around and you'll hear a version of the same complaint: streaming discovery is good at finding you more of what you already like, and bad at telling you where to stand in a room you've never been in. What the Wharf Quarter offers instead is context you can't scroll past, the sound of a cistern's natural reverb, the specific ache of a set that runs twenty minutes long because the crowd won't let the band stop. "You can't queue up the feeling of two hundred strangers deciding, at the same moment, to trust each other," says Toma Reyes, who caught his first Wharf Quarter show at sixteen and hasn't missed a Flood Season Fest since. "That's not a playlist. That's a room."</p>
+
+        <blockquote class="pull-quote">
+          <p>You can't queue up the feeling of two hundred strangers deciding, at the same moment, to trust each other.</p>
+          <cite>- Toma Reyes</cite>
+        </blockquote>
+
+        <p>Whatever happens with the rezoning proposal, that's the thing the Wharf Quarter is actually trying to protect: not a genre, not a real estate footprint, but the specific, unrepeatable experience of being in a room where the show only works because everyone in it decided to show up.</p>
+      </div>
+    </section>
+
+    <section class="section section--artists" id="the-artists" aria-labelledby="artists-heading">
+      <div class="section-wide">
+        <div class="section-head">
+          <p class="section-kicker">The Artists</p>
+          <h2 id="artists-heading">Three Acts Worth Losing Sleep For</h2>
+          <p>Three acts anchor the Wharf Quarter's rotation right now. None of them agree on genre. All three sell out the room.</p>
+        </div>
+
+        <div class="artist-grid">
+          <article class="artist-profile" aria-labelledby="artist-1-name">
+            <p class="profile-index" aria-hidden="true">01</p>
+            <h3 id="artist-1-name">Marlowe Vex</h3>
+            <p class="profile-tag">Junkyard synth-punk</p>
+            <p class="profile-hook">Builds half the rig from scavenged wharf scrap and never plays a set the same way twice.</p>
+            <blockquote class="profile-quote">
+              <p>If it doesn't rattle the windows, I didn't plug it in right.</p>
+              <cite>- Marlowe Vex</cite>
+            </blockquote>
+            <p class="profile-bio">Marlowe Vex grew up two blocks from the Tannery and started performing at nineteen with a bass amp held together by gaffer tape. The scavenged-synth reputation started by accident: a real synthesizer broke mid-set in 2023, and the replacement, built that same week from a gutted building intercom, sounded better. Vex has used salvage electronics ever since, treating every show as an engineering problem as much as a performance.</p>
+          </article>
+
+          <article class="artist-profile" aria-labelledby="artist-2-name">
+            <p class="profile-index" aria-hidden="true">02</p>
+            <h3 id="artist-2-name">Fen and the Static</h3>
+            <p class="profile-tag">Gutter soul</p>
+            <p class="profile-hook">Four-piece known for closing sets with a crowd singalong that outlasts the actual song.</p>
+            <blockquote class="profile-quote">
+              <p>We don't end shows anymore. The room ends them for us.</p>
+              <cite>- Odalys Marsh, vocalist</cite>
+            </blockquote>
+            <p class="profile-bio">Fen and the Static formed at a benefit show for the Anchor Room the week it announced its closing lease. What started as a one-off backing band for a compilation cut has become the Wharf Quarter's most reliable full-room draw, built around horn arrangements that owe more to church choir than to any soul revival trend. Vocalist Odalys Marsh writes most of the lyrics about the neighborhood directly, sometimes naming venues in the songs themselves.</p>
+          </article>
+
+          <article class="artist-profile" aria-labelledby="artist-3-name">
+            <p class="profile-index" aria-hidden="true">03</p>
+            <h3 id="artist-3-name">Kiln</h3>
+            <p class="profile-tag">Warehouse dub, broken techno</p>
+            <p class="profile-hook">Runs the monthly Low Tide night, building every set around whatever room she's in.</p>
+            <blockquote class="profile-quote">
+              <p>The Cistern basically DJs with me. I just decide which mistakes to keep.</p>
+              <cite>- Kiln, born Priya Anand</cite>
+            </blockquote>
+            <p class="profile-bio">Priya Anand started producing in a bedroom studio before she'd ever played a show, then discovered her tracks behaved completely differently once real reverb got involved. Low Tide, her monthly night at the Cistern, is built specifically around that room's seven-second decay time; the same set played anywhere else in the Wharf Quarter would need a full remix. She's become something like the scene's de facto acoustics consultant, informally asked in whenever a new room opens.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--venues" id="the-venues" aria-labelledby="venues-heading">
+      <div class="section-wide">
+        <div class="section-head">
+          <p class="section-kicker">The Venues</p>
+          <h2 id="venues-heading">Where It Actually Happens</h2>
+          <p>Four rooms carry most of the Wharf Quarter's weekly bill, and no two of them sound, feel, or run anything alike.</p>
+        </div>
+
+        <ul class="venue-list">
+          <li class="venue-entry">
+            <h3>The Tannery</h3>
+            <p class="venue-meta">Wharf Quarter &middot; All ages &middot; Standing room about 300</p>
+            <p>The building spent sixty years as Corvale Hide and Leather Co. before a collective of musicians took over the lease in 2019. The concrete floor holds cold well into spring, which is why regulars keep their coats on and call it, without irony, the coats-on venue. It's the closest thing the scene has to a town hall.</p>
+          </li>
+          <li class="venue-entry">
+            <h3>Split Lip</h3>
+            <p class="venue-meta">Wharf Quarter &middot; 21 and over &middot; Back room holds about 80</p>
+            <p>A dive bar up front, a stage in the back, and a low ceiling that makes every show feel like it's happening inside a bass cabinet. Split Lip books the acts too rough-edged for anywhere with a dress code, and the regulars at the bar have opinions about all of them.</p>
+          </li>
+          <li class="venue-entry">
+            <h3>The Cistern</h3>
+            <p class="venue-meta">Wharf Quarter &middot; ID required after 9pm &middot; Capacity about 150</p>
+            <p>A decommissioned municipal water cistern, converted by a local arts nonprofit, with a seven-second natural reverb that no sound engineer fully controls. Bands either build a set around it or fight it the whole night. Kiln's monthly Low Tide night has made peace with it better than anyone.</p>
+          </li>
+          <li class="venue-entry">
+            <h3>Hook &amp; Ladder</h3>
+            <p class="venue-meta">Wharf Quarter &middot; All ages by day &middot; Capacity about 120</p>
+            <p>A retired firehouse still marked Engine Co. 12 above the door, now community-run on a rotating volunteer schedule. Sunday matinees are all ages and usually acoustic; the same room turns considerably louder once the sun's down.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section--voices" id="the-voices" aria-labelledby="voices-heading">
+      <div class="section-wide">
+        <div class="section-head">
+          <p class="section-kicker">The Voices</p>
+          <h2 id="voices-heading">Voices From the Floor</h2>
+          <p>Performers, regulars, and the volunteers keeping the doors open, in their own words.</p>
+        </div>
+
+        <div class="quote-grid">
+          <blockquote class="voice-quote">
+            <p>Nobody's discovering this scene through a For You page. You hear about the Tannery because someone you trust told you to be there.</p>
+            <footer>Dara Lindqvist<span>Regular at the Tannery</span></footer>
+          </blockquote>
+          <blockquote class="voice-quote">
+            <p>Every band here has played someone else's benefit show. That's basically the entry fee.</p>
+            <footer>Odalys Marsh<span>Vocalist, Fen and the Static</span></footer>
+          </blockquote>
+          <blockquote class="voice-quote">
+            <p>Running door on donations means some nights we clear forty dollars for four bands, and somehow that's still the job I want.</p>
+            <footer>Bettina Cho<span>Booking volunteer, the Tannery</span></footer>
+          </blockquote>
+          <blockquote class="voice-quote">
+            <p>The reverb at the Cistern doesn't forgive you for playing safe.</p>
+            <footer>Wick Alvarado<span>Drummer, Fen and the Static</span></footer>
+          </blockquote>
+          <blockquote class="voice-quote">
+            <p>I moved to the Wharf Quarter for a job. I stayed for a Tuesday.</p>
+            <footer>Toma Reyes<span>First show at sixteen</span></footer>
+          </blockquote>
+          <blockquote class="voice-quote">
+            <p>People ask if I'll ever play a real synthesizer again. I built a real synthesizer. It's just made of a phone system.</p>
+            <footer>Marlowe Vex<span>Performer</span></footer>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--listening" id="keep-listening" aria-labelledby="listening-heading">
+      <div class="section-narrow">
+        <div class="section-head">
+          <p class="section-kicker">Keep Listening</p>
+          <h2 id="listening-heading">Five Ways In</h2>
+          <p>The scene doesn't have a single official playlist, on purpose. Here's where to start anyway.</p>
+        </div>
+
+        <ol class="listening-list">
+          <li>
+            <h3>Scrap Metal Lullaby</h3>
+            <p class="track-artist">Marlowe Vex</p>
+            <p>Three minutes of feedback and found-object percussion that somehow resolves into an actual melody around the two-minute mark. Recorded live at the Tannery with the room noise left in on purpose.</p>
+          </li>
+          <li>
+            <h3>Anchor Room</h3>
+            <p class="track-artist">Fen and the Static</p>
+            <p>Named for the venue that closed to make space for it. The horns come in around the second chorus, and the song does not calm back down after that.</p>
+          </li>
+          <li>
+            <h3>Low Tide (Live at the Cistern)</h3>
+            <p class="track-artist">Kiln</p>
+            <p>Built entirely around that room's seven-second reverb tail. The version on any other recording sounds like a different song.</p>
+          </li>
+          <li>
+            <h3>Ballast</h3>
+            <p class="track-artist">Cutlass Mary</p>
+            <p>A newer name on the bill, mostly solo cello run through the same scavenged pedal chain Marlowe Vex lent her for a single show. Quieter than everything else on this list, and somehow the tensest listen of the five.</p>
+          </li>
+          <li>
+            <h3>The Loaner Sessions</h3>
+            <p class="track-artist">Various artists, cassette-only compilation</p>
+            <p>Recorded on the shared PA system itself, between sets, hiss and all. The closest thing to a rough cut of what the Wharf Quarter actually sounds like when nobody's performing for anyone outside the room.</p>
+          </li>
+        </ol>
+
+        <p class="listening-outro">None of it streams particularly well. Go find a room instead.</p>
+      </div>
+    </section>
+
+    <p class="back-to-top"><a href="#main">Back to top</a></p>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p class="fiction-disclaimer">All artists, venues, and quotes in this report are fictional composites created for editorial illustration.</p>
+    <p class="footer-copyright">&copy; 2026 Undercurrent. A scene report, not a directory.</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.getElementById("copyLinkBtn");
+    var feedback = document.getElementById("copyFeedback");
+    var feedbackTimer;
+
+    if (!btn || !feedback) { return; }
+
+    function showFeedback(message, isError) {
+      window.clearTimeout(feedbackTimer);
+      feedback.textContent = message;
+      feedback.classList.toggle("is-error", !!isError);
+      feedback.classList.add("is-visible");
+      feedbackTimer = window.setTimeout(function () {
+        feedback.classList.remove("is-visible");
+      }, 3200);
+    }
+
+    btn.addEventListener("click", function () {
+      var url = window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () {
+          showFeedback("Link copied.", false);
+        }).catch(function () {
+          showFeedback("Couldn't copy automatically. Select the address bar to copy the link instead.", true);
+        });
+      } else {
+        showFeedback("Couldn't copy automatically. Select the address bar to copy the link instead.", true);
+      }
+    });
+  })();
+
+  (function () {
+    if (!("IntersectionObserver" in window)) { return; }
+    var sections = document.querySelectorAll("main section[id]");
+    var links = document.querySelectorAll(".jump-nav a");
+    if (!sections.length || !links.length) { return; }
+
+    var map = {};
+    links.forEach(function (link) {
+      map[link.getAttribute("href").slice(1)] = link;
+    });
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var link = map[entry.target.id];
+        if (!link || !entry.isIntersecting) { return; }
+        links.forEach(function (l) { l.removeAttribute("aria-current"); });
+        link.setAttribute("aria-current", "true");
+      });
+    }, { rootMargin: "-40% 0px -50% 0px", threshold: 0 });
+
+    sections.forEach(function (section) { observer.observe(section); });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny Table Chefs: Kids Cooking Kit for Ages 6 to 10</title>
+<style>
+  /* ============ Design tokens ============ */
+  :root {
+    color-scheme: light;
+
+    /* Color: OKLCH, tinted neutrals toward the brand hue (warm coral, ~35deg) */
+    --hue-brand: 35;
+    --color-bg: oklch(0.985 0.008 var(--hue-brand));
+    --color-surface: oklch(0.995 0.005 var(--hue-brand));
+    --color-surface-alt: oklch(0.96 0.014 var(--hue-brand));
+    --color-border: oklch(0.87 0.016 var(--hue-brand));
+    --color-border-strong: oklch(0.74 0.02 var(--hue-brand));
+    --color-text: oklch(0.24 0.02 var(--hue-brand));
+    --color-text-muted: oklch(0.44 0.02 var(--hue-brand));
+    --color-on-primary: oklch(0.99 0.006 var(--hue-brand));
+
+    --color-primary: oklch(0.5 0.17 35);
+    --color-primary-hover: oklch(0.45 0.17 35);
+    --color-primary-active: oklch(0.4 0.17 35);
+
+    --color-secondary: oklch(0.5 0.1 195);
+    --color-secondary-surface: oklch(0.94 0.035 195);
+    --color-secondary-border: oklch(0.78 0.06 195);
+
+    --color-success: oklch(0.4 0.11 150);
+    --color-success-surface: oklch(0.94 0.05 150);
+    --color-success-border: oklch(0.72 0.13 150);
+
+    --color-error: oklch(0.45 0.17 25);
+    --color-error-surface: oklch(0.95 0.03 25);
+    --color-error-border: oklch(0.75 0.13 25);
+
+    --color-focus-ring: oklch(0.55 0.19 250);
+
+    /* Typography: playful geometric heading over a warm readable serif body,
+       both drawn from the OS-installed font list so the file stays offline. */
+    --font-heading: "Gill Sans", "Gill Sans MT", "Century Gothic", Calibri, sans-serif;
+    --font-body: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+
+    --text-body: 1rem;
+    --text-lede: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+    --text-small: 0.875rem;
+    --text-h1: clamp(2.25rem, 1.85rem + 2vw, 3.5rem);
+    --text-h2: clamp(1.75rem, 1.55rem + 1vw, 2.25rem);
+    --text-h3: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+
+    /* Spacing: 4pt grid */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+    --space-9: 96px;
+
+    /* Radius: concentric, button 8px + 4px padding = 12px outer container */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+    /* Motion: prescribed named easings only */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --duration-feedback: 120ms;
+    --duration-state: 220ms;
+    --duration-entrance: 560ms;
+    --duration-exit: 420ms;
+
+    --max-width: 76rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --color-bg: oklch(0.19 0.014 var(--hue-brand));
+      --color-surface: oklch(0.24 0.016 var(--hue-brand));
+      --color-surface-alt: oklch(0.28 0.018 var(--hue-brand));
+      --color-border: oklch(0.36 0.02 var(--hue-brand));
+      --color-border-strong: oklch(0.48 0.024 var(--hue-brand));
+      --color-text: oklch(0.93 0.01 var(--hue-brand));
+      --color-text-muted: oklch(0.74 0.016 var(--hue-brand));
+      --color-on-primary: oklch(0.99 0.006 var(--hue-brand));
+
+      --color-primary: oklch(0.68 0.15 35);
+      --color-primary-hover: oklch(0.73 0.15 35);
+      --color-primary-active: oklch(0.6 0.15 35);
+
+      --color-secondary-surface: oklch(0.3 0.045 195);
+      --color-secondary-border: oklch(0.46 0.06 195);
+
+      --color-success-surface: oklch(0.28 0.05 150);
+      --color-success-border: oklch(0.5 0.09 150);
+
+      --color-error-surface: oklch(0.3 0.05 25);
+      --color-error-border: oklch(0.55 0.1 25);
+    }
+  }
+
+  /* ============ Reset ============ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  img, svg { max-width: 100%; display: block; }
+  h1, h2, h3 { font-family: var(--font-heading); line-height: 1.15; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
+
+  h1 { font-size: var(--text-h1); font-weight: 700; }
+  h2 { font-size: var(--text-h2); font-weight: 700; }
+  h3 { font-size: var(--text-h3); font-weight: 600; }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -100px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-sm);
+    z-index: 100;
+    transition: top var(--duration-state) var(--ease-out);
+  }
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  .wrap {
+    max-width: var(--max-width);
+    margin-inline: auto;
+    padding-inline: var(--space-5);
+  }
+
+  /* ============ Header ============ */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in oklch, var(--color-surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .header-inner {
+    max-width: var(--max-width);
+    margin-inline: auto;
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    position: relative;
+  }
+  .brand {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.25rem;
+    text-decoration: none;
+  }
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+  }
+  .nav-toggle-bars {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    position: relative;
+  }
+  .nav-toggle-bars::before,
+  .nav-toggle-bars::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+  }
+  .nav-toggle-bars::before { top: -6px; }
+  .nav-toggle-bars::after { top: 6px; }
+
+  .site-nav {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-3);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-4) var(--space-5);
+  }
+  .site-nav.is-open { display: flex; }
+  .site-nav ul { display: flex; flex-direction: column; gap: var(--space-3); }
+  .site-nav a {
+    text-decoration: none;
+    padding: var(--space-2) 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .header-cta { display: none; }
+
+  @media (min-width: 768px) {
+    .nav-toggle { display: none; }
+    .site-nav {
+      display: flex;
+      position: static;
+      flex-direction: row;
+      border: none;
+      padding: 0;
+      background: transparent;
+    }
+    .site-nav ul { flex-direction: row; gap: var(--space-5); }
+    .site-nav a { min-height: auto; padding: var(--space-1) 0; }
+    .header-cta { display: inline-flex; }
+  }
+
+  /* ============ Buttons (8-state component) ============ */
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--text-body);
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: background-color var(--duration-feedback) var(--ease-out),
+                border-color var(--duration-feedback) var(--ease-out),
+                transform var(--duration-feedback) var(--ease-out),
+                box-shadow var(--duration-feedback) var(--ease-out);
+  }
+  .button:active { transform: scale(0.96); }
+  .button-primary {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+  .button-primary:hover { background: var(--color-primary-hover); }
+  .button-primary:active { background: var(--color-primary-active); }
+  .button-primary[disabled],
+  .button-primary[aria-disabled="true"] {
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+    cursor: not-allowed;
+    transform: none;
+  }
+  .button-primary[data-state="success"] {
+    background: var(--color-success);
+  }
+  .button-secondary {
+    background: transparent;
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+  }
+  .button-secondary:hover { background: var(--color-surface-alt); }
+  .button-small { padding: var(--space-2) var(--space-4); font-size: var(--text-small); min-height: 40px; }
+
+  .button-spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid color-mix(in oklch, var(--color-on-primary) 35%, transparent);
+    border-top-color: var(--color-on-primary);
+    display: none;
+  }
+  .button[aria-busy="true"] .button-spinner { display: inline-block; animation: spin 700ms linear infinite; }
+  .button[aria-busy="true"] .button-label-default { display: none; }
+  .button .button-label-loading,
+  .button .button-label-success { display: none; }
+  .button[aria-busy="true"] .button-label-loading { display: inline; }
+  .button[data-state="success"] .button-label-default,
+  .button[data-state="success"] .button-label-loading { display: none; }
+  .button[data-state="success"] .button-label-success { display: inline; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============ Layout sections ============ */
+  .section { padding-block: var(--space-9); }
+  .section-alt { background: var(--color-surface-alt); }
+  .section-heading-group { max-width: 42rem; margin-bottom: var(--space-6); }
+  .section-lede { color: var(--color-text-muted); font-size: var(--text-lede); margin-top: var(--space-3); }
+  .eyebrow {
+    font-family: var(--font-heading);
+    font-size: var(--text-small);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    margin: 0 0 var(--space-3);
+  }
+
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity var(--duration-entrance) var(--ease-out),
+                transform var(--duration-entrance) var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 50ms);
+  }
+  [data-reveal].is-visible { opacity: 1; transform: translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] { transform: none; transition-duration: 1ms; transition-delay: 0ms; }
+    .button:active { transform: none; }
+  }
+
+  /* ============ Hero ============ */
+  .hero {
+    display: grid;
+    gap: var(--space-7);
+    padding-block: var(--space-8) var(--space-9);
+  }
+  @media (min-width: 1024px) {
+    .hero { grid-template-columns: 1.1fr 0.9fr; align-items: center; }
+  }
+  .hero-lede { margin-top: var(--space-4); font-size: var(--text-lede); color: var(--color-text-muted); max-width: 42rem; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
+  .hero-trust { margin-top: var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); }
+  .hero-trust li { display: flex; gap: var(--space-2); align-items: baseline; color: var(--color-text-muted); }
+  .hero-trust li::before { content: "-"; color: var(--color-primary); flex-shrink: 0; }
+
+  .hero-visual {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+  }
+  .visual-shape { position: absolute; border-radius: 50%; }
+  .shape-a { width: 55%; aspect-ratio: 1; background: var(--color-primary); opacity: 0.85; top: -10%; left: -8%; }
+  .shape-b { width: 40%; aspect-ratio: 1; background: var(--color-secondary-surface); border: 1px solid var(--color-secondary-border); bottom: -12%; right: -6%; }
+  .shape-c { width: 30%; aspect-ratio: 1; background: var(--color-success-surface); border: 1px solid var(--color-success-border); bottom: 12%; left: 18%; }
+
+  /* ============ Contents grid ============ */
+  .contents-grid {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) { .contents-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .contents-grid { grid-template-columns: repeat(3, 1fr); } }
+  .contents-grid li {
+    padding: var(--space-5);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .contents-name { font-family: var(--font-heading); font-weight: 700; }
+  .contents-detail { color: var(--color-text-muted); font-size: var(--text-small); }
+
+  /* ============ Two-column info blocks ============ */
+  .info-columns { display: grid; gap: var(--space-7); }
+  @media (min-width: 1024px) { .info-columns { grid-template-columns: 1fr 1fr; } }
+  .info-list { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-5); }
+  .info-list li { display: flex; gap: var(--space-3); }
+  .info-marker {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary);
+    margin-top: 2px;
+  }
+  .info-marker.is-safety { border-color: var(--color-error); }
+  .info-list p { color: var(--color-text-muted); }
+  .info-list strong { color: var(--color-text); display: block; margin-bottom: var(--space-1); }
+
+  /* ============ Recipe ============ */
+  .recipe-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    padding: var(--space-6);
+    display: grid;
+    gap: var(--space-6);
+  }
+  @media (min-width: 768px) { .recipe-card { grid-template-columns: 1fr 1fr; } }
+  .recipe-meta { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: 999px;
+    font-size: var(--text-small);
+    font-weight: 600;
+    background: var(--color-secondary-surface);
+    border: 1px solid var(--color-secondary-border);
+    color: var(--color-text);
+  }
+  .badge.is-adult { background: var(--color-error-surface); border-color: var(--color-error-border); }
+  .recipe-steps { display: flex; flex-direction: column; gap: var(--space-3); counter-reset: step; margin-top: var(--space-4); }
+  .recipe-steps li { display: flex; gap: var(--space-3); counter-increment: step; }
+  .recipe-steps li::before {
+    content: counter(step);
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: var(--text-small);
+  }
+  .recipe-steps li[data-adult] strong::after {
+    content: "Grown-up here";
+    display: inline-block;
+    margin-left: var(--space-2);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-error);
+  }
+
+  /* ============ Pricing ============ */
+  .pricing-layout { display: grid; gap: var(--space-7); }
+  @media (min-width: 1024px) { .pricing-layout { grid-template-columns: 1.2fr 0.8fr; align-items: start; } }
+
+  .plan-toggle { display: flex; flex-direction: column; gap: var(--space-4); }
+  .plan-option {
+    position: relative;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-5);
+    background: var(--color-surface);
+    transition: border-color var(--duration-state) var(--ease-in-out),
+                background-color var(--duration-state) var(--ease-in-out);
+  }
+  .plan-option:has(input:checked) {
+    border-color: var(--color-primary);
+    background: color-mix(in oklch, var(--color-primary) 6%, var(--color-surface));
+  }
+  .plan-option:has(input:focus-visible) {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+  .plan-option-row { display: flex; align-items: flex-start; gap: var(--space-4); }
+  .plan-option input[type="radio"] { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--color-primary); flex-shrink: 0; }
+  .plan-option label { display: block; }
+  .plan-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+  .plan-name { font-family: var(--font-heading); font-weight: 700; font-size: var(--text-h3); }
+  .plan-price { font-family: var(--font-heading); font-weight: 700; font-variant-numeric: tabular-nums; font-size: var(--text-h3); white-space: nowrap; }
+  .plan-price span { font-size: var(--text-small); font-weight: 400; color: var(--color-text-muted); }
+  .plan-desc { color: var(--color-text-muted); margin-top: var(--space-2); }
+
+  .info-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 50%;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+  [popover] {
+    max-width: 20rem;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-md);
+  }
+  [popover]:popover-open { animation: pop-in var(--duration-state) var(--ease-out); }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [popover]:popover-open { animation: none; }
+  }
+
+  .summary-panel {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    padding: var(--space-6);
+    position: sticky;
+    top: 88px;
+  }
+  .summary-row { display: flex; justify-content: space-between; padding-block: var(--space-3); border-bottom: 1px solid var(--color-border); }
+  .summary-row:last-of-type { border-bottom: none; }
+  .summary-total { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .add-to-cart { width: 100%; margin-top: var(--space-5); }
+  .cart-status { margin-top: var(--space-3); font-size: var(--text-small); color: var(--color-success); min-height: 1.2em; }
+
+  .gift-callout {
+    margin-top: var(--space-6);
+    padding: var(--space-5);
+    border-radius: var(--radius-md);
+    background: var(--color-secondary-surface);
+    border: 1px solid var(--color-secondary-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+
+  /* ============ Dialog ============ */
+  dialog {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    max-width: 32rem;
+    width: min(92vw, 32rem);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-md);
+  }
+  dialog::backdrop { background: oklch(0.1 0.01 var(--hue-brand) / 45%); }
+  @supports (transition-behavior: allow-discrete) {
+    dialog {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
+      transition: opacity var(--duration-state) var(--ease-drawer),
+                  transform var(--duration-state) var(--ease-drawer),
+                  overlay var(--duration-state) allow-discrete,
+                  display var(--duration-state) allow-discrete;
+    }
+    dialog[open] { opacity: 1; transform: translateY(0) scale(1); }
+    @starting-style {
+      dialog[open] { opacity: 0; transform: translateY(16px) scale(0.98); }
+    }
+  }
+  .dialog-inner { padding: var(--space-6); }
+  .dialog-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-4); }
+  .dialog-close {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    transition: background-color var(--duration-feedback) var(--ease-out);
+  }
+  .dialog-close:hover { background: var(--color-surface-alt); }
+
+  .field { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
+  .field label { font-weight: 600; font-size: var(--text-small); }
+  .field input, .field textarea {
+    font: inherit;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    min-height: 44px;
+  }
+  .field textarea { min-height: 88px; resize: vertical; }
+  .field input:focus-visible, .field textarea:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+  .field[data-invalid="true"] input { border-color: var(--color-error); }
+  .field-error {
+    color: var(--color-error);
+    font-size: var(--text-small);
+    display: none;
+  }
+  .field[data-invalid="true"] .field-error { display: block; }
+  .field-hint { color: var(--color-text-muted); font-size: var(--text-small); }
+  .dialog-actions { margin-top: var(--space-6); display: flex; justify-content: flex-end; gap: var(--space-3); }
+  .dialog-confirm {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--color-success-surface);
+    border: 1px solid var(--color-success-border);
+    display: none;
+  }
+  .dialog-confirm.is-visible { display: block; }
+
+  /* ============ Footer ============ */
+  .site-footer {
+    padding-block: var(--space-7);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: var(--text-small);
+  }
+  .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); }
+  .footer-links { display: flex; gap: var(--space-5); }
+  .footer-links a { text-decoration: underline; text-underline-offset: 2px; min-height: 44px; display: inline-flex; align-items: center; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="#top">Tiny Table Chefs</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" id="nav-toggle-btn">
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+      <span>Menu</span>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Product sections">
+      <ul>
+        <li><a href="#whats-inside">What's inside</a></li>
+        <li><a href="#recipe">Sample recipe</a></li>
+        <li><a href="#safety">Safety</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+      </ul>
+    </nav>
+    <a class="button button-primary button-small header-cta" href="#pricing">See pricing</a>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero wrap" id="top">
+    <div class="hero-copy">
+      <p class="eyebrow">Cooking kit, ages 6 to 10</p>
+      <h1>Tiny Table Chefs</h1>
+      <p class="hero-lede">A hands-on cooking kit that turns kitchen time into a weekly ritual: real tools sized for small hands, recipe cards written for beginning readers, and a clear line between what a child does alone and what needs a grown-up standing next to them.</p>
+      <div class="hero-actions">
+        <a href="#pricing" class="button button-primary">Choose a plan</a>
+        <a href="#whats-inside" class="button button-secondary">See what's inside</a>
+      </div>
+      <ul class="hero-trust">
+        <li>Built for ages 6 to 10, with an adult present for stovetop steps</li>
+        <li>Blunt-tip tools that won't cut skin, even used with force</li>
+        <li>Pick a one-time kit or a monthly recipe subscription</li>
+      </ul>
+    </div>
+    <div class="hero-visual" role="img" aria-label="Photo placeholder: a family kitchen table set up for cooking, a child in a canvas apron folding a quesadilla next to a parent at the stove, surrounded by the kit's mixing bowl, measuring cups, and a propped-up recipe card.">
+      <div class="visual-shape shape-a" aria-hidden="true"></div>
+      <div class="visual-shape shape-b" aria-hidden="true"></div>
+      <div class="visual-shape shape-c" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <section class="section" id="whats-inside" aria-labelledby="whats-inside-heading">
+    <div class="wrap">
+      <div class="section-heading-group" data-reveal>
+        <h2 id="whats-inside-heading">What's inside the box</h2>
+        <p class="section-lede">Everything a beginner cook needs to start a recipe and finish it, so a session doesn't stall on a missing tool.</p>
+      </div>
+      <ul class="contents-grid">
+        <li data-reveal style="--i: 0;">
+          <span class="contents-name">Canvas kids' apron</span>
+          <span class="contents-detail">Adjustable neck strap, front pocket sized for the recipe card, machine washable.</span>
+        </li>
+        <li data-reveal style="--i: 1;">
+          <span class="contents-name">Blunt-tip nylon chef knife</span>
+          <span class="contents-detail">Cuts soft produce like banana and cooked pasta; will not cut skin, even pressed hard.</span>
+        </li>
+        <li data-reveal style="--i: 2;">
+          <span class="contents-name">Silicone spatula and whisk</span>
+          <span class="contents-detail">Bamboo handles shaped for a smaller grip than standard kitchen tools.</span>
+        </li>
+        <li data-reveal style="--i: 3;">
+          <span class="contents-name">Fraction-labeled measuring set</span>
+          <span class="contents-detail">Stackable cups and spoons marked 1/4, 1/3, 1/2, and 1, plus matching spoons.</span>
+        </li>
+        <li data-reveal style="--i: 4;">
+          <span class="contents-name">Non-slip silicone mixing bowl</span>
+          <span class="contents-detail">Grippy base keeps the bowl still during one-handed whisking.</span>
+        </li>
+        <li data-reveal style="--i: 5;">
+          <span class="contents-name">Laminated recipe card</span>
+          <span class="contents-detail">Double-sided, wipeable, numbered steps with a "grown-up here" flag on stovetop steps.</span>
+        </li>
+        <li data-reveal style="--i: 6;">
+          <span class="contents-name">Kitchen safety placemat</span>
+          <span class="contents-detail">Marks a hot-zone boundary to keep a young cook a safe distance from the stove.</span>
+        </li>
+        <li data-reveal style="--i: 7;">
+          <span class="contents-name">Finished-recipe sticker chart</span>
+          <span class="contents-detail">Reusable chart for tracking which recipes a child has actually cooked.</span>
+        </li>
+        <li data-reveal style="--i: 8;">
+          <span class="contents-name">Storage and mise-en-place tin</span>
+          <span class="contents-detail">Holds the small tools between uses and doubles as a prep tray on cooking day.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="age-guidance" aria-labelledby="age-guidance-heading">
+    <div class="wrap info-columns">
+      <div data-reveal>
+        <p class="eyebrow">Age guidance</p>
+        <h2 id="age-guidance-heading">Right for ages 6 to 10</h2>
+        <p class="section-lede">The tools, print size, and recipe steps are all built for this range, not scaled down from an adult kit.</p>
+        <ul class="info-list">
+          <li>
+            <span class="info-marker" aria-hidden="true"></span>
+            <div><strong>Ages 6 to 7</strong><p>Plan for hand-over-hand help on cutting steps and full supervision at the stove; most kids in this range still want a grown-up close by throughout.</p></div>
+          </li>
+          <li>
+            <span class="info-marker" aria-hidden="true"></span>
+            <div><strong>Ages 8 to 10</strong><p>Many kids handle prep steps independently once an adult starts the stovetop portion, checking in rather than standing over the pan.</p></div>
+          </li>
+          <li>
+            <span class="info-marker" aria-hidden="true"></span>
+            <div><strong>Every recipe card</strong><p>Marks which steps need an adult in advance, so you know before you start whether you'll be needed for two minutes or twenty.</p></div>
+          </li>
+        </ul>
+      </div>
+      <div data-reveal style="--i: 1;">
+        <p class="eyebrow">Learning benefits</p>
+        <h2>What a recipe actually teaches</h2>
+        <p class="section-lede">The cooking is the hook; the skills underneath are why parents keep the kit around.</p>
+        <ul class="info-list">
+          <li>
+            <span class="info-marker" aria-hidden="true"></span>
+            <div><strong>Fractions and measurement</strong><p>Cups and spoons are labeled in fraction form, so filling a 1/3 cup twice becomes a hands-on math problem, not a worksheet.</p></div>
+          </li>
+          <li>
+            <span class="info-marker" aria-hidden="true"></span>
+            <div><strong>Sequencing and reading</strong><p>Numbered recipe cards build the habit of reading a full step before starting it, rather than acting on the first word.</p></div>
+          </li>
+          <li>
+            <span class="info-marker" aria-hidden="true"></span>
+            <div><strong>Fine motor control</strong><p>Whisking, folding, and plating use the same grip and wrist motion as handwriting practice.</p></div>
+          </li>
+          <li>
+            <span class="info-marker" aria-hidden="true"></span>
+            <div><strong>Follow-through</strong><p>The sticker chart gives a child a visible record of recipes they finished start to finish, not just started.</p></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="recipe" aria-labelledby="recipe-heading">
+    <div class="wrap">
+      <div class="section-heading-group" data-reveal>
+        <p class="eyebrow">Sample recipe</p>
+        <h2 id="recipe-heading">Rainbow veggie quesadillas</h2>
+        <p class="section-lede">One of the six recipe cards included with every kit, chosen here because it uses almost every tool in the box.</p>
+      </div>
+      <div class="recipe-card" data-reveal>
+        <div>
+          <div class="recipe-meta">
+            <span class="badge">25 minutes</span>
+            <span class="badge">Beginner</span>
+            <span class="badge is-adult">Stovetop step, adult required</span>
+          </div>
+          <h3 style="margin-top: 1rem;">What's on the card</h3>
+          <p class="section-lede" style="font-size: var(--text-body); margin-top: var(--space-2);">Whole-wheat tortillas layered with shredded cheese, bell pepper, corn, and black beans, folded and pressed until the cheese melts. Yields two kid-size servings.</p>
+        </div>
+        <div>
+          <h3>How the steps split</h3>
+          <ol class="recipe-steps">
+            <li><div><strong>Grate the cheese</strong><p>Using the included guard over the coarse side of the grater.</p></div></li>
+            <li><div><strong>Arrange the vegetables</strong><p>In a pattern across half the tortilla; this step is where the "rainbow" comes from.</p></div></li>
+            <li><div><strong>Fold and press</strong><p>Close the tortilla and press down gently so it holds its shape in the pan.</p></div></li>
+            <li data-adult><div><strong>Heat and flip</strong><p>An adult heats the pan and flips the quesadilla once the first side is golden.</p></div></li>
+            <li><div><strong>Plate and slice</strong><p>Cut into wedges with the blunt-tip knife once it's cool enough to touch.</p></div></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="safety" aria-labelledby="safety-heading">
+    <div class="wrap">
+      <div class="section-heading-group" data-reveal>
+        <p class="eyebrow">Safety notes</p>
+        <h2 id="safety-heading">What supervision actually looks like</h2>
+        <p class="section-lede">Read this before the first cooking session, not after.</p>
+      </div>
+      <ul class="info-list" data-reveal style="max-width: 48rem;">
+        <li>
+          <span class="info-marker is-safety" aria-hidden="true"></span>
+          <div><strong>Blunt-tip tools still need respect</strong><p>The included knife will not cut skin, but it can still crush soft produce with force; pair the first few uses with a reminder about what the tool is for.</p></div>
+        </li>
+        <li>
+          <span class="info-marker is-safety" aria-hidden="true"></span>
+          <div><strong>Stovetop and oven steps are flagged</strong><p>Every recipe card marks these steps in advance with a "grown-up here" label, so you can plan your attention before starting.</p></div>
+        </li>
+        <li>
+          <span class="info-marker is-safety" aria-hidden="true"></span>
+          <div><strong>No nuts, shellfish, or raw egg tasting in the recipes</strong><p>Ingredients ship separately and are sourced by your household; check your family's allergies against the shopping list before you buy groceries.</p></div>
+        </li>
+        <li>
+          <span class="info-marker is-safety" aria-hidden="true"></span>
+          <div><strong>Small parts and age range</strong><p>Measuring-spoon rings are sized above standard choke-hazard testing thresholds for ages 6 and up; the kit is not intended for children under 6.</p></div>
+        </li>
+        <li>
+          <span class="info-marker is-safety" aria-hidden="true"></span>
+          <div><strong>The placemat marks a hot zone</strong><p>Set it up before cooking so a young cook has a visible boundary to stay behind near the stove.</p></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-pricing" id="pricing" aria-labelledby="pricing-heading">
+    <div class="wrap">
+      <div class="section-heading-group" data-reveal>
+        <p class="eyebrow">Pricing</p>
+        <h2 id="pricing-heading">Choose how you want to start</h2>
+        <p class="section-lede">Both options include the full tool set. The difference is what happens after the first box.</p>
+      </div>
+
+      <div class="pricing-layout" data-reveal>
+        <form class="plan-toggle" id="plan-form">
+          <fieldset style="border: none; padding: 0; margin: 0; display: contents;">
+            <legend class="eyebrow" style="margin-bottom: var(--space-3);">Purchase option</legend>
+
+            <div class="plan-option">
+              <div class="plan-option-row">
+                <input type="radio" name="plan" id="plan-onetime" value="59" checked>
+                <label for="plan-onetime" style="flex: 1;">
+                  <div class="plan-title-row">
+                    <span class="plan-name">One-time kit</span>
+                    <span class="plan-price">$59</span>
+                  </div>
+                  <p class="plan-desc">Full tool set (apron, knife, spatula, whisk, measuring set, mixing bowl, storage tin) plus six recipe cards. Ships once. No recurring charge.</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="plan-option">
+              <div class="plan-option-row">
+                <input type="radio" name="plan" id="plan-sub" value="24">
+                <label for="plan-sub" style="flex: 1;">
+                  <div class="plan-title-row">
+                    <span class="plan-name">Monthly subscription <button type="button" class="info-button" popovertarget="plan-info" aria-label="What's the difference between the two plans?">i</button></span>
+                    <span class="plan-price">$24<span>/mo</span></span>
+                  </div>
+                  <p class="plan-desc">Month one ships the full tool set. Every month after, a new recipe card arrives, with the occasional replacement tool. Cancel anytime after month one.</p>
+                </label>
+              </div>
+            </div>
+          </fieldset>
+        </form>
+
+        <div popover id="plan-info">
+          <p style="font-weight: 700; margin-bottom: var(--space-2);">Which one is right for us?</p>
+          <p style="color: var(--color-text-muted);">Pick the one-time kit if you want a single set of recipes with nothing recurring. Pick the subscription if you'd like a new recipe to show up each month without reordering.</p>
+        </div>
+
+        <aside class="summary-panel" aria-labelledby="summary-heading">
+          <h3 id="summary-heading">Order summary</h3>
+          <div class="summary-row">
+            <span id="summary-plan-name">One-time kit</span>
+            <span class="summary-total" id="summary-plan-price">$59</span>
+          </div>
+          <div class="summary-row">
+            <span>Shipping</span>
+            <span class="summary-total">Free</span>
+          </div>
+          <button type="button" class="button button-primary add-to-cart" id="add-to-cart" aria-busy="false">
+            <span class="button-spinner" aria-hidden="true"></span>
+            <span class="button-label-default">Add one-time kit to cart</span>
+            <span class="button-label-loading">Adding to cart...</span>
+            <span class="button-label-success">Added to cart</span>
+          </button>
+          <p class="cart-status" role="status" aria-live="polite" id="cart-status"></p>
+
+          <div class="gift-callout">
+            <strong>Buying this for someone else?</strong>
+            <p style="color: var(--color-text-muted);">Either plan ships as a gift: unmarked kraft packaging, no price on the packing slip, and an optional handwritten-style note.</p>
+            <button type="button" class="button button-secondary button-small" id="open-gift-dialog">Send as a gift</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p>Tiny Table Chefs: cooking kits for young beginners.</p>
+    <div class="footer-links">
+      <a href="#top">Back to top</a>
+      <a href="#pricing">Shipping and returns</a>
+      <a href="#whats-inside">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<dialog id="gift-dialog" aria-labelledby="gift-dialog-heading">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <h2 id="gift-dialog-heading" style="font-size: var(--text-h3);">Send this as a gift</h2>
+      <button type="button" class="dialog-close" id="gift-dialog-close" aria-label="Close gift note dialog">&times;</button>
+    </div>
+    <p class="section-lede" style="font-size: var(--text-body); color: var(--color-text-muted);">Add a note and we'll leave the price off the packing slip. Your selected plan ships as-is, wrapped in unmarked kraft packaging.</p>
+
+    <form id="gift-form" novalidate>
+      <div class="field" id="field-recipient">
+        <label for="gift-recipient">Recipient's name</label>
+        <input type="text" id="gift-recipient" name="recipient" autocomplete="off" spellcheck="false" aria-describedby="gift-recipient-error" aria-invalid="false">
+        <p class="field-error" id="gift-recipient-error">Enter the recipient's name so we know who the note is for.</p>
+      </div>
+      <div class="field">
+        <label for="gift-sender">Your name</label>
+        <input type="text" id="gift-sender" name="sender" autocomplete="name" spellcheck="false">
+        <p class="field-hint">Shown on the note as "From ___".</p>
+      </div>
+      <div class="field">
+        <label for="gift-message">Personal message (optional)</label>
+        <textarea id="gift-message" name="message" autocomplete="off"></textarea>
+      </div>
+
+      <div class="dialog-confirm" id="gift-confirm" role="status">
+        Gift note saved. It will ship with the order.
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="button button-secondary" id="gift-cancel">Cancel</button>
+        <button type="submit" class="button button-primary" id="gift-submit" aria-busy="false">
+          <span class="button-spinner" aria-hidden="true"></span>
+          <span class="button-label-default">Save gift note</span>
+          <span class="button-label-loading">Saving...</span>
+          <span class="button-label-success">Saved</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Mobile nav toggle */
+  var navToggle = document.getElementById("nav-toggle-btn");
+  var siteNav = document.getElementById("site-nav");
+  navToggle.addEventListener("click", function () {
+    var expanded = navToggle.getAttribute("aria-expanded") === "true";
+    navToggle.setAttribute("aria-expanded", String(!expanded));
+    siteNav.classList.toggle("is-open", !expanded);
+  });
+  siteNav.addEventListener("click", function (event) {
+    if (event.target.tagName === "A" && window.innerWidth < 768) {
+      siteNav.classList.remove("is-open");
+      navToggle.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  /* Scroll-reveal entrance, respecting reduced motion */
+  var revealTargets = document.querySelectorAll("[data-reveal]");
+  if ("IntersectionObserver" in window && !reduceMotion) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    revealTargets.forEach(function (el) { observer.observe(el); });
+  } else {
+    revealTargets.forEach(function (el) { el.classList.add("is-visible"); });
+  }
+
+  /* Plan selection + order summary */
+  var planForm = document.getElementById("plan-form");
+  var summaryName = document.getElementById("summary-plan-name");
+  var summaryPrice = document.getElementById("summary-plan-price");
+  var addToCartBtn = document.getElementById("add-to-cart");
+  var cartStatus = document.getElementById("cart-status");
+  var cartLabelDefault = addToCartBtn.querySelector(".button-label-default");
+
+  var plans = {
+    "59": { name: "One-time kit", price: "$59", label: "Add one-time kit to cart" },
+    "24": { name: "Monthly subscription", price: "$24/mo", label: "Start monthly subscription" }
+  };
+
+  function updateSummary() {
+    var checked = planForm.querySelector('input[name="plan"]:checked');
+    var plan = plans[checked.value];
+    summaryName.textContent = plan.name;
+    summaryPrice.textContent = plan.price;
+    cartLabelDefault.textContent = plan.label;
+  }
+  planForm.addEventListener("change", updateSummary);
+  updateSummary();
+
+  var cartTimer = null;
+  addToCartBtn.addEventListener("click", function () {
+    if (addToCartBtn.getAttribute("aria-busy") === "true") { return; }
+    window.clearTimeout(cartTimer);
+    addToCartBtn.removeAttribute("data-state");
+    addToCartBtn.setAttribute("aria-busy", "true");
+    addToCartBtn.disabled = true;
+    cartStatus.textContent = "";
+
+    cartTimer = window.setTimeout(function () {
+      addToCartBtn.setAttribute("aria-busy", "false");
+      addToCartBtn.setAttribute("data-state", "success");
+      addToCartBtn.disabled = false;
+      var checked = planForm.querySelector('input[name="plan"]:checked');
+      cartStatus.textContent = plans[checked.value].name + " added to your cart.";
+
+      cartTimer = window.setTimeout(function () {
+        addToCartBtn.removeAttribute("data-state");
+      }, 2200);
+    }, reduceMotion ? 50 : 800);
+  });
+
+  /* Gift dialog */
+  var giftDialog = document.getElementById("gift-dialog");
+  var openGiftBtn = document.getElementById("open-gift-dialog");
+  var closeGiftBtn = document.getElementById("gift-dialog-close");
+  var cancelGiftBtn = document.getElementById("gift-cancel");
+  var giftForm = document.getElementById("gift-form");
+  var giftRecipient = document.getElementById("gift-recipient");
+  var giftRecipientField = document.getElementById("field-recipient");
+  var giftSubmit = document.getElementById("gift-submit");
+  var giftConfirm = document.getElementById("gift-confirm");
+
+  openGiftBtn.addEventListener("click", function () {
+    giftDialog.showModal();
+    giftRecipient.focus();
+  });
+  closeGiftBtn.addEventListener("click", function () { giftDialog.close(); });
+  cancelGiftBtn.addEventListener("click", function () { giftDialog.close(); });
+
+  giftDialog.addEventListener("close", function () {
+    giftForm.reset();
+    giftRecipientField.setAttribute("data-invalid", "false");
+    giftRecipient.setAttribute("aria-invalid", "false");
+    giftConfirm.classList.remove("is-visible");
+    giftSubmit.removeAttribute("data-state");
+    openGiftBtn.focus();
+  });
+
+  giftRecipient.addEventListener("blur", function () {
+    if (giftRecipient.value.trim() === "") {
+      giftRecipientField.setAttribute("data-invalid", "true");
+      giftRecipient.setAttribute("aria-invalid", "true");
+    } else {
+      giftRecipientField.setAttribute("data-invalid", "false");
+      giftRecipient.setAttribute("aria-invalid", "false");
+    }
+  });
+
+  var giftTimer = null;
+  giftForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    if (giftSubmit.getAttribute("aria-busy") === "true") { return; }
+
+    if (giftRecipient.value.trim() === "") {
+      giftRecipientField.setAttribute("data-invalid", "true");
+      giftRecipient.setAttribute("aria-invalid", "true");
+      giftRecipient.focus();
+      return;
+    }
+
+    window.clearTimeout(giftTimer);
+    giftSubmit.setAttribute("aria-busy", "true");
+    giftSubmit.disabled = true;
+
+    giftTimer = window.setTimeout(function () {
+      giftSubmit.setAttribute("aria-busy", "false");
+      giftSubmit.setAttribute("data-state", "success");
+      giftSubmit.disabled = false;
+      giftConfirm.classList.add("is-visible");
+    }, reduceMotion ? 50 : 700);
+  });
+})();
+</script>
+</body>
+</html>

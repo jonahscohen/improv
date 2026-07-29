@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flour, Fire, and a Hundred Years: Inside Halloran's Bakehouse</title>
+<style>
+  :root {
+    --paper: #f7f2e9;
+    --paper-dim: #efe7d8;
+    --ink: #2a2420;
+    --ink-soft: #56493d;
+    --rule: #d8cbb2;
+    --accent: #8a3324;
+    --accent-deep: #6b2419;
+    --sidebar-bg: #efe6d3;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .masthead {
+    border-bottom: 1px solid var(--rule);
+    padding: 1.1rem 1.25rem;
+    text-align: center;
+  }
+
+  .masthead__title {
+    margin: 0;
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .masthead__sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .page {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+
+  .eyebrow {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.9rem;
+  }
+
+  .headline {
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-size: clamp(2.1rem, 4.6vw, 3.1rem);
+    line-height: 1.12;
+    margin: 0 0 1.1rem;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+
+  .standfirst {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    font-style: italic;
+    margin: 0 0 1.6rem;
+    max-width: 40rem;
+  }
+
+  .byline-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.9rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin-bottom: 2.2rem;
+  }
+
+  .byline-row strong {
+    color: var(--ink);
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.82rem;
+  }
+
+  .byline-row .sep {
+    color: var(--rule);
+  }
+
+  figure.lede-photo {
+    margin: 0 0 2.4rem;
+  }
+
+  .photo-placeholder {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: 2px;
+    background:
+      repeating-linear-gradient(135deg, #cdbfa0 0px, #cdbfa0 2px, #c1b090 2px, #c1b090 4px);
+    border: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .photo-placeholder span {
+    font-family: Georgia, serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b5c46;
+    background: rgba(247, 242, 233, 0.75);
+    padding: 0.3rem 0.7rem;
+    border-radius: 2px;
+  }
+
+  figure.lede-photo .photo-placeholder {
+    aspect-ratio: 16 / 9;
+  }
+
+  figcaption {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-top: 0.6rem;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  figcaption .credit {
+    font-style: normal;
+    color: #8a7c66;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .article-body p {
+    margin: 0 0 1.3rem;
+    font-size: 1.06rem;
+  }
+
+  .article-body p.lede::first-letter {
+    float: left;
+    font-family: Georgia, serif;
+    font-size: 3.9rem;
+    line-height: 0.82;
+    font-weight: 700;
+    padding: 0.05em 0.08em 0 0;
+    color: var(--accent-deep);
+  }
+
+  h2.section-heading {
+    font-family: Georgia, serif;
+    font-size: 1.5rem;
+    margin: 2.6rem 0 1.1rem;
+    padding-top: 1.8rem;
+    border-top: 1px solid var(--rule);
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+
+  .article-body > .article-body :first-child { margin-top: 0; }
+
+  blockquote.pull-quote {
+    margin: 2.4rem 0;
+    padding: 0.2rem 0 0.2rem 1.6rem;
+    border-left: 3px solid var(--accent);
+    font-family: Georgia, serif;
+    font-size: 1.55rem;
+    line-height: 1.42;
+    font-style: italic;
+    color: var(--accent-deep);
+  }
+
+  blockquote.pull-quote footer {
+    margin-top: 0.7rem;
+    font-size: 0.85rem;
+    font-style: normal;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  figure.inline-photo {
+    margin: 2.2rem 0;
+  }
+
+  .sidebar {
+    background: var(--sidebar-bg);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1.6rem 1.6rem 1.8rem;
+    margin: 2.6rem 0;
+  }
+
+  .sidebar__eyebrow {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+  }
+
+  .sidebar h3 {
+    font-family: Georgia, serif;
+    font-size: 1.3rem;
+    margin: 0 0 0.9rem;
+    color: var(--ink);
+  }
+
+  .sidebar dl {
+    margin: 0;
+  }
+
+  .sidebar__item {
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .sidebar__item:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .sidebar dt {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ink);
+    margin-bottom: 0.25rem;
+  }
+
+  .sidebar dt .since {
+    font-weight: 400;
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+
+  .sidebar dd {
+    margin: 0;
+    font-size: 0.94rem;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
+  .timeline {
+    margin: 2.6rem 0;
+  }
+
+  .timeline h2.section-heading {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  .timeline__list {
+    list-style: none;
+    margin: 1.6rem 0 0;
+    padding: 0 0 0 1.6rem;
+    border-left: 2px solid var(--rule);
+  }
+
+  .timeline__entry {
+    position: relative;
+    padding: 0 0 1.9rem 1.6rem;
+  }
+
+  .timeline__entry:last-child {
+    padding-bottom: 0;
+  }
+
+  .timeline__entry::before {
+    content: "";
+    position: absolute;
+    left: -1.72rem;
+    top: 0.35rem;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--paper);
+    box-shadow: 0 0 0 2px var(--rule);
+  }
+
+  .timeline__year {
+    display: block;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+    color: var(--accent-deep);
+    margin-bottom: 0.25rem;
+  }
+
+  .timeline__desc {
+    margin: 0;
+    font-size: 0.98rem;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
+  .closing {
+    margin-top: 0.5rem;
+  }
+
+  hr.section-break {
+    border: none;
+    text-align: center;
+    margin: 2.4rem 0;
+    height: 1.1rem;
+  }
+
+  hr.section-break::after {
+    content: "❧";
+    display: inline-block;
+    color: var(--accent);
+    font-size: 1.1rem;
+  }
+
+  .colophon {
+    margin-top: 3.2rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.82rem;
+    color: #8a7c66;
+    line-height: 1.6;
+  }
+
+  @media (min-width: 760px) {
+    .page {
+      padding: 3.5rem 2rem 6rem;
+    }
+
+    .sidebar {
+      float: right;
+      width: 15.5rem;
+      margin: 0.2rem 0 1.4rem 2.2rem;
+      shape-outside: margin-box;
+    }
+
+    figure.inline-photo.align-left {
+      float: left;
+      width: 18rem;
+      margin: 0.2rem 2rem 1.4rem 0;
+    }
+
+    figure.inline-photo.align-left figcaption,
+    figure.inline-photo.align-left .photo-placeholder {
+      width: 100%;
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1c1815;
+      --paper-dim: #211c18;
+      --ink: #ece4d6;
+      --ink-soft: #bdac93;
+      --rule: #4a4038;
+      --accent: #e0947c;
+      --accent-deep: #eaa38c;
+      --sidebar-bg: #241f1a;
+    }
+
+    .photo-placeholder {
+      background: repeating-linear-gradient(135deg, #3a322a 0px, #3a322a 2px, #332c25 2px, #332c25 4px);
+      border-color: var(--rule);
+    }
+
+    .photo-placeholder span {
+      background: rgba(28, 24, 21, 0.75);
+      color: #d8c9ac;
+    }
+
+    .timeline__entry::before {
+      box-shadow: 0 0 0 2px var(--rule);
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="masthead">
+    <p class="masthead__title">The Harrow County Review</p>
+    <p class="masthead__sub">At the Table &middot; A Culture &amp; Food Quarterly</p>
+  </div>
+
+  <div class="page">
+    <article>
+      <header>
+        <span class="eyebrow">Food &amp; Place, Centennial Feature</span>
+        <h1 class="headline">Flour, Fire, and a Hundred Years: Inside Halloran's Bakehouse</h1>
+        <p class="standfirst">On the corner of Mill Street and Quarry Row, a fourth-generation bakery has turned bread into a form of memory. As Halloran's marks its hundredth year, the town of Millbrook Falls is asking what, exactly, it is that keeps a small business, and a small town, rising.</p>
+        <div class="byline-row">
+          <span><strong>By Odette Marchetti</strong></span>
+          <span class="sep">&middot;</span>
+          <span>Staff Writer</span>
+          <span class="sep">&middot;</span>
+          <span>Photographs by Desmond Achebe</span>
+          <span class="sep">&middot;</span>
+          <span>Published September 14, 2025</span>
+          <span class="sep">&middot;</span>
+          <span>12 min read</span>
+        </div>
+      </header>
+
+      <figure class="lede-photo">
+        <div class="photo-placeholder" role="img" aria-label="Photograph of the Halloran's Bakehouse storefront at dawn, its warm windows lit against a still-dark street">
+          <span>Photograph placeholder</span>
+        </div>
+        <figcaption>The bakery's Mill Street storefront, photographed before opening on a July morning. The awning is original to the 1961 renovation. <span class="credit">Photo: Desmond Achebe / The Harrow County Review</span></figcaption>
+      </figure>
+
+      <div class="layout">
+        <div class="article-body">
+
+          <p class="lede">At four in the morning, Millbrook Falls belongs to Halloran's. Before the streetlights switch off and before the first commuter car crosses the Quarry Bridge, the ovens on Mill Street are already breathing heat into the dark, and Theo Halloran is already elbow-deep in a fifty-pound trough of dough. He has done this six mornings a week for thirty-one years, which means, by his own rough arithmetic, he has shaped something close to two million loaves. This year, the bakery his great-grandmother opened in 1925 turns one hundred, and Theo says the number embarrasses him more than it impresses him. "A hundred years just means a lot of people didn't quit," he told me, wiping flour from his forearm. "That's the whole secret. Nobody quit."</p>
+
+          <p>It is a modest way to describe what has become, in Millbrook Falls, something closer to civic infrastructure. Ask around town, at the hardware store, at the elementary school pickup line, at the diner that shares a parking lot with the bakery, and Halloran's comes up unprompted, the way a river or a water tower might, as a fixed point people orient themselves by. "I bought my wedding cake there. My mother bought her wedding cake there," said Priya Nkemelu, who runs the flower shop two doors down. "That's not really about the cake anymore. That's about the fact that it was still there to buy one from."</p>
+
+          <figure class="inline-photo align-left">
+            <div class="photo-placeholder" role="img" aria-label="Photograph of Theo Halloran shaping loaves at the wooden prep table, flour dusted across the surface">
+              <span>Photograph placeholder</span>
+            </div>
+            <figcaption>Theo Halloran shapes the morning's country loaves on the same oak prep table his grandfather built in 1958. <span class="credit">Photo: Desmond Achebe</span></figcaption>
+          </figure>
+
+          <p>The bakery's founding is, like most founding stories, smaller and stranger than the myth that grew around it. In 1925, a Belgian immigrant named Margit Halloran leased a single room behind a since-demolished feed store and began selling dense, dark rye loaves to millworkers on their way to the Quarry Row shift. She had no formal training and, according to family letters kept in a shoebox in the bakery's back office, very little starting capital, only a starter culture she had carried across the Atlantic in a stoneware crock, wrapped in wool socks against the cold. That culture, town lore insists, is the same one bubbling in the walk-in refrigerator today. Whether that is literally true or merely true in spirit is a question the family has learned to answer with a shrug and a smile.</p>
+
+          <h2 class="section-heading">A Business Built on Not Changing, and Also on Constantly Changing</h2>
+
+          <p>What makes Halloran's centennial worth writing about is not simply its longevity, but the particular, almost contradictory discipline that longevity required. Every generation of the family has made the case, separately, that the bakery survived by holding its center fixed, the rye, the technique, the hour of the first bake, while everything around that center was allowed, even required, to change.</p>
+
+          <p>Theo's grandfather Vernon added the storefront's now-iconic green awning in 1961 and, more consequentially, added a second oven to meet demand from the new subdivision going up along the river. Theo's mother, Rosalind, who ran the bakery through the 1980s and '90s, was the one who introduced laminated pastries after a trip to visit cousins in Lyon, over the strenuous objection of an uncle who considered croissants "a French rumor." Rosalind's answer, repeated so often in the family it has become something like scripture, was that "the bread doesn't change. Everything around the bread can."</p>
+
+          <blockquote class="pull-quote">
+            "People think a hundred-year-old bakery survived by refusing to change. It's the opposite. We changed constantly. We just never once let go of the rye."
+            <footer>Theo Halloran, owner, Halloran's Bakehouse</footer>
+          </blockquote>
+
+          <p>That philosophy was tested hardest in 2009, when a regional grocery chain opened a supercenter eleven minutes from Mill Street, complete with an in-house bakery counter and prices Halloran's could not sensibly match. Theo, who had taken over full-time only two years earlier, remembers the family gathering around the same oak prep table to decide whether to compete on price or abandon the wholesale accounts that had long padded the bakery's margins. They chose neither. Instead they leaned into what the supercenter could not replicate: the forty-eight-hour fermentation, the wood-fired hearth oven installed by Vernon in 1974, and a walk-in relationship with regular customers that no scanner gun could offer. "We got smaller and better instead of bigger and cheaper," Theo said. "It felt like a risk at the time. Now it just looks like the only thing that could have worked."</p>
+
+          <div class="sidebar">
+            <span class="sidebar__eyebrow">On the Counter</span>
+            <h3>Signature Bakes</h3>
+            <dl>
+              <div class="sidebar__item">
+                <dt>Quarry Row Rye <span class="since">since 1925</span></dt>
+                <dd>The founding loaf, still made from a starter the family maintains has never been discarded. Dense, faintly sour, and, per longtime customers, better on day two than day one.</dd>
+              </div>
+              <div class="sidebar__item">
+                <dt>Millworker's Bun <span class="since">since 1933</span></dt>
+                <dd>A slightly sweet enriched roll originally sold two-for-a-nickel to the quarry's morning shift. The recipe has not changed; the price, Theo notes dryly, has.</dd>
+              </div>
+              <div class="sidebar__item">
+                <dt>Rosalind's Almond Twist <span class="since">since 1987</span></dt>
+                <dd>The bakery's first laminated pastry, introduced after Rosalind Halloran's trip to Lyon. Sells out most Saturdays before ten in the morning.</dd>
+              </div>
+              <div class="sidebar__item">
+                <dt>Centennial Levain <span class="since">new for 2025</span></dt>
+                <dd>A limited anniversary loaf blending the original rye starter with a modern high-hydration white levain, developed by Theo and his daughter Nadia.</dd>
+              </div>
+            </dl>
+          </div>
+
+          <h2 class="section-heading">The Fifth Generation, Already Kneading</h2>
+
+          <p>On the morning I visited, Theo's daughter Nadia, twenty-six, was running the hearth oven's second bake alone, checking loaves by ear the way her father taught her: a sharp, hollow knock against the crust that tells an experienced hand more than a thermometer would. Nadia left a marketing job in the city three years ago to return to Mill Street, a decision she describes, with some amusement, as "the least original thing a Halloran has ever done." She is quick to note that her return was not sentimental so much as practical: she saw a hundred-year business with no succession plan and a supply chain that still ran, in places, on handwritten order pads.</p>
+
+          <p>It is Nadia who pushed the bakery onto local delivery apps, who renegotiated the flour contract with a regional mill after years of rising costs, and who is quietly digitizing Margit's original recipe notebook before its pages, softened by a century of flour dust, disintegrate further. She is also, by her own admission, the most protective member of the family when it comes to the rye. "Dad will experiment with everything else," she said. "The rye is the one thing I've told him, over my dead body."</p>
+
+          <figure class="inline-photo">
+            <div class="photo-placeholder" role="img" aria-label="Photograph of Nadia Halloran checking a loaf at the hearth oven, tongs in hand">
+              <span>Photograph placeholder</span>
+            </div>
+            <figcaption>Nadia Halloran checks a batch of Quarry Row Rye at the 1974 hearth oven, still fired daily before sunrise. <span class="credit">Photo: Desmond Achebe</span></figcaption>
+          </figure>
+
+          <hr class="section-break">
+
+          <h2 class="section-heading">What a Hundred Years Looks Like</h2>
+
+          <p>Talk to enough people in Millbrook Falls and the bakery's history starts to read less like a company timeline and more like a shared civic memory: the awning color everyone can picture, the smell that meant the school bus was five minutes out, the loaf bought for every wedding, wake, and church picnic in three generations of a town's calendar. The milestones below are drawn from family records, town archives, and interviews conducted for this story.</p>
+
+          <div class="timeline">
+            <ol class="timeline__list">
+              <li class="timeline__entry">
+                <span class="timeline__year">1925</span>
+                <p class="timeline__desc">Margit Halloran leases a single back room on Mill Street and begins selling rye loaves to quarry and millworkers before dawn.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">1933</span>
+                <p class="timeline__desc">The Millworker's Bun is introduced at two-for-a-nickel, becoming the bakery's first product to outlast its original customer base.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">1958</span>
+                <p class="timeline__desc">Vernon Halloran takes over the bakery and builds the oak prep table still used in the kitchen today.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">1961</span>
+                <p class="timeline__desc">The Mill Street storefront is renovated; the green awning, now a town landmark, is installed for the first time.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">1974</span>
+                <p class="timeline__desc">A wood-fired hearth oven is installed, replacing the bakery's original coal-fed model and still fired daily each morning.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">1987</span>
+                <p class="timeline__desc">Rosalind Halloran introduces the bakery's first laminated pastry after a formative trip to Lyon, France.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">2009</span>
+                <p class="timeline__desc">Facing new competition from a regional grocery chain, the family chooses to scale down wholesale accounts and lean into artisanal fermentation.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">2022</span>
+                <p class="timeline__desc">Nadia Halloran returns to Millbrook Falls to join the business full-time, becoming the fifth generation at Mill Street.</p>
+              </li>
+              <li class="timeline__entry">
+                <span class="timeline__year">2025</span>
+                <p class="timeline__desc">Halloran's Bakehouse marks its centennial year with the release of the limited Centennial Levain and a town-wide celebration on Mill Street.</p>
+              </li>
+            </ol>
+          </div>
+
+          <h2 class="section-heading">The Hundred-and-First Year</h2>
+
+          <p>Standing outside the bakery as the morning delivery trucks began arriving along Mill Street, Theo Halloran allowed himself something closer to reflection than he had over the previous two hours of shaping dough. He is fifty-eight now, and he is aware, in the practical way business owners eventually become aware of such things, that his own tenure is a chapter and not the whole book. When I asked what he hoped Halloran's would look like at its hundred-and-fiftieth anniversary, he did not describe growth, or new locations, or any of the language a consultant might have supplied.</p>
+
+          <p>"I hope somebody's arguing with their kid about whether to change the recipe," he said, smiling for the first time all morning. "That's how you know it's still alive. It's not a museum. It's a fight worth having, every single generation." Behind him, through the bakery's fogged front window, the day's first customers were already gathering under the green awning, waiting, as Millbrook Falls has waited for a century, for the doors to open.</p>
+
+          <div class="closing">
+            <p>Halloran's Bakehouse is located at 14 Mill Street in Millbrook Falls and is open Tuesday through Sunday, 6 a.m. to 2 p.m. The bakery's centennial celebration is scheduled for the second weekend of October.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="colophon">
+        <p>Odette Marchetti is a staff writer for The Harrow County Review covering food, small business, and regional history. Desmond Achebe is a contributing photographer based in Millbrook Falls. Names, dates, and details in this story are fictional and created for illustrative purposes.</p>
+      </div>
+    </article>
+  </div>
+
+</body>
+</html>

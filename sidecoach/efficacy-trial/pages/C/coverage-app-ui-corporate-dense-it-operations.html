@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IT Operations Incident Console</title>
+<style>
+  :root{
+    --bg: #eef0f4;
+    --panel: #ffffff;
+    --panel-alt: #f6f7fa;
+    --border: #d3d7e0;
+    --border-strong: #b7bcc8;
+    --text: #161a22;
+    --text-mute: #5b6472;
+    --text-faint: #848da0;
+    --accent: #1f3a5c;
+    --accent-strong: #12233a;
+    --focus: #1a5fb4;
+    --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    --sev1-bg: #7f1d1d;
+    --sev2-bg: #9a3412;
+    --sev3-bg: #854d0e;
+    --sev4-bg: #1e3a5f;
+
+    --st-investigating-bg: #fee2e2;
+    --st-investigating-fg: #7f1d1d;
+    --st-investigating-bd: #f3b7b7;
+    --st-identified-bg: #ffedd5;
+    --st-identified-fg: #7c2d12;
+    --st-identified-bd: #f3c894;
+    --st-monitoring-bg: #dbeafe;
+    --st-monitoring-fg: #1e3a8a;
+    --st-monitoring-bd: #b3caf5;
+    --st-resolved-bg: #dcfce7;
+    --st-resolved-fg: #14532d;
+    --st-resolved-bd: #a9dcb9;
+  }
+
+  *, *::before, *::after{ box-sizing: border-box; }
+
+  html, body{
+    height: 100%;
+  }
+
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, p{ margin: 0; }
+
+  button{ font-family: inherit; font-size: inherit; color: inherit; }
+  input, select{ font-family: inherit; font-size: inherit; color: inherit; }
+
+  .sr-only{
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link{
+    position: absolute;
+    left: 8px;
+    top: -48px;
+    background: var(--accent-strong);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 4px;
+    z-index: 100;
+    text-decoration: none;
+    font-weight: 600;
+    transition: top 0.15s ease;
+  }
+  .skip-link:focus{ top: 8px; }
+
+  :focus-visible{
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .app{
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--accent-strong);
+    color: #f2f5fa;
+    padding: 10px 18px;
+    border-bottom: 1px solid #0b1826;
+    flex-shrink: 0;
+  }
+  .topbar-brand{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-mark{
+    color: #5fb0ff;
+    font-size: 10px;
+  }
+  .topbar h1{
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .topbar-meta{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .env-tag{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    background: #7f1d1d;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+  .clock{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #c7d3e6;
+    font-variant-numeric: tabular-nums;
+    min-width: 8ch;
+    text-align: right;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    display: flex;
+    align-items: end;
+    gap: 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 18px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .field{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field label{
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+  }
+  .field input, .field select{
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 6px 8px;
+    background: #fff;
+    min-height: 30px;
+  }
+  .search-field{
+    flex: 1 1 260px;
+    min-width: 220px;
+  }
+  .search-field input{ width: 100%; }
+
+  .btn-ghost, .btn-secondary, .btn-primary, .btn-danger, .btn-warn{
+    border-radius: 4px;
+    border: 1px solid var(--border-strong);
+    background: #fff;
+    padding: 7px 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-ghost{
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-mute);
+    text-decoration: underline;
+  }
+  .btn-ghost:hover{ color: var(--text); }
+  .btn-secondary:hover{ background: var(--panel-alt); }
+  .btn-primary{
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover{ background: var(--accent-strong); }
+  .btn-warn{
+    background: #9a3412;
+    border-color: #9a3412;
+    color: #fff;
+  }
+  .btn-warn:hover{ background: #7c2d12; }
+  .btn-danger{
+    background: #7f1d1d;
+    border-color: #7f1d1d;
+    color: #fff;
+  }
+  .btn-danger:hover{ background: #641515; }
+  button:disabled{
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .toolbar-summary{
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-mute);
+    padding-bottom: 7px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shortcut-hint{
+    font-size: 10.5px;
+    color: var(--text-faint);
+    padding-bottom: 7px;
+    font-family: var(--mono);
+  }
+  kbd{
+    font-family: var(--mono);
+    background: var(--panel-alt);
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 10px;
+  }
+
+  /* ---------- Workspace ---------- */
+  .workspace{
+    flex: 1;
+    display: grid;
+    grid-template-columns: 380px minmax(0,1fr) 320px;
+    gap: 1px;
+    background: var(--border);
+    min-height: 0;
+  }
+
+  .pane{
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: calc(100vh - 108px);
+  }
+
+  .pane-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .pane-header h2{
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+  }
+  .pane-count{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  /* ---------- Incident list ---------- */
+  .pane-list{ overflow: hidden; }
+  .list-scroll{
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+  }
+  .list-columns-head{
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 8px;
+    padding: 6px 14px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    background: var(--panel-alt);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+  }
+  .list-columns-head .sub{
+    display: grid;
+    grid-template-columns: 1fr 96px 92px 78px;
+    gap: 8px;
+  }
+
+  .incident-list{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .incident-row{
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 14px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+  }
+  .incident-row:nth-child(even){ background: #fbfbfd; }
+  .incident-row:hover{ background: #eef3fb; }
+  .incident-row[aria-selected="true"]{
+    background: #dce8f7;
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .incident-row .row-main{
+    display: grid;
+    grid-template-columns: 1fr 96px 92px 78px;
+    gap: 8px;
+    align-items: center;
+    min-width: 0;
+  }
+  .row-id-title{ min-width: 0; }
+  .row-id{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-faint);
+    display: block;
+  }
+  .row-title{
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+  .row-service, .row-owner{
+    font-size: 11.5px;
+    color: var(--text-mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .row-updated{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sev-chip{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    border-radius: 3px;
+    padding: 3px 0;
+    width: 44px;
+    letter-spacing: 0.02em;
+  }
+  .sev-1{ background: var(--sev1-bg); }
+  .sev-2{ background: var(--sev2-bg); }
+  .sev-3{ background: var(--sev3-bg); }
+  .sev-4{ background: var(--sev4-bg); }
+
+  .status-chip{
+    display: inline-flex;
+    align-items: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .status-investigating{ background: var(--st-investigating-bg); color: var(--st-investigating-fg); border-color: var(--st-investigating-bd); }
+  .status-identified{ background: var(--st-identified-bg); color: var(--st-identified-fg); border-color: var(--st-identified-bd); }
+  .status-monitoring{ background: var(--st-monitoring-bg); color: var(--st-monitoring-fg); border-color: var(--st-monitoring-bd); }
+  .status-resolved{ background: var(--st-resolved-bg); color: var(--st-resolved-fg); border-color: var(--st-resolved-bd); }
+
+  .row-status{ display: flex; justify-content: flex-start; }
+
+  /* ---------- Empty state ---------- */
+  .empty-state{
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-mute);
+  }
+  .empty-title{
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .empty-body{
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+
+  /* ---------- Detail pane ---------- */
+  .pane-detail{ overflow: hidden; }
+  .detail-scroll{
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+    padding: 16px 18px 28px;
+  }
+
+  .detail-top{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .detail-id{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.02em;
+  }
+  .detail-title{
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 2px;
+    color: var(--text);
+  }
+
+  .detail-badges{
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .detail-badges .sev-chip{ width: auto; padding: 4px 9px; font-size: 11px; }
+
+  .detail-meta-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px 18px;
+    margin: 14px 0 16px;
+    padding: 12px 14px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .meta-item dt{
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    margin: 0 0 3px;
+  }
+  .meta-item dd{
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .meta-item dd.mono{ font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .detail-desc{
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 18px;
+    max-width: 72ch;
+  }
+
+  .actions-bar{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 12px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 20px;
+  }
+  .ack-note{
+    font-size: 11px;
+    color: var(--st-resolved-fg);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  .assign-inline{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 5px 8px;
+  }
+  .assign-inline select{
+    border: none;
+    background: transparent;
+    padding: 2px;
+  }
+  .assign-inline select:focus{ outline: 2px solid var(--focus); outline-offset: 1px; }
+
+  .section-block{ margin-bottom: 22px; }
+  .section-title{
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .count-pill{
+    font-family: var(--mono);
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    color: var(--text-mute);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .history-list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 2px solid var(--border-strong);
+  }
+  .history-item{
+    position: relative;
+    padding: 2px 0 14px 18px;
+  }
+  .history-item::before{
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 4px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+  }
+  .history-time{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .history-action{
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 2px 0 1px;
+  }
+  .history-note{
+    font-size: 12px;
+    color: var(--text-mute);
+  }
+  .history-actor{
+    font-size: 11px;
+    color: var(--text-faint);
+    font-style: italic;
+  }
+
+  /* ---------- Alerts pane ---------- */
+  .pane-alerts{ overflow: hidden; }
+  .alerts-scroll{
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+    padding: 12px 14px;
+  }
+  .alert-card{
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 9px 10px;
+    margin-bottom: 10px;
+    background: var(--panel-alt);
+  }
+  .alert-card.sev-b-1{ border-left-color: var(--sev1-bg); }
+  .alert-card.sev-b-2{ border-left-color: var(--sev2-bg); }
+  .alert-card.sev-b-3{ border-left-color: var(--sev3-bg); }
+  .alert-card.sev-b-4{ border-left-color: var(--sev4-bg); }
+  .alert-head{
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .alert-source{
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .alert-time{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+  .alert-message{
+    font-size: 12px;
+    color: var(--text-mute);
+  }
+  .alert-id{
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 4px;
+    display: block;
+  }
+
+  .no-alerts{
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--text-mute);
+    font-size: 12px;
+  }
+
+  .alert-error{
+    padding: 20px 14px;
+    text-align: center;
+    border: 1px dashed var(--border-strong);
+    border-radius: 6px;
+    background: #fff8f8;
+  }
+  .alert-error-icon{
+    font-size: 20px;
+    color: #7f1d1d;
+    margin-bottom: 8px;
+  }
+  .alert-error-title{
+    font-size: 13px;
+    font-weight: 700;
+    color: #7f1d1d;
+    margin-bottom: 4px;
+  }
+  .alert-error-body{
+    font-size: 11.5px;
+    color: var(--text-mute);
+    margin-bottom: 12px;
+  }
+  .alert-loading{
+    padding: 28px 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-mute);
+  }
+
+  /* ---------- Footer / status bar ---------- */
+  .statusbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--accent-strong);
+    color: #c7d3e6;
+    font-size: 10.5px;
+    padding: 5px 18px;
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  /* ---------- Responsive: collapse to single column ---------- */
+  @media (max-width: 1179px){
+    .workspace{
+      grid-template-columns: 1fr;
+    }
+    .pane{
+      max-height: none;
+    }
+    .pane-list .list-scroll{
+      max-height: 420px;
+    }
+    .pane-detail .detail-scroll{
+      max-height: none;
+    }
+    .pane-alerts .alerts-scroll{
+      max-height: 480px;
+    }
+    .toolbar-summary{ margin-left: 0; }
+    .shortcut-hint{ display: none; }
+  }
+
+  @media (max-width: 640px){
+    .topbar h1{ font-size: 13px; }
+    .env-tag{ display: none; }
+    .toolbar{ padding: 10px 12px; }
+    .workspace{ gap: 8px; background: transparent; }
+    .pane{ border: 1px solid var(--border); border-radius: 6px; }
+    .row-main{ grid-template-columns: 1fr 74px; }
+    .row-service, .row-owner, .row-status{ display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <a class="skip-link" href="#incident-detail">Skip to incident detail</a>
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="brand-mark" aria-hidden="true">&#9679;</span>
+      <h1>IT Operations Incident Console</h1>
+    </div>
+    <div class="topbar-meta">
+      <span class="env-tag">Production</span>
+      <span class="clock" id="liveClock">--:--:--</span>
+    </div>
+  </header>
+
+  <form class="toolbar" role="search" id="toolbarForm">
+    <div class="field search-field">
+      <label for="searchInput">Search incidents</label>
+      <input type="search" id="searchInput" placeholder="Search by ID, title, service, or owner" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="severityFilter">Severity</label>
+      <select id="severityFilter">
+        <option value="all">All severities</option>
+        <option value="1">SEV1 - Critical</option>
+        <option value="2">SEV2 - High</option>
+        <option value="3">SEV3 - Medium</option>
+        <option value="4">SEV4 - Low</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="statusFilter">Status</label>
+      <select id="statusFilter">
+        <option value="all">All statuses</option>
+        <option value="Investigating">Investigating</option>
+        <option value="Identified">Identified</option>
+        <option value="Monitoring">Monitoring</option>
+        <option value="Resolved">Resolved</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="serviceFilter">Service</label>
+      <select id="serviceFilter">
+        <option value="all">All services</option>
+      </select>
+    </div>
+    <button type="button" id="clearFiltersBtn" class="btn-ghost">Clear filters</button>
+    <span class="shortcut-hint"><kbd>/</kbd> search &nbsp; <kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate &nbsp; <kbd>Enter</kbd> open</span>
+    <span class="toolbar-summary" id="resultSummary" aria-live="polite"></span>
+  </form>
+
+  <main class="workspace">
+    <section class="pane pane-list" aria-labelledby="listHeading">
+      <div class="pane-header">
+        <h2 id="listHeading">Active Incidents</h2>
+        <span class="pane-count" id="listCount"></span>
+      </div>
+      <div class="list-scroll">
+        <div class="list-columns-head">
+          <span>Sev</span>
+          <span class="sub"><span>Incident</span><span>Service</span><span>Owner</span><span style="text-align:right;">Updated</span></span>
+        </div>
+        <div id="incidentListbox" class="incident-list" role="listbox" aria-label="Active incidents, sorted by most recently updated"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <p class="empty-title">No incidents match your filters</p>
+          <p class="empty-body">Try widening your search or clearing filters to see all active incidents.</p>
+          <button type="button" class="btn-secondary" id="emptyClearBtn">Clear filters</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="pane pane-detail" id="incident-detail" aria-labelledby="detailHeading" tabindex="-1">
+      <div class="pane-header">
+        <h2 id="detailHeading">Incident Detail</h2>
+      </div>
+      <div class="detail-scroll" id="detailScroll"></div>
+    </section>
+
+    <section class="pane pane-alerts" aria-labelledby="alertsHeading">
+      <div class="pane-header">
+        <h2 id="alertsHeading">Related Alerts</h2>
+        <span class="pane-count" id="alertsCount"></span>
+      </div>
+      <div class="alerts-scroll" id="alertsScroll"></div>
+    </section>
+  </main>
+
+  <div class="statusbar">
+    <span>Duty manager: J. Alvarez</span>
+    <span id="statusbarRight">Console ready</span>
+  </div>
+
+  <div id="liveRegion" class="sr-only" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CURRENT_USER = "J. Alvarez (Duty Manager)";
+
+  var SEV_META = {
+    1: { label: "SEV1", name: "Critical" },
+    2: { label: "SEV2", name: "High" },
+    3: { label: "SEV3", name: "Medium" },
+    4: { label: "SEV4", name: "Low" }
+  };
+
+  var STATUS_ORDER = ["Investigating", "Identified", "Monitoring", "Resolved"];
+
+  var ROSTER = [
+    "Marcus Webb - Platform Reliability",
+    "Elena Cho - Platform Reliability",
+    "Tomas Rivera - Network Engineering",
+    "Grace Kim - Network Engineering",
+    "Sasha Volkov - Identity & Access",
+    "Priya Natarajan - Identity & Access",
+    "Ben Alcaraz - Data Engineering",
+    "Naomi Fischer - Data Engineering",
+    "Owen Patel - Messaging Team",
+    "Lidia Moreau - Storage Ops",
+    "Dana Whitfield - App Platform",
+    "Kwame Boateng - App Platform",
+    "Rachel Ng - Infrastructure"
+  ];
+
+  function statusClass(status){
+    return "status-" + status.toLowerCase();
+  }
+
+  function sevChip(sev, extraClass){
+    var m = SEV_META[sev];
+    return '<span class="sev-chip sev-' + sev + (extraClass ? " " + extraClass : "") + '" title="' + m.name + ' severity">' + m.label + '</span>';
+  }
+
+  function statusChip(status){
+    return '<span class="status-chip ' + statusClass(status) + '">' + status + '</span>';
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[c];
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Fictional incident data
+  // ---------------------------------------------------------------------
+  var incidents = [
+    {
+      id: "INC-24812",
+      title: "Payments API - Elevated 5xx error rate",
+      severity: 1,
+      status: "Investigating",
+      service: "Payments API",
+      owner: "Marcus Webb - Platform Reliability",
+      created: "Jul 28, 08:52 UTC",
+      updated: "Jul 28, 09:41 UTC",
+      acknowledged: false,
+      description: "Checkout and payment-capture endpoints are returning 5xx responses for roughly 6% of requests. Impact is concentrated on the EU-West cluster following a routine dependency deploy at 08:40 UTC. Card-present transactions are unaffected.",
+      history: [
+        { time: "Jul 28, 09:41 UTC", actor: "Marcus Webb", action: "Mitigation in progress", note: "Rolling back dependency deploy on EU-West cluster, ETA 10 minutes." },
+        { time: "Jul 28, 09:18 UTC", actor: "Monitoring", action: "Error budget threshold breached", note: "5xx rate crossed 5% over a 5-minute window." },
+        { time: "Jul 28, 08:57 UTC", actor: "Marcus Webb", action: "Incident opened", note: "Paged from automated alert; investigating correlation with 08:40 UTC deploy." }
+      ],
+      alertsError: true,
+      alertsFallback: [
+        { id: "ALRT-88213", source: "API Gateway", severity: 1, message: "5xx rate 6.2% on /v2/checkout, EU-West", time: "09:40 UTC" },
+        { id: "ALRT-88209", source: "Synthetic Monitor", severity: 2, message: "Checkout latency p95 above 2400ms", time: "09:33 UTC" },
+        { id: "ALRT-88198", source: "Deploy Pipeline", severity: 3, message: "Dependency deploy completed with warnings", time: "08:41 UTC" }
+      ],
+      alerts: []
+    },
+    {
+      id: "INC-24807",
+      title: "Corporate VPN - Authentication failures for EU region",
+      severity: 1,
+      status: "Identified",
+      service: "Corporate VPN",
+      owner: "Tomas Rivera - Network Engineering",
+      created: "Jul 28, 07:10 UTC",
+      updated: "Jul 28, 09:38 UTC",
+      acknowledged: true,
+      description: "Employees in the EU region are unable to authenticate to the corporate VPN concentrator. Root cause traced to a certificate rotation that did not propagate to the secondary RADIUS node. Fix is being validated in staging.",
+      history: [
+        { time: "Jul 28, 09:38 UTC", actor: "Tomas Rivera", action: "Root cause identified", note: "Secondary RADIUS node serving expired certificate; rotation script did not target it." },
+        { time: "Jul 28, 08:20 UTC", actor: "Tomas Rivera", action: "Acknowledged", note: "Picked up from network operations queue." },
+        { time: "Jul 28, 07:32 UTC", actor: "Help Desk", action: "Escalated to SEV1", note: "Volume of authentication tickets exceeded 40 in 20 minutes." },
+        { time: "Jul 28, 07:10 UTC", actor: "Monitoring", action: "Incident opened", note: "RADIUS authentication failure rate spiked to 78%." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-88150", source: "RADIUS Cluster", severity: 1, message: "Authentication failure rate 78% on secondary node", time: "07:11 UTC" },
+        { id: "ALRT-88147", source: "Certificate Manager", severity: 2, message: "Certificate rotation job completed with 1 node skipped", time: "06:58 UTC" }
+      ]
+    },
+    {
+      id: "INC-24803",
+      title: "SSO Provider - Elevated login latency",
+      severity: 2,
+      status: "Investigating",
+      service: "SSO / Identity Provider",
+      owner: "Sasha Volkov - Identity & Access",
+      created: "Jul 28, 08:05 UTC",
+      updated: "Jul 28, 09:30 UTC",
+      acknowledged: true,
+      description: "Single sign-on logins are taking 8-12 seconds on average, up from a 1.2 second baseline. Session creation succeeds but with noticeable delay across all downstream applications.",
+      history: [
+        { time: "Jul 28, 09:30 UTC", actor: "Sasha Volkov", action: "Update", note: "Narrowed cause to token-signing service connection pool exhaustion." },
+        { time: "Jul 28, 08:40 UTC", actor: "Sasha Volkov", action: "Acknowledged", note: "" },
+        { time: "Jul 28, 08:05 UTC", actor: "Monitoring", action: "Incident opened", note: "Login latency p95 exceeded 8000ms threshold." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-88170", source: "Identity Provider", severity: 2, message: "Login latency p95 9.4s, all tenants", time: "09:25 UTC" },
+        { id: "ALRT-88162", source: "Connection Pool Monitor", severity: 2, message: "Token-signing pool utilization at 98%", time: "08:50 UTC" },
+        { id: "ALRT-88155", source: "Synthetic Monitor", severity: 3, message: "SSO synthetic check exceeded SLA 3 consecutive runs", time: "08:12 UTC" }
+      ]
+    },
+    {
+      id: "INC-24799",
+      title: "Data Warehouse ETL - Nightly load job failed",
+      severity: 2,
+      status: "Identified",
+      service: "Data Warehouse ETL",
+      owner: "Ben Alcaraz - Data Engineering",
+      created: "Jul 28, 06:15 UTC",
+      updated: "Jul 28, 09:12 UTC",
+      acknowledged: true,
+      description: "The 03:00 UTC nightly load into the analytics warehouse failed at the transform stage. Downstream reporting dashboards are showing data as of the prior business day. No customer-facing impact.",
+      history: [
+        { time: "Jul 28, 09:12 UTC", actor: "Ben Alcaraz", action: "Root cause identified", note: "Schema drift in upstream orders table; new nullable column broke a NOT NULL transform assertion." },
+        { time: "Jul 28, 07:05 UTC", actor: "Ben Alcaraz", action: "Acknowledged", note: "" },
+        { time: "Jul 28, 06:15 UTC", actor: "Monitoring", action: "Incident opened", note: "ETL job orders_nightly_load exited with code 1." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-88090", source: "ETL Orchestrator", severity: 2, message: "Job orders_nightly_load failed at transform stage", time: "03:14 UTC" },
+        { id: "ALRT-88092", source: "Data Quality Monitor", severity: 3, message: "Schema drift detected on orders table", time: "03:20 UTC" }
+      ]
+    },
+    {
+      id: "INC-24795",
+      title: "Email Gateway - Outbound queue delay",
+      severity: 2,
+      status: "Monitoring",
+      service: "Email Gateway",
+      owner: "Owen Patel - Messaging Team",
+      created: "Jul 27, 22:40 UTC",
+      updated: "Jul 28, 08:55 UTC",
+      acknowledged: true,
+      description: "Outbound transactional email was delayed up to 45 minutes overnight due to a backlog on the delivery queue. The backlog has been cleared and delivery times are being watched for recurrence.",
+      history: [
+        { time: "Jul 28, 08:55 UTC", actor: "Owen Patel", action: "Moved to monitoring", note: "Queue depth back to baseline for 3 consecutive hours." },
+        { time: "Jul 27, 23:30 UTC", actor: "Owen Patel", action: "Mitigation applied", note: "Scaled delivery workers from 4 to 12 instances." },
+        { time: "Jul 27, 22:52 UTC", actor: "Owen Patel", action: "Acknowledged", note: "" },
+        { time: "Jul 27, 22:40 UTC", actor: "Monitoring", action: "Incident opened", note: "Outbound queue depth exceeded 50,000 messages." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-87990", source: "Queue Monitor", severity: 2, message: "Outbound queue depth 62,400 messages", time: "22:41 UTC" }
+      ]
+    },
+    {
+      id: "INC-24788",
+      title: "Internal Wiki - Intermittent 503 responses",
+      severity: 3,
+      status: "Investigating",
+      service: "Internal Wiki",
+      owner: "Dana Whitfield - App Platform",
+      created: "Jul 28, 07:48 UTC",
+      updated: "Jul 28, 09:05 UTC",
+      acknowledged: false,
+      description: "Employees intermittently see 503 responses when loading the internal wiki, roughly 1 in 20 requests. Reproducible mostly during peak morning traffic. Search and edit functions unaffected when the page does load.",
+      history: [
+        { time: "Jul 28, 09:05 UTC", actor: "Monitoring", action: "Recurrence detected", note: "503 rate ticked up again after a brief lull." },
+        { time: "Jul 28, 07:48 UTC", actor: "Monitoring", action: "Incident opened", note: "503 error rate 4.8% over 10-minute window." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-88030", source: "Load Balancer", severity: 3, message: "503 rate 4.8% on wiki-frontend pool", time: "07:49 UTC" },
+        { id: "ALRT-88041", source: "Load Balancer", severity: 3, message: "503 rate 3.9% on wiki-frontend pool", time: "09:03 UTC" }
+      ]
+    },
+    {
+      id: "INC-24781",
+      title: "Backup Storage - Capacity threshold warning",
+      severity: 3,
+      status: "Monitoring",
+      service: "Backup & Storage",
+      owner: "Lidia Moreau - Storage Ops",
+      created: "Jul 27, 19:20 UTC",
+      updated: "Jul 28, 08:40 UTC",
+      acknowledged: true,
+      description: "The primary backup storage pool crossed the 80% capacity warning threshold. No jobs have failed. Additional capacity has been requested and provisioning is in progress.",
+      history: [
+        { time: "Jul 28, 08:40 UTC", actor: "Lidia Moreau", action: "Update", note: "Capacity expansion request approved, provisioning in progress." },
+        { time: "Jul 27, 19:45 UTC", actor: "Lidia Moreau", action: "Acknowledged", note: "" },
+        { time: "Jul 27, 19:20 UTC", actor: "Monitoring", action: "Incident opened", note: "Backup pool crossed 80% capacity threshold." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-87880", source: "Storage Monitor", severity: 3, message: "Primary backup pool at 82% capacity", time: "19:21 UTC" }
+      ]
+    },
+    {
+      id: "INC-24777",
+      title: "Core Network Switch Fabric - Packet loss on East Campus",
+      severity: 3,
+      status: "Identified",
+      service: "Core Network Switch Fabric",
+      owner: "Grace Kim - Network Engineering",
+      created: "Jul 28, 05:30 UTC",
+      updated: "Jul 28, 08:20 UTC",
+      acknowledged: true,
+      description: "Intermittent packet loss of 2-5% observed on the East Campus core switch fabric. Traced to a failing uplink transceiver. Traffic has been rerouted to the redundant path pending hardware replacement.",
+      history: [
+        { time: "Jul 28, 08:20 UTC", actor: "Grace Kim", action: "Root cause identified", note: "Failing SFP transceiver on uplink 3; traffic rerouted to redundant path." },
+        { time: "Jul 28, 06:02 UTC", actor: "Grace Kim", action: "Acknowledged", note: "" },
+        { time: "Jul 28, 05:30 UTC", actor: "Monitoring", action: "Incident opened", note: "Packet loss 3.1% detected on East Campus fabric." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-87960", source: "Network Fabric Monitor", severity: 3, message: "Packet loss 3.1% on east-core-switch-02", time: "05:31 UTC" },
+        { id: "ALRT-87972", source: "Hardware Diagnostics", severity: 3, message: "Uplink 3 transceiver signal degradation detected", time: "06:15 UTC" }
+      ]
+    },
+    {
+      id: "INC-24770",
+      title: "Customer Portal - Slow page loads reported",
+      severity: 3,
+      status: "Investigating",
+      service: "Customer Portal",
+      owner: "Kwame Boateng - App Platform",
+      created: "Jul 28, 08:58 UTC",
+      updated: "Jul 28, 09:15 UTC",
+      acknowledged: false,
+      description: "Support has received a handful of reports of slow page loads on the customer portal dashboard. Internal synthetic checks have not yet reproduced the issue at scale; investigating whether it is region-specific.",
+      history: [
+        { time: "Jul 28, 09:15 UTC", actor: "Kwame Boateng", action: "Update", note: "Requesting session traces from affected customers to narrow region." },
+        { time: "Jul 28, 08:58 UTC", actor: "Support Team", action: "Incident opened", note: "Manually opened from a cluster of support tickets." }
+      ],
+      alertsError: false,
+      alerts: []
+    },
+    {
+      id: "INC-24763",
+      title: "CI/CD Pipeline - Build agents offline",
+      severity: 4,
+      status: "Monitoring",
+      service: "CI/CD Pipeline",
+      owner: "Elena Cho - Platform Reliability",
+      created: "Jul 27, 16:05 UTC",
+      updated: "Jul 28, 07:50 UTC",
+      acknowledged: true,
+      description: "Two of eight self-hosted build agents went offline overnight after a host-level update. Builds are queuing slightly longer but no failures. Agents are being restored in sequence.",
+      history: [
+        { time: "Jul 28, 07:50 UTC", actor: "Elena Cho", action: "Update", note: "One agent restored, one remaining, no build failures observed." },
+        { time: "Jul 27, 16:40 UTC", actor: "Elena Cho", action: "Acknowledged", note: "" },
+        { time: "Jul 27, 16:05 UTC", actor: "Monitoring", action: "Incident opened", note: "2 of 8 build agents reporting offline." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-87700", source: "Build Fleet Monitor", severity: 4, message: "Agent build-runner-05 offline", time: "16:06 UTC" },
+        { id: "ALRT-87701", source: "Build Fleet Monitor", severity: 4, message: "Agent build-runner-07 offline", time: "16:07 UTC" }
+      ]
+    },
+    {
+      id: "INC-24759",
+      title: "DNS Resolver Cluster - Elevated query latency",
+      severity: 4,
+      status: "Resolved",
+      service: "DNS Resolver Cluster",
+      owner: "Rachel Ng - Infrastructure",
+      created: "Jul 27, 14:10 UTC",
+      updated: "Jul 27, 23:45 UTC",
+      acknowledged: true,
+      description: "Internal DNS resolvers showed elevated query latency (average 180ms vs 20ms baseline) for roughly two hours. Traced to a misconfigured cache TTL pushed in a routine config update, since reverted.",
+      history: [
+        { time: "Jul 27, 23:45 UTC", actor: "Rachel Ng", action: "Resolved", note: "Latency confirmed back to baseline for 4 hours; closing incident." },
+        { time: "Jul 27, 16:20 UTC", actor: "Rachel Ng", action: "Mitigation applied", note: "Reverted cache TTL configuration change." },
+        { time: "Jul 27, 14:35 UTC", actor: "Rachel Ng", action: "Acknowledged", note: "" },
+        { time: "Jul 27, 14:10 UTC", actor: "Monitoring", action: "Incident opened", note: "DNS query latency average 180ms, threshold 100ms." }
+      ],
+      alertsError: false,
+      alerts: [
+        { id: "ALRT-87600", source: "DNS Monitor", severity: 4, message: "Average query latency 180ms across resolver pool", time: "14:11 UTC" }
+      ]
+    },
+    {
+      id: "INC-24751",
+      title: "Monitoring Stack - Dashboard rendering errors",
+      severity: 4,
+      status: "Resolved",
+      service: "Monitoring Stack",
+      owner: "Rachel Ng - Infrastructure",
+      created: "Jul 27, 11:00 UTC",
+      updated: "Jul 27, 18:30 UTC",
+      acknowledged: true,
+      description: "Several operational dashboards failed to render panels after a visualization library upgrade. Underlying metrics collection was unaffected throughout. Rolled back to the prior library version.",
+      history: [
+        { time: "Jul 27, 18:30 UTC", actor: "Rachel Ng", action: "Resolved", note: "Rollback confirmed stable; dashboards rendering normally." },
+        { time: "Jul 27, 11:40 UTC", actor: "Rachel Ng", action: "Mitigation applied", note: "Rolled back visualization library to previous stable version." },
+        { time: "Jul 27, 11:00 UTC", actor: "Rachel Ng", action: "Incident opened", note: "Dashboard panel rendering failures reported by three teams." }
+      ],
+      alertsError: false,
+      alerts: []
+    }
+  ];
+
+  var state = {
+    search: "",
+    severity: "all",
+    status: "all",
+    service: "all",
+    selectedId: incidents[0].id,
+    assignOpenFor: null,
+    alertsLoadingFor: null
+  };
+
+  // ---------------------------------------------------------------------
+  // DOM refs
+  // ---------------------------------------------------------------------
+  var els = {
+    searchInput: document.getElementById("searchInput"),
+    severityFilter: document.getElementById("severityFilter"),
+    statusFilter: document.getElementById("statusFilter"),
+    serviceFilter: document.getElementById("serviceFilter"),
+    clearFiltersBtn: document.getElementById("clearFiltersBtn"),
+    emptyClearBtn: document.getElementById("emptyClearBtn"),
+    resultSummary: document.getElementById("resultSummary"),
+    listCount: document.getElementById("listCount"),
+    incidentListbox: document.getElementById("incidentListbox"),
+    emptyState: document.getElementById("emptyState"),
+    detailScroll: document.getElementById("detailScroll"),
+    alertsScroll: document.getElementById("alertsScroll"),
+    alertsCount: document.getElementById("alertsCount"),
+    liveRegion: document.getElementById("liveRegion"),
+    liveClock: document.getElementById("liveClock"),
+    statusbarRight: document.getElementById("statusbarRight"),
+    incidentDetailSection: document.getElementById("incident-detail")
+  };
+
+  function announce(msg){
+    els.liveRegion.textContent = "";
+    window.setTimeout(function(){ els.liveRegion.textContent = msg; }, 30);
+  }
+
+  function getIncident(id){
+    for (var i = 0; i < incidents.length; i++){
+      if (incidents[i].id === id) return incidents[i];
+    }
+    return null;
+  }
+
+  function populateServiceFilter(){
+    var services = [];
+    incidents.forEach(function(inc){
+      if (services.indexOf(inc.service) === -1) services.push(inc.service);
+    });
+    services.sort();
+    services.forEach(function(svc){
+      var opt = document.createElement("option");
+      opt.value = svc;
+      opt.textContent = svc;
+      els.serviceFilter.appendChild(opt);
+    });
+  }
+
+  function statusRank(status){
+    var idx = STATUS_ORDER.indexOf(status);
+    return idx === -1 ? 0 : idx;
+  }
+
+  function getFiltered(){
+    var q = state.search.trim().toLowerCase();
+    return incidents.filter(function(inc){
+      if (state.severity !== "all" && String(inc.severity) !== state.severity) return false;
+      if (state.status !== "all" && inc.status !== state.status) return false;
+      if (state.service !== "all" && inc.service !== state.service) return false;
+      if (q){
+        var hay = (inc.id + " " + inc.title + " " + inc.service + " " + inc.owner).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(function(a, b){
+      // Higher severity (lower number) first, then most recently updated
+      if (a.severity !== b.severity) return a.severity - b.severity;
+      return b.updated.localeCompare(a.updated);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering: list
+  // ---------------------------------------------------------------------
+  function renderList(){
+    var filtered = getFiltered();
+    els.incidentListbox.innerHTML = "";
+
+    if (filtered.length === 0){
+      els.emptyState.hidden = false;
+    } else {
+      els.emptyState.hidden = true;
+    }
+
+    filtered.forEach(function(inc){
+      var isSelected = inc.id === state.selectedId;
+      var row = document.createElement("div");
+      row.className = "incident-row";
+      row.setAttribute("role", "option");
+      row.setAttribute("id", "opt-" + inc.id);
+      row.setAttribute("aria-selected", isSelected ? "true" : "false");
+      row.setAttribute("tabindex", isSelected ? "0" : "-1");
+      row.dataset.id = inc.id;
+
+      row.innerHTML =
+        sevChip(inc.severity) +
+        '<span class="row-main">' +
+          '<span class="row-id-title"><span class="row-id">' + escapeHtml(inc.id) + '</span><span class="row-title">' + escapeHtml(inc.title) + '</span></span>' +
+          '<span class="row-service">' + escapeHtml(inc.service) + '</span>' +
+          '<span class="row-owner">' + escapeHtml(inc.owner.split(" - ")[0]) + '</span>' +
+          '<span class="row-status">' + statusChip(inc.status) + '</span>' +
+        '</span>' +
+        '<span class="row-updated">' + escapeHtml(inc.updated.replace(", ", " ")) + '</span>';
+
+      row.addEventListener("click", function(){
+        selectIncident(inc.id, true);
+      });
+
+      els.incidentListbox.appendChild(row);
+    });
+
+    els.listCount.textContent = filtered.length + " of " + incidents.length;
+    els.resultSummary.textContent = filtered.length === incidents.length
+      ? "Showing all " + incidents.length + " active incidents"
+      : "Showing " + filtered.length + " of " + incidents.length + " incidents";
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering: detail
+  // ---------------------------------------------------------------------
+  function renderDetail(){
+    var inc = getIncident(state.selectedId);
+    if (!inc){
+      els.detailScroll.innerHTML = '<div class="empty-state"><p class="empty-title">No incident selected</p><p class="empty-body">Choose an incident from the list to view its details.</p></div>';
+      return;
+    }
+
+    var isResolved = inc.status === "Resolved";
+    var canEscalate = inc.severity > 1 && !isResolved;
+
+    var html = "";
+    html += '<div class="detail-top">';
+    html += '<div><span class="detail-id">' + escapeHtml(inc.id) + '</span><h3 class="detail-title">' + escapeHtml(inc.title) + '</h3></div>';
+    html += '<div class="detail-badges">' + sevChip(inc.severity) + statusChip(inc.status) + '</div>';
+    html += '</div>';
+
+    html += '<dl class="detail-meta-grid">';
+    html += '<div class="meta-item"><dt>Service</dt><dd>' + escapeHtml(inc.service) + '</dd></div>';
+    html += '<div class="meta-item"><dt>Owner</dt><dd id="ownerValue">' + escapeHtml(inc.owner) + '</dd></div>';
+    html += '<div class="meta-item"><dt>Created</dt><dd class="mono">' + escapeHtml(inc.created) + '</dd></div>';
+    html += '<div class="meta-item"><dt>Last updated</dt><dd class="mono">' + escapeHtml(inc.updated) + '</dd></div>';
+    html += '</dl>';
+
+    html += '<p class="detail-desc">' + escapeHtml(inc.description) + '</p>';
+
+    // Actions bar
+    html += '<div class="actions-bar" id="actionsBar">';
+    if (isResolved){
+      html += '<button type="button" class="btn-secondary" data-action="reopen">Reopen incident</button>';
+      html += '<span class="ack-note">Resolved &mdash; no further action required</span>';
+    } else {
+      html += '<button type="button" class="btn-secondary" data-action="acknowledge" ' + (inc.acknowledged ? "disabled" : "") + '>' + (inc.acknowledged ? "Acknowledged" : "Acknowledge") + '</button>';
+      html += '<button type="button" class="btn-secondary" data-action="assign">Assign&hellip;</button>';
+      html += '<button type="button" class="btn-warn" data-action="escalate" ' + (canEscalate ? "" : "disabled") + '>' + (canEscalate ? "Escalate severity" : "At highest severity") + '</button>';
+      html += '<button type="button" class="btn-primary" data-action="resolve">Mark resolved</button>';
+      if (inc.acknowledged){
+        html += '<span class="ack-note">Acknowledged by ' + escapeHtml(CURRENT_USER) + '</span>';
+      }
+    }
+    html += '</div>';
+
+    if (state.assignOpenFor === inc.id){
+      html += '<div class="assign-inline" id="assignInline" style="margin:-10px 0 20px;">';
+      html += '<label class="sr-only" for="assignSelect">Reassign incident to</label>';
+      html += '<select id="assignSelect">';
+      ROSTER.forEach(function(person){
+        html += '<option value="' + escapeHtml(person) + '" ' + (person === inc.owner ? "selected" : "") + '>' + escapeHtml(person) + '</option>';
+      });
+      html += '</select>';
+      html += '<button type="button" class="btn-primary" data-action="confirm-assign">Confirm</button>';
+      html += '<button type="button" class="btn-ghost" data-action="cancel-assign">Cancel</button>';
+      html += '</div>';
+    }
+
+    // Status history
+    html += '<div class="section-block">';
+    html += '<div class="section-title">Status History <span class="count-pill">' + inc.history.length + '</span></div>';
+    html += '<ol class="history-list">';
+    inc.history.forEach(function(h){
+      html += '<li class="history-item">';
+      html += '<div class="history-time">' + escapeHtml(h.time) + '</div>';
+      html += '<div class="history-action">' + escapeHtml(h.action) + '</div>';
+      if (h.note) html += '<div class="history-note">' + escapeHtml(h.note) + '</div>';
+      html += '<div class="history-actor">' + escapeHtml(h.actor) + '</div>';
+      html += '</li>';
+    });
+    html += '</ol>';
+    html += '</div>';
+
+    els.detailScroll.innerHTML = html;
+    wireDetailActions(inc);
+  }
+
+  function wireDetailActions(inc){
+    var bar = document.getElementById("actionsBar");
+    if (bar){
+      bar.addEventListener("click", function(e){
+        var btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        var action = btn.dataset.action;
+        if (action === "acknowledge") doAcknowledge(inc);
+        else if (action === "assign") { state.assignOpenFor = inc.id; renderDetail(); focusAssignSelect(); }
+        else if (action === "escalate") doEscalate(inc);
+        else if (action === "resolve") doResolve(inc);
+        else if (action === "reopen") doReopen(inc);
+      });
+    }
+    var assignInline = document.getElementById("assignInline");
+    if (assignInline){
+      assignInline.addEventListener("click", function(e){
+        var btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        if (btn.dataset.action === "confirm-assign") doAssign(inc);
+        else if (btn.dataset.action === "cancel-assign"){
+          state.assignOpenFor = null;
+          renderDetail();
+        }
+      });
+    }
+  }
+
+  function focusAssignSelect(){
+    var sel = document.getElementById("assignSelect");
+    if (sel) sel.focus();
+  }
+
+  function pushHistory(inc, action, note){
+    inc.history.unshift({ time: "Jul 28, " + currentTimeLabel(), actor: CURRENT_USER, action: action, note: note || "" });
+    inc.updated = "Jul 28, " + currentTimeLabel();
+  }
+
+  function currentTimeLabel(){
+    var d = new Date();
+    function pad(n){ return (n < 10 ? "0" : "") + n; }
+    return pad(d.getHours()) + ":" + pad(d.getMinutes()) + " local";
+  }
+
+  function doAcknowledge(inc){
+    if (inc.acknowledged) return;
+    inc.acknowledged = true;
+    pushHistory(inc, "Acknowledged", "");
+    announce(inc.id + " acknowledged by " + CURRENT_USER + ".");
+    renderList();
+    renderDetail();
+  }
+
+  function doEscalate(inc){
+    if (inc.severity <= 1) return;
+    inc.severity = inc.severity - 1;
+    pushHistory(inc, "Escalated to " + SEV_META[inc.severity].label, "Severity raised by " + CURRENT_USER + ".");
+    announce(inc.id + " escalated to " + SEV_META[inc.severity].label + ".");
+    renderList();
+    renderDetail();
+  }
+
+  function doResolve(inc){
+    inc.status = "Resolved";
+    state.assignOpenFor = null;
+    pushHistory(inc, "Resolved", "Closed by " + CURRENT_USER + ".");
+    announce(inc.id + " marked resolved.");
+    renderList();
+    renderDetail();
+  }
+
+  function doReopen(inc){
+    inc.status = "Investigating";
+    pushHistory(inc, "Reopened", "Reopened by " + CURRENT_USER + ".");
+    announce(inc.id + " reopened.");
+    renderList();
+    renderDetail();
+  }
+
+  function doAssign(inc){
+    var sel = document.getElementById("assignSelect");
+    var newOwner = sel ? sel.value : inc.owner;
+    var changed = newOwner !== inc.owner;
+    inc.owner = newOwner;
+    state.assignOpenFor = null;
+    if (changed){
+      pushHistory(inc, "Reassigned", "Assigned to " + newOwner + " by " + CURRENT_USER + ".");
+      announce(inc.id + " reassigned to " + newOwner + ".");
+    }
+    renderList();
+    renderDetail();
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering: related alerts (with error + retry demo)
+  // ---------------------------------------------------------------------
+  function renderAlerts(){
+    var inc = getIncident(state.selectedId);
+    if (!inc){
+      els.alertsScroll.innerHTML = "";
+      els.alertsCount.textContent = "";
+      return;
+    }
+
+    if (state.alertsLoadingFor === inc.id){
+      els.alertsScroll.innerHTML = '<div class="alert-loading" role="status">Reconnecting to monitoring source&hellip;</div>';
+      els.alertsCount.textContent = "";
+      return;
+    }
+
+    if (inc.alertsError){
+      els.alertsCount.textContent = "";
+      els.alertsScroll.innerHTML =
+        '<div class="alert-error">' +
+          '<div class="alert-error-icon" aria-hidden="true">&#9888;</div>' +
+          '<div class="alert-error-title">Unable to load related alerts</div>' +
+          '<div class="alert-error-body">The monitoring source for ' + escapeHtml(inc.service) + ' did not respond. This does not affect the incident record.</div>' +
+          '<button type="button" class="btn-secondary" id="retryAlertsBtn">Retry</button>' +
+        '</div>';
+      var retryBtn = document.getElementById("retryAlertsBtn");
+      if (retryBtn){
+        retryBtn.addEventListener("click", function(){
+          state.alertsLoadingFor = inc.id;
+          renderAlerts();
+          window.setTimeout(function(){
+            inc.alertsError = false;
+            inc.alerts = inc.alertsFallback ? inc.alertsFallback.slice() : [];
+            state.alertsLoadingFor = null;
+            announce("Related alerts reconnected for " + inc.id + ".");
+            renderAlerts();
+          }, 700);
+        });
+      }
+      return;
+    }
+
+    if (!inc.alerts || inc.alerts.length === 0){
+      els.alertsCount.textContent = "0";
+      els.alertsScroll.innerHTML = '<div class="no-alerts">No related alerts for this incident.</div>';
+      return;
+    }
+
+    els.alertsCount.textContent = String(inc.alerts.length);
+    var html = "";
+    inc.alerts.forEach(function(a){
+      html += '<div class="alert-card sev-b-' + a.severity + '">';
+      html += '<div class="alert-head"><span class="alert-source">' + escapeHtml(a.source) + '</span><span class="alert-time">' + escapeHtml(a.time) + '</span></div>';
+      html += '<div class="alert-message">' + escapeHtml(a.message) + '</div>';
+      html += '<span class="alert-id">' + escapeHtml(a.id) + '</span>';
+      html += '</div>';
+    });
+    els.alertsScroll.innerHTML = html;
+  }
+
+  // ---------------------------------------------------------------------
+  // Selection
+  // ---------------------------------------------------------------------
+  function selectIncident(id, moveFocus){
+    state.selectedId = id;
+    state.assignOpenFor = null;
+    renderList();
+    renderDetail();
+    renderAlerts();
+    if (moveFocus){
+      var row = document.getElementById("opt-" + id);
+      if (row) row.focus();
+    }
+    els.statusbarRight.textContent = "Viewing " + id;
+  }
+
+  // ---------------------------------------------------------------------
+  // Filters
+  // ---------------------------------------------------------------------
+  function applyFiltersAndRender(){
+    var filtered = getFiltered();
+    var stillVisible = filtered.some(function(inc){ return inc.id === state.selectedId; });
+    if (!stillVisible && filtered.length > 0){
+      state.selectedId = filtered[0].id;
+    }
+    renderList();
+    renderDetail();
+    renderAlerts();
+  }
+
+  els.searchInput.addEventListener("input", function(){
+    state.search = els.searchInput.value;
+    applyFiltersAndRender();
+  });
+  els.severityFilter.addEventListener("change", function(){
+    state.severity = els.severityFilter.value;
+    applyFiltersAndRender();
+  });
+  els.statusFilter.addEventListener("change", function(){
+    state.status = els.statusFilter.value;
+    applyFiltersAndRender();
+  });
+  els.serviceFilter.addEventListener("change", function(){
+    state.service = els.serviceFilter.value;
+    applyFiltersAndRender();
+  });
+
+  function clearFilters(){
+    state.search = "";
+    state.severity = "all";
+    state.status = "all";
+    state.service = "all";
+    els.searchInput.value = "";
+    els.severityFilter.value = "all";
+    els.statusFilter.value = "all";
+    els.serviceFilter.value = "all";
+    applyFiltersAndRender();
+    announce("Filters cleared.");
+  }
+  els.clearFiltersBtn.addEventListener("click", clearFilters);
+  els.emptyClearBtn.addEventListener("click", clearFilters);
+
+  els.incidentDetailSection.addEventListener("focus", function(){}, true);
+
+  document.getElementById("toolbarForm").addEventListener("submit", function(e){ e.preventDefault(); });
+
+  // ---------------------------------------------------------------------
+  // Keyboard navigation for the incident listbox (roving tabindex)
+  // ---------------------------------------------------------------------
+  els.incidentListbox.addEventListener("keydown", function(e){
+    var rows = Array.prototype.slice.call(els.incidentListbox.querySelectorAll('.incident-row'));
+    if (rows.length === 0) return;
+    var currentIndex = rows.findIndex(function(r){ return r.dataset.id === state.selectedId; });
+    if (currentIndex === -1) currentIndex = 0;
+
+    if (e.key === "ArrowDown"){
+      e.preventDefault();
+      var next = rows[Math.min(currentIndex + 1, rows.length - 1)];
+      selectIncident(next.dataset.id, true);
+    } else if (e.key === "ArrowUp"){
+      e.preventDefault();
+      var prev = rows[Math.max(currentIndex - 1, 0)];
+      selectIncident(prev.dataset.id, true);
+    } else if (e.key === "Home"){
+      e.preventDefault();
+      selectIncident(rows[0].dataset.id, true);
+    } else if (e.key === "End"){
+      e.preventDefault();
+      selectIncident(rows[rows.length - 1].dataset.id, true);
+    } else if (e.key === "Enter" || e.key === " "){
+      e.preventDefault();
+      selectIncident(rows[currentIndex].dataset.id, true);
+    }
+  });
+
+  // Global "/" focuses search, unless already typing in a field
+  document.addEventListener("keydown", function(e){
+    if (e.key !== "/") return;
+    var tag = (document.activeElement && document.activeElement.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "select" || tag === "textarea") return;
+    e.preventDefault();
+    els.searchInput.focus();
+  });
+
+  // ---------------------------------------------------------------------
+  // Live clock
+  // ---------------------------------------------------------------------
+  function tickClock(){
+    var d = new Date();
+    function pad(n){ return (n < 10 ? "0" : "") + n; }
+    els.liveClock.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+  tickClock();
+  window.setInterval(tickClock, 1000);
+
+  // ---------------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------------
+  populateServiceFilter();
+  renderList();
+  renderDetail();
+  renderAlerts();
+})();
+</script>
+</body>
+</html>

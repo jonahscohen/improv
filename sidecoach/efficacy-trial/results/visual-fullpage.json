@@ -1,0 +1,138 @@
+{
+  "measure": "M1b-fullpage visual (EXPLORATORY - variant chosen after seeing the viewport-framed result)",
+  "analysedAt": "2026-07-28T23:50:41.947Z",
+  "contrast": "S-vs-P",
+  "favouredArm": "S",
+  "comparisons": 17,
+  "wins": 0,
+  "losses": 17,
+  "ties": 0,
+  "decided": 17,
+  "winRate": 0,
+  "ci95": [
+    0,
+    0.19506432296909354
+  ],
+  "p": 0.000015258789062500003,
+  "perPair": [
+    {
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-flex-warm-human-community-clinic",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-forms-minimal-medical-intake",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-product-minimal-utility-password-manager",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "A": "S",
+      "B": "P",
+      "verdict": "B",
+      "winnerArm": "P"
+    },
+    {
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "A": "P",
+      "B": "S",
+      "verdict": "A",
+      "winnerArm": "P"
+    }
+  ]
+}

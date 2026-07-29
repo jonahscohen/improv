@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident Console</title>
+<style>
+  :root {
+    --bg-app: #eef1f5;
+    --bg-panel: #ffffff;
+    --bg-header: #0b1220;
+    --bg-header-accent: #16213a;
+    --border: #d7dce2;
+    --border-strong: #b7c0ca;
+    --text-primary: #101828;
+    --text-secondary: #48505c;
+    --text-muted: #6b7280;
+    --text-inverse: #eef1f5;
+    --accent: #1d4ed8;
+    --accent-dark: #1e3a8a;
+    --danger-bg: #fef2f2;
+    --danger-border: #f3b7b7;
+    --danger-text: #7f1d1d;
+    --focus-ring: #2563eb;
+    --radius-sm: 3px;
+    --radius-md: 4px;
+    --sev-1: #b91c1c;
+    --sev-2: #c2410c;
+    --sev-3: #92400e;
+    --sev-4: #374151;
+    --status-investigating: #1d4ed8;
+    --status-identified: #6d28d9;
+    --status-mitigating: #0e7490;
+    --status-monitoring: #0f766e;
+    --status-resolved: #15803d;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 8px;
+    top: -48px;
+    background: var(--accent);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    z-index: 100;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top 0.12s ease;
+  }
+  .skip-link:focus {
+    top: 8px;
+  }
+
+  a, button, [tabindex], select, input {
+    font-family: inherit;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  [role="option"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  /* Fallback for browsers without :focus-visible on custom-tabindex elements */
+  [role="option"]:focus,
+  [role="tab"]:focus {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  /* ---------- Topbar ---------- */
+
+  .topbar {
+    background: var(--bg-header);
+    color: var(--text-inverse);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    gap: 16px;
+    border-bottom: 1px solid #000;
+  }
+
+  .topbar__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .topbar__title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0;
+    color: #fff;
+  }
+
+  .env-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    background: var(--sev-1);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+  }
+
+  .topbar__stats {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 12px;
+    color: #c7d0dd;
+  }
+
+  .topbar__stats strong {
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sync-note {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #93a2b8;
+  }
+
+  /* ---------- Degraded sync banner ---------- */
+
+  .degraded-banner {
+    background: #451a03;
+    border-bottom: 1px solid #7c2d12;
+    color: #fde68a;
+    padding: 7px 18px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .degraded-banner button {
+    background: #fde68a;
+    color: #451a03;
+    border: none;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .degraded-banner button:hover { background: #fcd34d; }
+
+  /* ---------- Layout ---------- */
+
+  .layout {
+    display: grid;
+    grid-template-columns: 440px 1fr;
+    align-items: start;
+    height: calc(100vh - 46px);
+  }
+  .layout.has-banner {
+    height: calc(100vh - 46px - 34px);
+  }
+
+  .list-panel {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .list-panel__controls {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .list-panel__heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .list-panel__heading h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin: 0;
+    font-weight: 700;
+  }
+
+  #list-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .search-field {
+    position: relative;
+    flex: 1 1 auto;
+  }
+
+  .search-field input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    background: #fbfcfd;
+    color: var(--text-primary);
+  }
+  .search-field input:focus {
+    background: #fff;
+  }
+
+  select.filter-select {
+    padding: 6px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    background: #fbfcfd;
+    color: var(--text-primary);
+    max-width: 132px;
+  }
+
+  .incident-scroll {
+    overflow-y: auto;
+    flex: 1 1 auto;
+  }
+
+  #incident-listbox {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .incident-row {
+    display: grid;
+    grid-template-columns: 10px 1fr auto;
+    grid-template-areas:
+      "dot idline idline"
+      "dot title title"
+      "dot meta status";
+    column-gap: 9px;
+    row-gap: 3px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  .incident-row:hover {
+    background: #f4f7fb;
+  }
+
+  .incident-row[aria-selected="true"] {
+    background: #eaf1fd;
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  .incident-row.is-resolved {
+    opacity: 0.72;
+  }
+
+  .sev-dot {
+    grid-area: dot;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+  }
+
+  .idline {
+    grid-area: idline;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .incident-id {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+
+  .incident-updated {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .incident-title {
+    grid-area: title;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .incident-meta {
+    grid-area: meta;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .incident-status-cell {
+    grid-area: status;
+    display: flex;
+    align-items: center;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .sev-1 { background: var(--sev-1); }
+  .sev-2 { background: var(--sev-2); }
+  .sev-3 { background: var(--sev-3); }
+  .sev-4 { background: var(--sev-4); }
+
+  .status-investigating { background: var(--status-investigating); }
+  .status-identified { background: var(--status-identified); }
+  .status-mitigating { background: var(--status-mitigating); }
+  .status-monitoring { background: var(--status-monitoring); }
+  .status-resolved { background: var(--status-resolved); }
+
+  .empty-state {
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+
+  .empty-state p {
+    margin: 0 0 12px;
+  }
+
+  .empty-state button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .empty-state button:hover { background: var(--accent-dark); }
+
+  /* ---------- Detail panel ---------- */
+
+  .detail-panel {
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px 26px 40px;
+  }
+
+  .detail-empty {
+    color: var(--text-secondary);
+    padding: 40px 0;
+  }
+
+  .detail-idrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .detail-idrow .incident-id {
+    font-size: 13px;
+  }
+
+  .detail-title {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0 0 14px;
+    color: var(--text-primary);
+    max-width: 62ch;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .meta-grid dt {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 2px;
+  }
+
+  .meta-grid dd {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .meta-grid dd.mono {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 12px;
+  }
+
+  .action-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 20px;
+    padding: 10px 14px;
+    background: #f7f9fb;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .action-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .action-group label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .action-bar select {
+    padding: 5px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    background: #fff;
+  }
+
+  .btn {
+    border: 1px solid transparent;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+
+  .btn-outline {
+    background: #fff;
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+  .btn-outline:hover:not(:disabled) { background: #eef1f5; }
+
+  .btn-danger-outline {
+    background: #fff;
+    border-color: #e0a1a1;
+    color: var(--danger-text);
+  }
+  .btn-danger-outline:hover:not(:disabled) { background: var(--danger-bg); }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .resolved-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .tablist {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border-strong);
+    margin-bottom: 16px;
+  }
+
+  .tablist [role="tab"] {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-bottom: -1px;
+  }
+
+  .tablist [role="tab"][aria-selected="true"] {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tablist [role="tab"]:hover {
+    color: var(--text-primary);
+  }
+
+  .count-pill {
+    display: inline-block;
+    min-width: 15px;
+    text-align: center;
+    background: var(--border);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 1px 5px;
+    margin-left: 4px;
+  }
+
+  .count-pill.is-error {
+    background: var(--danger-text);
+    color: #fff;
+  }
+
+  [role="tabpanel"] {
+    max-width: 68ch;
+  }
+
+  .overview-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .history-list, .alerts-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .history-item {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+  .history-item:last-child { border-bottom: none; }
+
+  .history-time {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+  }
+  .alert-item:last-child { border-bottom: none; }
+
+  .alert-item .sev-dot {
+    margin-top: 4px;
+    flex: none;
+  }
+
+  .panel-empty {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    padding: 10px 0;
+  }
+
+  .panel-error {
+    background: var(--danger-bg);
+    border: 1px solid var(--danger-border);
+    color: var(--danger-text);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    font-size: 12.5px;
+  }
+
+  .panel-error p { margin: 0 0 10px; }
+
+  .panel-error button {
+    background: var(--danger-text);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .panel-error button:hover { background: #6b1616; }
+  .panel-error button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .panel-loading {
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    padding: 10px 0;
+  }
+
+  @media (max-width: 900px) {
+    .layout, .layout.has-banner {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    .list-panel {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      height: auto;
+      max-height: 46vh;
+    }
+    .detail-panel {
+      height: auto;
+    }
+    .meta-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#detail-panel">Skip to incident detail</a>
+
+  <header class="topbar">
+    <div class="topbar__left">
+      <h1 class="topbar__title">Incident Console</h1>
+      <span class="env-tag">PRODUCTION</span>
+    </div>
+    <div class="topbar__stats" id="topbar-stats" aria-live="polite"></div>
+  </header>
+
+  <div id="degraded-banner" class="degraded-banner" role="status">
+    <span id="degraded-banner-text">Live feed sync degraded &middot; showing data as of <span class="mono" id="sync-time">09:41 UTC</span>. Auto-refresh is retrying.</span>
+    <button type="button" id="refresh-btn">Refresh now</button>
+  </div>
+
+  <div id="live-region" class="visually-hidden" aria-live="polite"></div>
+
+  <div class="layout has-banner" id="layout">
+    <aside class="list-panel" aria-label="Incident list">
+      <div class="list-panel__controls">
+        <div class="list-panel__heading">
+          <h2 id="list-heading">Incidents</h2>
+          <span id="list-count"></span>
+        </div>
+        <div class="field-row">
+          <div class="search-field">
+            <label for="search-input" class="visually-hidden">Search incidents by ID, title, service, or owner</label>
+            <input type="text" id="search-input" placeholder="Search ID, title, service, owner&hellip;" autocomplete="off">
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label for="severity-filter" class="visually-hidden">Filter by severity</label>
+            <select id="severity-filter" class="filter-select">
+              <option value="all">All severities</option>
+              <option value="1">SEV-1 &middot; Critical</option>
+              <option value="2">SEV-2 &middot; High</option>
+              <option value="3">SEV-3 &middot; Moderate</option>
+              <option value="4">SEV-4 &middot; Low</option>
+            </select>
+          </div>
+          <div>
+            <label for="status-filter" class="visually-hidden">Filter by status</label>
+            <select id="status-filter" class="filter-select">
+              <option value="active" selected>Active (default)</option>
+              <option value="all">All statuses</option>
+              <option value="Investigating">Investigating</option>
+              <option value="Identified">Identified</option>
+              <option value="Mitigating">Mitigating</option>
+              <option value="Monitoring">Monitoring</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="incident-scroll">
+        <ul id="incident-listbox" role="listbox" aria-labelledby="list-heading"></ul>
+        <div id="empty-state" class="empty-state" hidden>
+          <p>No incidents match the current filters.</p>
+          <button type="button" id="clear-filters-btn">Clear filters</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="detail-panel" id="detail-panel" tabindex="-1" aria-live="polite">
+      <!-- Populated by renderDetail() -->
+    </main>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SEVERITY_META = {
+    1: { label: "SEV-1 · Critical", cls: "sev-1" },
+    2: { label: "SEV-2 · High", cls: "sev-2" },
+    3: { label: "SEV-3 · Moderate", cls: "sev-3" },
+    4: { label: "SEV-4 · Low", cls: "sev-4" }
+  };
+
+  var STATUS_CLASS = {
+    "Investigating": "status-investigating",
+    "Identified": "status-identified",
+    "Mitigating": "status-mitigating",
+    "Monitoring": "status-monitoring",
+    "Resolved": "status-resolved"
+  };
+
+  var ROSTER = ["R. Nakamura", "M. Okafor", "J. Alvarez", "S. Petrov", "A. Byrne", "T. Nguyen", "R. Chen", "Unassigned"];
+
+  var incidents = [
+    {
+      id: "INC-4471", severity: 1, status: "Investigating",
+      service: "Payment Gateway", owner: "R. Nakamura",
+      created: "2026-07-28 08:52 UTC", updated: "2026-07-28 09:41 UTC",
+      title: "Authorization requests failing for EU-issued cards",
+      description: "Authorization requests from EU-issued cards are failing at the gateway. Impact is limited to the eu-west-1 processing node; other regions are unaffected so far.",
+      history: [
+        { time: "08:52", text: "Incident opened - auto-detected by payment success-rate monitor (threshold 92%)." },
+        { time: "09:05", text: "Assigned to R. Nakamura." },
+        { time: "09:20", text: "Identified: TLS certificate on eu-west-1 gateway node expired at 08:47 UTC." },
+        { time: "09:41", text: "Mitigating: certificate rotation in progress, ETA 10 minutes." }
+      ],
+      relatedAlerts: [
+        { text: "EU-GW-03 TLS handshake failure rate above 40%", severity: 1 },
+        { text: "Payment success rate below 92% threshold (eu-west-1)", severity: 1 },
+        { text: "Elevated 5xx responses on /v2/authorize", severity: 2 }
+      ]
+    },
+    {
+      id: "INC-4468", severity: 1, status: "Mitigating",
+      service: "Identity & Access", owner: "M. Okafor",
+      created: "2026-07-28 07:15 UTC", updated: "2026-07-28 09:30 UTC",
+      title: "SSO logins intermittently returning HTTP 500",
+      description: "SSO logins across all customer-facing applications are intermittently returning HTTP 500. Session issuance is degraded; users already authenticated are unaffected.",
+      history: [
+        { time: "07:15", text: "Incident opened - auto-detected by auth-service error-rate monitor." },
+        { time: "07:22", text: "Assigned to M. Okafor." },
+        { time: "07:40", text: "Identified: token-cache eviction storm following a Redis failover." },
+        { time: "08:10", text: "Mitigating: token cache manually warmed on standby nodes." },
+        { time: "09:30", text: "Error rate down to 3%, holding at reduced capacity." }
+      ],
+      relatedAlerts: [
+        { text: "auth-service p99 latency above 8s", severity: 1 },
+        { text: "Redis token-cache eviction rate spike (identity-cache-03)", severity: 2 }
+      ]
+    },
+    {
+      id: "INC-4459", severity: 2, status: "Identified",
+      service: "Order Processing API", owner: "J. Alvarez",
+      created: "2026-07-27 22:10 UTC", updated: "2026-07-28 09:05 UTC",
+      title: "Order confirmation and dispatch delayed beyond SLA",
+      description: "Order-processing consumers are falling behind the intake queue. New orders are accepted but confirmation emails and warehouse dispatch are delayed beyond the 15-minute SLA.",
+      history: [
+        { time: "22:10", text: "Incident opened - queue-depth alert crossed 50,000 messages." },
+        { time: "22:25", text: "Assigned to J. Alvarez." },
+        { time: "23:05", text: "Identified: consumer group orders-fulfillment-v3 stalled on a malformed message." },
+        { time: "09:05", text: "Poison message quarantined; backlog draining at 1,200 msg/min." }
+      ],
+      relatedAlerts: null,
+      alertsError: true
+    },
+    {
+      id: "INC-4442", severity: 2, status: "Monitoring",
+      service: "Customer Data Warehouse", owner: "S. Petrov",
+      created: "2026-07-26 14:02 UTC", updated: "2026-07-28 06:50 UTC",
+      title: "Elevated row-error rate in nightly ETL job",
+      description: "Nightly ETL jobs into the analytics warehouse are completing with an elevated row-error rate. Downstream dashboards are up to 6 hours stale.",
+      history: [
+        { time: "2026-07-26 14:02", text: "Incident opened - ETL error-rate alert on the 2026-07-26 run." },
+        { time: "2026-07-26 15:30", text: "Assigned to S. Petrov." },
+        { time: "2026-07-27 09:10", text: "Root cause: upstream schema change on orders.customer_id (widened to UUID)." },
+        { time: "2026-07-28 06:50", text: "Transform layer patched; monitoring the next three ETL runs before closing." }
+      ],
+      relatedAlerts: [
+        { text: "ETL row-error rate above 2% (warehouse-etl-nightly)", severity: 2 },
+        { text: "Dashboard data freshness exceeds 4 hours", severity: 3 }
+      ]
+    },
+    {
+      id: "INC-4430", severity: 3, status: "Monitoring",
+      service: "Email Delivery Service", owner: "A. Byrne",
+      created: "2026-07-27 11:20 UTC", updated: "2026-07-28 08:00 UTC",
+      title: "Transactional email delayed 30-45 minutes",
+      description: "Transactional email delivery (password resets, receipts) is delayed 30-45 minutes during peak hours. No messages have been lost.",
+      history: [
+        { time: "2026-07-27 11:20", text: "Incident opened - delivery-latency alert." },
+        { time: "2026-07-27 12:00", text: "Assigned to A. Byrne." },
+        { time: "2026-07-27 13:15", text: "Identified: outbound relay pool undersized for current send volume." },
+        { time: "2026-07-28 08:00", text: "Relay pool scaled from 4 to 8 nodes; monitoring delivery latency." }
+      ],
+      relatedAlerts: [
+        { text: "Outbound relay queue depth above 10,000", severity: 3 }
+      ]
+    },
+    {
+      id: "INC-4421", severity: 3, status: "Investigating",
+      service: "CDN Edge Nodes", owner: "T. Nguyen",
+      created: "2026-07-28 05:40 UTC", updated: "2026-07-28 07:55 UTC",
+      title: "APAC cache hit ratio dropped from 96% to 78%",
+      description: "Cache hit ratio in the APAC point-of-presence group has dropped from a 96% baseline to 78%, increasing origin load and page latency for APAC users.",
+      history: [
+        { time: "05:40", text: "Incident opened - cache-hit-ratio alert (apac-pop-group)." },
+        { time: "06:10", text: "Assigned to T. Nguyen." },
+        { time: "07:55", text: "Investigating a purge-rule change deployed 2026-07-27 22:00 UTC." }
+      ],
+      relatedAlerts: [
+        { text: "Cache hit ratio below 85% (apac-pop-group)", severity: 3 },
+        { text: "Origin request rate up 3.2x baseline (ap-southeast)", severity: 3 }
+      ]
+    },
+    {
+      id: "INC-4408", severity: 4, status: "Investigating",
+      service: "Internal VPN Gateway", owner: "Unassigned",
+      created: "2026-07-28 09:10 UTC", updated: "2026-07-28 09:10 UTC",
+      title: "Intermittent VPN disconnects reported by helpdesk",
+      description: "Employees on the internal VPN are experiencing intermittent disconnects roughly every 20 minutes. No customer-facing systems are affected.",
+      history: [
+        { time: "09:10", text: "Incident opened - reported by IT helpdesk (4 tickets in 30 minutes)." }
+      ],
+      relatedAlerts: []
+    },
+    {
+      id: "INC-4390", severity: 4, status: "Resolved",
+      service: "Billing Reconciliation Job", owner: "R. Chen",
+      created: "2026-07-26 01:00 UTC", updated: "2026-07-27 09:00 UTC",
+      title: "Nightly billing job ran 3.5 hours over baseline",
+      description: "The nightly billing-reconciliation batch job ran 3.5 hours longer than its baseline, delaying finance reporting by one business day.",
+      history: [
+        { time: "2026-07-26 01:00", text: "Incident opened - job duration exceeded 2x baseline." },
+        { time: "2026-07-26 09:15", text: "Assigned to R. Chen." },
+        { time: "2026-07-26 14:40", text: "Identified: reconciliation job was scanning a table missing a partition-pruning index." },
+        { time: "2026-07-27 09:00", text: "Resolved: index added, job duration back to baseline (42 minutes)." }
+      ],
+      relatedAlerts: [
+        { text: "Batch job duration exceeded 2x baseline (billing-reconcile-nightly)", severity: 4 }
+      ]
+    }
+  ];
+
+  var ALERTS_RETRY_FALLBACK = {
+    "INC-4459": [
+      { text: "Consumer lag above 15 minutes (orders-fulfillment-v3)", severity: 2 },
+      { text: "Queue depth above 50,000 messages (orders-intake)", severity: 2 }
+    ]
+  };
+
+  var state = {
+    search: "",
+    severity: "all",
+    status: "active",
+    selectedId: incidents[0].id,
+    activeTab: "overview",
+    alertsLoading: {}
+  };
+
+  var simClock = { h: 9, m: 52 };
+
+  function nowLabel() {
+    simClock.m += 1;
+    if (simClock.m >= 60) { simClock.m = 0; simClock.h += 1; }
+    var mm = simClock.m < 10 ? "0" + simClock.m : String(simClock.m);
+    var hh = String(simClock.h);
+    return hh + ":" + mm;
+  }
+
+  function byId(id) {
+    for (var i = 0; i < incidents.length; i++) {
+      if (incidents[i].id === id) return incidents[i];
+    }
+    return null;
+  }
+
+  function announce(msg) {
+    var region = document.getElementById("live-region");
+    region.textContent = "";
+    window.setTimeout(function () { region.textContent = msg; }, 30);
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function getFiltered() {
+    var q = state.search.trim().toLowerCase();
+    return incidents.filter(function (inc) {
+      if (state.severity !== "all" && String(inc.severity) !== state.severity) return false;
+      if (state.status === "active") {
+        if (inc.status === "Resolved") return false;
+      } else if (state.status !== "all") {
+        if (inc.status !== state.status) return false;
+      }
+      if (q) {
+        var haystack = (inc.id + " " + inc.title + " " + inc.service + " " + inc.owner).toLowerCase();
+        if (haystack.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(function (a, b) {
+      if (a.severity !== b.severity) return a.severity - b.severity;
+      return b.updated.localeCompare(a.updated);
+    });
+  }
+
+  function renderTopbarStats() {
+    var active = incidents.filter(function (i) { return i.status !== "Resolved"; });
+    var critical = active.filter(function (i) { return i.severity === 1; });
+    var unassigned = active.filter(function (i) { return i.owner === "Unassigned"; });
+    var el = document.getElementById("topbar-stats");
+    el.innerHTML =
+      "<span><strong>" + active.length + "</strong> Active</span>" +
+      "<span><strong>" + critical.length + "</strong> Critical</span>" +
+      "<span><strong>" + unassigned.length + "</strong> Unassigned</span>";
+  }
+
+  function renderList() {
+    var list = getFiltered();
+    var listbox = document.getElementById("incident-listbox");
+    var emptyState = document.getElementById("empty-state");
+    var countEl = document.getElementById("list-count");
+
+    countEl.textContent = list.length + (list.length === 1 ? " incident" : " incidents");
+
+    if (list.length === 0) {
+      listbox.innerHTML = "";
+      emptyState.hidden = false;
+      return;
+    }
+    emptyState.hidden = true;
+
+    listbox.innerHTML = list.map(function (inc) {
+      var sev = SEVERITY_META[inc.severity];
+      var statusCls = STATUS_CLASS[inc.status] || "";
+      var selected = inc.id === state.selectedId;
+      var resolvedCls = inc.status === "Resolved" ? " is-resolved" : "";
+      return (
+        '<li role="option" id="opt-' + inc.id + '" class="incident-row' + resolvedCls + '" ' +
+        'aria-selected="' + (selected ? "true" : "false") + '" tabindex="' + (selected ? "0" : "-1") + '" ' +
+        'data-id="' + inc.id + '">' +
+          '<span class="sev-dot" style="background:var(--' + sev.cls + ')" aria-hidden="true"></span>' +
+          '<span class="idline">' +
+            '<span class="incident-id">' + inc.id + ' &middot; ' + sev.label + '</span>' +
+            '<span class="incident-updated">' + escapeHtml(inc.updated.replace(" UTC", "")) + '</span>' +
+          '</span>' +
+          '<span class="incident-title">' + escapeHtml(inc.title) + '</span>' +
+          '<span class="incident-meta">' + escapeHtml(inc.service) + ' &middot; ' + escapeHtml(inc.owner) + '</span>' +
+          '<span class="incident-status-cell"><span class="badge ' + statusCls + '">' + escapeHtml(inc.status) + '</span></span>' +
+        '</li>'
+      );
+    }).join("");
+
+    Array.prototype.forEach.call(listbox.querySelectorAll("[role=\"option\"]"), function (opt) {
+      opt.addEventListener("click", function () {
+        selectIncident(opt.getAttribute("data-id"), false);
+      });
+    });
+  }
+
+  function moveSelection(delta) {
+    var list = getFiltered();
+    if (list.length === 0) return;
+    var idx = list.findIndex(function (i) { return i.id === state.selectedId; });
+    var nextIdx;
+    if (idx === -1) {
+      nextIdx = 0;
+    } else {
+      nextIdx = idx + delta;
+      if (nextIdx < 0) nextIdx = 0;
+      if (nextIdx > list.length - 1) nextIdx = list.length - 1;
+    }
+    selectIncident(list[nextIdx].id, true);
+  }
+
+  function selectIncident(id, moveFocus) {
+    state.selectedId = id;
+    state.activeTab = "overview";
+    renderList();
+    renderDetail();
+    if (moveFocus) {
+      var el = document.getElementById("opt-" + id);
+      if (el) el.focus();
+    }
+  }
+
+  function renderAlertsPanelContent(inc) {
+    if (state.alertsLoading[inc.id]) {
+      return '<p class="panel-loading">Loading related alerts&hellip;</p>';
+    }
+    if (inc.alertsError) {
+      return (
+        '<div class="panel-error">' +
+          '<p>Unable to load related alerts. The alerting service did not respond in time.</p>' +
+          '<button type="button" id="retry-alerts-btn" data-id="' + inc.id + '">Retry</button>' +
+        '</div>'
+      );
+    }
+    if (!inc.relatedAlerts || inc.relatedAlerts.length === 0) {
+      return '<p class="panel-empty">No related alerts have fired for this incident.</p>';
+    }
+    return '<ul class="alerts-list">' + inc.relatedAlerts.map(function (a) {
+      var sev = SEVERITY_META[a.severity];
+      return (
+        '<li class="alert-item">' +
+          '<span class="sev-dot" style="background:var(--' + sev.cls + ')" aria-hidden="true"></span>' +
+          '<span>' + escapeHtml(a.text) + '</span>' +
+        '</li>'
+      );
+    }).join("") + '</ul>';
+  }
+
+  function alertsCountLabel(inc) {
+    if (state.alertsLoading[inc.id]) return "";
+    if (inc.alertsError) return '<span class="count-pill is-error" aria-hidden="true">!</span>';
+    var n = inc.relatedAlerts ? inc.relatedAlerts.length : 0;
+    return '<span class="count-pill">' + n + '</span>';
+  }
+
+  function renderDetail() {
+    var panel = document.getElementById("detail-panel");
+    var inc = byId(state.selectedId);
+
+    if (!inc) {
+      panel.innerHTML = '<div class="detail-empty"><p>Select an incident from the list to view details.</p></div>';
+      return;
+    }
+
+    var sev = SEVERITY_META[inc.severity];
+    var statusCls = STATUS_CLASS[inc.status] || "";
+    var isResolved = inc.status === "Resolved";
+
+    var actionsHtml;
+    if (isResolved) {
+      actionsHtml =
+        '<div class="action-bar">' +
+          '<span class="resolved-note">This incident is resolved. Reassignment and escalation are disabled.</span>' +
+          '<button type="button" class="btn btn-outline" id="reopen-btn">Reopen incident</button>' +
+        '</div>';
+    } else {
+      var options = ROSTER.map(function (name) {
+        return '<option value="' + escapeHtml(name) + '"' + (name === inc.owner ? " selected" : "") + '>' + escapeHtml(name) + '</option>';
+      }).join("");
+      actionsHtml =
+        '<div class="action-bar">' +
+          '<div class="action-group">' +
+            '<label for="assign-select">Assign to</label>' +
+            '<select id="assign-select">' + options + '</select>' +
+            '<button type="button" class="btn btn-primary" id="assign-btn" disabled>Assign</button>' +
+          '</div>' +
+          '<div class="action-group">' +
+            '<button type="button" class="btn btn-outline" id="escalate-btn"' + (inc.severity === 1 ? " disabled" : "") + '>Escalate severity</button>' +
+          '</div>' +
+          '<div class="action-group">' +
+            '<button type="button" class="btn btn-danger-outline" id="resolve-btn">Resolve incident</button>' +
+          '</div>' +
+        '</div>';
+    }
+
+    var overviewSelected = state.activeTab === "overview";
+    var historySelected = state.activeTab === "history";
+    var alertsSelected = state.activeTab === "alerts";
+
+    panel.innerHTML =
+      '<div class="detail-idrow">' +
+        '<span class="incident-id">' + inc.id + '</span>' +
+        '<span class="badge ' + sev.cls + '">' + sev.label + '</span>' +
+        '<span class="badge ' + statusCls + '">' + escapeHtml(inc.status) + '</span>' +
+      '</div>' +
+      '<h2 class="detail-title">' + escapeHtml(inc.title) + '</h2>' +
+      '<dl class="meta-grid">' +
+        '<div><dt>Service</dt><dd>' + escapeHtml(inc.service) + '</dd></div>' +
+        '<div><dt>Owner</dt><dd>' + escapeHtml(inc.owner) + '</dd></div>' +
+        '<div><dt>Created</dt><dd class="mono">' + escapeHtml(inc.created) + '</dd></div>' +
+        '<div><dt>Updated</dt><dd class="mono">' + escapeHtml(inc.updated) + '</dd></div>' +
+      '</dl>' +
+      actionsHtml +
+      '<div class="tablist" role="tablist" aria-label="Incident information">' +
+        '<button type="button" role="tab" id="tab-overview" aria-selected="' + overviewSelected + '" aria-controls="panel-overview" tabindex="' + (overviewSelected ? "0" : "-1") + '">Overview</button>' +
+        '<button type="button" role="tab" id="tab-history" aria-selected="' + historySelected + '" aria-controls="panel-history" tabindex="' + (historySelected ? "0" : "-1") + '">Status History<span class="count-pill">' + inc.history.length + '</span></button>' +
+        '<button type="button" role="tab" id="tab-alerts" aria-selected="' + alertsSelected + '" aria-controls="panel-alerts" tabindex="' + (alertsSelected ? "0" : "-1") + '">Related Alerts' + alertsCountLabel(inc) + '</button>' +
+      '</div>' +
+      '<div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview"' + (overviewSelected ? "" : " hidden") + '>' +
+        '<p class="overview-desc">' + escapeHtml(inc.description) + '</p>' +
+      '</div>' +
+      '<div id="panel-history" role="tabpanel" aria-labelledby="tab-history"' + (historySelected ? "" : " hidden") + '>' +
+        '<ul class="history-list">' + inc.history.slice().reverse().map(function (h) {
+          return '<li class="history-item"><span class="history-time">' + escapeHtml(h.time) + '</span><span>' + escapeHtml(h.text) + '</span></li>';
+        }).join("") + '</ul>' +
+      '</div>' +
+      '<div id="panel-alerts" role="tabpanel" aria-labelledby="tab-alerts"' + (alertsSelected ? "" : " hidden") + '>' +
+        renderAlertsPanelContent(inc) +
+      '</div>';
+
+    wireDetailEvents(inc);
+  }
+
+  function wireDetailEvents(inc) {
+    var tabOverview = document.getElementById("tab-overview");
+    var tabHistory = document.getElementById("tab-history");
+    var tabAlerts = document.getElementById("tab-alerts");
+    var tabs = [tabOverview, tabHistory, tabAlerts];
+    var tabKeys = ["overview", "history", "alerts"];
+
+    tabs.forEach(function (tabEl, idx) {
+      tabEl.addEventListener("click", function () {
+        state.activeTab = tabKeys[idx];
+        renderDetail();
+        document.getElementById("tab-" + tabKeys[idx]).focus();
+      });
+      tabEl.addEventListener("keydown", function (e) {
+        var curIdx = tabKeys.indexOf(state.activeTab);
+        var nextIdx = null;
+        if (e.key === "ArrowRight") nextIdx = (curIdx + 1) % tabKeys.length;
+        else if (e.key === "ArrowLeft") nextIdx = (curIdx - 1 + tabKeys.length) % tabKeys.length;
+        else if (e.key === "Home") nextIdx = 0;
+        else if (e.key === "End") nextIdx = tabKeys.length - 1;
+        if (nextIdx !== null) {
+          e.preventDefault();
+          state.activeTab = tabKeys[nextIdx];
+          renderDetail();
+          document.getElementById("tab-" + tabKeys[nextIdx]).focus();
+        }
+      });
+    });
+
+    var assignSelect = document.getElementById("assign-select");
+    var assignBtn = document.getElementById("assign-btn");
+    if (assignSelect && assignBtn) {
+      assignSelect.addEventListener("change", function () {
+        assignBtn.disabled = assignSelect.value === inc.owner;
+      });
+      assignBtn.addEventListener("click", function () {
+        var newOwner = assignSelect.value;
+        var t = nowLabel();
+        inc.owner = newOwner;
+        inc.updated = "2026-07-28 " + t + " UTC";
+        inc.history.push({ time: t, text: "Reassigned to " + newOwner + " by console operator." });
+        announce(inc.id + " reassigned to " + newOwner + ".");
+        renderTopbarStats();
+        renderList();
+        renderDetail();
+      });
+    }
+
+    var escalateBtn = document.getElementById("escalate-btn");
+    if (escalateBtn) {
+      escalateBtn.addEventListener("click", function () {
+        if (inc.severity <= 1) return;
+        inc.severity -= 1;
+        var t = nowLabel();
+        inc.updated = "2026-07-28 " + t + " UTC";
+        inc.history.push({ time: t, text: "Escalated to " + SEVERITY_META[inc.severity].label + " by console operator. Incident commander paged." });
+        announce(inc.id + " escalated to severity " + inc.severity + ".");
+        renderTopbarStats();
+        renderList();
+        renderDetail();
+      });
+    }
+
+    var resolveBtn = document.getElementById("resolve-btn");
+    if (resolveBtn) {
+      resolveBtn.addEventListener("click", function () {
+        var t = nowLabel();
+        inc.status = "Resolved";
+        inc.updated = "2026-07-28 " + t + " UTC";
+        inc.history.push({ time: t, text: "Resolved by console operator." });
+        announce(inc.id + " marked resolved.");
+        renderTopbarStats();
+        renderList();
+        renderDetail();
+      });
+    }
+
+    var reopenBtn = document.getElementById("reopen-btn");
+    if (reopenBtn) {
+      reopenBtn.addEventListener("click", function () {
+        var t = nowLabel();
+        inc.status = "Monitoring";
+        inc.updated = "2026-07-28 " + t + " UTC";
+        inc.history.push({ time: t, text: "Reopened by console operator." });
+        announce(inc.id + " reopened.");
+        renderTopbarStats();
+        renderList();
+        renderDetail();
+      });
+    }
+
+    var retryBtn = document.getElementById("retry-alerts-btn");
+    if (retryBtn) {
+      retryBtn.addEventListener("click", function () {
+        var incId = retryBtn.getAttribute("data-id");
+        state.alertsLoading[incId] = true;
+        renderDetail();
+        window.setTimeout(function () {
+          var target = byId(incId);
+          delete state.alertsLoading[incId];
+          target.alertsError = false;
+          target.relatedAlerts = ALERTS_RETRY_FALLBACK[incId] || [];
+          announce("Related alerts loaded for " + incId + ".");
+          renderDetail();
+        }, 900);
+      });
+    }
+  }
+
+  function wireListboxKeyboard() {
+    var listbox = document.getElementById("incident-listbox");
+    listbox.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { e.preventDefault(); moveSelection(1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); moveSelection(-1); }
+      else if (e.key === "Home") { e.preventDefault(); var l = getFiltered(); if (l.length) selectIncident(l[0].id, true); }
+      else if (e.key === "End") { e.preventDefault(); var l2 = getFiltered(); if (l2.length) selectIncident(l2[l2.length - 1].id, true); }
+    });
+  }
+
+  function wireControls() {
+    var searchInput = document.getElementById("search-input");
+    searchInput.addEventListener("input", function () {
+      state.search = searchInput.value;
+      renderList();
+    });
+
+    var sevFilter = document.getElementById("severity-filter");
+    sevFilter.addEventListener("change", function () {
+      state.severity = sevFilter.value;
+      renderList();
+    });
+
+    var statusFilter = document.getElementById("status-filter");
+    statusFilter.addEventListener("change", function () {
+      state.status = statusFilter.value;
+      renderList();
+    });
+
+    document.getElementById("clear-filters-btn").addEventListener("click", function () {
+      state.search = "";
+      state.severity = "all";
+      state.status = "active";
+      searchInput.value = "";
+      sevFilter.value = "all";
+      statusFilter.value = "active";
+      renderList();
+      searchInput.focus();
+    });
+
+    var banner = document.getElementById("degraded-banner");
+    var refreshBtn = document.getElementById("refresh-btn");
+    refreshBtn.addEventListener("click", function () {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = "Refreshing...";
+      window.setTimeout(function () {
+        banner.parentNode.removeChild(banner);
+        document.getElementById("layout").classList.remove("has-banner");
+        announce("Live feed sync restored.");
+      }, 700);
+    });
+  }
+
+  function init() {
+    renderTopbarStats();
+    renderList();
+    renderDetail();
+    wireListboxKeyboard();
+    wireControls();
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>

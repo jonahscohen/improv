@@ -1,0 +1,42 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# forms-minimal-medical-intake (coverage brief, Codex-authored)
+
+title: New Patient Intake Form
+register: forms
+aestheticStyle: minimal
+audience: Adults completing intake information before a primary care appointment.
+goal: Collect necessary patient information accurately while reducing confusion and friction.
+requiredContent:
+- Patient contact details
+- Insurance information
+- Emergency contact
+- Current medications
+- Allergies
+- Medical history checklist
+- Consent acknowledgement
+- Review and submit action
+constraints:
+- audience: Users may be stressed, time-limited, or using assistive technology.
+- brand-tone-in-words: Respectful, clear, calm, and professional.
+- platform: Responsive web form.
+- baseline: Must meet common accessibility expectations and clearly communicate required versus optional fields.
+successCriteria:
+- Users can complete the form with confidence.
+- Sensitive information requests feel appropriate and understandable.
+- Validation and review needs are clear before submission.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-forms-minimal-medical-intake.html

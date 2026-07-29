@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoopLane - Ride Your Neighborhood</title>
+<meta name="description" content="LoopLane is the new neighborhood bike share. Grab a bike, ride where you need to go, drop it off. No app confusion, no car needed.">
+<style>
+  :root{
+    --ink:#0b1f2a;
+    --ink-soft:#16303e;
+    --paper:#fbf7ee;
+    --lime:#c8f13a;
+    --lime-dark:#9fce16;
+    --coral:#ff5b45;
+    --coral-dark:#e0432f;
+    --teal:#0f6e6a;
+    --line:rgba(11,31,42,0.14);
+    --shadow: 6px 6px 0 var(--ink);
+    --radius-lg: 28px;
+    --radius-md: 18px;
+    --maxw: 1180px;
+    font-size: 16px;
+  }
+
+  *,*::before,*::after{ box-sizing: border-box; }
+
+  html{ scroll-behavior: smooth; }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior: auto; }
+    *,*::before,*::after{
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img, svg { display:block; max-width:100%; }
+
+  a { color: inherit; }
+
+  .visually-hidden{
+    position:absolute;
+    width:1px;height:1px;
+    padding:0;margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+
+  .skip-link{
+    position:absolute;
+    left:1rem;
+    top:-4rem;
+    background:var(--ink);
+    color:var(--paper);
+    padding:0.75rem 1.25rem;
+    border-radius:0 0 10px 10px;
+    z-index:1000;
+    font-weight:700;
+    transition: top 0.2s ease;
+  }
+  .skip-link:focus{ top:0; }
+
+  :focus-visible{
+    outline: 3px solid var(--teal);
+    outline-offset: 3px;
+  }
+
+  .wrap{
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* ---------- Marquee band ---------- */
+  .marquee-band{
+    background: var(--ink);
+    color: var(--lime);
+    overflow: hidden;
+    white-space: nowrap;
+    border-bottom: 3px solid var(--ink);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 0.55rem 0;
+  }
+  .marquee-track{
+    display:inline-flex;
+    gap: 2.5rem;
+    animation: scroll-left 22s linear infinite;
+    padding-left: 2.5rem;
+  }
+  .marquee-track span{ opacity:0.95; }
+  .marquee-track span::after{ content:"\2022"; margin-left: 2.5rem; color: var(--coral); }
+  @keyframes scroll-left{
+    from{ transform: translateX(0); }
+    to{ transform: translateX(-50%); }
+  }
+
+  /* ---------- Header ---------- */
+  header.site-header{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--paper);
+    border-bottom: 3px solid var(--ink);
+  }
+  .nav-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap: 0.6rem;
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    text-decoration:none;
+    color: var(--ink);
+  }
+  .brand-mark{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--coral);
+    border: 3px solid var(--ink);
+    position: relative;
+    flex-shrink:0;
+  }
+  .brand-mark::before,
+  .brand-mark::after{
+    content:"";
+    position:absolute;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+  .brand-mark::before{ width:10px; height:10px; left:6px; top:14px; }
+  .brand-mark::after{ width:10px; height:10px; right:6px; top:14px; }
+
+  nav.primary-nav{
+    display:flex;
+    align-items:center;
+    gap: 2rem;
+  }
+  nav.primary-nav ul{
+    list-style:none;
+    display:flex;
+    gap: 1.75rem;
+    margin:0;
+    padding:0;
+    font-weight: 700;
+  }
+  nav.primary-nav a{
+    text-decoration:none;
+    position:relative;
+    padding: 0.25rem 0.1rem;
+  }
+  nav.primary-nav a::after{
+    content:"";
+    position:absolute;
+    left:0; right:0; bottom:-4px;
+    height:3px;
+    background: var(--lime);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s ease;
+  }
+  nav.primary-nav a:hover::after,
+  nav.primary-nav a:focus-visible::after{ transform: scaleX(1); }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:0.5rem;
+    font-weight: 800;
+    text-decoration:none;
+    border-radius: 999px;
+    border: 3px solid var(--ink);
+    padding: 0.7rem 1.4rem;
+    cursor:pointer;
+    font-size: 1rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 4px 4px 0 var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .btn:hover{ transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+  .btn:active{ transform: translate(0,0); box-shadow: 2px 2px 0 var(--ink); }
+  .btn-primary{ background: var(--lime); }
+  .btn-coral{ background: var(--coral); color: var(--paper); }
+  .btn-ghost{ background: transparent; }
+  .btn-block{ width:100%; }
+  .btn-lg{ padding: 1rem 2rem; font-size: 1.1rem; }
+
+  .menu-toggle{
+    display:none;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 10px;
+    width: 46px;
+    height: 42px;
+    font-size: 1.4rem;
+    cursor:pointer;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    padding: 4.5rem 0 5rem;
+    background:
+      radial-gradient(circle at 85% 20%, rgba(200,241,58,0.55), transparent 45%),
+      radial-gradient(circle at 8% 85%, rgba(255,91,69,0.35), transparent 40%);
+    overflow:hidden;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 3rem;
+    align-items:center;
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:0.5rem;
+    background: var(--ink);
+    color: var(--lime);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    margin-bottom: 1.5rem;
+  }
+  .eyebrow-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: var(--coral);
+    flex-shrink:0;
+  }
+  h1.hero-title{
+    font-size: clamp(2.6rem, 5.5vw, 4.4rem);
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+    font-weight: 900;
+    margin: 0 0 1.3rem;
+  }
+  h1.hero-title .highlight{
+    background: var(--lime);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    padding: 0 0.15em;
+    border-radius: 0.2em;
+  }
+  .hero-sub{
+    font-size: 1.2rem;
+    max-width: 46ch;
+    color: var(--ink-soft);
+    margin: 0 0 2rem;
+  }
+  .hero-cta-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .hero-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+    font-weight:700;
+    color: var(--ink-soft);
+  }
+  .hero-meta li{ list-style:none; display:flex; align-items:center; gap:0.5rem; }
+  .hero-meta ul{ display:flex; gap:1.5rem; flex-wrap:wrap; padding:0; margin:0; }
+  .hero-meta .check{
+    width: 20px; height:20px;
+    border-radius:50%;
+    background: var(--teal);
+    color:#fff;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.7rem;
+    flex-shrink:0;
+  }
+
+  .hero-art{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .art-card{
+    position:relative;
+    width:100%;
+    max-width: 420px;
+    aspect-ratio: 4/5;
+    background: var(--ink);
+    border-radius: var(--radius-lg);
+    border: 4px solid var(--ink);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+    display:flex;
+    align-items:flex-end;
+    padding: 1.75rem;
+  }
+  .art-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(200,241,58,0.9), transparent 40%),
+      radial-gradient(circle at 75% 60%, rgba(255,91,69,0.8), transparent 45%),
+      linear-gradient(160deg, #123844, #0b1f2a 70%);
+  }
+  .art-wheel{
+    position:absolute;
+    border-radius:50%;
+    border: 6px solid var(--paper);
+    opacity:0.9;
+  }
+  .art-wheel.one{ width:150px; height:150px; top:14%; left:-40px; }
+  .art-wheel.two{ width:90px; height:90px; bottom:18%; right:-20px; border-color: var(--lime); }
+  .art-caption{
+    position:relative;
+    color: var(--paper);
+    font-weight: 800;
+    font-size: 1.4rem;
+    line-height:1.2;
+  }
+  .art-caption span{ color: var(--lime); }
+
+  /* ---------- Section shell ---------- */
+  section{ padding: 4.5rem 0; }
+  .section-head{
+    max-width: 62ch;
+    margin: 0 0 2.75rem;
+  }
+  .section-tag{
+    display:inline-block;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    font-size:0.75rem;
+    color: var(--teal);
+    margin-bottom: 0.75rem;
+  }
+  h2.section-title{
+    font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 0.75rem;
+    font-weight: 900;
+  }
+  .section-desc{
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    margin:0;
+  }
+
+  .band-teal{ background: var(--teal); color: var(--paper); }
+  .band-teal .section-tag{ color: var(--lime); }
+  .band-teal .section-desc{ color: rgba(251,247,238,0.85); }
+  .band-ink{ background: var(--ink); color: var(--paper); }
+  .band-ink .section-tag{ color: var(--lime); }
+  .band-ink .section-desc{ color: rgba(251,247,238,0.8); }
+
+  /* ---------- How it works ---------- */
+  .steps{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+  }
+  .step-card{
+    background: var(--paper);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: var(--radius-md);
+    padding: 1.75rem;
+    box-shadow: var(--shadow);
+    position:relative;
+  }
+  .step-num{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--coral);
+    color: var(--paper);
+    font-weight: 900;
+    font-size: 1.2rem;
+    border: 3px solid var(--ink);
+    margin-bottom: 1.1rem;
+  }
+  .step-card h3{
+    margin: 0 0 0.6rem;
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+  .step-card p{ margin:0; color: var(--ink-soft); }
+
+  /* ---------- Pricing ---------- */
+  .price-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+    align-items: stretch;
+  }
+  .price-card{
+    background: var(--paper);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    display:flex;
+    flex-direction:column;
+    box-shadow: var(--shadow);
+  }
+  .price-card.featured{
+    background: var(--lime);
+    transform: translateY(-10px);
+  }
+  .price-badge{
+    align-self:flex-start;
+    background: var(--ink);
+    color: var(--lime);
+    font-weight: 800;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+  }
+  .price-card h3{
+    margin: 0 0 0.35rem;
+    font-size: 1.3rem;
+  }
+  .price-amount{
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin: 0.4rem 0 0.2rem;
+  }
+  .price-amount small{
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .price-note{
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin: 0 0 1.5rem;
+  }
+  .price-list{
+    list-style:none;
+    padding:0;
+    margin: 0 0 1.75rem;
+    display:flex;
+    flex-direction:column;
+    gap: 0.65rem;
+    flex-grow:1;
+  }
+  .price-list li{
+    display:flex;
+    gap:0.6rem;
+    font-size: 0.95rem;
+  }
+  .price-list .tick{
+    width:20px; height:20px;
+    border-radius:50%;
+    background: var(--ink);
+    color: var(--lime);
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.7rem;
+    font-weight:900;
+  }
+  .price-card.featured .tick{ background: var(--ink); color: var(--lime); }
+
+  /* ---------- Coverage ---------- */
+  .coverage-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items:center;
+  }
+  .coverage-map{
+    position:relative;
+    aspect-ratio: 1/1;
+    background: var(--ink-soft);
+    border-radius: var(--radius-lg);
+    border: 4px solid var(--paper);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .coverage-map .grid-lines{
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(251,247,238,0.08) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgba(251,247,238,0.08) 0 1px, transparent 1px 40px);
+  }
+  .coverage-map .zone{
+    position:absolute;
+    border-radius: 50%;
+    background: rgba(200,241,58,0.35);
+    border: 2px dashed var(--lime);
+  }
+  .coverage-map .zone.a{ width:60%; height:60%; top:8%; left:12%; }
+  .coverage-map .zone.b{ width:38%; height:38%; bottom:8%; right:8%; background: rgba(255,91,69,0.3); border-color: var(--coral); }
+  .coverage-map .pin{
+    position:absolute;
+    width: 16px; height:16px;
+    border-radius:50% 50% 50% 0;
+    background: var(--coral);
+    border: 2px solid var(--paper);
+    transform: rotate(-45deg);
+  }
+  .coverage-map .pin.p1{ top:22%; left:28%; }
+  .coverage-map .pin.p2{ top:40%; left:55%; }
+  .coverage-map .pin.p3{ top:60%; left:35%; }
+  .coverage-map .pin.p4{ bottom:16%; right:20%; }
+  .coverage-map .pin.p5{ top:32%; right:14%; }
+  .coverage-list{
+    columns: 2;
+    column-gap: 2rem;
+    list-style:none;
+    margin: 1.5rem 0 0;
+    padding:0;
+  }
+  .coverage-list li{
+    break-inside: avoid;
+    margin-bottom: 0.85rem;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:0.55rem;
+  }
+  .coverage-list li::before{
+    content:"";
+    width:10px; height:10px;
+    border-radius:50%;
+    background: var(--lime);
+    flex-shrink:0;
+  }
+
+  /* ---------- Safety ---------- */
+  .safety-grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+  }
+  .safety-card{
+    background: rgba(251,247,238,0.06);
+    border: 2px solid rgba(251,247,238,0.25);
+    border-radius: var(--radius-md);
+    padding: 1.75rem;
+  }
+  .safety-card h3{
+    margin: 0 0 0.6rem;
+    font-size: 1.15rem;
+    color: var(--lime);
+  }
+  .safety-card p{ margin:0; color: rgba(251,247,238,0.85); }
+  .support-strip{
+    margin-top: 2.5rem;
+    display:flex;
+    flex-wrap:wrap;
+    gap: 1.5rem;
+    align-items:center;
+    justify-content:space-between;
+    background: rgba(251,247,238,0.08);
+    border: 2px dashed rgba(251,247,238,0.3);
+    border-radius: var(--radius-md);
+    padding: 1.5rem 1.75rem;
+  }
+  .support-strip strong{ display:block; font-size:1.1rem; }
+  .support-strip span{ color: rgba(251,247,238,0.75); font-size:0.95rem; }
+
+  /* ---------- Sign-up ---------- */
+  .signup{
+    background: var(--lime);
+    border-radius: var(--radius-lg);
+    border: 4px solid var(--ink);
+    box-shadow: var(--shadow);
+    padding: 3rem;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    align-items:center;
+  }
+  .signup h2{
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    margin: 0 0 0.75rem;
+    letter-spacing:-0.02em;
+    font-weight:900;
+  }
+  .signup p{ margin:0; color: var(--ink-soft); font-size:1.05rem; }
+  .signup-form{
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: var(--radius-md);
+    padding: 1.75rem;
+  }
+  .field{ margin-bottom: 1.1rem; }
+  .field label{
+    display:block;
+    font-weight:800;
+    font-size:0.85rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    margin-bottom: 0.4rem;
+  }
+  .field input{
+    width:100%;
+    padding: 0.75rem 0.9rem;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: #fff;
+  }
+  .field input:focus-visible{
+    outline: 3px solid var(--teal);
+    outline-offset: 2px;
+  }
+  .field-hint{ font-size:0.8rem; color: var(--ink-soft); margin-top:0.3rem; }
+  .form-msg{
+    margin-top: 1rem;
+    font-weight:700;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    display:none;
+  }
+  .form-msg.show{ display:block; }
+  .form-msg.success{ background: var(--teal); color: var(--paper); }
+  .form-msg.error{ background: var(--coral); color: var(--paper); }
+
+  /* ---------- FAQ ---------- */
+  .faq-list{
+    display:flex;
+    flex-direction:column;
+    gap: 1rem;
+    max-width: 760px;
+  }
+  .faq-item{
+    border: 2px solid var(--ink);
+    border-radius: var(--radius-md);
+    background: var(--paper);
+    overflow:hidden;
+  }
+  .faq-item summary{
+    cursor:pointer;
+    list-style:none;
+    padding: 1.1rem 1.5rem;
+    font-weight: 800;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+  }
+  .faq-item summary::-webkit-details-marker{ display:none; }
+  .faq-item summary .plus{
+    width: 28px; height:28px;
+    border-radius:50%;
+    border: 2px solid var(--ink);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    font-weight:900;
+    transition: transform 0.2s ease;
+  }
+  .faq-item[open] summary .plus{ transform: rotate(45deg); }
+  .faq-item .faq-body{
+    padding: 0 1.5rem 1.25rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- Footer ---------- */
+  footer.site-footer{
+    background: var(--ink);
+    color: rgba(251,247,238,0.85);
+    padding: 3.5rem 0 2rem;
+  }
+  .footer-grid{
+    display:grid;
+    grid-template-columns: 1.3fr repeat(3, 1fr);
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+  }
+  .footer-brand{
+    display:flex;
+    align-items:center;
+    gap:0.6rem;
+    font-weight:900;
+    font-size:1.3rem;
+    color: var(--paper);
+    margin-bottom: 0.75rem;
+  }
+  .footer-grid h4{
+    color: var(--lime);
+    font-size:0.85rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin: 0 0 1rem;
+  }
+  .footer-grid ul{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.6rem; }
+  .footer-grid a{ text-decoration:none; }
+  .footer-grid a:hover{ color: var(--lime); }
+  .footer-bottom{
+    border-top: 1px solid rgba(251,247,238,0.2);
+    padding-top: 1.5rem;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:1rem;
+    font-size:0.85rem;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px){
+    .hero-grid{ grid-template-columns: 1fr; }
+    .hero-art{ order:-1; }
+    .steps, .price-grid, .safety-grid{ grid-template-columns: 1fr 1fr; }
+    .coverage-grid{ grid-template-columns: 1fr; }
+    .signup{ grid-template-columns: 1fr; padding: 2rem; }
+    .footer-grid{ grid-template-columns: 1fr 1fr; }
+    .price-card.featured{ transform:none; }
+  }
+
+  @media (max-width: 720px){
+    nav.primary-nav ul{
+      position:absolute;
+      top: 100%;
+      left:0; right:0;
+      background: var(--paper);
+      border-bottom: 3px solid var(--ink);
+      flex-direction:column;
+      padding: 1rem 1.5rem 1.5rem;
+      gap: 1rem;
+      display:none;
+    }
+    nav.primary-nav.open ul{ display:flex; }
+    nav.primary-nav{ position:relative; flex-grow:1; justify-content:flex-end; }
+    .nav-cta{ display:none; }
+    .menu-toggle{ display:inline-flex; align-items:center; justify-content:center; }
+    .steps, .price-grid, .safety-grid{ grid-template-columns: 1fr; }
+    .footer-grid{ grid-template-columns: 1fr 1fr; }
+    .hero{ padding: 3rem 0 3.5rem; }
+  }
+
+  @media (max-width: 480px){
+    .footer-grid{ grid-template-columns: 1fr; }
+    .coverage-list{ columns:1; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<div class="marquee-band" aria-hidden="true">
+  <div class="marquee-track">
+    <span>Grab a bike</span>
+    <span>Ride your loop</span>
+    <span>Drop it anywhere</span>
+    <span>No car needed</span>
+    <span>Grab a bike</span>
+    <span>Ride your loop</span>
+    <span>Drop it anywhere</span>
+    <span>No car needed</span>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="wrap nav-row">
+    <a class="brand" href="#main">
+      <span class="brand-mark" aria-hidden="true"></span>
+      LoopLane
+    </a>
+    <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+      <ul>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#coverage">Coverage</a></li>
+        <li><a href="#safety">Safety</a></li>
+      </ul>
+    </nav>
+    <a class="btn btn-primary nav-cta" href="#signup">Get started</a>
+    <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle menu">
+      <span aria-hidden="true">&#9776;</span>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>Now rolling through your neighborhood</span>
+        <h1 class="hero-title">Your block just got a <span class="highlight">whole lot closer.</span></h1>
+        <p class="hero-sub">LoopLane drops bikes on the corners you already walk past. Unlock one, ride to class, work, or the coffee shop, then leave it at the nearest station. No car, no rideshare wait, no sweat over parking.</p>
+        <div class="hero-cta-row">
+          <a class="btn btn-primary btn-lg" href="#signup">Start riding today</a>
+          <a class="btn btn-ghost btn-lg" href="#how-it-works">See how it works</a>
+        </div>
+        <div class="hero-meta">
+          <ul>
+            <li><span class="check" aria-hidden="true">&#10003;</span>First ride is free</li>
+            <li><span class="check" aria-hidden="true">&#10003;</span>No bike ownership required</li>
+            <li><span class="check" aria-hidden="true">&#10003;</span>Cancel anytime</li>
+          </ul>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-card">
+          <div class="art-wheel one"></div>
+          <div class="art-wheel two"></div>
+          <p class="art-caption">Unlock.<br>Ride.<br><span>Loop back.</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-tag">New to bike share? Start here</span>
+        <h2 class="section-title">Three steps. No experience needed.</h2>
+        <p class="section-desc">You don't need an account history with bike share to use LoopLane. If you can use a phone and ride a bike, you're set.</p>
+      </div>
+      <div class="steps">
+        <div class="step-card">
+          <span class="step-num">1</span>
+          <h3>Find a bike nearby</h3>
+          <p>Open the LoopLane app or walk up to any station. Live availability shows exactly which docks have a bike ready to go.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">2</span>
+          <h3>Unlock and ride</h3>
+          <p>Scan the code on the bike or tap your membership card. The lock releases in seconds and you're rolling.</p>
+        </div>
+        <div class="step-card">
+          <span class="step-num">3</span>
+          <h3>Dock it and go</h3>
+          <p>Slide the bike into any open dock across the coverage area. Your ride ends automatically and your receipt lands in the app.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="band-teal">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-tag">Membership and pay-per-ride</span>
+        <h2 class="section-title">Pick the plan that matches how you ride.</h2>
+        <p class="section-desc">Occasional rider or daily commuter, there's a straightforward option with no hidden fees.</p>
+      </div>
+      <div class="price-grid">
+        <div class="price-card">
+          <span class="price-badge">Pay per ride</span>
+          <h3>Single Ride</h3>
+          <p class="price-amount">$2<small>/unlock</small></p>
+          <p class="price-note">Plus $0.15 per minute after the first 20 minutes.</p>
+          <ul class="price-list">
+            <li><span class="tick">&#10003;</span>No commitment, no account required to start</li>
+            <li><span class="tick">&#10003;</span>Pay with tap-to-pay at the dock</li>
+            <li><span class="tick">&#10003;</span>Great for visitors and one-off trips</li>
+          </ul>
+          <a class="btn btn-block" href="#signup">Ride once</a>
+        </div>
+        <div class="price-card featured">
+          <span class="price-badge">Most popular</span>
+          <h3>Monthly Rider</h3>
+          <p class="price-amount">$15<small>/month</small></p>
+          <p class="price-note">Unlimited 45-minute rides, every day.</p>
+          <ul class="price-list">
+            <li><span class="tick">&#10003;</span>Unlimited unlocks all month long</li>
+            <li><span class="tick">&#10003;</span>Rides under 45 minutes always free</li>
+            <li><span class="tick">&#10003;</span>Cancel or pause anytime, no penalty</li>
+          </ul>
+          <a class="btn btn-block btn-primary" href="#signup">Join monthly</a>
+        </div>
+        <div class="price-card">
+          <span class="price-badge">Best value</span>
+          <h3>Annual Rider</h3>
+          <p class="price-amount">$99<small>/year</small></p>
+          <p class="price-note">Less than $9 a month when you ride year-round.</p>
+          <ul class="price-list">
+            <li><span class="tick">&#10003;</span>Everything in Monthly Rider</li>
+            <li><span class="tick">&#10003;</span>Locked-in rate for 12 months</li>
+            <li><span class="tick">&#10003;</span>Priority access during peak hours</li>
+          </ul>
+          <a class="btn btn-block" href="#signup">Go annual</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="coverage">
+    <div class="wrap coverage-grid">
+      <div class="coverage-copy">
+        <span class="section-tag">Where LoopLane runs</span>
+        <h2 class="section-title">Stations across the neighborhoods you already move through.</h2>
+        <p class="section-desc">Over 60 stations connect downtown, the university district, the riverside path, and the main commercial corridors. New stations roll out every quarter based on rider requests.</p>
+        <ul class="coverage-list">
+          <li>Downtown Core</li>
+          <li>University District</li>
+          <li>Riverside Path</li>
+          <li>Harbor Row</li>
+          <li>Maple Street Corridor</li>
+          <li>Transit Center</li>
+        </ul>
+      </div>
+      <div class="coverage-map" role="img" aria-label="Illustrated map showing LoopLane station zones concentrated downtown and along the riverside path, with pins marking dock locations across the coverage area.">
+        <div class="grid-lines"></div>
+        <div class="zone a"></div>
+        <div class="zone b"></div>
+        <div class="pin p1"></div>
+        <div class="pin p2"></div>
+        <div class="pin p3"></div>
+        <div class="pin p4"></div>
+        <div class="pin p5"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="safety" class="band-ink">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-tag">Safety and support</span>
+        <h2 class="section-title">Built so first-time riders feel confident, fast.</h2>
+        <p class="section-desc">Every bike is inspected regularly and every rider gets the same safety basics up front.</p>
+      </div>
+      <div class="safety-grid">
+        <div class="safety-card">
+          <h3>Daily bike checks</h3>
+          <p>Brakes, tires, and lights are inspected on a rolling schedule. Anything flagged is pulled from service the same day.</p>
+        </div>
+        <div class="safety-card">
+          <h3>Free helmet fitting</h3>
+          <p>Stop by any LoopLane hub for a free helmet fitting and a five-minute walkthrough of hand signals and local bike lanes.</p>
+        </div>
+        <div class="safety-card">
+          <h3>In-app ride help</h3>
+          <p>Trouble docking or unlocking? A live agent is one tap away inside the app, no phone tree required.</p>
+        </div>
+      </div>
+      <div class="support-strip">
+        <div>
+          <strong>Support is on 7 days a week, 6am to midnight.</strong>
+          <span>Call, text, or message in-app and a real person answers.</span>
+        </div>
+        <a class="btn btn-primary" href="tel:+15551234567">Call (555) 123-4567</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="section-tag">Common questions</span>
+        <h2 class="section-title">New to bike share? These usually come up first.</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Do I need to own a bike helmet?<span class="plus" aria-hidden="true">+</span></summary>
+          <div class="faq-body">No. Free helmet fittings are available at every LoopLane hub, and loaner helmets are available at major stations.</div>
+        </details>
+        <details class="faq-item">
+          <summary>What happens if every dock near me is full?<span class="plus" aria-hidden="true">+</span></summary>
+          <div class="faq-body">The app shows live dock space and gives you 10 extra minutes free to reach the next nearest station, no charge.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Can I try it before committing to a membership?<span class="plus" aria-hidden="true">+</span></summary>
+          <div class="faq-body">Yes. Your very first ride is free, and pay-per-ride pricing has no sign-up commitment at all.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Is LoopLane available outside the main coverage area?<span class="plus" aria-hidden="true">+</span></summary>
+          <div class="faq-body">Coverage currently focuses on downtown, the university district, and the riverside path, with new stations added quarterly.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section id="signup">
+    <div class="wrap">
+      <div class="signup">
+        <div class="signup-copy">
+          <h2>Ready for your first free ride?</h2>
+          <p>Drop your email and we'll text you a link to grab your first bike today. No credit card needed until you decide on a plan.</p>
+        </div>
+        <form class="signup-form" id="signup-form" novalidate>
+          <h3 class="visually-hidden">Sign up for LoopLane</h3>
+          <div class="field">
+            <label for="rider-name">Name</label>
+            <input type="text" id="rider-name" name="rider-name" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="rider-email">Email</label>
+            <input type="email" id="rider-email" name="rider-email" autocomplete="email" required>
+            <p class="field-hint">We'll send your free first-ride link here.</p>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Claim my free ride</button>
+          <div class="form-msg" id="form-msg" role="status"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <span class="brand-mark" aria-hidden="true" style="width:28px;height:28px;"></span>
+          LoopLane
+        </div>
+        <p>Neighborhood bike share built for commuters, students, and visitors alike.</p>
+      </div>
+      <div>
+        <h4>Ride</h4>
+        <ul>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#coverage">Coverage map</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#safety">Safety</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="tel:+15551234567">Call support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#main">About LoopLane</a></li>
+          <li><a href="#coverage">Neighborhoods</a></li>
+          <li><a href="#signup">Sign up</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 LoopLane Bike Share. All rights reserved.</span>
+      <span>Ride local. Ride often.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var toggle = document.getElementById("menu-toggle");
+  var nav = document.getElementById("primary-nav");
+
+  if (toggle && nav) {
+    toggle.addEventListener("click", function(){
+      var isOpen = nav.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    nav.querySelectorAll("a").forEach(function(link){
+      link.addEventListener("click", function(){
+        nav.classList.remove("open");
+        toggle.setAttribute("aria-expanded", "false");
+      });
+    });
+  }
+
+  var form = document.getElementById("signup-form");
+  var msg = document.getElementById("form-msg");
+
+  if (form && msg) {
+    form.addEventListener("submit", function(evt){
+      evt.preventDefault();
+      var nameField = document.getElementById("rider-name");
+      var emailField = document.getElementById("rider-email");
+      var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      msg.classList.remove("success", "error");
+
+      if (!nameField.value.trim() || !emailPattern.test(emailField.value.trim())) {
+        msg.textContent = "Please enter your name and a valid email address.";
+        msg.classList.add("show", "error");
+        return;
+      }
+
+      msg.textContent = "You're in! Check your email for your free first-ride link.";
+      msg.classList.add("show", "success");
+      form.reset();
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

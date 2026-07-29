@@ -1,0 +1,42 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# editorial-classic-editorial-heritage-bakery (coverage brief, Codex-authored)
+
+title: Feature Story on a Heritage Bakery
+register: editorial
+aestheticStyle: classic-editorial
+audience: Readers of a regional culture magazine interested in food, history, and local businesses.
+goal: Present a long-form feature about a family bakery’s centennial year.
+requiredContent:
+- Article title
+- Standfirst
+- Byline and publication date
+- Main article body with section breaks
+- Pull quote from the owner
+- Timeline of key milestones
+- Sidebar on signature baked goods
+- Photo caption placeholders
+constraints:
+- audience: Readers value narrative detail, context, and human perspective.
+- brand-tone-in-words: Thoughtful, polished, observant, and respectful.
+- platform: Responsive digital magazine article.
+- baseline: Must be readable, accessible, and self-contained with fictional names and details.
+successCriteria:
+- The story has a clear narrative arc and sense of place.
+- Supporting information enriches the article without distracting from it.
+- Readers can comfortably move through long-form content.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-editorial-classic-editorial-heritage-bakery.html

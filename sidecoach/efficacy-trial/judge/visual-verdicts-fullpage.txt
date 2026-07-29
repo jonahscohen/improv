@@ -1,0 +1,17 @@
+coverage-flex-high-energy-youth-campus-event VERDICT: A
+coverage-flex-premium-luxury-private-travel VERDICT: B
+coverage-flex-warm-human-community-clinic VERDICT: B
+coverage-forms-minimal-medical-intake VERDICT: B
+coverage-forms-multi-step-corporate-vendor-onboarding VERDICT: B
+coverage-marketing-landing-corporate-trust-freight-security VERDICT: B
+coverage-marketing-landing-expressive-branded-bike-share VERDICT: B
+coverage-marketing-landing-minimal-language-app VERDICT: A
+coverage-product-data-dense-climate-risk-dashboard VERDICT: A
+coverage-product-minimal-utility-password-manager VERDICT: A
+coverage-product-playful-kids-cooking-kit VERDICT: A
+coverage-app-ui-corporate-dense-it-operations VERDICT: A
+coverage-app-ui-minimal-utility-personal-budget VERDICT: A
+coverage-app-ui-playful-pet-care-planner VERDICT: B
+coverage-editorial-classic-editorial-heritage-bakery VERDICT: A
+coverage-editorial-expressive-music-scene-report VERDICT: B
+coverage-editorial-restrained-public-health-brief VERDICT: A

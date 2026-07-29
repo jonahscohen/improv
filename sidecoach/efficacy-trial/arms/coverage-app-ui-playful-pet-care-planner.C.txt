@@ -1,0 +1,41 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# app-ui-playful-pet-care-planner (coverage brief, Codex-authored)
+
+title: Pet Care Planner App
+register: app-ui
+aestheticStyle: playful
+audience: Pet owners coordinating feeding, medication, appointments, and shared care tasks.
+goal: Help households manage daily pet care responsibilities without missing important tasks.
+requiredContent:
+- Pet profile summary
+- Today’s care tasks
+- Medication reminders
+- Upcoming appointments
+- Shared caregiver assignments
+- Add task flow entry point
+- Completion and overdue states
+constraints:
+- audience: Users may include multiple household members with different levels of commitment.
+- brand-tone-in-words: Friendly, reassuring, lively, and responsible.
+- platform: Mobile-first app interface with responsive support.
+- baseline: Must meet common accessibility expectations and use fictional pet and task data.
+successCriteria:
+- Care responsibilities are easy to understand and update.
+- Urgent items are distinguishable from routine tasks.
+- The interface supports shared household coordination.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-app-ui-playful-pet-care-planner.html

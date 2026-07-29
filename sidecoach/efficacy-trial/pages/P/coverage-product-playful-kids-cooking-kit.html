@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny Table Chefs - The Kids Cooking Kit for Ages 6-10</title>
+<meta name="description" content="Tiny Table Chefs is a hands-on cooking kit for kids ages 6 to 10, built for fun, real skills, and family time in the kitchen.">
+<style>
+  :root {
+    --cream: #FFF8EF;
+    --cream-deep: #FBEEDA;
+    --ink: #2B2118;
+    --ink-soft: #5B4A3B;
+    --orange: #FF7A45;
+    --orange-deep: #E8622C;
+    --teal: #1E9E93;
+    --teal-deep: #147A71;
+    --yellow: #FFD23F;
+    --berry: #E85D75;
+    --white: #FFFFFF;
+    --border: #EADFCB;
+    --radius-lg: 28px;
+    --radius-md: 18px;
+    --radius-sm: 10px;
+    --shadow-soft: 0 12px 30px rgba(43, 33, 24, 0.10);
+    --shadow-tight: 0 4px 12px rgba(43, 33, 24, 0.08);
+    --focus-ring: 3px solid #147A71;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: inherit;
+    font-weight: 800;
+    line-height: 1.15;
+    margin: 0 0 0.5em 0;
+    letter-spacing: -0.01em;
+  }
+
+  p { margin: 0 0 1em 0; }
+
+  a { color: var(--teal-deep); }
+
+  img, svg { max-width: 100%; display: block; }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -60px;
+    background: var(--ink);
+    color: var(--white);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-sm);
+    z-index: 100;
+    transition: top 0.15s ease;
+    font-weight: 700;
+  }
+  .skip-link:focus {
+    top: 1rem;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  input:focus-visible,
+  [tabindex]:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  .wrap {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ---------- Header ---------- */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .site-header .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    gap: 16px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--orange), var(--yellow));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+
+  .main-nav {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  .main-nav a {
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .main-nav a:hover { color: var(--orange-deep); }
+
+  .header-cta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .icon-btn {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    padding: 12px 22px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-primary {
+    background: var(--orange);
+    color: var(--white);
+    box-shadow: var(--shadow-tight);
+  }
+  .btn-primary:hover { background: var(--orange-deep); }
+
+  .btn-secondary {
+    background: var(--white);
+    color: var(--teal-deep);
+    border-color: var(--teal);
+  }
+  .btn-secondary:hover { background: var(--cream-deep); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--border);
+  }
+
+  .btn-block { width: 100%; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 48px 0 64px;
+  }
+
+  .hero .wrap {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .gallery-main {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(160deg, #FFE0C2 0%, #FFC98A 45%, #FF9F5A 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gallery-main::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.35) 0, transparent 40%),
+                       radial-gradient(circle at 85% 75%, rgba(255,255,255,0.25) 0, transparent 35%);
+  }
+
+  .gallery-main-label {
+    position: relative;
+    z-index: 1;
+    color: #5A3418;
+    font-weight: 700;
+    max-width: 300px;
+    font-size: 0.95rem;
+    background: rgba(255,255,255,0.55);
+    padding: 14px 18px;
+    border-radius: var(--radius-md);
+  }
+
+  .gallery-thumbs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .gallery-thumb {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    background: var(--cream-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .gallery-thumb:hover { border-color: var(--orange); }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--teal);
+    color: var(--white);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 4vw, 2.9rem);
+  }
+
+  .rating-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .stars {
+    color: var(--yellow);
+    letter-spacing: 2px;
+    font-size: 1.1rem;
+  }
+  .stars[aria-hidden] + span { color: var(--ink-soft); }
+
+  .hero-desc {
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+    max-width: 46ch;
+  }
+
+  .age-badge-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 18px 0 22px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+
+  .price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .price {
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .price-note {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+
+  .trust-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .trust-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .trust-list li::before {
+    content: "✓";
+    color: var(--teal-deep);
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  /* ---------- Sections ---------- */
+  section {
+    padding: 56px 0;
+  }
+
+  .section-alt {
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-head {
+    max-width: 62ch;
+    margin: 0 auto 36px;
+    text-align: center;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+  }
+
+  .section-head p {
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+  }
+
+  /* Kit contents */
+  .contents-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .content-card {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 22px;
+  }
+
+  .content-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+  }
+
+  .content-card h3 {
+    font-size: 1.05rem;
+    margin-bottom: 6px;
+  }
+
+  .content-card p {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin-bottom: 0;
+  }
+
+  /* Age guidance */
+  .age-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    background: linear-gradient(135deg, var(--teal) 0%, var(--teal-deep) 100%);
+    color: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+  }
+
+  .age-panel h2 { color: var(--white); }
+
+  .age-panel .price-note,
+  .age-range-big {
+    font-size: 2.6rem;
+    font-weight: 800;
+  }
+
+  .age-panel ul {
+    margin: 0;
+    padding-left: 1.2em;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .age-panel ul li::marker { color: var(--yellow); }
+
+  /* Recipe */
+  .recipe-card {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 32px;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    align-items: center;
+  }
+
+  .recipe-visual {
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    background: linear-gradient(160deg, #FFD6E1, #FF9FB6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    color: #6B1F35;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .recipe-meta {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 14px 0 18px;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    font-weight: 700;
+  }
+
+  .recipe-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .recipe-steps {
+    margin: 0;
+    padding-left: 1.3em;
+    color: var(--ink-soft);
+  }
+  .recipe-steps li { margin-bottom: 6px; }
+
+  /* Safety */
+  .safety-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .safety-card {
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    background: var(--white);
+  }
+
+  .safety-card h3 {
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .safety-card ul {
+    margin: 0;
+    padding-left: 1.1em;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+  .safety-card ul li { margin-bottom: 6px; }
+
+  .safety-note-banner {
+    margin-top: 24px;
+    background: #FFF3D6;
+    border: 1px solid #F0D585;
+    border-radius: var(--radius-md);
+    padding: 18px 22px;
+    font-size: 0.92rem;
+    color: #5C4300;
+    display: flex;
+    gap: 10px;
+  }
+
+  /* Learning benefits */
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .benefit-card {
+    text-align: center;
+    padding: 24px 18px;
+  }
+
+  .benefit-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--cream-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 14px;
+  }
+
+  .benefit-card h3 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+  .benefit-card p {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    margin-bottom: 0;
+  }
+
+  /* Purchase plans */
+  .plan-toggle {
+    display: inline-flex;
+    background: var(--cream-deep);
+    border-radius: 999px;
+    padding: 4px;
+    margin: 0 auto 32px;
+    gap: 4px;
+  }
+
+  .plan-toggle-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  .plan-toggle button {
+    border: none;
+    background: transparent;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+
+  .plan-toggle button[aria-pressed="true"] {
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: var(--shadow-tight);
+  }
+
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .plan-card {
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .plan-card.featured {
+    border-color: var(--orange);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .plan-badge {
+    position: absolute;
+    top: -14px;
+    left: 32px;
+    background: var(--orange);
+    color: var(--white);
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+
+  .plan-price {
+    font-size: 2.1rem;
+    font-weight: 800;
+    margin: 10px 0 4px;
+  }
+
+  .plan-price span {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+
+  .plan-list {
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-grow: 1;
+  }
+
+  .plan-list li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+  }
+  .plan-list li::before {
+    content: "✓";
+    color: var(--teal-deep);
+    font-weight: 800;
+  }
+
+  /* Gift */
+  .gift-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    background: linear-gradient(135deg, #FFE9CE, #FFD9E4);
+    border-radius: var(--radius-lg);
+    padding: 44px;
+  }
+
+  .gift-visual {
+    aspect-ratio: 4/3;
+    border-radius: var(--radius-md);
+    background: linear-gradient(160deg, var(--berry), #C93F5A);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--white);
+    font-weight: 700;
+    padding: 24px;
+  }
+
+  .gift-options {
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .gift-options li {
+    background: rgba(255,255,255,0.6);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 0.92rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  /* FAQ */
+  .faq-list {
+    max-width: 760px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .faq-item {
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 4px 22px;
+  }
+
+  .faq-item summary {
+    cursor: pointer;
+    font-weight: 700;
+    padding: 16px 0;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+
+  .faq-item summary::after {
+    content: "+";
+    font-size: 1.3rem;
+    color: var(--orange-deep);
+    flex-shrink: 0;
+  }
+  .faq-item[open] summary::after {
+    content: "−";
+  }
+
+  .faq-item p {
+    color: var(--ink-soft);
+    padding-bottom: 16px;
+    margin: 0;
+  }
+
+  /* Footer */
+  .site-footer {
+    background: var(--ink);
+    color: #E8DFD2;
+    padding: 48px 0 28px;
+    font-size: 0.9rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 32px;
+  }
+
+  .site-footer h4 {
+    color: var(--white);
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+  }
+
+  .site-footer ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .site-footer a {
+    color: #C9BEAE;
+    text-decoration: none;
+  }
+  .site-footer a:hover { color: var(--white); }
+
+  .footer-bottom {
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-top: 20px;
+    color: #A99C87;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .main-nav { display: none; }
+    .hero .wrap { grid-template-columns: 1fr; }
+    .age-panel { grid-template-columns: 1fr; }
+    .recipe-card { grid-template-columns: 1fr; }
+    .safety-grid { grid-template-columns: 1fr; }
+    .benefits-grid { grid-template-columns: 1fr 1fr; }
+    .contents-grid { grid-template-columns: 1fr 1fr; }
+    .plans-grid { grid-template-columns: 1fr; }
+    .gift-panel { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 560px) {
+    .benefits-grid { grid-template-columns: 1fr; }
+    .contents-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr; }
+    .gallery-thumbs { grid-template-columns: repeat(4, 1fr); }
+    .age-panel, .gift-panel { padding: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#main">
+      <span class="brand-mark" aria-hidden="true">🍳</span>
+      Tiny Table Chefs
+    </a>
+    <nav class="main-nav" aria-label="Primary">
+      <a href="#contents">What's Inside</a>
+      <a href="#recipe">Sample Recipe</a>
+      <a href="#safety">Safety</a>
+      <a href="#plans">Pricing</a>
+      <a href="#gift">Gift a Kit</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="header-cta">
+      <button class="icon-btn" type="button" aria-label="Search">🔍</button>
+      <button class="icon-btn" type="button" aria-label="View cart, 0 items">🛒</button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <div class="wrap">
+      <div>
+        <div class="gallery-main">
+          <p class="gallery-main-label">Product photo placeholder: a child at a kitchen counter wearing the Tiny Table Chefs apron, arranging colorful vegetable slices on a wooden board next to the illustrated recipe cards and kid-safe knife.</p>
+        </div>
+        <div class="gallery-thumbs">
+          <div class="gallery-thumb" role="img" aria-label="Placeholder thumbnail: full contents of the kit laid out flat">📦</div>
+          <div class="gallery-thumb" role="img" aria-label="Placeholder thumbnail: close-up of the kid-safe knife and mitts">🔪</div>
+          <div class="gallery-thumb" role="img" aria-label="Placeholder thumbnail: recipe card for the rainbow quesadilla towers">📋</div>
+          <div class="gallery-thumb" role="img" aria-label="Placeholder thumbnail: two kids cooking together with a parent supervising">👨‍👧‍👦</div>
+        </div>
+      </div>
+
+      <div>
+        <span class="eyebrow">Ages 6-10 · Family Cooking Kit</span>
+        <h1 id="hero-heading">Tiny Table Chefs</h1>
+        <div class="rating-row">
+          <span class="stars" aria-hidden="true">★★★★★</span>
+          <span>4.8 out of 5 · 1,240 family reviews</span>
+        </div>
+        <p class="hero-desc">A hands-on cooking kit that turns your kitchen into your kid's favorite classroom. Real (kid-safe) tools, real recipes, and a whole lot of proud "I made this!" moments.</p>
+
+        <div class="age-badge-row">
+          <span class="badge">👶 Ages 6-10</span>
+          <span class="badge">🧑‍🍳 Adult supervision recommended</span>
+          <span class="badge">⏱ 20-35 min recipes</span>
+        </div>
+
+        <div class="price-row">
+          <span class="price">$49.00</span>
+          <span class="price-note">one-time · or from $24.00/month</span>
+        </div>
+
+        <div class="hero-actions">
+          <button class="btn btn-primary" type="button">Add Starter Kit to Cart</button>
+          <a class="btn btn-secondary" href="#plans">Compare Plans</a>
+        </div>
+
+        <ul class="trust-list">
+          <li>All cutting tools are blunt-tip and serrated for safe little hands</li>
+          <li>Every recipe card flags the steps a grown-up should handle</li>
+          <li>Ships in 3 business days, free returns within 30 days</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT'S IN THE KIT -->
+  <section class="section-alt" id="contents" aria-labelledby="contents-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="contents-heading">What's in the box</h2>
+        <p>Everything a young chef needs to go from "can I help?" to "I've got this" - nothing you'll find yourself digging through a junk drawer for.</p>
+      </div>
+      <div class="contents-grid">
+        <div class="content-card">
+          <div class="content-icon" aria-hidden="true">🔪</div>
+          <h3>Kid-safe serrated knife</h3>
+          <p>Rounded tip, wavy safety edge - cuts soft foods like bananas and cooked pasta, not fingers.</p>
+        </div>
+        <div class="content-card">
+          <div class="content-icon" aria-hidden="true">🧤</div>
+          <h3>Child-sized chef mitts</h3>
+          <p>Heat-resistant to 450°F, sized for small hands, for grown-up-assisted oven and stovetop moments.</p>
+        </div>
+        <div class="content-card">
+          <div class="content-icon" aria-hidden="true">📋</div>
+          <h3>12 illustrated recipe cards</h3>
+          <p>Laminated and wipeable, with picture-led steps for pre-readers and full text for confident readers.</p>
+        </div>
+        <div class="content-card">
+          <div class="content-icon" aria-hidden="true">🥣</div>
+          <h3>Non-slip mixing bowl</h3>
+          <p>Grippy silicone base keeps it steady on the counter through even the most enthusiastic stirring.</p>
+        </div>
+        <div class="content-card">
+          <div class="content-icon" aria-hidden="true">📏</div>
+          <h3>Mini measuring set</h3>
+          <p>Stackable cups and spoons sized for small hands, color-coded to match the recipe cards.</p>
+        </div>
+        <div class="content-card">
+          <div class="content-icon" aria-hidden="true">👕</div>
+          <h3>Adjustable apron</h3>
+          <p>Machine washable, grows with your chef via an adjustable neck strap and two roomy pockets.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AGE GUIDANCE -->
+  <section aria-labelledby="age-heading">
+    <div class="wrap">
+      <div class="age-panel">
+        <div>
+          <h2 id="age-heading">Built for ages 6 to 10</h2>
+          <p>Recipes are designed around this range, but the kit flexes with your family.</p>
+          <p class="age-range-big">6-10</p>
+          <p>Younger siblings can join in on mixing, measuring, and decorating steps while a grown-up handles the knife work. Older kids in the range are usually ready to read the cards and lead a recipe start to finish with light supervision.</p>
+        </div>
+        <ul>
+          <li>Every recipe lists a recommended age and a "confidence level" so you can pick the right challenge.</li>
+          <li>Supervision guidance is printed directly on the card, not buried in a separate manual.</li>
+          <li>Difficulty scales: swap a stovetop step for a no-cook version for younger chefs.</li>
+          <li>Not recommended for children under 6 due to small parts in the measuring set.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAMPLE RECIPE -->
+  <section class="section-alt" id="recipe" aria-labelledby="recipe-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="recipe-heading">Taste the adventure: Rainbow Veggie Quesadilla Towers</h2>
+        <p>One of the 12 recipes included in the Starter Kit - a family favorite that turns "eat your vegetables" into "can we make these again?"</p>
+      </div>
+      <div class="recipe-card">
+        <div class="recipe-visual" role="img" aria-label="Placeholder photo: a stacked quesadilla wedge tower with visible layers of bell pepper, corn, and melted cheese, garnished with cilantro, on a colorful kid-friendly plate.">
+          Sample recipe photo placeholder
+        </div>
+        <div>
+          <div class="recipe-meta">
+            <span>⏱ 25 min total</span>
+            <span>🧑‍🍳 Grown-up step: stovetop</span>
+            <span>🎯 Skills: peeling, stacking, cutting</span>
+          </div>
+          <p>Kids peel and dice soft veggies, layer them between tortillas and cheese, and use their kid-safe knife to cut the cooled tower into wedges. A grown-up handles the two stovetop flips.</p>
+          <ol class="recipe-steps">
+            <li>Wash hands and gather ingredients from the recipe card's picture list.</li>
+            <li>Peel and dice bell pepper and corn kernels with the mini tools.</li>
+            <li>Layer tortillas, cheese, and veggies into a tower (the fun part).</li>
+            <li>Grown-Up Step: pan-cook each side until the cheese melts.</li>
+            <li>Cool for 3 minutes, then cut into wedges with the kid-safe knife.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAFETY -->
+  <section id="safety" aria-labelledby="safety-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="safety-heading">Safety first, always</h2>
+        <p>We designed every tool and every recipe card around one rule: kids should feel capable, not at risk.</p>
+      </div>
+      <div class="safety-grid">
+        <div class="safety-card">
+          <h3><span aria-hidden="true">🛡️</span> Tools built for small, careful hands</h3>
+          <ul>
+            <li>The included knife has a rounded tip and a serrated safety edge - it saws through soft foods and will not cut skin under normal use.</li>
+            <li>The peeler has a blunt guard and finger loop to keep hands behind the blade.</li>
+            <li>Mitts and pot holders are heat-tested to 450°F for oven and stovetop moments.</li>
+          </ul>
+        </div>
+        <div class="safety-card">
+          <h3><span aria-hidden="true">👀</span> Supervision guidance built in</h3>
+          <ul>
+            <li>Every recipe card flags a "Grown-Up Step" for anything involving the stove, oven, or boiling water.</li>
+            <li>We recommend a grown-up stay in the kitchen for the full recipe, not just the hot parts.</li>
+            <li>A quick-reference safety card ships in every box for first-time use.</li>
+          </ul>
+        </div>
+        <div class="safety-card">
+          <h3><span aria-hidden="true">🥜</span> Allergen awareness</h3>
+          <ul>
+            <li>Each recipe card lists common allergens used (dairy, gluten, tree nuts, egg) so you can swap ingredients ahead of time.</li>
+            <li>The kit itself contains no food - you shop fresh ingredients using the provided list.</li>
+          </ul>
+        </div>
+        <div class="safety-card">
+          <h3><span aria-hidden="true">🧼</span> Everyday kitchen habits</h3>
+          <ul>
+            <li>Every card opens with a hand-washing and apron-on reminder.</li>
+            <li>Tools are dishwasher-safe on the top rack for easy cleanup.</li>
+            <li>Small measuring pieces are not recommended for children under 6 or any child who still mouths small objects.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="safety-note-banner">
+        <span aria-hidden="true">ℹ️</span>
+        <p>This kit is a cooking companion, not a substitute for supervision. A grown-up should be present in the kitchen for every recipe, and should always handle the stove, oven, and any boiling liquids.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEARNING BENEFITS -->
+  <section class="section-alt" aria-labelledby="benefits-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="benefits-heading">More than a snack - it's a lesson in disguise</h2>
+        <p>Parents tell us the mess is worth it. Here's why.</p>
+      </div>
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">🔢</div>
+          <h3>Real math practice</h3>
+          <p>Measuring cups and spoons turn fractions and counting into something you can taste.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">📖</div>
+          <h3>Reading and sequencing</h3>
+          <p>Following a recipe card step-by-step builds early literacy and the habit of reading instructions.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">✋</div>
+          <h3>Fine motor skills</h3>
+          <p>Peeling, stirring, and cutting build the same hand control used in handwriting and sports.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">🧪</div>
+          <h3>Everyday science</h3>
+          <p>Melting, mixing, and rising are a first, delicious introduction to how ingredients change.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">🎯</div>
+          <h3>Independence and follow-through</h3>
+          <p>Finishing a recipe start to finish builds real confidence - and a real sense of "I did that."</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">💛</div>
+          <h3>Family time, unplugged</h3>
+          <p>A shared project that gets everyone away from screens and around the same counter.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANS -->
+  <section id="plans" aria-labelledby="plans-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="plans-heading">Choose how you'd like to start</h2>
+        <p>Try one box, or keep the recipes (and the fun) coming every month.</p>
+      </div>
+
+      <div class="plan-toggle-wrap">
+        <div class="plan-toggle" role="group" aria-label="Filter plans by billing type">
+          <button type="button" id="toggle-onetime" aria-pressed="true">One-time kit</button>
+          <button type="button" id="toggle-subscription" aria-pressed="false">Monthly subscription</button>
+        </div>
+      </div>
+
+      <div class="plans-grid">
+        <div class="plan-card">
+          <h3>Starter Kit</h3>
+          <p>A one-time box with every core tool plus 4 recipe cards to get cooking right away.</p>
+          <p class="plan-price">$49.00 <span>one-time</span></p>
+          <ul class="plan-list">
+            <li>Full tool set: knife, peeler, mitts, bowl, measuring set, apron</li>
+            <li>4 illustrated recipe cards</li>
+            <li>Printed safety quick-reference card</li>
+            <li>Ships within 3 business days</li>
+          </ul>
+          <button class="btn btn-secondary btn-block" type="button">Add Starter Kit - $49.00</button>
+        </div>
+
+        <div class="plan-card featured">
+          <span class="plan-badge">Most popular</span>
+          <h3>Monthly Chef Club</h3>
+          <p>Includes the full Starter Kit tools in month one, then a themed box of new recipes and small tools every month after.</p>
+          <p class="plan-price">$24.00 <span>/month</span></p>
+          <ul class="plan-list">
+            <li>Everything in the Starter Kit, delivered first</li>
+            <li>4 new themed recipe cards every month</li>
+            <li>Save 15% versus buying kits one at a time</li>
+            <li>Pause or cancel anytime from your account</li>
+          </ul>
+          <button class="btn btn-primary btn-block" type="button">Start Chef Club - $24.00/mo</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GIFT -->
+  <section class="section-alt" id="gift" aria-labelledby="gift-heading">
+    <div class="wrap">
+      <div class="gift-panel">
+        <div class="gift-visual" role="img" aria-label="Placeholder photo: the Tiny Table Chefs box wrapped with a bow and a handwritten gift note tag, sitting on a kitchen counter.">
+          Gift packaging photo placeholder
+        </div>
+        <div>
+          <h2 id="gift-heading">The gift that keeps them cooking</h2>
+          <p>Birthdays, holidays, or "just because" - Tiny Table Chefs ships gift-ready and every option below can be added at checkout.</p>
+          <ul class="gift-options">
+            <li><span>Gift wrap with ribbon</span><strong>+$5.00</strong></li>
+            <li><span>Handwritten gift note card</span><strong>Free</strong></li>
+            <li><span>Gift a Chef Club subscription (3, 6, or 12 months)</span><strong>From $69.00</strong></li>
+            <li><span>Last-minute digital gift email, delivered instantly</span><strong>Free</strong></li>
+          </ul>
+          <div class="hero-actions">
+            <button class="btn btn-primary" type="button">Send as a Gift</button>
+          </div>
+          <p class="hero-desc">Gift receipts never show pricing, and gift subscriptions can be paused or extended anytime by the recipient.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" aria-labelledby="faq-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="faq-heading">Questions parents ask us</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Is the knife actually safe for a 6-year-old?</summary>
+          <p>Yes. It has a rounded tip and a serrated safety edge designed to saw through soft foods like bananas, cooked pasta, and cooled quesadillas - it will not cut skin under normal handling. We still recommend supervision any time it's in use.</p>
+        </details>
+        <details class="faq-item">
+          <summary>How much supervision does each recipe actually need?</summary>
+          <p>Every recipe card marks a specific "Grown-Up Step" for stovetop, oven, or boiling water tasks. Outside of those marked steps, most kids ages 8-10 can lead independently, while ages 6-7 usually do best with a grown-up nearby the whole time.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What if my child has a food allergy?</summary>
+          <p>Every recipe card lists the common allergens it uses so you can swap ingredients before you shop. The kit itself ships with no food - you choose and bring the ingredients.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I switch from the one-time kit to the subscription later?</summary>
+          <p>Yes, you can start with the Starter Kit and add Chef Club at any time from your account - you won't receive duplicate tools.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I cancel the subscription anytime?</summary>
+          <p>Yes. Chef Club can be paused or canceled anytime before your next billing date with no cancellation fee.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="#main" style="color: var(--white);">
+          <span class="brand-mark" aria-hidden="true">🍳</span>
+          Tiny Table Chefs
+        </a>
+        <p style="margin-top: 14px; max-width: 32ch; color: #C9BEAE;">Hands-on cooking kits that help kids ages 6-10 build real skills, one recipe at a time.</p>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#plans">Starter Kit</a></li>
+          <li><a href="#plans">Chef Club Subscription</a></li>
+          <li><a href="#gift">Gift a Kit</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Learn</h4>
+        <ul>
+          <li><a href="#contents">What's Inside</a></li>
+          <li><a href="#safety">Safety Guidelines</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#faq">Contact Us</a></li>
+          <li><a href="#faq">Shipping and Returns</a></li>
+          <li><a href="#faq">Allergen Information</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Tiny Table Chefs. All rights reserved.</span>
+      <span>Made for kitchens with small hands and big appetites.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+
+    var oneTimeBtn = document.getElementById("toggle-onetime");
+    var subscriptionBtn = document.getElementById("toggle-subscription");
+    var plansGrid = document.querySelector(".plans-grid");
+    var starterCard = plansGrid ? plansGrid.children[0] : null;
+    var clubCard = plansGrid ? plansGrid.children[1] : null;
+
+    function showPlan(which) {
+      if (!starterCard || !clubCard) { return; }
+      if (which === "onetime") {
+        starterCard.style.display = "";
+        clubCard.style.display = "";
+        oneTimeBtn.setAttribute("aria-pressed", "true");
+        subscriptionBtn.setAttribute("aria-pressed", "false");
+      } else {
+        starterCard.style.display = "";
+        clubCard.style.display = "";
+        oneTimeBtn.setAttribute("aria-pressed", "false");
+        subscriptionBtn.setAttribute("aria-pressed", "true");
+      }
+    }
+
+    if (oneTimeBtn && subscriptionBtn) {
+      oneTimeBtn.addEventListener("click", function () { showPlan("onetime"); });
+      subscriptionBtn.addEventListener("click", function () { showPlan("subscription"); });
+    }
+
+    var thumbs = document.querySelectorAll(".gallery-thumb");
+    var mainLabel = document.querySelector(".gallery-main-label");
+    thumbs.forEach(function (thumb) {
+      thumb.addEventListener("click", function () {
+        var label = thumb.getAttribute("aria-label");
+        if (mainLabel && label) {
+          mainLabel.textContent = label.replace("Placeholder thumbnail: ", "Product photo placeholder: ");
+        }
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

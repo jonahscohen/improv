@@ -1,0 +1,825 @@
+{
+  "analysedAt": "2026-07-28T23:50:41.841Z",
+  "realisedN": 17,
+  "alphaFamilywise": 0.05,
+  "confirmatoryFamily": [
+    {
+      "key": "M2",
+      "p": 0.072265625,
+      "threshold": 0.025,
+      "reject": false,
+      "adjustedP": 0.14453125
+    },
+    {
+      "key": "M1",
+      "p": 0.6290588378906283,
+      "threshold": 0.05,
+      "reject": false,
+      "adjustedP": 0.6290588378906283
+    }
+  ],
+  "verdict": "NO DETECTABLE IMPROVEMENT on this task at this n. Neither confirmatory measure survived Holm correction.",
+  "M1": {
+    "label": "M1 blind preference, sidecoach vs length-matched placebo (CONFIRMATORY)",
+    "contrast": "S-vs-P",
+    "favouredArm": "S",
+    "comparisons": 17,
+    "wins": 7,
+    "losses": 10,
+    "ties": 0,
+    "decided": 17,
+    "winRate": 0.4117647058823529,
+    "ci95": [
+      0.18443696178394647,
+      0.6707528460532426
+    ],
+    "p": 0.6290588378906283,
+    "perPair": [
+      {
+        "id": "coverage-app-ui-corporate-dense-it-operations",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A better satisfies the dense operations brief with clearer prioritization, explicit owner/service/timestamps, stronger incident detail workflow, and more authoritative IA while still covering accessibility, empty, and error states."
+      },
+      {
+        "id": "coverage-app-ui-minimal-utility-personal-budget",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A better delivers the required dashboard with working adjustment controls, privacy masking, clearer money hierarchy, and stronger accessible semantics, while Page B claims interactions that do not update the budget view."
+      },
+      {
+        "id": "coverage-app-ui-playful-pet-care-planner",
+        "A": "S",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "S",
+        "reason": "Page A more completely supports shared coordination with explicit caregiver progress, clearer overdue medication urgency, and a more robust accessible add-task/update flow."
+      },
+      {
+        "id": "coverage-editorial-classic-editorial-heritage-bakery",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A better matches the classic editorial brief with stronger period-magazine hierarchy, explicit section breaks, accessible photo placeholders, and supporting timeline/sidebar content that enriches without adding modern distractions."
+      },
+      {
+        "id": "coverage-editorial-expressive-music-scene-report",
+        "A": "S",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "S",
+        "reason": "Page A more fully delivers the brief with richer scene context, clearer separation of article, artists, venues, voices, and listening recommendations, while maintaining strong accessibility and editorial hierarchy."
+      },
+      {
+        "id": "coverage-editorial-restrained-public-health-brief",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A more clearly foregrounds the fictional nature, caveats, and evidence limits while maintaining restrained editorial hierarchy and accessible navigation."
+      },
+      {
+        "id": "coverage-flex-high-energy-youth-campus-event",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A more completely covers logistics, team formation, support, and beginner reassurance with clearer hierarchy and a more energetic student-event feel, while Page B’s usable form does not offset its thinner content and calmer register."
+      },
+      {
+        "id": "coverage-flex-premium-luxury-private-travel",
+        "A": "S",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "S",
+        "reason": "A covers the required service details more completely and has stronger responsive navigation, form feedback, and accessibility affordances, while still maintaining a credible premium concierge tone."
+      },
+      {
+        "id": "coverage-flex-warm-human-community-clinic",
+        "A": "S",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "S",
+        "reason": "Page A gives clearer cost, eligibility, walk-in, preparation, and booking guidance without promising an online request flow it does not implement."
+      },
+      {
+        "id": "coverage-forms-minimal-medical-intake",
+        "A": "S",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "S",
+        "reason": "Page A better satisfies the form workflow with clearer required-state communication, stronger validation/error recovery, repeatable medical entries, accessible review/edit flow, and more complete handling of sensitive intake details."
+      },
+      {
+        "id": "coverage-marketing-landing-corporate-trust-freight-security",
+        "A": "S",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "S",
+        "reason": "Page A covers the brief more completely with stronger role-specific benefits, security/data handling detail, integrations, proof points, and more robust accessible interactions."
+      },
+      {
+        "id": "coverage-marketing-landing-expressive-branded-bike-share",
+        "A": "S",
+        "B": "P",
+        "verdict": "B",
+        "winnerArm": "P",
+        "reason": "Page B matches the expressive branded marketing brief better while still covering pricing, coverage, support, and sign-up clearly, though Page A is somewhat stronger on form accessibility."
+      },
+      {
+        "id": "coverage-marketing-landing-minimal-language-app",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A more consistently delivers the calm, low-pressure subscription story with complete required content, clear trial path, fewer contradictions, and stronger robustness than Page B’s more elaborate but occasionally misleading interactions."
+      },
+      {
+        "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+        "A": "S",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "S",
+        "reason": "Page A better implements the full workflow with interactive progress, save/resume, review/edit, validation, and confirmation, while Page B is more visually restrained but has weaker keyboard accessibility for uploads."
+      },
+      {
+        "id": "coverage-product-data-dense-climate-risk-dashboard",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A better matches the data-dense analyst brief with visible coverage tables, source-specific cadence, use-case mappings, and permissions, while B leans more interactive and marketing-oriented."
+      },
+      {
+        "id": "coverage-product-minimal-utility-password-manager",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A is plainer, more focused, and compares Free/Personal/Team clearly while covering setup, support, use cases, and security with fewer distracting interactions or inconsistent plan details."
+      },
+      {
+        "id": "coverage-product-playful-kids-cooking-kit",
+        "A": "P",
+        "B": "S",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A more fully and visibly covers the required product, safety, learning, purchasing, and gift details in a warm playful ecommerce structure, despite a few interaction/accessibility flaws."
+      }
+    ]
+  },
+  "M2": {
+    "label": "M2 axe-core violations, sidecoach minus placebo (CONFIRMATORY; lower is better)",
+    "contrast": "S-vs-P",
+    "n": 17,
+    "droppedIds": [],
+    "meanA": 0.9411764705882353,
+    "meanB": 1.411764705882353,
+    "meanDiff": -0.47058823529411764,
+    "bootstrapCI": [
+      -0.8823529411764706,
+      -0.058823529411764705
+    ],
+    "dz": -0.53813823519705,
+    "ties": 7,
+    "tieRate": 0.4117647058823529,
+    "wilcoxonW": 9,
+    "p": 0.072265625,
+    "perPair": [
+      {
+        "id": "coverage-app-ui-corporate-dense-it-operations",
+        "a": 0,
+        "b": 1,
+        "d": -1
+      },
+      {
+        "id": "coverage-app-ui-minimal-utility-personal-budget",
+        "a": 2,
+        "b": 1,
+        "d": 1
+      },
+      {
+        "id": "coverage-app-ui-playful-pet-care-planner",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-editorial-classic-editorial-heritage-bakery",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-editorial-expressive-music-scene-report",
+        "a": 1,
+        "b": 3,
+        "d": -2
+      },
+      {
+        "id": "coverage-editorial-restrained-public-health-brief",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-high-energy-youth-campus-event",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-premium-luxury-private-travel",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-warm-human-community-clinic",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-forms-minimal-medical-intake",
+        "a": 2,
+        "b": 2,
+        "d": 0
+      },
+      {
+        "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+        "a": 0,
+        "b": 1,
+        "d": -1
+      },
+      {
+        "id": "coverage-marketing-landing-corporate-trust-freight-security",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-marketing-landing-expressive-branded-bike-share",
+        "a": 0,
+        "b": 0,
+        "d": 0
+      },
+      {
+        "id": "coverage-marketing-landing-minimal-language-app",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-product-data-dense-climate-risk-dashboard",
+        "a": 1,
+        "b": 3,
+        "d": -2
+      },
+      {
+        "id": "coverage-product-minimal-utility-password-manager",
+        "a": 1,
+        "b": 0,
+        "d": 1
+      },
+      {
+        "id": "coverage-product-playful-kids-cooking-kit",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      }
+    ]
+  },
+  "M1_PC": {
+    "label": "SECONDARY blind preference, placebo vs bare control (the pure prompt-length effect)",
+    "contrast": "P-vs-C",
+    "favouredArm": "P",
+    "comparisons": 17,
+    "wins": 8,
+    "losses": 9,
+    "ties": 0,
+    "decided": 17,
+    "winRate": 0.47058823529411764,
+    "ci95": [
+      0.22983268726599038,
+      0.7218816996688935
+    ],
+    "p": 1,
+    "perPair": [
+      {
+        "id": "coverage-app-ui-corporate-dense-it-operations",
+        "A": "P",
+        "B": "C",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A better matches the brief with clearer active-incident prioritization, unambiguous ownership/actions, functional detail tabs, and fewer IA inconsistencies than Page B’s mislabeled active/all status and flawed list grid."
+      },
+      {
+        "id": "coverage-app-ui-minimal-utility-personal-budget",
+        "A": "P",
+        "B": "C",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A better supports at-a-glance status and real budget adjustments, with clearer hierarchy, a visible month summary, functional updates, privacy masking, and stronger semantic treatment of transactions."
+      },
+      {
+        "id": "coverage-app-ui-playful-pet-care-planner",
+        "A": "C",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "C",
+        "reason": "Page A more clearly prioritizes overdue work and shared caregiver responsibility with explicit names, counts, and states, while Page B’s assignments are less legible and appointment/date details are weaker."
+      },
+      {
+        "id": "coverage-editorial-classic-editorial-heritage-bakery",
+        "A": "C",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "C",
+        "reason": "A has the stronger, more coherent long-form story, richer sense of place, and all required editorial elements while keeping supporting material relevant and readable."
+      },
+      {
+        "id": "coverage-editorial-expressive-music-scene-report",
+        "A": "P",
+        "B": "C",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A more completely delivers the editorial brief, with clearer scene stakes, distinct artist/venue/community sections, fuller performer and fan voices, stronger date/byline treatment, and better accessibility scaffolding."
+      },
+      {
+        "id": "coverage-editorial-restrained-public-health-brief",
+        "A": "C",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "C",
+        "reason": "Page A more completely satisfies the brief with explicit source links, stronger caveat visibility, clearer evidence-versus-interpretation framing, and more restrained practical guidance for sensitive health claims."
+      },
+      {
+        "id": "coverage-flex-high-energy-youth-campus-event",
+        "A": "P",
+        "B": "C",
+        "verdict": "B",
+        "winnerArm": "C",
+        "reason": "B more clearly centers BuildBurst, includes a real accessible registration form with recap logistics, and maintains strong IA while still making first-timer participation feel open."
+      },
+      {
+        "id": "coverage-flex-premium-luxury-private-travel",
+        "A": "C",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "C",
+        "reason": "Page A more completely covers the service model, inquiry path, standards, and fictional itinerary caveats while maintaining strong hierarchy, responsive navigation, and a more appropriate high-consideration consultation experience."
+      },
+      {
+        "id": "coverage-flex-warm-human-community-clinic",
+        "A": "C",
+        "B": "P",
+        "verdict": "B",
+        "winnerArm": "P",
+        "reason": "Page B is clearer and more actionable for booking, with consistent walk-in guidance and strong plain-language reassurance around eligibility, cost, preparation, and contact paths."
+      },
+      {
+        "id": "coverage-forms-minimal-medical-intake",
+        "A": "P",
+        "B": "C",
+        "verdict": "B",
+        "winnerArm": "C",
+        "reason": "Page B better satisfies the brief with clearer required/optional signaling, stronger validation flow, review/edit affordances, and accessibility support while remaining calm and professional."
+      },
+      {
+        "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+        "A": "C",
+        "B": "P",
+        "verdict": "B",
+        "winnerArm": "P",
+        "reason": "Page B better meets the workflow criteria with real draft saving/resume, required document validation, review-before-submit, and solid accessibility, while Page A is more polished but overstates save behavior."
+      },
+      {
+        "id": "coverage-marketing-landing-corporate-trust-freight-security",
+        "A": "P",
+        "B": "C",
+        "verdict": "A",
+        "winnerArm": "P",
+        "reason": "Page A is more complete and focused, with clearer audit-risk messaging, stronger role-specific benefits, better demo path, and fewer irrelevant navigation distractions."
+      },
+      {
+        "id": "coverage-marketing-landing-expressive-branded-bike-share",
+        "A": "C",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "C",
+        "reason": "Page A delivers the required content with clearer pricing, coverage, support channels, and first-rider explanation, while Page B is expressive but has minor credibility and form-copy inconsistencies."
+      },
+      {
+        "id": "coverage-marketing-landing-minimal-language-app",
+        "A": "C",
+        "B": "P",
+        "verdict": "B",
+        "winnerArm": "P",
+        "reason": "Page B delivers all required content with clearer pricing, calmer minimal hierarchy, and a less cluttered trial path, while Page A’s pricing toggle creates avoidable confusion."
+      },
+      {
+        "id": "coverage-product-data-dense-climate-risk-dashboard",
+        "A": "C",
+        "B": "P",
+        "verdict": "B",
+        "winnerArm": "P",
+        "reason": "Page B better delivers dense analytical coverage, business utility, refresh details, role permissions, and real demo/procurement actions while maintaining scannable hierarchy for the target audience."
+      },
+      {
+        "id": "coverage-product-minimal-utility-password-manager",
+        "A": "P",
+        "B": "C",
+        "verdict": "B",
+        "winnerArm": "C",
+        "reason": "B is more clearly organized and plainspoken, with stronger security caveats and setup guidance, while A includes a more questionable unsupported security-review claim."
+      },
+      {
+        "id": "coverage-product-playful-kids-cooking-kit",
+        "A": "C",
+        "B": "P",
+        "verdict": "A",
+        "winnerArm": "C",
+        "reason": "Page A better meets the ecommerce brief with clearer purchase controls, age guidance, safety details, gift flow, and accessible form semantics."
+      }
+    ]
+  },
+  "M3": {
+    "label": "M3 sidecoach-detect findings, sidecoach minus placebo (SECONDARY, OWN EXAM, asymmetric)",
+    "contrast": "S-vs-P",
+    "n": 17,
+    "droppedIds": [],
+    "meanA": 11.882352941176471,
+    "meanB": 19.235294117647058,
+    "meanDiff": -7.352941176470588,
+    "bootstrapCI": [
+      -12.058823529411764,
+      -2.235294117647059
+    ],
+    "dz": -0.6868080032196335,
+    "ties": 0,
+    "tieRate": 0,
+    "wilcoxonW": 30.5,
+    "p": 0.0274658203125,
+    "perPair": [
+      {
+        "id": "coverage-app-ui-corporate-dense-it-operations",
+        "a": 14,
+        "b": 18,
+        "d": -4
+      },
+      {
+        "id": "coverage-app-ui-minimal-utility-personal-budget",
+        "a": 11,
+        "b": 17,
+        "d": -6
+      },
+      {
+        "id": "coverage-app-ui-playful-pet-care-planner",
+        "a": 6,
+        "b": 30,
+        "d": -24
+      },
+      {
+        "id": "coverage-editorial-classic-editorial-heritage-bakery",
+        "a": 13,
+        "b": 22,
+        "d": -9
+      },
+      {
+        "id": "coverage-editorial-expressive-music-scene-report",
+        "a": 3,
+        "b": 10,
+        "d": -7
+      },
+      {
+        "id": "coverage-editorial-restrained-public-health-brief",
+        "a": 6,
+        "b": 11,
+        "d": -5
+      },
+      {
+        "id": "coverage-flex-high-energy-youth-campus-event",
+        "a": 7,
+        "b": 17,
+        "d": -10
+      },
+      {
+        "id": "coverage-flex-premium-luxury-private-travel",
+        "a": 7,
+        "b": 21,
+        "d": -14
+      },
+      {
+        "id": "coverage-flex-warm-human-community-clinic",
+        "a": 6,
+        "b": 26,
+        "d": -20
+      },
+      {
+        "id": "coverage-forms-minimal-medical-intake",
+        "a": 22,
+        "b": 13,
+        "d": 9
+      },
+      {
+        "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+        "a": 7,
+        "b": 17,
+        "d": -10
+      },
+      {
+        "id": "coverage-marketing-landing-corporate-trust-freight-security",
+        "a": 9,
+        "b": 24,
+        "d": -15
+      },
+      {
+        "id": "coverage-marketing-landing-expressive-branded-bike-share",
+        "a": 5,
+        "b": 16,
+        "d": -11
+      },
+      {
+        "id": "coverage-marketing-landing-minimal-language-app",
+        "a": 7,
+        "b": 16,
+        "d": -9
+      },
+      {
+        "id": "coverage-product-data-dense-climate-risk-dashboard",
+        "a": 45,
+        "b": 34,
+        "d": 11
+      },
+      {
+        "id": "coverage-product-minimal-utility-password-manager",
+        "a": 25,
+        "b": 9,
+        "d": 16
+      },
+      {
+        "id": "coverage-product-playful-kids-cooking-kit",
+        "a": 9,
+        "b": 26,
+        "d": -17
+      }
+    ]
+  },
+  "M2_PC": {
+    "label": "axe violations, placebo minus control (descriptive)",
+    "contrast": "P-vs-C",
+    "n": 17,
+    "droppedIds": [],
+    "meanA": 1.411764705882353,
+    "meanB": 1.6470588235294117,
+    "meanDiff": -0.23529411764705882,
+    "bootstrapCI": [
+      -0.7058823529411765,
+      0.29411764705882354
+    ],
+    "dz": -0.21558722225451818,
+    "ties": 6,
+    "tieRate": 0.35294117647058826,
+    "wilcoxonW": 23.5,
+    "p": 0.4892578125,
+    "perPair": [
+      {
+        "id": "coverage-app-ui-corporate-dense-it-operations",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-app-ui-minimal-utility-personal-budget",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-app-ui-playful-pet-care-planner",
+        "a": 2,
+        "b": 2,
+        "d": 0
+      },
+      {
+        "id": "coverage-editorial-classic-editorial-heritage-bakery",
+        "a": 1,
+        "b": 3,
+        "d": -2
+      },
+      {
+        "id": "coverage-editorial-expressive-music-scene-report",
+        "a": 3,
+        "b": 1,
+        "d": 2
+      },
+      {
+        "id": "coverage-editorial-restrained-public-health-brief",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-high-energy-youth-campus-event",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-premium-luxury-private-travel",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-warm-human-community-clinic",
+        "a": 2,
+        "b": 2,
+        "d": 0
+      },
+      {
+        "id": "coverage-forms-minimal-medical-intake",
+        "a": 2,
+        "b": 1,
+        "d": 1
+      },
+      {
+        "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-marketing-landing-corporate-trust-freight-security",
+        "a": 2,
+        "b": 1,
+        "d": 1
+      },
+      {
+        "id": "coverage-marketing-landing-expressive-branded-bike-share",
+        "a": 0,
+        "b": 2,
+        "d": -2
+      },
+      {
+        "id": "coverage-marketing-landing-minimal-language-app",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-product-data-dense-climate-risk-dashboard",
+        "a": 3,
+        "b": 2,
+        "d": 1
+      },
+      {
+        "id": "coverage-product-minimal-utility-password-manager",
+        "a": 0,
+        "b": 1,
+        "d": -1
+      },
+      {
+        "id": "coverage-product-playful-kids-cooking-kit",
+        "a": 2,
+        "b": 2,
+        "d": 0
+      }
+    ]
+  },
+  "M2_SC": {
+    "label": "axe violations, sidecoach minus bare control (DESCRIPTIVE ONLY - the confounded contrast)",
+    "contrast": "S-vs-C",
+    "n": 17,
+    "droppedIds": [],
+    "meanA": 0.9411764705882353,
+    "meanB": 1.6470588235294117,
+    "meanDiff": -0.7058823529411765,
+    "bootstrapCI": [
+      -1.1176470588235294,
+      -0.29411764705882354
+    ],
+    "dz": -0.7676316252086415,
+    "ties": 7,
+    "tieRate": 0.4117647058823529,
+    "wilcoxonW": 3.5,
+    "p": 0.013671875,
+    "perPair": [
+      {
+        "id": "coverage-app-ui-corporate-dense-it-operations",
+        "a": 0,
+        "b": 2,
+        "d": -2
+      },
+      {
+        "id": "coverage-app-ui-minimal-utility-personal-budget",
+        "a": 2,
+        "b": 2,
+        "d": 0
+      },
+      {
+        "id": "coverage-app-ui-playful-pet-care-planner",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-editorial-classic-editorial-heritage-bakery",
+        "a": 1,
+        "b": 3,
+        "d": -2
+      },
+      {
+        "id": "coverage-editorial-expressive-music-scene-report",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-editorial-restrained-public-health-brief",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-high-energy-youth-campus-event",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-premium-luxury-private-travel",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-flex-warm-human-community-clinic",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-forms-minimal-medical-intake",
+        "a": 2,
+        "b": 1,
+        "d": 1
+      },
+      {
+        "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+        "a": 0,
+        "b": 2,
+        "d": -2
+      },
+      {
+        "id": "coverage-marketing-landing-corporate-trust-freight-security",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-marketing-landing-expressive-branded-bike-share",
+        "a": 0,
+        "b": 2,
+        "d": -2
+      },
+      {
+        "id": "coverage-marketing-landing-minimal-language-app",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-product-data-dense-climate-risk-dashboard",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      },
+      {
+        "id": "coverage-product-minimal-utility-password-manager",
+        "a": 1,
+        "b": 1,
+        "d": 0
+      },
+      {
+        "id": "coverage-product-playful-kids-cooking-kit",
+        "a": 1,
+        "b": 2,
+        "d": -1
+      }
+    ]
+  },
+  "leaks": [],
+  "sidecoachInconclusive": 0,
+  "readingRules": {
+    "M3": "ASYMMETRIC by pre-registration. Null or negative = STRONG evidence against improvement. Positive = WEAK, and BARRED from the headline and the verdict.",
+    "M2_SC": "The confounded S-vs-C contrast. Reported for completeness; cannot carry any claim.",
+    "power": "n=17 detects only a LARGE effect (sign test needs 13 of 17; 80% power only at a true win rate of 0.813). A non-significant result means no LARGE effect was detected, NOT that there is no effect."
+  }
+}

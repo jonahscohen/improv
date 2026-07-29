@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>LoopLane - Neighborhood Bike Share</title>
+<meta name="description" content="LoopLane is neighborhood bike share for short local trips. Find a bike, unlock it with your phone, and ride - membership or pay-per-ride, five neighborhoods covered.">
+<style>
+  /* ---------- Design tokens ---------- */
+  :root {
+    color-scheme: light dark;
+
+    /* Typography */
+    --font-heading: 'Gill Sans', 'Gill Sans MT', Corbel, 'Trebuchet MS', sans-serif;
+    --font-body: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif;
+
+    --text-small: 0.875rem;
+    --text-body: 1rem;
+    --text-body-lg: 1.125rem;
+    --text-h3: clamp(1.25rem, 1.15rem + 0.5vw, 1.75rem);
+    --text-h2: clamp(1.625rem, 1.45rem + 1vw, 2.5rem);
+    --text-h1: clamp(2.25rem, 1.9rem + 2vw, 3.5rem);
+    --text-display: clamp(2.5rem, 2rem + 3vw, 4.5rem);
+
+    --body-line-height: 1.6;
+    --body-letter-spacing: 0em;
+    --heading-line-height: 1.15;
+
+    /* Spacing (4pt grid) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    /* Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-pill: 999px;
+
+    /* Shadow (rgba only, never rgb/hsl) */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.1);
+
+    /* Motion - prescribed named easings, do not improvise */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-feedback: 120ms;
+    --dur-state: 220ms;
+    --dur-layout: 400ms;
+    --dur-entrance: 600ms;
+    --dur-exit: 450ms;
+
+    /* Color - OKLCH, neutrals tinted toward brand hue 152 */
+    --color-brand-900: oklch(22% 0.05 152);
+    --color-brand-700: oklch(40% 0.16 152);
+    --color-brand-600: oklch(48% 0.17 152);
+    --color-brand-500: oklch(58% 0.17 152);
+    --color-brand-100: oklch(95% 0.025 152);
+    --color-brand-50: oklch(98% 0.012 152);
+
+    --color-accent-600: oklch(48% 0.17 38);
+    --color-accent-100: oklch(94% 0.03 38);
+
+    --color-ink-900: oklch(18% 0.012 152);
+    --color-ink-700: oklch(34% 0.012 152);
+    --color-ink-500: oklch(52% 0.012 152);
+
+    --color-surface-0: oklch(99% 0.006 152);
+    --color-surface-50: oklch(97% 0.008 152);
+    --color-surface-100: oklch(94% 0.012 152);
+    --color-border: oklch(87% 0.014 152);
+
+    --color-error: oklch(46% 0.19 25);
+    --color-error-bg: oklch(96% 0.03 25);
+    --color-success: oklch(44% 0.14 150);
+    --color-success-bg: oklch(95% 0.035 150);
+
+    --color-focus-ring: var(--color-accent-600);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-brand-700: oklch(50% 0.18 152);
+      --color-brand-600: oklch(56% 0.18 152);
+      --color-brand-100: oklch(30% 0.03 152);
+      --color-brand-50: oklch(26% 0.02 152);
+
+      --color-accent-600: oklch(50% 0.2 38);
+      --color-accent-100: oklch(30% 0.05 38);
+
+      --color-ink-900: oklch(95% 0.01 152);
+      --color-ink-700: oklch(82% 0.012 152);
+      --color-ink-500: oklch(68% 0.012 152);
+
+      --color-surface-0: oklch(20% 0.02 152);
+      --color-surface-50: oklch(24% 0.02 152);
+      --color-surface-100: oklch(28% 0.022 152);
+      --color-border: oklch(36% 0.02 152);
+
+      --color-error: oklch(68% 0.17 25);
+      --color-error-bg: oklch(28% 0.05 25);
+      --color-success: oklch(75% 0.14 150);
+      --color-success-bg: oklch(26% 0.04 150);
+
+      --body-line-height: 1.68;
+      --body-letter-spacing: 0.012em;
+    }
+  }
+
+  /* ---------- Reset ---------- */
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--body-line-height);
+    letter-spacing: var(--body-letter-spacing);
+    color: var(--color-ink-900);
+    background: var(--color-surface-0);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    line-height: var(--heading-line-height);
+    font-weight: 700;
+    color: var(--color-ink-900);
+    text-wrap: balance;
+  }
+  h1 { font-size: var(--text-display); }
+  h2 { font-size: var(--text-h2); }
+  h3 { font-size: var(--text-h3); }
+  p { max-width: 68ch; }
+  ul, ol { padding: 0; list-style: none; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; }
+  input { font: inherit; color: var(--color-ink-900); }
+  img { max-width: 100%; display: block; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
+  /* ---------- Layout ---------- */
+  .section-inner {
+    width: 100%;
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-inline: clamp(var(--space-4), 4vw, var(--space-8));
+  }
+  section { padding-block: var(--space-16); }
+  .eyebrow {
+    font-family: var(--font-heading);
+    font-size: var(--text-small);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--color-brand-700);
+    margin-bottom: var(--space-3);
+  }
+  .section-lede {
+    font-size: var(--text-body-lg);
+    color: var(--color-ink-700);
+    margin-top: var(--space-4);
+    max-width: 62ch;
+  }
+
+  /* ---------- Skip link ---------- */
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -100px;
+    background: var(--color-ink-900);
+    color: var(--color-surface-0);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    z-index: 100;
+    transition: top var(--dur-state) var(--ease-out);
+  }
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+
+  /* ---------- Buttons (8 interaction states) ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: var(--text-body);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color var(--dur-state) var(--ease-out),
+                color var(--dur-state) var(--ease-out),
+                border-color var(--dur-state) var(--ease-out),
+                transform var(--dur-feedback) var(--ease-out),
+                box-shadow var(--dur-state) var(--ease-out);
+  }
+  .btn-lg { padding: var(--space-4) var(--space-8); font-size: var(--text-body-lg); }
+
+  .btn-primary {
+    background: var(--color-brand-700);
+    color: var(--color-surface-0);
+    box-shadow: var(--shadow-sm);
+    will-change: transform;
+  }
+  .btn-primary:hover { background: var(--color-brand-600); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-primary:active { transform: scale(0.96); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--color-brand-700);
+    border-color: var(--color-border);
+  }
+  .btn-outline:hover { background: var(--color-brand-50); border-color: var(--color-brand-500); transform: translateY(-1px); }
+  .btn-outline:active { transform: scale(0.96); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-ink-900);
+    border-color: transparent;
+  }
+  .btn-ghost:hover { background: var(--color-surface-100); }
+  .btn-ghost:active { transform: scale(0.96); }
+
+  .btn:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn.is-loading { position: relative; }
+  .btn.is-loading::after {
+    content: "";
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .btn.is-loading::after { animation: none; border-right-color: currentColor; opacity: 0.5; }
+  }
+
+  /* ---------- Header ---------- */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in oklch, var(--color-surface-0) 92%, transparent);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-block: var(--space-3);
+  }
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--color-brand-700);
+  }
+  .wordmark-mark {
+    width: 24px;
+    height: 24px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .wordmark-mark::before,
+  .wordmark-mark::after {
+    content: "";
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 2.5px solid var(--color-brand-700);
+    background: var(--color-brand-50);
+  }
+  .wordmark-mark::before { left: 0; top: 4px; }
+  .wordmark-mark::after { right: 0; top: 4px; }
+  .wordmark-small {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--color-brand-700);
+  }
+
+  .nav-desktop { display: none; }
+  .nav-desktop ul { display: flex; gap: var(--space-8); }
+  .nav-desktop a {
+    font-weight: 600;
+    color: var(--color-ink-700);
+    padding: var(--space-2) 0;
+    border-bottom: 2px solid transparent;
+    transition: color var(--dur-state) var(--ease-out), border-color var(--dur-state) var(--ease-out);
+  }
+  .nav-desktop a:hover { color: var(--color-brand-700); border-color: var(--color-brand-500); }
+  .nav-desktop a:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 4px; }
+
+  .header-actions { display: flex; align-items: center; gap: var(--space-3); }
+
+  .nav-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 1px solid var(--color-border);
+  }
+  .nav-toggle:hover { background: var(--color-surface-100); }
+  .nav-toggle:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .nav-toggle:active { transform: scale(0.96); }
+  .nav-toggle-bar {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: var(--color-ink-900);
+    border-radius: var(--radius-pill);
+    transition: transform var(--dur-state) var(--ease-in-out), opacity var(--dur-state) var(--ease-in-out);
+  }
+  .nav-toggle.is-open .nav-toggle-bar:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .nav-toggle.is-open .nav-toggle-bar:nth-child(2) { opacity: 0; }
+  .nav-toggle.is-open .nav-toggle-bar:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+  @media (min-width: 768px) {
+    .nav-desktop { display: block; }
+    .nav-toggle { display: none; }
+  }
+
+  /* ---------- Mobile nav drawer (Popover API) ---------- */
+  .mobile-nav {
+    position: fixed;
+    inset: 0 0 0 auto;
+    margin: 0;
+    width: min(320px, 85vw);
+    height: 100dvh;
+    max-height: 100dvh;
+    border: none;
+    border-left: 1px solid var(--color-border);
+    background: var(--color-surface-0);
+    padding: var(--space-6);
+    padding-top: calc(var(--space-6) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+    padding-right: calc(var(--space-6) + env(safe-area-inset-right));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    transform: translateX(100%);
+    transition: transform var(--dur-layout) var(--ease-drawer),
+                overlay var(--dur-layout) var(--ease-drawer) allow-discrete,
+                display var(--dur-layout) var(--ease-drawer) allow-discrete;
+  }
+  .mobile-nav:popover-open { transform: translateX(0); }
+  @starting-style {
+    .mobile-nav:popover-open { transform: translateX(100%); }
+  }
+  .mobile-nav::backdrop {
+    background: oklch(20% 0.02 152 / 0.4);
+  }
+  .mobile-nav-head { display: flex; align-items: center; justify-content: space-between; }
+  .mobile-nav-close {
+    width: 44px;
+    height: 44px;
+    font-size: 1.5rem;
+    line-height: 1;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 1px solid var(--color-border);
+  }
+  .mobile-nav-close:hover { background: var(--color-surface-100); }
+  .mobile-nav-close:active { transform: scale(0.96); }
+  .mobile-nav-close:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .mobile-nav ul { display: flex; flex-direction: column; gap: var(--space-2); }
+  .mobile-nav a:not(.btn) {
+    display: block;
+    padding: var(--space-3) 0;
+    font-weight: 600;
+    font-size: var(--text-body-lg);
+    color: var(--color-ink-900);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .mobile-nav a:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+
+  @media (min-width: 768px) {
+    .mobile-nav { display: none; }
+  }
+
+  /* ---------- Reveal / entrance motion ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity var(--dur-entrance) var(--ease-out),
+                transform var(--dur-entrance) var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 60ms);
+  }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { transition: opacity 0s; transform: none; }
+    .reveal.is-visible { opacity: 1; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { background: var(--color-brand-100); padding-block: var(--space-24) var(--space-16); }
+  .hero-inner { max-width: 760px; }
+  .hero h1 { margin-top: var(--space-3); }
+  .hero-lede {
+    font-size: var(--text-body-lg);
+    color: var(--color-ink-700);
+    margin-top: var(--space-6);
+    max-width: 56ch;
+  }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-8); }
+  .hero-note { margin-top: var(--space-6); font-size: var(--text-small); color: var(--color-ink-500); max-width: 60ch; }
+
+  /* ---------- How it works ---------- */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+  }
+  @media (min-width: 768px) {
+    .steps-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .step-card {
+    container-type: inline-size;
+    container-name: step;
+    background: var(--color-surface-0);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+  }
+  .step-card-head { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
+  @container step (min-width: 280px) {
+    .step-card-head { flex-direction: row; align-items: center; }
+  }
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    background: var(--color-brand-100);
+    color: var(--color-brand-700);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .step-card p { color: var(--color-ink-700); }
+
+  /* ---------- Pricing ---------- */
+  .pricing { background: var(--color-surface-50); }
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    margin-top: var(--space-12);
+  }
+  @media (min-width: 768px) {
+    .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .pricing-card {
+    container-type: inline-size;
+    container-name: pricing-card;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    background: var(--color-surface-0);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8) var(--space-6);
+  }
+  .pricing-card-featured {
+    background: var(--color-brand-50);
+    border-color: var(--color-brand-500);
+    box-shadow: var(--shadow-md);
+  }
+  .pricing-badge {
+    display: inline-flex;
+    align-self: flex-start;
+    background: var(--color-accent-100);
+    color: var(--color-accent-600);
+    font-size: var(--text-small);
+    font-weight: 700;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    margin-bottom: var(--space-2);
+  }
+  .price { display: flex; flex-direction: column; align-items: flex-start; margin-top: var(--space-2); }
+  @container pricing-card (min-width: 260px) {
+    .price { flex-direction: row; align-items: baseline; gap: var(--space-2); }
+  }
+  .price-amount {
+    font-family: var(--font-heading);
+    font-size: var(--text-h2);
+    font-weight: 700;
+    color: var(--color-ink-900);
+    font-variant-numeric: tabular-nums;
+  }
+  .price-unit { color: var(--color-ink-500); font-size: var(--text-small); }
+  .price-sub { color: var(--color-ink-700); font-size: var(--text-small); }
+  .price-desc { color: var(--color-ink-700); margin-top: var(--space-2); margin-bottom: var(--space-2); }
+  .pricing-card .btn { margin-top: auto; align-self: flex-start; }
+  .pricing-footnote { margin-top: var(--space-8); color: var(--color-ink-500); font-size: var(--text-small); }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* ---------- Coverage ---------- */
+  .zone-list { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }
+  .zone-chip {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--color-brand-100);
+    color: var(--color-brand-700);
+    font-weight: 600;
+    font-size: var(--text-small);
+  }
+  .coverage-note { margin-top: var(--space-6); color: var(--color-ink-500); font-size: var(--text-small); max-width: 60ch; }
+
+  /* ---------- Safety ---------- */
+  .safety-list {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-12);
+    max-width: 68ch;
+  }
+  .safety-list li {
+    position: relative;
+    padding-left: var(--space-8);
+    color: var(--color-ink-700);
+  }
+  .safety-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-brand-500);
+  }
+
+  /* ---------- Signup ---------- */
+  .signup {
+    background: var(--color-brand-700);
+    color: var(--color-surface-0);
+  }
+  .signup .eyebrow { color: var(--color-brand-100); }
+  .signup h2 { color: var(--color-surface-0); }
+  .signup .section-lede { color: color-mix(in oklch, var(--color-surface-0) 85%, transparent); }
+  .signup-inner { max-width: 560px; }
+  .signup-form { margin-top: var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); align-items: flex-start; }
+  .form-field { width: 100%; display: flex; flex-direction: column; gap: var(--space-2); }
+  .form-field label { font-weight: 600; }
+  .form-field input {
+    min-height: 44px;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-0);
+    color: var(--color-ink-900);
+    transition: border-color var(--dur-state) var(--ease-out), box-shadow var(--dur-state) var(--ease-out);
+  }
+  .form-field input:hover { border-color: var(--color-brand-500); }
+  .form-field input:focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+  .form-field input[aria-invalid="true"] {
+    border-color: var(--color-error);
+  }
+  .form-hint { font-size: var(--text-small); color: color-mix(in oklch, var(--color-surface-0) 75%, transparent); }
+  .form-error {
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--color-error);
+    background: var(--color-error-bg);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+  }
+  .signup .btn-primary { background: var(--color-accent-600); }
+  .signup .btn-primary:hover { background: color-mix(in oklch, var(--color-accent-600) 85%, white); }
+
+  .signup-success {
+    margin-top: var(--space-8);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    max-width: 480px;
+  }
+  .signup-success-title { font-family: var(--font-heading); font-weight: 700; font-size: var(--text-h3); margin-bottom: var(--space-2); }
+  .signup-success p:last-child { color: color-mix(in oklch, var(--color-success) 85%, black 15%); }
+
+  /* ---------- Footer ---------- */
+  .site-footer { background: var(--color-surface-50); border-top: 1px solid var(--color-border); }
+  .footer-inner {
+    display: grid;
+    gap: var(--space-8);
+    padding-block: var(--space-16);
+  }
+  @media (min-width: 768px) {
+    .footer-inner { grid-template-columns: 1.2fr 2fr; align-items: start; }
+  }
+  .footer-brand p:last-child { color: var(--color-ink-500); margin-top: var(--space-2); }
+  .footer-links { display: grid; gap: var(--space-8); grid-template-columns: repeat(2, 1fr); }
+  .footer-links h3 { font-size: var(--text-small); text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-500); margin-bottom: var(--space-3); }
+  .footer-links ul { display: grid; gap: var(--space-2); }
+  .footer-links a { color: var(--color-ink-700); }
+  .footer-links a:hover { color: var(--color-brand-700); }
+  .footer-links a:focus-visible { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; }
+  .footer-legal {
+    grid-column: 1 / -1;
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-ink-500);
+    font-size: var(--text-small);
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="site-header">
+  <div class="section-inner header-inner">
+    <a class="wordmark" href="#top">
+      <span class="wordmark-mark" aria-hidden="true"></span>
+      LoopLane
+    </a>
+    <nav class="nav-desktop" aria-label="Primary">
+      <ul>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#pricing">Membership</a></li>
+        <li><a href="#coverage">Coverage</a></li>
+        <li><a href="#safety">Safety</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <a class="btn btn-primary" href="#signup">Start riding</a>
+      <button type="button" class="nav-toggle" popovertarget="mobile-nav" popovertargetaction="toggle" aria-expanded="false" aria-label="Open menu">
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav id="mobile-nav" class="mobile-nav" popover aria-label="Primary">
+  <div class="mobile-nav-head">
+    <span class="wordmark-small">LoopLane</span>
+    <button type="button" class="mobile-nav-close" popovertarget="mobile-nav" popovertargetaction="hide" aria-label="Close menu">&times;</button>
+  </div>
+  <ul>
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#pricing">Membership</a></li>
+    <li><a href="#coverage">Coverage</a></li>
+    <li><a href="#safety">Safety</a></li>
+    <li><a class="btn btn-primary" href="#signup">Start riding</a></li>
+  </ul>
+</nav>
+
+<main id="main-content">
+  <section id="top" class="hero" aria-labelledby="hero-heading">
+    <div class="section-inner hero-inner">
+      <p class="eyebrow">Bike share for the neighborhood</p>
+      <h1 id="hero-heading">Grab a bike. Go where you're going.</h1>
+      <p class="hero-lede">LoopLane puts a bike within a five-minute walk of most homes, offices, and transit stops downtown. Unlock one with your phone, ride to where you're headed, and dock it at any station along the way.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="#signup">Get your first ride free</a>
+        <a class="btn btn-ghost btn-lg" href="#how-it-works">See how it works</a>
+      </div>
+      <p class="hero-note">45 stations across Downtown, Riverside, University Row, Midtown, and the Harbor - most within a five-minute walk.</p>
+    </div>
+  </section>
+
+  <section id="how-it-works" aria-labelledby="how-heading">
+    <div class="section-inner">
+      <p class="eyebrow">How it works</p>
+      <h2 id="how-heading">Three steps, no experience required</h2>
+      <ol class="steps-grid">
+        <li class="step-card reveal" style="--i:0;">
+          <div class="step-card-head">
+            <span class="step-number" aria-hidden="true">01</span>
+            <h3>Find a bike</h3>
+          </div>
+          <p>Look for a green LoopLane dock. Most neighborhoods have one within a five-minute walk.</p>
+        </li>
+        <li class="step-card reveal" style="--i:1;">
+          <div class="step-card-head">
+            <span class="step-number" aria-hidden="true">02</span>
+            <h3>Unlock in seconds</h3>
+          </div>
+          <p>Scan the code on the bike with your phone's camera. No app install or account needed for your first ride.</p>
+        </li>
+        <li class="step-card reveal" style="--i:2;">
+          <div class="step-card-head">
+            <span class="step-number" aria-hidden="true">03</span>
+            <h3>Ride and return</h3>
+          </div>
+          <p>Pedal to where you're headed and dock the bike at any LoopLane station in the coverage area. Your ride ends the moment it locks in.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="pricing" class="pricing" aria-labelledby="pricing-heading">
+    <div class="section-inner">
+      <p class="eyebrow">Membership and pricing</p>
+      <h2 id="pricing-heading">Pay per ride, or ride all month</h2>
+      <p class="section-lede">Every plan includes 45-minute rides before overage charges apply. Pause or cancel a membership anytime.</p>
+      <div class="pricing-grid">
+        <article class="pricing-card reveal" style="--i:0;">
+          <h3>Single ride</h3>
+          <p class="price"><span class="price-amount">$1</span><span class="price-unit">to unlock</span></p>
+          <p class="price-sub">plus <span class="tabular">$0.20</span> per minute</p>
+          <p class="price-desc">Best for a one-off trip or trying LoopLane for the first time.</p>
+          <a class="btn btn-outline" href="#signup">Reserve a single ride</a>
+        </article>
+        <article class="pricing-card reveal" style="--i:1;">
+          <h3>Day pass</h3>
+          <p class="price"><span class="price-amount">$10</span><span class="price-unit">per day</span></p>
+          <p class="price-sub">unlimited 45-minute rides for 24 hours</p>
+          <p class="price-desc">Best for visitors and a full day of errands.</p>
+          <a class="btn btn-outline" href="#signup">Get a day pass</a>
+        </article>
+        <article class="pricing-card pricing-card-featured reveal" style="--i:2;">
+          <p class="pricing-badge">Most riders choose this</p>
+          <h3>Monthly membership</h3>
+          <p class="price"><span class="price-amount">$16</span><span class="price-unit">per month</span></p>
+          <p class="price-sub">unlimited 45-minute rides, every day</p>
+          <p class="price-desc">Best for daily commuters and students. Pause or cancel anytime.</p>
+          <a class="btn btn-primary" href="#signup">Start your membership</a>
+        </article>
+      </div>
+      <p class="pricing-footnote">Rides longer than 45 minutes are billed at <span class="tabular">$0.15</span> per additional minute on every plan.</p>
+    </div>
+  </section>
+
+  <section id="coverage" aria-labelledby="coverage-heading">
+    <div class="section-inner">
+      <p class="eyebrow">Coverage area</p>
+      <h2 id="coverage-heading">Five neighborhoods, one loop</h2>
+      <p class="section-lede">LoopLane currently covers Downtown, Riverside, University Row, Midtown, and the Harbor - 45 stations and counting, with new docks going in every quarter.</p>
+      <ul class="zone-list">
+        <li class="zone-chip">Downtown</li>
+        <li class="zone-chip">Riverside</li>
+        <li class="zone-chip">University Row</li>
+        <li class="zone-chip">Midtown</li>
+        <li class="zone-chip">Harbor</li>
+      </ul>
+      <p class="coverage-note">Check for the green dock symbol before you ride - stations outside the coverage area can't accept returns yet.</p>
+    </div>
+  </section>
+
+  <section id="safety" aria-labelledby="safety-heading">
+    <div class="section-inner">
+      <p class="eyebrow">Safety and support</p>
+      <h2 id="safety-heading">Ride prepared, get help fast</h2>
+      <ul class="safety-list">
+        <li>Every bike ships with front and rear lights that turn on automatically after dark.</li>
+        <li>Helmets aren't provided, but wearing one is strongly recommended, and required by law for riders under 18.</li>
+        <li>Follow the same traffic laws as any vehicle: ride with traffic, signal turns, and use bike lanes where they exist.</li>
+        <li>Report a damaged bike or a station issue from the lock screen. Our team responds within the hour, every day.</li>
+        <li>Reach support by phone or text from 6am to midnight, every day. Overnight messages get a callback the next morning.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="signup" class="signup" aria-labelledby="signup-heading">
+    <div class="section-inner signup-inner">
+      <p class="eyebrow">Get started</p>
+      <h2 id="signup-heading">Your first ride is free</h2>
+      <p class="section-lede">Enter your email and we'll send a code for one free 45-minute ride, plus directions to your nearest station.</p>
+
+      <form class="signup-form" id="signup-form" novalidate>
+        <div class="form-field">
+          <label for="signup-email">Email address</label>
+          <input type="email" id="signup-email" name="email" autocomplete="email" inputmode="email" spellcheck="false" required aria-describedby="signup-email-hint" aria-invalid="false">
+          <p id="signup-email-hint" class="form-hint">We'll only use this to send your ride code.</p>
+          <p class="form-error" id="signup-email-error" role="alert" hidden></p>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg" id="signup-submit">
+          <span class="btn-label">Get my free ride code</span>
+        </button>
+      </form>
+
+      <div class="signup-success" id="signup-success" hidden aria-live="polite">
+        <p class="signup-success-title">Check your inbox</p>
+        <p>Your free ride code is on its way. Look for a message from LoopLane within a few minutes.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="section-inner footer-inner">
+    <div class="footer-brand">
+      <p class="wordmark-small">LoopLane</p>
+      <p>Local rides, no car required.</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <div>
+        <h3>Company</h3>
+        <ul>
+          <li><a href="#safety">Safety guidelines</a></li>
+          <li><a href="#pricing">Membership</a></li>
+          <li><a href="#coverage">Coverage area</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Support</h3>
+        <ul>
+          <li><a href="mailto:support@looplane.example">support@looplane.example</a></li>
+          <li><a href="tel:+15550142">(555) 555-0142</a></li>
+        </ul>
+      </div>
+    </nav>
+    <p class="footer-legal">&copy; 2026 LoopLane. Ride local.</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    'use strict';
+
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* Mobile nav: sync icon + aria-expanded with popover state */
+    var navToggle = document.querySelector('.nav-toggle');
+    var mobileNav = document.getElementById('mobile-nav');
+
+    if (navToggle && mobileNav) {
+      mobileNav.addEventListener('toggle', function (event) {
+        var isOpen = event.newState === 'open';
+        navToggle.setAttribute('aria-expanded', String(isOpen));
+        navToggle.classList.toggle('is-open', isOpen);
+      });
+
+      mobileNav.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () {
+          if (typeof mobileNav.hidePopover === 'function') {
+            mobileNav.hidePopover();
+          }
+        });
+      });
+    }
+
+    /* Scroll-reveal entrances */
+    var revealEls = document.querySelectorAll('.reveal');
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+      revealEls.forEach(function (el) { el.classList.add('is-visible'); });
+    } else {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.2 });
+      revealEls.forEach(function (el) { observer.observe(el); });
+    }
+
+    /* Signup form: validate on blur, simulate async submit, manage all states */
+    var form = document.getElementById('signup-form');
+    var emailInput = document.getElementById('signup-email');
+    var emailError = document.getElementById('signup-email-error');
+    var submitButton = document.getElementById('signup-submit');
+    var submitLabel = submitButton ? submitButton.querySelector('.btn-label') : null;
+    var successPanel = document.getElementById('signup-success');
+    var isSubmitting = false;
+
+    function isValidEmail(value) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+
+    function showError(message) {
+      emailInput.setAttribute('aria-invalid', 'true');
+      emailError.textContent = message;
+      emailError.hidden = false;
+      emailInput.focus();
+    }
+
+    function clearError() {
+      emailInput.setAttribute('aria-invalid', 'false');
+      emailError.hidden = true;
+      emailError.textContent = '';
+    }
+
+    if (emailInput) {
+      emailInput.addEventListener('blur', function () {
+        if (emailInput.value && !isValidEmail(emailInput.value)) {
+          showError('Enter a valid email address so we can send your ride code.');
+        } else {
+          clearError();
+        }
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        if (isSubmitting) { return; }
+
+        var value = emailInput.value.trim();
+        if (!isValidEmail(value)) {
+          showError('Enter a valid email address so we can send your ride code.');
+          return;
+        }
+        clearError();
+
+        isSubmitting = true;
+        submitButton.disabled = true;
+        submitButton.setAttribute('aria-busy', 'true');
+        submitButton.classList.add('is-loading');
+        if (submitLabel) { submitLabel.textContent = 'Sending your code...'; }
+
+        window.setTimeout(function () {
+          form.hidden = true;
+          successPanel.hidden = false;
+          isSubmitting = false;
+        }, prefersReducedMotion ? 0 : 900);
+      });
+    }
+  })();
+</script>
+</body>
+</html>

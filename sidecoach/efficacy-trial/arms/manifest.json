@@ -1,0 +1,500 @@
+{
+  "builtAt": "2026-07-28T22:38:38.715Z",
+  "briefs": [
+    {
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "register": "app-ui",
+      "aestheticStyle": "corporate-dense",
+      "briefSha256": "2b4b538ed7e27d2e8278cf04f22a9d0df489ff01e6939fb669b755679bde82e0",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4178,
+        "chars": 30543,
+        "sha256": "df1acfe9c8f9081753288e9f4868b822dc3e0e428e4a129bf1a46dd5314d744d"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5453,
+        "chars": 30540,
+        "sha256": "a16bb835952204b98166ffc9d4b362ae50a2c0c98cf3cac05f224d27c8ec23e9"
+      },
+      "promptChars": {
+        "C": 1964,
+        "P": 32560,
+        "S": 32564
+      },
+      "promptSha256": {
+        "C": "598098b4089f78ddb23be4e8f2dfffb7305ed9c9daca3e4d2bb24ca67b4666a5",
+        "P": "11a25d1101cd2e566ee5508a96f6391eba07d0c155ce6add5184dea877044a5d",
+        "S": "ceedd23206241bdfdd3c1e7b356a221729a187bda5ec603ad0242aa3a78bfa60"
+      }
+    },
+    {
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "register": "app-ui",
+      "aestheticStyle": "minimal-utility",
+      "briefSha256": "71213112d78131bcf9ad9b40bb6f79881ded5a763af853e251019cdfc54080b8",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4178,
+        "chars": 30482,
+        "sha256": "9f5a3f0402c5b7dda82fc89e7e81ce899284c24ca9aec04ff08e74cbcc1625fd"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5443,
+        "chars": 30482,
+        "sha256": "b402b05b84b625878c79c112fa1b85aa7733b0158009ee17d41051a71ae1bb3e"
+      },
+      "promptChars": {
+        "C": 1895,
+        "P": 32433,
+        "S": 32434
+      },
+      "promptSha256": {
+        "C": "d5fbc944468a7379e187bbf00f3d8cf98b726d9acf9e66aab68b028ac1a6f963",
+        "P": "43c21cf707926b447f7b124456c8c65e75dadfc198954d0d94e0059023be2b82",
+        "S": "33a20358664a79e34b6b3caf64bf2f9e4d2c098b3313dc693bd064cb4e167b5d"
+      }
+    },
+    {
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "register": "app-ui",
+      "aestheticStyle": "playful",
+      "briefSha256": "c74fbe0862f7968bb1cadd910e0e23cba6be6784fa24ef871c12a67e466a4fd6",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4180,
+        "chars": 30537,
+        "sha256": "d7c25c67b49302e2d076c92309bd6d670a0b213e3bd5cd7572982ca8e4dac16b"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5452,
+        "chars": 30530,
+        "sha256": "ee310f745a7a952caae2377997ad6f167a0c0f05c574516fc21fc15b07478f83"
+      },
+      "promptChars": {
+        "C": 1918,
+        "P": 32504,
+        "S": 32512
+      },
+      "promptSha256": {
+        "C": "81e9bf7fbf0c8ef4b35447b3e003de202946b898c27e31bf6181e75d5d56787e",
+        "P": "bcf4c0d1ab4395cb6e58e5d05b202f5266a223b0bb9110581b6cd26c24ef9312",
+        "S": "8180860cae55bccb20d46321d21c65bb96c6fc6be80fefc68eaaab1ba253d7bc"
+      }
+    },
+    {
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "register": "editorial",
+      "aestheticStyle": "classic-editorial",
+      "briefSha256": "bffde5e8a00ef2b1f90edad5d9be3d9387e6bb3be039d8c92b8f54a37e083b53",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4182,
+        "chars": 30562,
+        "sha256": "9936eb0b291daeec5bc1e6b4fad3fc847e1f0bf7785429f7bdd62dce00b137b6"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5457,
+        "chars": 30559,
+        "sha256": "6ea8314c7c563497a9300205311d16f9cb580815af480e1e53bd3e4eee27dab8"
+      },
+      "promptChars": {
+        "C": 1989,
+        "P": 32604,
+        "S": 32608
+      },
+      "promptSha256": {
+        "C": "2e90d2bc627036164b9e33dea3d602d6cafb20977c24e95f121c4440c1dec647",
+        "P": "3d390a5ff3b91621ff829e59bc807419e4f903424070c0e33994b3cad4702f88",
+        "S": "6dade0b92cc1ab4a5703e1da9ae6659edc5111c47f9f23e1127f5b06ff6a17f5"
+      }
+    },
+    {
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "register": "editorial",
+      "aestheticStyle": "expressive",
+      "briefSha256": "600bfa9adfc9066f278f4db59ed3043d19e71b3875406d1eede8f058ad9fe809",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4180,
+        "chars": 30532,
+        "sha256": "b4095d17aab1c756f600331a0fc80b4982c95d326cf668e603285721f8da7340"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5452,
+        "chars": 30530,
+        "sha256": "ee310f745a7a952caae2377997ad6f167a0c0f05c574516fc21fc15b07478f83"
+      },
+      "promptChars": {
+        "C": 1997,
+        "P": 32583,
+        "S": 32586
+      },
+      "promptSha256": {
+        "C": "e4fa45da39ae2b5da5539cd03d3c46384fb9165c40622644a6e91d5df341da98",
+        "P": "b07d26019b48f88407bdcbbf90db0877f0d6570d038b843151b349bbb0adab79",
+        "S": "dd512234c1e9c9d914126a7a9ba99aced41f3b5dd14ed735fb004160ed342ea0"
+      }
+    },
+    {
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "register": "editorial",
+      "aestheticStyle": "restrained",
+      "briefSha256": "106a7a4b7d66bb3e4ecbcc153740507738d1c5a1b7c664eb8d8fe3f602d82072",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4180,
+        "chars": 30519,
+        "sha256": "33496fdbe1af954a78c4238a1416a57d627fad5d609473fa74e6d6cb8ad5cc5d"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5450,
+        "chars": 30516,
+        "sha256": "a11a0ef2d2ab952d388dd21e504f8b5412a52de9ac2cac6e69e8b8167177f0c6"
+      },
+      "promptChars": {
+        "C": 1971,
+        "P": 32543,
+        "S": 32547
+      },
+      "promptSha256": {
+        "C": "26ec87c576765ae6c9e9cbbab53128bde9c84c4402e2a4340cc846b05d5e424c",
+        "P": "fef8428a31d1a68d4201501da49cf65ac0f3bec42972ed6ddf438a96f0f7549c",
+        "S": "6ddde73a8470a0cc61f0f430bdb098c1c50f36562811c2127ca5314a6e1e7d2c"
+      }
+    },
+    {
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "register": "flex",
+      "aestheticStyle": "high-energy/youth",
+      "briefSha256": "11ecb512b1f445ba100a42a6b68cf34f4944773c1abd228e9ef1bf8048ca0f28",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4179,
+        "chars": 30517,
+        "sha256": "ca7b611e4e2acb51a8aa3894114b4cd4d7d649551d25ee760f1158c2b9d30c04"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5450,
+        "chars": 30516,
+        "sha256": "a11a0ef2d2ab952d388dd21e504f8b5412a52de9ac2cac6e69e8b8167177f0c6"
+      },
+      "promptChars": {
+        "C": 1890,
+        "P": 32462,
+        "S": 32464
+      },
+      "promptSha256": {
+        "C": "d3dfa756fcd9f3e8468e962917878b16669f3dcd94a393a2dbf028e3e013e949",
+        "P": "f000b504726dd8db08201434e4f4c8a2cee737579f64525756438a5c2cb43f38",
+        "S": "12331c90fa25b3206b3221c75dd164953b74a4782e0ebae4c8a5af88d5c1f95f"
+      }
+    },
+    {
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "register": "flex",
+      "aestheticStyle": "premium/luxury",
+      "briefSha256": "b1107e84845e3c4352923b552980e5d0727431fd1b333c22eb38353fb9331a53",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4177,
+        "chars": 30515,
+        "sha256": "01d8773a6c2d8cd0d09785ddfa1c5fbfff5086b30dc574d627c62550060472a7"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5449,
+        "chars": 30511,
+        "sha256": "27e7031672cbe8e2230245e6b3e8c0c51266016243fcb65cff986a28b692804b"
+      },
+      "promptChars": {
+        "C": 1993,
+        "P": 32560,
+        "S": 32565
+      },
+      "promptSha256": {
+        "C": "40ae688a06c3f37776d3babd71f942e6bb8c9197e1d0edb210e322b9a180db72",
+        "P": "afefa1149a67bd242050698b0d683a070c15134fd3d329cc618e1b52081cf4ee",
+        "S": "d8a16b7b44bf9bd81f9c91aff6f5ad1b9e8f9062837babeb5c7a072e2c5624cf"
+      }
+    },
+    {
+      "id": "coverage-flex-warm-human-community-clinic",
+      "register": "flex",
+      "aestheticStyle": "warm/human",
+      "briefSha256": "5855eb38b575df31bdc16ac0443904be57dca1ff42efa782c90ea752b99d0d2d",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4179,
+        "chars": 30506,
+        "sha256": "c9d61546ac6531420381d9b0c49c0f5005a67ee4be264de0a623832d81f76fa6"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5447,
+        "chars": 30502,
+        "sha256": "d9e94982fc6fcffe10ecb30c2edd9ac5b060e11565699f9da02b954bff7cce2b"
+      },
+      "promptChars": {
+        "C": 1900,
+        "P": 32458,
+        "S": 32463
+      },
+      "promptSha256": {
+        "C": "92b033e8953861a4e065ea188a0549a03d633cfccd5b26aead3c009ac253c606",
+        "P": "18de816f82e99302918b122a4d2f8509f9047bf0e4fb5246ae78f20136775aa0",
+        "S": "0ddec4615cf19984620b5127326989181a223c0e057cf9bdd130b240dacd6173"
+      }
+    },
+    {
+      "id": "coverage-forms-minimal-medical-intake",
+      "register": "forms",
+      "aestheticStyle": "minimal",
+      "briefSha256": "98f59edd608a2b2f7640d02134589c3190f8a5f2c7b033debe2da87a7bb1d911",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 588,
+        "tokens": 4163,
+        "chars": 30394,
+        "sha256": "5b69259c5be9dcaecb10edf01f544e9c0ecbbb1fc84334f9da7c2248626eea7f"
+      },
+      "placebo": {
+        "lines": 588,
+        "tokens": 5426,
+        "chars": 30392,
+        "sha256": "22e49e4613b153f6fa82694babcd51f5c034de1950d611ede8cca6446e4cf8bf"
+      },
+      "promptChars": {
+        "C": 1885,
+        "P": 32334,
+        "S": 32336
+      },
+      "promptSha256": {
+        "C": "8e07a7eecc27a32aba73bcb76626a6260debe7e659e0ee01a132af0873287088",
+        "P": "9d1b3674b7d78a5bb44372f97778e7a3351c90110d537f3423b16d30aa733755",
+        "S": "7910409eab7024890b646f1b985e691d531148430d8b2e73aaed15be1f56dbec"
+      }
+    },
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "register": "forms",
+      "aestheticStyle": "multi-step-corporate",
+      "briefSha256": "50dd56da96d8df208d8985445085b5dab7505963dacdf5242f6471dfa3f13f45",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4180,
+        "chars": 30493,
+        "sha256": "532f51f077e79a133ab2ebd7dda5174aa0c51715687a01e0e0aa89dc34454c21"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5445,
+        "chars": 30491,
+        "sha256": "d040fff8eb05a1a66aa6f563066e69fc97706151bba072612b8840d2647b57df"
+      },
+      "promptChars": {
+        "C": 1980,
+        "P": 32527,
+        "S": 32530
+      },
+      "promptSha256": {
+        "C": "94a23912bbaabb77bfd3c9e9f4f05d59743a8651b7d63e418a360ac68ef0bfd0",
+        "P": "80115d6a5dc2a59594bad8ed295e42db5e9dfaec09386b21f08d5c16f6964077",
+        "S": "c14c5f76861b51c55baa2282d33e9e94a14607c3eede70a71902d0d6e25b5f24"
+      }
+    },
+    {
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "register": "marketing/landing",
+      "aestheticStyle": "corporate-trust",
+      "briefSha256": "8960989b1864d72b47d53b9f093b7d3b582e28cc2917913b7c2b9a68b5c4ca29",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 588,
+        "tokens": 4163,
+        "chars": 30456,
+        "sha256": "d1e186040c2865e104df90bfddffadb44d527abe8738569fae34afc5eb997320"
+      },
+      "placebo": {
+        "lines": 588,
+        "tokens": 5438,
+        "chars": 30453,
+        "sha256": "775661024779467005bbc8fdd21f283eba8b48ad9fad5767ac635d3ae6df7a62"
+      },
+      "promptChars": {
+        "C": 2118,
+        "P": 32628,
+        "S": 32631
+      },
+      "promptSha256": {
+        "C": "d93fd440f93fde654bb0a1b75dd99ab1faa7b50ada03c9080f32741258d8bcec",
+        "P": "4b503237af52a168aff46850f10680dddab5f94e8ca6a47726ec3ca77480d0aa",
+        "S": "47b7fe0d7ba6fc3aed91c6909b736a46d8117e5d0739447092820c5f823a93df"
+      }
+    },
+    {
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "register": "marketing/landing",
+      "aestheticStyle": "expressive-branded",
+      "briefSha256": "fd5132c9edd0f0aabc932a5ba4b02f0f194ea13c38af50c5aa6ff21a900f0f59",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4178,
+        "chars": 30518,
+        "sha256": "dc508d82bc18ee4504e25cd4d3db15cf8b13ca61acb60a5d9a405947c6990a87"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5450,
+        "chars": 30516,
+        "sha256": "a11a0ef2d2ab952d388dd21e504f8b5412a52de9ac2cac6e69e8b8167177f0c6"
+      },
+      "promptChars": {
+        "C": 2035,
+        "P": 32607,
+        "S": 32610
+      },
+      "promptSha256": {
+        "C": "08e4e46886e082e8b985c90bfada9083b47905b306249b4335a50cadb809a3c2",
+        "P": "d0d2285031f983bc5272c7b42bf4b0e1ac2547989674d9ecca0cd86cae73f2b5",
+        "S": "a89473e9438787511d6f9ce6080802538f03a85c367bad95d86125a71186b1f2"
+      }
+    },
+    {
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "register": "marketing/landing",
+      "aestheticStyle": "minimal",
+      "briefSha256": "125d4589b4e48f7c7089f1499cc7c610ff81a509eeb1d8ddd67f4d8bedfacdc2",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4178,
+        "chars": 30497,
+        "sha256": "b373921b57a00ae683801e880047c46ce5ae621f39d85435c34a37c1d34caebe"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5446,
+        "chars": 30494,
+        "sha256": "11715e9b29f86ddf45dac1aeb3e1e01f0a4f94a56e654764aa9f792372355dc6"
+      },
+      "promptChars": {
+        "C": 1912,
+        "P": 32462,
+        "S": 32466
+      },
+      "promptSha256": {
+        "C": "45305f87fe1cfcd0c6a2e3e6747eb23b70bb9ccde00d13dd5767a8f5fc557012",
+        "P": "21af7fec0c65642efae21cbca5b05280bbe017ff81a87b5100b91cc8aec2f634",
+        "S": "c8c614225c5f5da50cf46b3c7ce7fc4da0cf3708efaabdac7aa16666f69401c9"
+      }
+    },
+    {
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "register": "product",
+      "aestheticStyle": "data-dense",
+      "briefSha256": "c3168f51a3d8a10bf37673a0af292fe9302100b9732d96a9c118cfc10eb08b07",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4184,
+        "chars": 30579,
+        "sha256": "e9dc70c35a0ddbeada54a64594cbfbbe8b070fe4b152d9da9158690e2d29b935"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5461,
+        "chars": 30579,
+        "sha256": "c5c0171ab7518dbbf4cf0a04f3486921a3451a3eb51840aed097daf523d7fb07"
+      },
+      "promptChars": {
+        "C": 1981,
+        "P": 32616,
+        "S": 32617
+      },
+      "promptSha256": {
+        "C": "4d0136e258f281e48322b418c23ee68ae6b5b180ffca2c7b81c6713d0c83c744",
+        "P": "62a84e821eb2abf56b6508dad5d406352a3fa4a80689efa5ea48cb0f7cc9ee16",
+        "S": "467a560d3e10cbd21cb50a93296d24cc24d267bb49d27ac4047fcb613e091d7f"
+      }
+    },
+    {
+      "id": "coverage-product-minimal-utility-password-manager",
+      "register": "product",
+      "aestheticStyle": "minimal-utility",
+      "briefSha256": "1c604778d7b60132be1797ec8a5748eb3d6528cf3255fd61b27771c7da840a1d",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 590,
+        "tokens": 4179,
+        "chars": 30526,
+        "sha256": "69ac00ac5de2ce27e3251bd394891d8292feade63864c28a3383cd8b528a95a7"
+      },
+      "placebo": {
+        "lines": 590,
+        "tokens": 5451,
+        "chars": 30521,
+        "sha256": "35d266a37421b3b42912ddcf4c80c0f9e5c13b13f9dc247b51edd51f269b85a8"
+      },
+      "promptChars": {
+        "C": 1919,
+        "P": 32496,
+        "S": 32502
+      },
+      "promptSha256": {
+        "C": "38951f71a086aa0aa88235ab7362291c77793133e71df836ee26b38e52e3d10f",
+        "P": "a9262bb435fcf4c15d076dbbdb05d9deb251223a8cb8fa7162d4d2bff63c9009",
+        "S": "495917548dfa9d8fc939ebf5bc8f8854688548b72d9af5cd4f34b23ecd338f6a"
+      }
+    },
+    {
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "register": "product",
+      "aestheticStyle": "playful",
+      "briefSha256": "00d49e70bcb40a8bdf5d46e0a3192a34e48c11cb9c7b8c6fbf88b806962a8789",
+      "detectedFlow": "flowA_brand_verify",
+      "sidecoach": {
+        "lines": 589,
+        "tokens": 4170,
+        "chars": 30499,
+        "sha256": "fa082e741212a3abe896df5ac8b8a52f482a5fe01549d526fcba98a10ea778f0"
+      },
+      "placebo": {
+        "lines": 589,
+        "tokens": 5446,
+        "chars": 30493,
+        "sha256": "c3eb600323a861a979360d57d5d0bd25c8bb1821fdee9a7a9b331c77daf64fe8"
+      },
+      "promptChars": {
+        "C": 1971,
+        "P": 32521,
+        "S": 32527
+      },
+      "promptSha256": {
+        "C": "68a46eda52d10e82fdd274c00b62c053713205ddd58cfaf30af73321ffda24b6",
+        "P": "cf04ce27e90d088032d7177ba7b70ea21638adbb5a22bf93bf1685ca0f874a0c",
+        "S": "7964b1da1a1bcee7c7079b9b71bcc124a3ff61c6c59385e105ccfc6be215bb57"
+      }
+    }
+  ],
+  "wrapperSha256": "abf082005390bfbff09a5b32b56df5bbff7d5056aae50e605de4cdc59ac3e5c7",
+  "payloadHeader": "PROJECT GUIDANCE (ordered steps to execute)"
+}

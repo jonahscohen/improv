@@ -226,6 +226,10 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/t23-deep-interview.test.ts', required: true },
   { rel: 'src/__tests__/taste-validator-observer-race.test.ts', required: true },
   { rel: 'src/__tests__/taste-validator-tailwind-tokens.test.ts', required: true },
+  // 2026-07-28: fabricated-svg was blind to icons built from <line>/<rect>/<circle>/<polyline>/
+  // <polygon> and to icons compressed into one compound path. Pins the primitive/compound triggers
+  // AND the conjunctive icon test that keeps charts, diagrams, logos and sparklines silent.
+  { rel: 'src/__tests__/taste-validator-primitive-icons.test.ts', required: true },
   // ROUTING/COMMAND-RESOLUTION tests (2026-07-26): deferred during the routing consolidation, now reconciled
   // against the landed refactor - ALL 21 gated. sprint12 had a stale length assertion (fixed 8->11).
   // sprint3-process-path was a DATA regression, not a stale test: reference/DESIGN.md had drifted out of

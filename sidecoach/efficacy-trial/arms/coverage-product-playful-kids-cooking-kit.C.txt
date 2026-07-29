@@ -1,0 +1,42 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# product-playful-kids-cooking-kit (coverage brief, Codex-authored)
+
+title: Kids Cooking Kit Product Detail
+register: product
+aestheticStyle: playful
+audience: Parents and caregivers buying hands-on cooking activities for children ages 6 to 10.
+goal: Present a children’s cooking kit in a way that helps adults assess fun, safety, and educational value.
+requiredContent:
+- Product name: Tiny Table Chefs
+- Kit contents
+- Age guidance
+- Sample recipe description
+- Safety notes
+- Learning benefits
+- Subscription and one-time purchase options
+- Gift information
+constraints:
+- audience: Buyers care about child engagement, supervision needs, and household practicality.
+- brand-tone-in-words: Warm, lively, reassuring, and family-friendly.
+- platform: Responsive ecommerce product page.
+- baseline: Must meet common accessibility expectations and use placeholder product imagery descriptions if needed.
+successCriteria:
+- Adults can judge whether the kit is age-appropriate.
+- The product feels enjoyable while still addressing safety and value.
+- Purchase options and included items are clear.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-product-playful-kids-cooking-kit.html

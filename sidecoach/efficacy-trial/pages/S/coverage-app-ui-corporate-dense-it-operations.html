@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>IT Operations Incident Console</title>
+<style>
+  /* ============ Reset ============ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; }
+  ul, ol, dl, dd { margin: 0; padding: 0; list-style: none; }
+  h1, h2, h3, p, dl, dd, dt, fieldset, figure { margin: 0; }
+  fieldset { border: none; padding: 0; }
+  button { font: inherit; color: inherit; }
+  input, select, textarea { font: inherit; color: inherit; }
+  table { border-collapse: collapse; width: 100%; }
+  img, svg { display: block; max-width: 100%; }
+
+  /* ============ Design tokens (dark default) ============ */
+  :root {
+    --hue: 250;
+
+    --surface-0: oklch(15% 0.015 var(--hue));
+    --surface-1: oklch(19% 0.014 var(--hue));
+    --surface-2: oklch(24% 0.013 var(--hue));
+    --surface-3: oklch(29% 0.012 var(--hue));
+    --border-subtle: oklch(33% 0.012 var(--hue));
+    --border: oklch(41% 0.013 var(--hue));
+
+    --text-primary: oklch(95% 0.008 var(--hue));
+    --text-secondary: oklch(78% 0.012 var(--hue));
+    --text-tertiary: oklch(63% 0.013 var(--hue));
+
+    --accent: oklch(74% 0.14 var(--hue));
+    --accent-hover: oklch(80% 0.13 var(--hue));
+    --accent-active: oklch(68% 0.15 var(--hue));
+    --accent-text-on: oklch(14% 0.02 var(--hue));
+    --focus-ring: oklch(80% 0.15 var(--hue));
+
+    --danger: oklch(72% 0.17 27);
+    --danger-text-on: oklch(14% 0.02 27);
+
+    --critical-bg: oklch(30% 0.09 27);
+    --critical-text: oklch(86% 0.09 27);
+    --high-bg: oklch(30% 0.08 55);
+    --high-text: oklch(85% 0.10 55);
+    --medium-bg: oklch(30% 0.07 92);
+    --medium-text: oklch(85% 0.09 92);
+    --low-bg: oklch(28% 0.03 235);
+    --low-text: oklch(82% 0.04 235);
+
+    --inv-bg: oklch(28% 0.06 200);
+    --inv-text: oklch(83% 0.08 200);
+    --ident-bg: oklch(28% 0.07 300);
+    --ident-text: oklch(84% 0.09 300);
+    --mon-bg: oklch(27% 0.06 175);
+    --mon-text: oklch(82% 0.08 175);
+    --res-bg: oklch(24% 0.03 150);
+    --res-text: oklch(72% 0.05 150);
+
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-group: 12px;
+
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+    --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px; --sp-24: 96px;
+
+    --font-heading: "Cambria", Georgia, "Times New Roman", serif;
+    --font-body: "Optima", Candara, Corbel, sans-serif;
+
+    --fs-meta: 0.75rem;
+    --fs-cell: 0.875rem;
+    --fs-body: 1rem;
+    --fs-h3: 1.25rem;
+    --fs-h2: clamp(1.5625rem, 1.3rem + 1vw, 1.875rem);
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-feedback: 100ms;
+    --dur-state: 150ms;
+    --dur-entrance: 200ms;
+    --dur-exit: 100ms;
+    --dur-drawer: 260ms;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --surface-0: oklch(97% 0.006 var(--hue));
+      --surface-1: oklch(99% 0.004 var(--hue));
+      --surface-2: oklch(95% 0.008 var(--hue));
+      --surface-3: oklch(91% 0.01 var(--hue));
+      --border-subtle: oklch(86% 0.01 var(--hue));
+      --border: oklch(78% 0.012 var(--hue));
+
+      --text-primary: oklch(22% 0.015 var(--hue));
+      --text-secondary: oklch(40% 0.015 var(--hue));
+      --text-tertiary: oklch(52% 0.014 var(--hue));
+
+      --accent: oklch(50% 0.15 var(--hue));
+      --accent-hover: oklch(45% 0.16 var(--hue));
+      --accent-active: oklch(40% 0.17 var(--hue));
+      --accent-text-on: oklch(98% 0.01 var(--hue));
+      --focus-ring: oklch(45% 0.17 var(--hue));
+
+      --danger: oklch(46% 0.18 27);
+      --danger-text-on: oklch(98% 0.01 27);
+
+      --critical-bg: oklch(93% 0.05 27);
+      --critical-text: oklch(38% 0.15 27);
+      --high-bg: oklch(92% 0.06 55);
+      --high-text: oklch(36% 0.13 55);
+      --medium-bg: oklch(91% 0.07 92);
+      --medium-text: oklch(34% 0.10 92);
+      --low-bg: oklch(93% 0.02 235);
+      --low-text: oklch(34% 0.06 235);
+
+      --inv-bg: oklch(92% 0.05 200);
+      --inv-text: oklch(35% 0.09 200);
+      --ident-bg: oklch(92% 0.05 300);
+      --ident-text: oklch(38% 0.10 300);
+      --mon-bg: oklch(91% 0.05 175);
+      --mon-text: oklch(34% 0.08 175);
+      --res-bg: oklch(90% 0.02 150);
+      --res-text: oklch(38% 0.06 150);
+    }
+  }
+
+  /* ============ Base ============ */
+  body {
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (prefers-color-scheme: light) {
+    body { letter-spacing: 0.003em; }
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    text-wrap: balance;
+    color: var(--text-primary);
+  }
+
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: var(--sp-3);
+    top: -100px;
+    background: var(--accent);
+    color: var(--accent-text-on);
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    text-decoration: none;
+    z-index: 100;
+    transition: top var(--dur-state) var(--ease-out);
+  }
+  .skip-link:focus {
+    top: var(--sp-3);
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  :focus:not(:focus-visible) { outline: none; }
+
+  /* ============ Header ============ */
+  .app-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding: var(--sp-4) var(--sp-6);
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-subtle);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .app-header__title h1 {
+    font-size: var(--fs-h3);
+    letter-spacing: 0.01em;
+  }
+  .app-header__subtitle {
+    margin-top: var(--sp-1);
+    font-size: var(--fs-meta);
+    color: var(--text-tertiary);
+    letter-spacing: 0.03em;
+  }
+  .app-header__stats {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 76px;
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+  }
+  .stat-chip__value {
+    font-family: var(--font-heading);
+    font-size: var(--fs-h3);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .stat-chip__label {
+    font-size: var(--fs-meta);
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .stat-chip--critical .stat-chip__value { color: var(--critical-text); }
+
+  /* ============ Layout ============ */
+  .app-main {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--sp-6);
+    padding: var(--sp-6);
+    max-width: 100%;
+  }
+
+  @media (min-width: 900px) {
+    .app-main {
+      grid-template-columns: minmax(360px, 460px) 1fr;
+      align-items: start;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .app-main {
+      max-width: 1680px;
+      margin-inline: auto;
+      grid-template-columns: minmax(400px, 500px) 1fr;
+    }
+  }
+
+  .list-panel, .detail-panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+  }
+
+  @media (min-width: 900px) {
+    .detail-panel { position: sticky; top: calc(var(--sp-16) + var(--sp-4)); max-height: calc(100dvh - var(--sp-16) - var(--sp-8)); overflow-y: auto; }
+  }
+
+  /* ============ Toolbar / filters ============ */
+  .list-panel__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    align-items: end;
+    margin-bottom: var(--sp-4);
+  }
+  .field { display: flex; flex-direction: column; gap: var(--sp-1); }
+  .field label {
+    font-size: var(--fs-meta);
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .field--search { flex: 1 1 200px; min-width: 180px; }
+  input[type="search"], select, textarea {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+    min-height: 40px;
+    font-size: var(--fs-body);
+    transition: border-color var(--dur-feedback) var(--ease-out), box-shadow var(--dur-feedback) var(--ease-out);
+  }
+  input[type="search"]:hover, select:hover, textarea:hover { border-color: var(--text-tertiary); }
+  textarea { min-height: unset; resize: vertical; }
+
+  .severity-filter { display: flex; flex-direction: column; gap: var(--sp-1); }
+  .severity-filter legend {
+    font-size: var(--fs-meta);
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0;
+  }
+  .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1);
+    padding: var(--sp-1);
+    background: var(--surface-3);
+    border-radius: var(--radius-group);
+  }
+  .chip {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+    min-height: 40px;
+    font-size: var(--fs-cell);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--dur-feedback) var(--ease-out), color var(--dur-feedback) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+  .chip:hover { background: var(--surface-2); color: var(--text-primary); }
+  .chip:active { transform: scale(0.96); }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-text-on); }
+  .chip--critical[aria-pressed="true"] { background: var(--critical-text); color: var(--critical-bg); }
+  .chip--high[aria-pressed="true"] { background: var(--high-text); color: var(--high-bg); }
+  .chip--medium[aria-pressed="true"] { background: var(--medium-text); color: var(--medium-bg); }
+  .chip--low[aria-pressed="true"] { background: var(--low-text); color: var(--low-bg); }
+
+  /* ============ Buttons ============ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    min-height: 40px;
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: var(--fs-cell);
+    cursor: pointer;
+    transition: background-color var(--dur-feedback) var(--ease-out), border-color var(--dur-feedback) var(--ease-out), color var(--dur-feedback) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+  .btn--primary { background: var(--accent); color: var(--accent-text-on); }
+  .btn--primary:hover { background: var(--accent-hover); }
+  .btn--primary:active { background: var(--accent-active); }
+
+  .btn--secondary { background: var(--surface-3); color: var(--text-primary); border-color: var(--border); }
+  .btn--secondary:hover { background: var(--surface-2); border-color: var(--text-tertiary); }
+
+  .btn--ghost { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+  .btn--ghost:hover { background: var(--surface-2); color: var(--text-primary); }
+  .btn--ghost[aria-busy="true"] { color: var(--text-tertiary); }
+
+  .btn--link { background: none; border: none; color: var(--accent); font-weight: 600; padding: var(--sp-1) var(--sp-2); min-height: 40px; text-decoration: underline; text-underline-offset: 2px; }
+  .btn--link:hover { color: var(--accent-hover); }
+
+  /* ============ Meta row ============ */
+  .list-panel__meta {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    font-size: var(--fs-meta);
+    color: var(--text-tertiary);
+    margin-bottom: var(--sp-3);
+  }
+
+  /* ============ Table ============ */
+  .table-wrapper {
+    container-type: inline-size;
+    container-name: incident-table;
+    position: relative;
+  }
+  .incident-table { font-size: var(--fs-cell); }
+  .incident-table th {
+    text-align: left;
+    font-size: var(--fs-meta);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: var(--sp-2) var(--sp-2);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .incident-table td {
+    padding: var(--sp-2);
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+    color: var(--text-secondary);
+  }
+  .incident-row[hidden] { display: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .incident-row:hover { background: var(--surface-2); }
+  }
+  .incident-row.is-selected { background: var(--surface-2); }
+
+  .row-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    padding: var(--sp-1) var(--sp-2);
+    min-height: 40px;
+    justify-content: center;
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    width: 100%;
+  }
+  .row-trigger__id { font-size: var(--fs-meta); color: var(--text-tertiary); }
+  .row-trigger__title { font-weight: 600; }
+  .row-trigger[aria-current="true"] .row-trigger__title { color: var(--accent-hover); }
+
+  /* Responsive table -> stacked cards (component-relative via container query) */
+  @container incident-table (max-width: 640px) {
+    .incident-table thead { display: none; }
+    .incident-table, .incident-table tbody, .incident-table tr, .incident-table td {
+      display: block;
+      width: 100%;
+    }
+    .incident-row {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--sp-3);
+      padding: var(--sp-2);
+    }
+    .incident-table td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--sp-3);
+      border-bottom: none;
+      padding: var(--sp-2) var(--sp-1);
+    }
+    .incident-table td::before {
+      content: attr(data-label);
+      font-size: var(--fs-meta);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+    .row-trigger { align-items: flex-end; text-align: right; }
+  }
+
+  /* ============ Badges & status pills ============ */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-meta);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .badge--sm { font-size: 0.6875rem; padding: 2px var(--sp-2); }
+  .badge--critical { background: var(--critical-bg); color: var(--critical-text); }
+  .badge--high { background: var(--high-bg); color: var(--high-text); }
+  .badge--medium { background: var(--medium-bg); color: var(--medium-text); }
+  .badge--low { background: var(--low-bg); color: var(--low-text); }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+  }
+  .status-pill::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-pill--investigating { background: var(--inv-bg); color: var(--inv-text); }
+  .status-pill--investigating::before { background: var(--inv-text); }
+  .status-pill--identified { background: var(--ident-bg); color: var(--ident-text); }
+  .status-pill--identified::before { background: var(--ident-text); }
+  .status-pill--monitoring { background: var(--mon-bg); color: var(--mon-text); }
+  .status-pill--monitoring::before { background: var(--mon-text); }
+  .status-pill--resolved { background: var(--res-bg); color: var(--res-text); }
+  .status-pill--resolved::before { background: var(--res-text); }
+
+  /* ============ Empty / skeleton ============ */
+  .empty-state {
+    text-align: center;
+    padding: var(--sp-12) var(--sp-4);
+    color: var(--text-secondary);
+  }
+  .empty-state h3 { font-size: var(--fs-h3); margin-bottom: var(--sp-2); }
+  .empty-state p { margin-bottom: var(--sp-4); color: var(--text-tertiary); }
+
+  .list-skeleton {
+    position: absolute;
+    inset: 0;
+    background: var(--surface-1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-2);
+  }
+  .list-skeleton[hidden] { display: none; }
+  .skeleton-bar {
+    display: block;
+    height: 16px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-3);
+    animation: skeleton-pulse 1.2s var(--ease-in-out) infinite;
+  }
+  .skeleton-bar--full { width: 100%; }
+  .skeleton-bar--short { width: 40%; }
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+  .skeleton-block { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+  /* ============ Detail panel ============ */
+  .detail-panel__badges { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+  .detail-panel h2 { font-size: var(--fs-h2); margin-bottom: 2px; }
+  .detail-panel__id { color: var(--text-tertiary); font-size: var(--fs-meta); margin-bottom: var(--sp-4); }
+
+  .detail-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+    padding-bottom: var(--sp-4);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .detail-meta dt {
+    font-size: var(--fs-meta);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 2px;
+  }
+  .detail-meta dd { color: var(--text-primary); font-weight: 600; }
+  .detail-meta__assign dd { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
+  .detail-panel__actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4); }
+
+  .detail-description {
+    max-width: 68ch;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: var(--sp-6);
+  }
+
+  .detail-section { margin-bottom: var(--sp-6); }
+  .detail-section h3 {
+    font-size: var(--fs-h3);
+    margin-bottom: var(--sp-3);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  /* ============ Timeline ============ */
+  .timeline { display: flex; flex-direction: column; gap: var(--sp-4); }
+  .timeline__item { display: flex; gap: var(--sp-3); }
+  .timeline__dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+    background: var(--text-tertiary);
+  }
+  .timeline__item--investigating .timeline__dot { background: var(--inv-text); }
+  .timeline__item--identified .timeline__dot { background: var(--ident-text); }
+  .timeline__item--monitoring .timeline__dot { background: var(--mon-text); }
+  .timeline__item--resolved .timeline__dot { background: var(--res-text); }
+  .timeline__item--escalated .timeline__dot { background: var(--critical-text); }
+  .timeline__meta { font-size: var(--fs-meta); color: var(--text-tertiary); margin-bottom: 2px; }
+  .timeline__label { color: var(--text-primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .timeline__detail { color: var(--text-secondary); max-width: 60ch; }
+
+  /* ============ Related alerts ============ */
+  .alert-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .alert-list__item { display: flex; gap: var(--sp-3); padding: var(--sp-3); background: var(--surface-2); border-radius: var(--radius-md); align-items: flex-start; }
+  .alert-list__body { flex: 1; }
+  .alert-list__message { color: var(--text-primary); margin-bottom: 2px; }
+  .alert-list__meta { font-size: var(--fs-meta); color: var(--text-tertiary); }
+  .alerts-empty { color: var(--text-tertiary); font-size: var(--fs-cell); }
+
+  .alerts-error {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-4);
+  }
+  .alerts-error__title { font-weight: 700; color: var(--critical-text); margin-bottom: var(--sp-1); }
+  .alerts-error__body { color: var(--text-secondary); margin-bottom: var(--sp-3); max-width: 60ch; }
+
+  /* ============ Popover ============ */
+  [popover] {
+    background: var(--surface-3);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-2);
+    min-width: 220px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+  }
+  .popover__label { font-size: var(--fs-meta); letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-tertiary); padding: var(--sp-2); }
+  .popover__list { display: flex; flex-direction: column; gap: 2px; }
+  .popover__option {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    padding: var(--sp-2) var(--sp-2);
+    min-height: 40px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color var(--dur-feedback) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+  .popover__option:hover { background: var(--surface-2); }
+  .popover__option:active { transform: scale(0.98); }
+  .popover__option--unassign { color: var(--text-tertiary); border-top: 1px solid var(--border-subtle); margin-top: var(--sp-1); padding-top: var(--sp-3); }
+
+  /* ============ Dialog ============ */
+  .dialog {
+    background: var(--surface-1);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-6);
+    max-width: min(480px, 92vw);
+    width: 100%;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.1);
+  }
+  .dialog::backdrop { background: rgba(0,0,0,0.5); }
+  .dialog[open] { animation: dialog-in var(--dur-drawer) var(--ease-drawer); }
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .dialog h2 { font-size: var(--fs-h3); margin-bottom: var(--sp-2); }
+  .dialog__context { color: var(--text-secondary); margin-bottom: var(--sp-4); }
+  .dialog fieldset { margin-bottom: var(--sp-4); }
+  .dialog legend {
+    font-size: var(--fs-meta);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: var(--sp-2);
+  }
+  .radio-option {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 40px;
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .radio-option:hover { background: var(--surface-2); }
+  .radio-option input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .field-error {
+    color: var(--danger);
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    margin-top: var(--sp-2);
+  }
+  .dialog .field { margin-bottom: var(--sp-4); }
+  .dialog textarea { width: 100%; }
+  .dialog__actions { display: flex; justify-content: flex-end; gap: var(--sp-3); }
+
+  /* ============ Toast ============ */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: var(--sp-6);
+    transform: translate(-50%, 12px);
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius-md);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+    z-index: 200;
+    max-width: min(420px, 90vw);
+    transition: opacity var(--dur-entrance) var(--ease-out), transform var(--dur-entrance) var(--ease-out);
+  }
+  .toast[hidden] { display: none; }
+  .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+  .toast__message { flex: 1; font-size: var(--fs-cell); }
+  .toast__action {
+    background: none;
+    border: none;
+    color: var(--accent-hover);
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 40px;
+    padding: 0 var(--sp-2);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .toast__dismiss {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .toast__dismiss:hover { color: var(--text-primary); }
+
+  /* ============ Footer ============ */
+  .app-footer {
+    text-align: center;
+    padding: var(--sp-6);
+    color: var(--text-tertiary);
+    font-size: var(--fs-meta);
+  }
+
+  /* ============ Responsive tightening ============ */
+  @media (max-width: 640px) {
+    .app-header { padding: var(--sp-3) var(--sp-4); }
+    .app-main { padding: var(--sp-4); gap: var(--sp-4); }
+    .list-panel, .detail-panel { padding: var(--sp-3); }
+    .detail-meta { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ============ Reduced motion ============ */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+    .skeleton-bar { animation: none; opacity: 0.75; }
+    .dialog[open] { animation: none; }
+    .toast { transform: translate(-50%, 0); }
+    .btn:active, .chip:active, .popover__option:active { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#incident-detail">Skip to incident detail</a>
+
+<header class="app-header">
+  <div class="app-header__title">
+    <h1>IT Operations Incident Console</h1>
+    <p class="app-header__subtitle">Enterprise systems · triage &amp; response</p>
+  </div>
+  <div class="app-header__stats" aria-label="Incident summary">
+    <div class="stat-chip"><span class="stat-chip__value tabular">8</span><span class="stat-chip__label">Active</span></div>
+    <div class="stat-chip stat-chip--critical"><span class="stat-chip__value tabular">2</span><span class="stat-chip__label">Critical</span></div>
+    <div class="stat-chip"><span class="stat-chip__value tabular">2</span><span class="stat-chip__label">Unassigned</span></div>
+  </div>
+</header>
+
+<main class="app-main">
+  <section class="list-panel" aria-labelledby="list-heading">
+    <h2 id="list-heading" class="visually-hidden">Active incidents</h2>
+
+    <div class="list-panel__toolbar">
+      <div class="field field--search">
+        <label for="search-input">Search</label>
+        <input type="search" id="search-input" name="search" placeholder="ID, title, service, or owner" autocomplete="off" spellcheck="false">
+      </div>
+
+      <fieldset class="severity-filter">
+        <legend>Severity</legend>
+        <div class="chip-group" role="group" aria-label="Filter by severity">
+          <button type="button" class="chip" data-severity="all" aria-pressed="true">All</button>
+          <button type="button" class="chip chip--critical" data-severity="critical" aria-pressed="false">Critical</button>
+          <button type="button" class="chip chip--high" data-severity="high" aria-pressed="false">High</button>
+          <button type="button" class="chip chip--medium" data-severity="medium" aria-pressed="false">Medium</button>
+          <button type="button" class="chip chip--low" data-severity="low" aria-pressed="false">Low</button>
+        </div>
+      </fieldset>
+
+      <div class="field field--status">
+        <label for="status-filter">Status</label>
+        <select id="status-filter" name="status">
+          <option value="all">All statuses</option>
+          <option value="investigating">Investigating</option>
+          <option value="identified">Identified</option>
+          <option value="monitoring">Monitoring</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </div>
+
+      <button type="button" class="btn btn--ghost" id="refresh-btn">Refresh list</button>
+    </div>
+
+    <div class="list-panel__meta">
+      <p id="result-count" aria-live="polite">Showing <span class="tabular">9</span> of <span class="tabular">9</span> incidents</p>
+      <p class="last-synced">Last synced <span id="last-synced-time" class="tabular">2 minutes ago</span></p>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="incident-table">
+        <caption class="visually-hidden">Active incidents sorted by severity and time opened</caption>
+        <thead>
+          <tr>
+            <th scope="col">Severity</th>
+            <th scope="col">Incident</th>
+            <th scope="col">Owner</th>
+            <th scope="col">Service</th>
+            <th scope="col">Opened</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody id="incident-rows">
+          <tr class="incident-row" data-id="INC-2041" data-severity="critical" data-status="investigating" data-search="inc-2041 payment gateway timeout spike payments api m. alvarez">
+            <td data-label="Severity"><span class="badge badge--critical">Critical</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger" aria-current="true"><span class="row-trigger__id tabular">INC-2041</span><span class="row-trigger__title">Payment gateway timeout spike</span></button></td>
+            <td data-label="Owner">M. Alvarez</td>
+            <td data-label="Service">Payments API</td>
+            <td data-label="Opened"><span class="tabular">12m ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--investigating">Investigating</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-2038" data-severity="critical" data-status="identified" data-search="inc-2038 elevated 5xx responses on auth service identity access r. chen">
+            <td data-label="Severity"><span class="badge badge--critical">Critical</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-2038</span><span class="row-trigger__title">Elevated 5xx responses on auth service</span></button></td>
+            <td data-label="Owner">R. Chen</td>
+            <td data-label="Service">Identity &amp; Access</td>
+            <td data-label="Opened"><span class="tabular">41m ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--identified">Identified</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-2035" data-severity="high" data-status="monitoring" data-search="inc-2035 database replica lag us-east-2 core database s. patel">
+            <td data-label="Severity"><span class="badge badge--high">High</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-2035</span><span class="row-trigger__title">Database replica lag – us-east-2</span></button></td>
+            <td data-label="Owner">S. Patel</td>
+            <td data-label="Service">Core Database</td>
+            <td data-label="Opened"><span class="tabular">1h 12m ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--monitoring">Monitoring</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-2030" data-severity="high" data-status="investigating" data-search="inc-2030 intermittent packet loss eu edge nodes network edge unassigned">
+            <td data-label="Severity"><span class="badge badge--high">High</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-2030</span><span class="row-trigger__title">Intermittent packet loss – EU edge nodes</span></button></td>
+            <td data-label="Owner">Unassigned</td>
+            <td data-label="Service">Network Edge</td>
+            <td data-label="Opened"><span class="tabular">2h ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--investigating">Investigating</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-2027" data-severity="medium" data-status="identified" data-search="inc-2027 nightly etl batch job failures data pipeline t. okafor">
+            <td data-label="Severity"><span class="badge badge--medium">Medium</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-2027</span><span class="row-trigger__title">Nightly ETL batch job failures</span></button></td>
+            <td data-label="Owner">T. Okafor</td>
+            <td data-label="Service">Data Pipeline</td>
+            <td data-label="Opened"><span class="tabular">3h 40m ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--identified">Identified</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-2019" data-severity="medium" data-status="monitoring" data-search="inc-2019 tls certificate expiring cdn tls j. kim">
+            <td data-label="Severity"><span class="badge badge--medium">Medium</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-2019</span><span class="row-trigger__title">TLS certificate expiring in 5 days</span></button></td>
+            <td data-label="Owner">J. Kim</td>
+            <td data-label="Service">CDN &amp; TLS</td>
+            <td data-label="Opened"><span class="tabular">6h ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--monitoring">Monitoring</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-2011" data-severity="low" data-status="investigating" data-search="inc-2011 search indexing running slow search unassigned">
+            <td data-label="Severity"><span class="badge badge--low">Low</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-2011</span><span class="row-trigger__title">Search indexing running slow</span></button></td>
+            <td data-label="Owner">Unassigned</td>
+            <td data-label="Service">Search</td>
+            <td data-label="Opened"><span class="tabular">9h ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--investigating">Investigating</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-1998" data-severity="low" data-status="monitoring" data-search="inc-1998 elevated memory usage worker pool 3 compute fleet m. alvarez">
+            <td data-label="Severity"><span class="badge badge--low">Low</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-1998</span><span class="row-trigger__title">Elevated memory usage – worker pool 3</span></button></td>
+            <td data-label="Owner">M. Alvarez</td>
+            <td data-label="Service">Compute Fleet</td>
+            <td data-label="Opened"><span class="tabular">14h ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--monitoring">Monitoring</span></td>
+          </tr>
+          <tr class="incident-row" data-id="INC-1985" data-severity="medium" data-status="resolved" data-search="inc-1985 object storage volume nearing capacity object storage r. chen">
+            <td data-label="Severity"><span class="badge badge--medium">Medium</span></td>
+            <td data-label="Incident"><button type="button" class="row-trigger"><span class="row-trigger__id tabular">INC-1985</span><span class="row-trigger__title">Object storage volume nearing capacity</span></button></td>
+            <td data-label="Owner">R. Chen</td>
+            <td data-label="Service">Object Storage</td>
+            <td data-label="Opened"><span class="tabular">1d ago</span></td>
+            <td data-label="Status"><span class="status-pill status-pill--resolved">Resolved</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="list-skeleton" id="list-skeleton" hidden aria-hidden="true">
+        <span class="skeleton-bar skeleton-bar--full"></span>
+        <span class="skeleton-bar skeleton-bar--full"></span>
+        <span class="skeleton-bar skeleton-bar--full"></span>
+        <span class="skeleton-bar skeleton-bar--full"></span>
+        <span class="skeleton-bar skeleton-bar--short"></span>
+      </div>
+    </div>
+
+    <div class="empty-state" id="empty-state" hidden>
+      <h3>No incidents match your filters</h3>
+      <p>Try a different search term, or clear filters to see all active incidents.</p>
+      <button type="button" class="btn btn--secondary" id="clear-filters-btn">Clear filters</button>
+    </div>
+  </section>
+
+  <section class="detail-panel" id="incident-detail" aria-labelledby="detail-title" tabindex="-1">
+    <div class="detail-panel__badges">
+      <span class="badge badge--critical" id="detail-severity">Critical</span>
+      <span class="status-pill status-pill--investigating" id="detail-status">Investigating</span>
+    </div>
+    <h2 id="detail-title">Payment gateway timeout spike</h2>
+    <p class="detail-panel__id tabular" id="detail-id">INC-2041</p>
+
+    <dl class="detail-meta">
+      <div><dt>Service</dt><dd id="detail-service">Payments API</dd></div>
+      <div><dt>Opened</dt><dd id="detail-opened" class="tabular">12m ago</dd></div>
+      <div class="detail-meta__assign">
+        <dt>Assigned to</dt>
+        <dd>
+          <span id="detail-owner">M. Alvarez</span>
+          <button type="button" class="btn btn--link" id="assign-btn" popovertarget="assign-popover" aria-haspopup="true" aria-expanded="false">Reassign</button>
+        </dd>
+      </div>
+    </dl>
+
+    <div popover id="assign-popover" class="popover">
+      <p class="popover__label" id="assign-popover-label">Assign to</p>
+      <div class="popover__list" role="list" aria-labelledby="assign-popover-label">
+        <button type="button" class="popover__option" data-owner="M. Alvarez">M. Alvarez</button>
+        <button type="button" class="popover__option" data-owner="R. Chen">R. Chen</button>
+        <button type="button" class="popover__option" data-owner="S. Patel">S. Patel</button>
+        <button type="button" class="popover__option" data-owner="T. Okafor">T. Okafor</button>
+        <button type="button" class="popover__option" data-owner="J. Kim">J. Kim</button>
+        <button type="button" class="popover__option popover__option--unassign" data-owner="Unassigned">Unassign</button>
+      </div>
+    </div>
+
+    <div class="detail-panel__actions">
+      <button type="button" class="btn btn--primary" id="escalate-btn">Escalate incident</button>
+      <button type="button" class="btn btn--secondary" id="resolve-btn">Mark resolved</button>
+    </div>
+
+    <p class="detail-description" id="detail-description">Checkout requests to the payments gateway are timing out for roughly 8% of transactions in the US-East region. Retry volume is climbing and may amplify load on downstream services.</p>
+
+    <section class="detail-section" aria-labelledby="history-heading">
+      <h3 id="history-heading">Status history</h3>
+      <ol class="timeline" id="history-list"></ol>
+    </section>
+
+    <section class="detail-section" aria-labelledby="alerts-heading">
+      <h3 id="alerts-heading">Related alerts</h3>
+      <div id="alerts-content"></div>
+    </section>
+  </section>
+</main>
+
+<dialog id="escalate-dialog" class="dialog" aria-labelledby="escalate-heading">
+  <form id="escalate-form">
+    <h2 id="escalate-heading">Escalate incident</h2>
+    <p class="dialog__context">Escalating <strong id="escalate-incident-id">INC-2041</strong> notifies the selected tier immediately.</p>
+    <fieldset id="tier-fieldset">
+      <legend>Escalation tier</legend>
+      <label class="radio-option"><input type="radio" name="tier" value="Tier 2 - Secondary on-call"> Tier 2 – Secondary on-call</label>
+      <label class="radio-option"><input type="radio" name="tier" value="Tier 3 - Engineering leadership"> Tier 3 – Engineering leadership</label>
+      <label class="radio-option"><input type="radio" name="tier" value="Executive - Executive and customer comms"> Executive – Executive and customer comms</label>
+      <p class="field-error" id="tier-error" role="alert" hidden>Select an escalation tier to continue.</p>
+    </fieldset>
+    <div class="field">
+      <label for="escalate-note">Note (optional)</label>
+      <textarea id="escalate-note" name="note" rows="3" placeholder="Add context for the responder"></textarea>
+    </div>
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--ghost" id="escalate-cancel">Cancel</button>
+      <button type="submit" class="btn btn--primary" id="escalate-confirm">Confirm escalation</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <p class="toast__message" id="toast-message"></p>
+  <button type="button" class="toast__action" id="toast-action" hidden></button>
+  <button type="button" class="toast__dismiss" id="toast-dismiss" aria-label="Dismiss notification">&times;</button>
+</div>
+
+<div class="visually-hidden" aria-live="polite" id="sr-announcer"></div>
+
+<footer class="app-footer">
+  <p>Fictional incident data for demonstration purposes.</p>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var incidentExtra = {
+    'INC-2041': {
+      description: 'Checkout requests to the payments gateway are timing out for roughly 8% of transactions in the US-East region. Retry volume is climbing and may amplify load on downstream services.',
+      history: [
+        { time: '14:02', label: 'Investigating', detail: 'M. Alvarez claimed the incident and began triage.' },
+        { time: '13:59', label: 'Detected', detail: 'Automated monitor opened this incident from a latency threshold breach.' }
+      ],
+      alerts: [
+        { source: 'Latency Monitor', message: 'Payments API p99 latency exceeded 2,400ms', time: '14:01', severity: 'critical' },
+        { source: 'Health Check Service', message: '3 consecutive health check failures on payments-gw-03', time: '13:59', severity: 'high' },
+        { source: 'Health Check Service', message: 'Load balancer target group unhealthy host count: 2', time: '13:58', severity: 'high' }
+      ]
+    },
+    'INC-2038': {
+      description: 'Auth service is returning HTTP 500 for approximately 3% of token refresh requests following the 13:20 deploy. Root cause identified as connection pool exhaustion under load.',
+      history: [
+        { time: '13:36', label: 'Identified', detail: 'R. Chen linked the spike to the 13:20 deploy of identity-service v4.12.0.' },
+        { time: '13:34', label: 'Investigating', detail: 'R. Chen assigned themselves to the incident.' },
+        { time: '13:33', label: 'Detected', detail: 'Automated monitor opened this incident.' }
+      ],
+      alerts: [
+        { source: 'Error Tracker', message: 'auth-service 5xx rate exceeded 2% threshold', time: '13:33', severity: 'critical' },
+        { source: 'Error Tracker', message: 'Connection pool timeout exceptions: 214 in 5 minutes', time: '13:35', severity: 'high' }
+      ]
+    },
+    'INC-2035': {
+      description: 'Read replica lag in us-east-2 peaked at 47 seconds before beginning to recover. Write throughput has been reduced 20% as a precaution while lag stabilizes.',
+      history: [
+        { time: '58m ago', label: 'Monitoring', detail: 'S. Patel reduced write throughput 20%; lag is trending down.' },
+        { time: '1h 5m ago', label: 'Identified', detail: 'Root cause traced to a long-running analytics query.' },
+        { time: '1h 12m ago', label: 'Detected', detail: 'Automated monitor opened this incident.' }
+      ],
+      alerts: [
+        { source: 'Replica Lag Monitor', message: 'Replica lag reached 47s, above the 30s threshold', time: '1h 10m ago', severity: 'high' },
+        { source: 'Query Analyzer', message: 'Write latency p95 increased 65%', time: '1h 8m ago', severity: 'medium' }
+      ]
+    },
+    'INC-2030': {
+      description: 'Edge nodes in Frankfurt and Amsterdam are reporting intermittent packet loss between 2 and 6 percent. Impact is limited to a subset of European traffic; no customer-facing errors confirmed yet.',
+      history: [
+        { time: '2h ago', label: 'Investigating', detail: 'Network engineering paged; awaiting acknowledgement.' },
+        { time: '2h 5m ago', label: 'Detected', detail: 'Automated monitor opened this incident.' }
+      ],
+      alertsError: true,
+      alerts: [],
+      alertsRetry: [
+        { source: 'Edge Network Monitor', message: 'Packet loss 4.2% sustained on fra-edge-07', time: '2h ago', severity: 'high' },
+        { source: 'Edge Network Monitor', message: 'Packet loss 2.1% sustained on ams-edge-03', time: '1h 50m ago', severity: 'medium' }
+      ]
+    },
+    'INC-2027': {
+      description: 'The nightly customer-analytics ETL job failed for the second consecutive run due to a schema mismatch on an upstream export. Downstream dashboards are showing data through yesterday only.',
+      history: [
+        { time: '3h 10m ago', label: 'Identified', detail: 'T. Okafor traced the failure to an unannounced upstream schema change.' },
+        { time: '3h 38m ago', label: 'Investigating', detail: 'T. Okafor assigned themselves to the incident.' },
+        { time: '3h 40m ago', label: 'Detected', detail: 'Scheduled job failure alert opened this incident.' }
+      ],
+      alerts: [
+        { source: 'Pipeline Scheduler', message: 'Task customer_analytics_export failed after 3 retries', time: '3h 40m ago', severity: 'medium' },
+        { source: 'Data Quality Monitor', message: 'Schema validation failed: 2 columns missing', time: '3h 35m ago', severity: 'low' }
+      ]
+    },
+    'INC-2019': {
+      description: 'The wildcard certificate for internal status pages expires in 5 days. Renewal has been requested and is awaiting certificate authority validation.',
+      history: [
+        { time: '5h ago', label: 'Monitoring', detail: 'J. Kim requested renewal; awaiting CA validation.' },
+        { time: '6h ago', label: 'Detected', detail: 'Certificate expiry monitor opened this incident.' }
+      ],
+      alerts: [
+        { source: 'Certificate Monitor', message: 'Certificate expiry within the 7-day threshold', time: '6h ago', severity: 'medium' }
+      ]
+    },
+    'INC-2011': {
+      description: 'New product listings are taking up to 40 minutes to appear in search results, above the 10-minute target. No errors reported; indexing queue depth is elevated.',
+      history: [
+        { time: '9h ago', label: 'Investigating', detail: 'Queued for on-call review; not yet acknowledged.' },
+        { time: '9h ago', label: 'Detected', detail: 'Queue depth monitor opened this incident.' }
+      ],
+      alerts: [
+        { source: 'Search Queue Monitor', message: 'Indexing queue depth at 12,400, above the 5,000 threshold', time: '9h ago', severity: 'low' }
+      ]
+    },
+    'INC-1998': {
+      description: 'Worker pool 3 is running at 82% memory utilization, above the 75% advisory threshold. No restarts or degraded jobs observed; monitoring for further growth.',
+      history: [
+        { time: '13h ago', label: 'Monitoring', detail: 'M. Alvarez confirmed no job impact; watching the trend.' },
+        { time: '14h ago', label: 'Detected', detail: 'Memory utilization monitor opened this incident.' }
+      ],
+      alerts: [
+        { source: 'Memory Monitor', message: 'worker-pool-3 memory at 82%, above the 75% threshold', time: '14h ago', severity: 'low' }
+      ]
+    },
+    'INC-1985': {
+      description: 'Primary object storage volume reached 91% capacity. Additional capacity was provisioned and the incident is resolved.',
+      history: [
+        { time: '20h ago', label: 'Resolved', detail: 'R. Chen confirmed capacity headroom restored to 34%.' },
+        { time: '22h ago', label: 'Monitoring', detail: 'An additional 2TB volume was provisioned.' },
+        { time: '1d ago', label: 'Detected', detail: 'Capacity monitor opened this incident.' }
+      ],
+      alerts: [
+        { source: 'Capacity Monitor', message: 'Volume capacity at 91%, above the 90% threshold', time: '1d ago', severity: 'medium' }
+      ]
+    }
+  };
+
+  var state = { selectedId: 'INC-2041', severity: 'all', status: 'all', search: '' };
+  var els = {};
+  var toastTimer = null;
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init() {
+    els.rows = Array.prototype.slice.call(document.querySelectorAll('.incident-row'));
+    els.searchInput = document.getElementById('search-input');
+    els.statusFilter = document.getElementById('status-filter');
+    els.chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+    els.refreshBtn = document.getElementById('refresh-btn');
+    els.listSkeleton = document.getElementById('list-skeleton');
+    els.tableWrapper = document.querySelector('.table-wrapper');
+    els.emptyState = document.getElementById('empty-state');
+    els.clearFiltersBtn = document.getElementById('clear-filters-btn');
+    els.resultCount = document.getElementById('result-count');
+    els.lastSynced = document.getElementById('last-synced-time');
+
+    els.detailSeverity = document.getElementById('detail-severity');
+    els.detailStatus = document.getElementById('detail-status');
+    els.detailTitle = document.getElementById('detail-title');
+    els.detailId = document.getElementById('detail-id');
+    els.detailService = document.getElementById('detail-service');
+    els.detailOpened = document.getElementById('detail-opened');
+    els.detailOwner = document.getElementById('detail-owner');
+    els.detailDescription = document.getElementById('detail-description');
+    els.historyList = document.getElementById('history-list');
+    els.alertsContent = document.getElementById('alerts-content');
+    els.resolveBtn = document.getElementById('resolve-btn');
+    els.escalateBtn = document.getElementById('escalate-btn');
+
+    els.assignPopover = document.getElementById('assign-popover');
+    els.assignBtn = document.getElementById('assign-btn');
+
+    els.escalateDialog = document.getElementById('escalate-dialog');
+    els.escalateForm = document.getElementById('escalate-form');
+    els.escalateCancel = document.getElementById('escalate-cancel');
+    els.escalateIncidentId = document.getElementById('escalate-incident-id');
+    els.tierFieldset = document.getElementById('tier-fieldset');
+    els.tierError = document.getElementById('tier-error');
+    els.escalateNote = document.getElementById('escalate-note');
+
+    els.toast = document.getElementById('toast');
+    els.toastMessage = document.getElementById('toast-message');
+    els.toastAction = document.getElementById('toast-action');
+    els.toastDismiss = document.getElementById('toast-dismiss');
+    els.srAnnouncer = document.getElementById('sr-announcer');
+
+    els.rows.forEach(function (row) {
+      var trigger = row.querySelector('.row-trigger');
+      trigger.addEventListener('click', function () { selectIncident(row.dataset.id); });
+    });
+
+    els.searchInput.addEventListener('input', function (e) {
+      state.search = e.target.value.trim().toLowerCase();
+      applyFilters();
+    });
+
+    els.statusFilter.addEventListener('change', function (e) {
+      state.status = e.target.value;
+      applyFilters();
+    });
+
+    els.chips.forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        state.severity = chip.dataset.severity;
+        els.chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+        applyFilters();
+      });
+    });
+
+    els.clearFiltersBtn.addEventListener('click', clearFilters);
+    els.refreshBtn.addEventListener('click', refreshList);
+    els.resolveBtn.addEventListener('click', resolveIncident);
+
+    els.escalateBtn.addEventListener('click', function () {
+      els.escalateIncidentId.textContent = state.selectedId;
+      els.tierError.hidden = true;
+      els.tierFieldset.removeAttribute('aria-invalid');
+      els.escalateForm.reset();
+      els.escalateDialog.showModal();
+    });
+    els.escalateCancel.addEventListener('click', function () { els.escalateDialog.close(); });
+    els.escalateDialog.addEventListener('click', function (e) {
+      if (e.target === els.escalateDialog) els.escalateDialog.close();
+    });
+    els.escalateForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var tier = els.escalateForm.querySelector('input[name="tier"]:checked');
+      if (!tier) {
+        els.tierError.hidden = false;
+        els.tierFieldset.setAttribute('aria-invalid', 'true');
+        var firstRadio = els.escalateForm.querySelector('input[name="tier"]');
+        if (firstRadio) firstRadio.focus();
+        return;
+      }
+      var note = els.escalateNote.value.trim();
+      var tierShort = tier.value.split(' - ')[0];
+      addHistoryEntry(state.selectedId, {
+        time: 'Just now',
+        label: 'Escalated',
+        detail: 'Escalated to ' + tier.value.replace(' - ', ' – ') + (note ? '. Note: ' + note : '.')
+      });
+      els.escalateDialog.close();
+      renderDetail(state.selectedId);
+      showToast(state.selectedId + ' escalated to ' + tierShort + '. On-call notified.', {});
+    });
+
+    if (els.assignPopover && 'ontoggle' in els.assignPopover) {
+      els.assignPopover.addEventListener('toggle', function (e) {
+        els.assignBtn.setAttribute('aria-expanded', String(e.newState === 'open'));
+      });
+    }
+
+    document.querySelectorAll('.popover__option').forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        assignOwner(state.selectedId, opt.dataset.owner);
+        if (els.assignPopover.hidePopover) els.assignPopover.hidePopover();
+      });
+    });
+
+    els.toastDismiss.addEventListener('click', hideToast);
+
+    renderDetail(state.selectedId);
+    applyFilters();
+  }
+
+  function getRow(id) {
+    for (var i = 0; i < els.rows.length; i++) {
+      if (els.rows[i].dataset.id === id) return els.rows[i];
+    }
+    return null;
+  }
+
+  function severityLabel(sev) { return sev.charAt(0).toUpperCase() + sev.slice(1); }
+  function statusLabel(st) { return st.charAt(0).toUpperCase() + st.slice(1); }
+
+  function selectIncident(id) {
+    if (id === state.selectedId) return;
+    state.selectedId = id;
+    els.rows.forEach(function (r) {
+      var trig = r.querySelector('.row-trigger');
+      if (r.dataset.id === id) { trig.setAttribute('aria-current', 'true'); r.classList.add('is-selected'); }
+      else { trig.removeAttribute('aria-current'); r.classList.remove('is-selected'); }
+    });
+    renderDetail(id);
+    var row = getRow(id);
+    var titleEl = row.querySelector('.row-trigger__title');
+    announce('Showing details for ' + id + ': ' + titleEl.textContent + '.');
+  }
+
+  function renderDetail(id) {
+    var row = getRow(id);
+    if (!row) return;
+    var extra = incidentExtra[id] || {};
+    var severity = row.dataset.severity;
+    var status = row.dataset.status;
+
+    els.detailSeverity.textContent = severityLabel(severity);
+    els.detailSeverity.className = 'badge badge--' + severity;
+    els.detailStatus.textContent = statusLabel(status);
+    els.detailStatus.className = 'status-pill status-pill--' + status;
+
+    var titleEl = row.querySelector('.row-trigger__title');
+    els.detailTitle.textContent = titleEl.textContent;
+    els.detailId.textContent = id;
+    els.detailService.textContent = row.querySelector('[data-label="Service"]').textContent.trim();
+    els.detailOpened.textContent = row.querySelector('[data-label="Opened"]').textContent.trim();
+    els.detailOwner.textContent = row.querySelector('[data-label="Owner"]').textContent.trim();
+    els.detailDescription.textContent = extra.description || '';
+
+    els.historyList.innerHTML = '';
+    (extra.history || []).forEach(function (h) {
+      var li = document.createElement('li');
+      li.className = 'timeline__item timeline__item--' + h.label.toLowerCase();
+      var meta = document.createElement('p');
+      meta.className = 'timeline__meta';
+      var labelSpan = document.createElement('span');
+      labelSpan.className = 'timeline__label';
+      labelSpan.textContent = h.label;
+      var timeSpan = document.createElement('span');
+      timeSpan.className = 'tabular';
+      timeSpan.textContent = ' · ' + h.time;
+      meta.appendChild(labelSpan);
+      meta.appendChild(timeSpan);
+      var detailP = document.createElement('p');
+      detailP.className = 'timeline__detail';
+      detailP.textContent = h.detail;
+      var content = document.createElement('div');
+      content.className = 'timeline__content';
+      content.appendChild(meta);
+      content.appendChild(detailP);
+      var dot = document.createElement('span');
+      dot.className = 'timeline__dot';
+      dot.setAttribute('aria-hidden', 'true');
+      li.appendChild(dot);
+      li.appendChild(content);
+      els.historyList.appendChild(li);
+    });
+
+    renderAlerts(id, extra);
+
+    var resolved = status === 'resolved';
+    els.resolveBtn.disabled = resolved;
+    els.escalateBtn.disabled = resolved;
+  }
+
+  function renderAlerts(id, extra) {
+    var container = els.alertsContent;
+    container.innerHTML = '';
+    container.removeAttribute('aria-busy');
+    if (extra.alertsError) {
+      var wrap = document.createElement('div');
+      wrap.className = 'alerts-error';
+      wrap.setAttribute('role', 'alert');
+      var title = document.createElement('p');
+      title.className = 'alerts-error__title';
+      title.textContent = 'Alert feed unavailable';
+      var body = document.createElement('p');
+      body.className = 'alerts-error__body';
+      body.textContent = 'The monitoring aggregator did not respond before timing out. Related alerts for this incident could not be loaded.';
+      var retryBtn = document.createElement('button');
+      retryBtn.type = 'button';
+      retryBtn.className = 'btn btn--secondary';
+      retryBtn.textContent = 'Retry';
+      retryBtn.addEventListener('click', function () { retryAlerts(id); });
+      wrap.appendChild(title);
+      wrap.appendChild(body);
+      wrap.appendChild(retryBtn);
+      container.appendChild(wrap);
+      return;
+    }
+    buildAlertsList(container, extra.alerts || []);
+  }
+
+  function buildAlertsList(container, alerts) {
+    container.innerHTML = '';
+    if (!alerts.length) {
+      var p = document.createElement('p');
+      p.className = 'alerts-empty';
+      p.textContent = 'No related alerts have been linked to this incident.';
+      container.appendChild(p);
+      return;
+    }
+    var ul = document.createElement('ul');
+    ul.className = 'alert-list';
+    alerts.forEach(function (a) {
+      var li = document.createElement('li');
+      li.className = 'alert-list__item';
+      var badge = document.createElement('span');
+      badge.className = 'badge badge--sm badge--' + a.severity;
+      badge.textContent = severityLabel(a.severity);
+      var body = document.createElement('div');
+      body.className = 'alert-list__body';
+      var msg = document.createElement('p');
+      msg.className = 'alert-list__message';
+      msg.textContent = a.message;
+      var meta = document.createElement('p');
+      meta.className = 'alert-list__meta';
+      var src = document.createElement('span');
+      src.textContent = a.source;
+      var sep = document.createElement('span');
+      sep.setAttribute('aria-hidden', 'true');
+      sep.textContent = ' · ';
+      var time = document.createElement('span');
+      time.className = 'tabular';
+      time.textContent = a.time;
+      meta.appendChild(src);
+      meta.appendChild(sep);
+      meta.appendChild(time);
+      body.appendChild(msg);
+      body.appendChild(meta);
+      li.appendChild(badge);
+      li.appendChild(body);
+      ul.appendChild(li);
+    });
+    container.appendChild(ul);
+  }
+
+  function retryAlerts(id) {
+    var container = els.alertsContent;
+    container.setAttribute('aria-busy', 'true');
+    container.innerHTML = '';
+    var block = document.createElement('div');
+    block.className = 'skeleton-block';
+    block.setAttribute('aria-hidden', 'true');
+    block.innerHTML = '<span class="skeleton-bar skeleton-bar--full"></span><span class="skeleton-bar skeleton-bar--full"></span><span class="skeleton-bar skeleton-bar--short"></span>';
+    container.appendChild(block);
+    setTimeout(function () {
+      container.removeAttribute('aria-busy');
+      var extra = incidentExtra[id];
+      var data = (extra && extra.alertsRetry) || [];
+      if (extra) { extra.alertsError = false; extra.alerts = data; }
+      buildAlertsList(container, data);
+      announce('Alert feed reconnected for ' + id + '. ' + data.length + (data.length === 1 ? ' alert loaded.' : ' alerts loaded.'));
+    }, 900);
+  }
+
+  function applyFilters() {
+    var visible = 0;
+    els.rows.forEach(function (row) {
+      var matchesSeverity = state.severity === 'all' || row.dataset.severity === state.severity;
+      var matchesStatus = state.status === 'all' || row.dataset.status === state.status;
+      var matchesSearch = !state.search || row.dataset.search.indexOf(state.search) !== -1;
+      var show = matchesSeverity && matchesStatus && matchesSearch;
+      row.hidden = !show;
+      if (show) visible++;
+    });
+    els.resultCount.innerHTML = 'Showing <span class="tabular">' + visible + '</span> of <span class="tabular">' + els.rows.length + '</span> incidents';
+    els.emptyState.hidden = visible !== 0;
+    els.tableWrapper.hidden = visible === 0;
+  }
+
+  function clearFilters() {
+    state.severity = 'all';
+    state.status = 'all';
+    state.search = '';
+    els.searchInput.value = '';
+    els.statusFilter.value = 'all';
+    els.chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c.dataset.severity === 'all')); });
+    applyFilters();
+  }
+
+  function refreshList() {
+    if (els.refreshBtn.disabled) return;
+    els.refreshBtn.disabled = true;
+    els.refreshBtn.setAttribute('aria-busy', 'true');
+    els.tableWrapper.setAttribute('aria-busy', 'true');
+    els.listSkeleton.hidden = false;
+    setTimeout(function () {
+      els.listSkeleton.hidden = true;
+      els.tableWrapper.removeAttribute('aria-busy');
+      els.refreshBtn.removeAttribute('aria-busy');
+      els.refreshBtn.disabled = false;
+      els.lastSynced.textContent = 'just now';
+      announce('Incident list refreshed.');
+    }, 800);
+  }
+
+  function assignOwner(id, owner) {
+    var row = getRow(id);
+    if (!row) return;
+    var ownerCell = row.querySelector('[data-label="Owner"]');
+    ownerCell.textContent = owner;
+    if (id === state.selectedId) els.detailOwner.textContent = owner;
+    announce('Assigned ' + id + ' to ' + owner + '.');
+    showToast(id + ' assigned to ' + owner + '.', {});
+  }
+
+  function resolveIncident() {
+    var id = state.selectedId;
+    var row = getRow(id);
+    if (!row || row.dataset.status === 'resolved') return;
+    var previousStatus = row.dataset.status;
+    var ownerName = row.querySelector('[data-label="Owner"]').textContent.trim();
+    setRowStatus(row, 'resolved');
+    addHistoryEntry(id, {
+      time: 'Just now',
+      label: 'Resolved',
+      detail: (ownerName && ownerName !== 'Unassigned' ? ownerName : 'An operator') + ' marked this incident resolved.'
+    });
+    renderDetail(id);
+    applyFilters();
+    showToast(id + ' marked resolved.', {
+      actionLabel: 'Undo',
+      onAction: function () {
+        setRowStatus(row, previousStatus);
+        removeFirstHistoryEntry(id);
+        renderDetail(id);
+        applyFilters();
+        announce('Resolution undone for ' + id + '.');
+      }
+    });
+  }
+
+  function setRowStatus(row, status) {
+    row.dataset.status = status;
+    var cell = row.querySelector('[data-label="Status"] .status-pill');
+    cell.className = 'status-pill status-pill--' + status;
+    cell.textContent = statusLabel(status);
+  }
+
+  function addHistoryEntry(id, entry) {
+    var extra = incidentExtra[id];
+    if (!extra) return;
+    extra.history = extra.history || [];
+    extra.history.unshift(entry);
+  }
+  function removeFirstHistoryEntry(id) {
+    var extra = incidentExtra[id];
+    if (extra && extra.history && extra.history.length) extra.history.shift();
+  }
+
+  function announce(msg) {
+    els.srAnnouncer.textContent = '';
+    window.setTimeout(function () { els.srAnnouncer.textContent = msg; }, 30);
+  }
+
+  function showToast(message, opts) {
+    opts = opts || {};
+    clearTimeout(toastTimer);
+    els.toastMessage.textContent = message;
+    if (opts.actionLabel) {
+      els.toastAction.textContent = opts.actionLabel;
+      els.toastAction.hidden = false;
+      els.toastAction.onclick = function () {
+        if (opts.onAction) opts.onAction();
+        hideToast();
+      };
+    } else {
+      els.toastAction.hidden = true;
+      els.toastAction.onclick = null;
+    }
+    els.toast.hidden = false;
+    requestAnimationFrame(function () { els.toast.classList.add('is-visible'); });
+    toastTimer = setTimeout(hideToast, opts.duration || 6000);
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    els.toast.classList.remove('is-visible');
+    setTimeout(function () { els.toast.hidden = true; }, 220);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Static &amp; Bloom: Inside the City&rsquo;s New Basement Sound</title>
+<style>
+  :root {
+    --ink: #14110f;
+    --paper: #f6f1e7;
+    --paper-dim: #ece4d4;
+    --acid: #d4ff3f;
+    --rust: #c8461f;
+    --plum: #5a2a63;
+    --line: rgba(20, 17, 15, 0.14);
+    --max: 780px;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--rust); }
+  a:focus-visible,
+  button:focus-visible {
+    outline: 3px solid var(--plum);
+    outline-offset: 2px;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.75rem 1.25rem;
+    z-index: 100;
+    font-family: Arial, sans-serif;
+  }
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+  }
+
+  /* ---------- masthead / hero ---------- */
+
+  .hero {
+    position: relative;
+    padding: 4.5rem 1.5rem 5rem;
+    background: var(--ink);
+    color: var(--paper);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: -20% -10%;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(212, 255, 63, 0.35), transparent 45%),
+      radial-gradient(circle at 85% 0%, rgba(200, 70, 31, 0.4), transparent 40%),
+      radial-gradient(circle at 70% 80%, rgba(90, 42, 99, 0.55), transparent 45%);
+    filter: blur(20px);
+    z-index: -1;
+    transform: rotate(-4deg);
+  }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--acid);
+    margin: 0 0 1.5rem;
+  }
+
+  .kicker::before {
+    content: "";
+    width: 1.75rem;
+    height: 2px;
+    background: var(--acid);
+    display: inline-block;
+  }
+
+  .hero-title {
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-weight: 700;
+    font-size: clamp(2.4rem, 7vw, 4.6rem);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    margin: 0 0 1.6rem;
+    max-width: 14ch;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--acid);
+  }
+
+  .standfirst {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+    line-height: 1.55;
+    color: rgba(246, 241, 231, 0.88);
+    max-width: 58ch;
+    margin: 0 0 2.25rem;
+  }
+
+  .byline-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+    align-items: baseline;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.95rem;
+    color: rgba(246, 241, 231, 0.75);
+    border-top: 1px solid rgba(246, 241, 231, 0.22);
+    padding-top: 1.1rem;
+    max-width: 58ch;
+  }
+
+  .byline-row strong {
+    color: var(--paper);
+    font-weight: 700;
+  }
+
+  .byline-row .dot {
+    opacity: 0.5;
+  }
+
+  /* ---------- body shell ---------- */
+
+  main { display: block; }
+
+  .section {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem;
+  }
+
+  .section + .section {
+    border-top: 1px solid var(--line);
+  }
+
+  .section-label {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--rust);
+    font-weight: 700;
+    margin: 0 0 1rem;
+  }
+
+  .article-body p {
+    font-size: 1.14rem;
+    margin: 0 0 1.4rem;
+  }
+
+  .article-body p:first-of-type::first-letter {
+    float: left;
+    font-size: 4.4rem;
+    line-height: 0.82;
+    font-weight: 700;
+    padding: 0.05em 0.1em 0 0;
+    color: var(--rust);
+  }
+
+  .pull-quote {
+    margin: 2.6rem 0;
+    padding: 0 0 0 1.4rem;
+    border-left: 5px solid var(--acid);
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+
+  .pull-quote cite {
+    display: block;
+    margin-top: 0.6rem;
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--plum);
+  }
+
+  /* ---------- artist profiles ---------- */
+
+  .profiles {
+    background: var(--paper-dim);
+  }
+
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.75rem;
+    margin-top: 2rem;
+  }
+
+  .profile-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1.6rem 1.5rem 1.8rem;
+    position: relative;
+  }
+
+  .profile-card::before {
+    content: attr(data-mark);
+    position: absolute;
+    top: -0.9rem;
+    left: 1.4rem;
+    background: var(--rust);
+    color: var(--paper);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.28rem 0.65rem;
+    border-radius: 2px;
+    font-weight: 700;
+  }
+
+  .profile-card h3 {
+    font-family: Georgia, serif;
+    font-size: 1.4rem;
+    margin: 0.9rem 0 0.15rem;
+  }
+
+  .profile-role {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--plum);
+    margin: 0 0 0.9rem;
+    font-weight: 700;
+  }
+
+  .profile-card p {
+    font-size: 0.98rem;
+    margin: 0 0 0.9rem;
+  }
+
+  .profile-quote {
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--ink);
+    border-top: 1px dashed var(--line);
+    padding-top: 0.8rem;
+    margin: 0;
+  }
+
+  /* ---------- venue list ---------- */
+
+  .venue-list {
+    list-style: none;
+    margin: 2rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .venue-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.3rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .venue-item:first-child {
+    padding-top: 0;
+  }
+
+  .venue-name-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+
+  .venue-name {
+    font-family: Georgia, serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .venue-tag {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--rust);
+    border: 1px solid var(--rust);
+    border-radius: 999px;
+    padding: 0.15rem 0.65rem;
+  }
+
+  .venue-item p {
+    margin: 0.3rem 0 0;
+    font-size: 1rem;
+    max-width: 62ch;
+  }
+
+  /* ---------- chorus of voices ---------- */
+
+  .voices {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .voices .section-label {
+    color: var(--acid);
+  }
+
+  .voice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .voice-card {
+    background: rgba(246, 241, 231, 0.06);
+    border: 1px solid rgba(246, 241, 231, 0.18);
+    border-radius: 4px;
+    padding: 1.4rem 1.4rem 1.5rem;
+  }
+
+  .voice-card p {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    margin: 0 0 0.9rem;
+    color: var(--paper);
+  }
+
+  .voice-card cite {
+    font-family: Arial, Helvetica, sans-serif;
+    font-style: normal;
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+    color: var(--acid);
+  }
+
+  /* ---------- listening list ---------- */
+
+  .listening-list {
+    list-style: none;
+    margin: 2rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+  }
+
+  .listening-item {
+    padding-left: 1.2rem;
+    border-left: 3px solid var(--plum);
+  }
+
+  .listening-item h3 {
+    font-family: Georgia, serif;
+    font-size: 1.15rem;
+    margin: 0 0 0.35rem;
+  }
+
+  .listening-item p {
+    margin: 0;
+    font-size: 0.98rem;
+  }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.85rem;
+    color: rgba(20, 17, 15, 0.6);
+    border-top: 1px solid var(--line);
+  }
+
+  footer p {
+    margin: 0 0 0.4rem;
+  }
+
+  @media (max-width: 640px) {
+    .hero { padding: 3.5rem 1.25rem 3.5rem; }
+    .section { padding: 2.75rem 1.25rem; }
+    .article-body p:first-of-type::first-letter { font-size: 3.4rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to article</a>
+
+<header class="hero">
+  <p class="kicker" aria-hidden="true">Field Report &middot; Nightlife &amp; Sound</p>
+  <h1 class="hero-title">Static &amp; Bloom: Inside the City&rsquo;s New <em>Basement Sound</em></h1>
+  <p class="standfirst">
+    Four nights a week, a scatter of unlicensed rooms, converted garages, and one
+    very loud laundromat are quietly rewriting what a local scene sounds like &mdash;
+    and who gets to be loud in it.
+  </p>
+  <p class="byline-row">
+    <span>By <strong>Marisol Ferreira</strong></span>
+    <span class="dot">&middot;</span>
+    <span>Culture &amp; Nightlife Desk</span>
+    <span class="dot">&middot;</span>
+    <span>Published March 14</span>
+    <span class="dot">&middot;</span>
+    <span>9 min read</span>
+  </p>
+</header>
+
+<main id="main-content">
+
+  <article class="section article-body">
+    <p>
+      The first thing you notice at a Tuesday night show inside the old Kettner
+      Street laundromat isn&rsquo;t the band. It&rsquo;s the dryers &mdash; six of them,
+      still running, still warm, lined up behind the merch table like part of the
+      set design nobody bothered to remove. Nobody minds. The room holds maybe
+      ninety people if everyone agrees to stand closer than they normally would,
+      and on a good night it holds a hundred and twenty anyway.
+    </p>
+    <p>
+      This is where the city&rsquo;s newest music scene actually lives right now:
+      not in the mid-size venues with their drink minimums and their sightline
+      problems, but in the gaps between zoning categories. A laundromat. A tire
+      shop with good acoustics by accident. A three-story walk-up where the
+      upstairs neighbor turned out to be the best sound engineer anyone had worked
+      with in years. The scene doesn&rsquo;t have a genre so much as a temperature
+      &mdash; hot, close, unresolved, allergic to anything that sounds finished.
+    </p>
+    <p>
+      What&rsquo;s driving it isn&rsquo;t nostalgia for house shows, though it looks
+      like that from the outside. It&rsquo;s economics colliding with impatience.
+      Rehearsal space downtown tripled in price over three years. The venues that
+      survived did so by booking safer, and safer got boring fast for a generation
+      of twenty-somethings who grew up livestreaming their own bedrooms. So they
+      built rooms instead of waiting for one. What&rsquo;s left is scrappy, loud,
+      occasionally illegal, and &mdash; more nights than not &mdash; genuinely
+      thrilling.
+    </p>
+
+    <blockquote class="pull-quote">
+      &ldquo;Nobody in this scene is trying to get discovered. They&rsquo;re trying
+      to get through Thursday with something true left in the set.&rdquo;
+      <cite>&mdash; Odalys Reyes, promoter, Tin Ceiling Collective</cite>
+    </blockquote>
+
+    <p>
+      That intensity is precisely what&rsquo;s pulling in a wider crowd than the
+      scene&rsquo;s size would suggest. Word travels through group chats and
+      hand-drawn flyers taped inside coffee shop windows more than through any
+      app, which means showing up already feels like being let in on something.
+      Whether that stays true as more people find out is the tension underneath
+      every conversation happening in these rooms right now &mdash; nobody wants
+      to be the reason it gets easy to find.
+    </p>
+  </article>
+
+  <section class="section profiles">
+    <p class="section-label">The Faces</p>
+    <h2>Three Artists Carrying the Sound</h2>
+    <div class="profile-grid">
+
+      <article class="profile-card" data-mark="Profile">
+        <h3>Coral Moth</h3>
+        <p class="profile-role">Solo project, bedroom-industrial</p>
+        <p>
+          Coral Moth is one person, a borrowed drum machine, and a vocal delay
+          pedal held together with electrical tape. Her sets run twenty minutes
+          and end mid-song more often than not &mdash; a choice, she insists, not
+          a malfunction. Tracks build from a single looped phrase into something
+          closer to weather than music.
+        </p>
+        <p class="profile-quote">
+          &ldquo;I stop when the room stops feeling honest. Sometimes that&rsquo;s
+          four minutes in.&rdquo;
+        </p>
+      </article>
+
+      <article class="profile-card" data-mark="Profile">
+        <h3>Jaydee Vex &amp; the Overpass</h3>
+        <p class="profile-role">Five-piece, sludge-pop</p>
+        <p>
+          Jaydee Vex writes hooks big enough for an arena and then buries them
+          under two guitars set to feed back on purpose. The band rehearses
+          under an actual overpass, which explains both the name and the
+          low-end rumble that shows up on every recording whether they want
+          it there or not.
+        </p>
+        <p class="profile-quote">
+          &ldquo;We keep the ugly parts in. The ugly parts are the parts that are
+          true.&rdquo;
+        </p>
+      </article>
+
+      <article class="profile-card" data-mark="Profile">
+        <h3>The Low Orbit</h3>
+        <p class="profile-role">Duo, dream-punk</p>
+        <p>
+          Twin sisters trading vocals and bass mid-song, The Low Orbit built a
+          following by refusing to play the same set twice. Fans keep informal
+          logs of which songs got which endings. Their sound splits the
+          difference between a lullaby and a shove.
+        </p>
+        <p class="profile-quote">
+          &ldquo;If you can predict where the chorus lands, we already failed.&rdquo;
+        </p>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="section-label">Where It Happens</p>
+    <h2>Five Rooms Worth Finding</h2>
+    <ul class="venue-list">
+
+      <li class="venue-item">
+        <div class="venue-name-row">
+          <p class="venue-name">The Tin Ceiling</p>
+          <span class="venue-tag">Converted Garage</span>
+        </div>
+        <p>
+          A two-car garage with the actual tin ceiling still intact, holding
+          roughly seventy people who don&rsquo;t mind sharing floor space with a
+          water heater. Best sound in the scene, by wide agreement, and the
+          strictest door policy about phones staying in pockets.
+        </p>
+      </li>
+
+      <li class="venue-item">
+        <div class="venue-name-row">
+          <p class="venue-name">Vault 44</p>
+          <span class="venue-tag">Former Bank Basement</span>
+        </div>
+        <p>
+          Below a shuttered bank branch, a vault room turned rehearsal-space-
+          turned-venue with concrete walls that make everything sound bigger
+          than it is. Cash only, no exceptions, which somehow suits the room.
+        </p>
+      </li>
+
+      <li class="venue-item">
+        <div class="venue-name-row">
+          <p class="venue-name">Kettner Street Laundromat</p>
+          <span class="venue-tag">Working Laundromat</span>
+        </div>
+        <p>
+          Yes, an active laundromat. Shows run Tuesdays after close-of-business,
+          dryers included. Owner takes a cut of the door in exchange for letting
+          bands set up between the machines.
+        </p>
+      </li>
+
+      <li class="venue-item">
+        <div class="venue-name-row">
+          <p class="venue-name">Overpass Room</p>
+          <span class="venue-tag">Rehearsal Space</span>
+        </div>
+        <p>
+          Technically a storage unit under the interstate overpass, functionally
+          the loudest room in the city. No neighbors close enough to complain,
+          which means curfew is whenever everyone gets tired.
+        </p>
+      </li>
+
+      <li class="venue-item">
+        <div class="venue-name-row">
+          <p class="venue-name">The Hollow Room</p>
+          <span class="venue-tag">Warehouse Loft</span>
+        </div>
+        <p>
+          A third-floor loft above a defunct print shop, reachable only by a
+          freight elevator that requires a specific, slightly alarming knock
+          pattern. Programming leans toward the scene&rsquo;s quieter, stranger
+          acts.
+        </p>
+      </li>
+
+    </ul>
+  </section>
+
+  <section class="section voices">
+    <p class="section-label">On the Ground</p>
+    <h2>What the Room Sounds Like from Inside It</h2>
+    <div class="voice-grid">
+
+      <blockquote class="voice-card">
+        <p>
+          &ldquo;I found out about the laundromat shows because someone taped a
+          flyer inside a coffee shop bathroom. That&rsquo;s the whole marketing
+          plan and it works better than anything with a hashtag.&rdquo;
+        </p>
+        <cite>Priya Okonkwo, regular attendee</cite>
+      </blockquote>
+
+      <blockquote class="voice-card">
+        <p>
+          &ldquo;Nobody's trying to go viral in these rooms. That's what makes it
+          worth the drive across town on a work night.&rdquo;
+        </p>
+        <cite>Desmond Ilic, fan and amateur sound recordist</cite>
+      </blockquote>
+
+      <blockquote class="voice-card">
+        <p>
+          &ldquo;We book bands based on whether they'd still play the set if only
+          five people showed up. That filter has never once been wrong.&rdquo;
+        </p>
+        <cite>Odalys Reyes, promoter, Tin Ceiling Collective</cite>
+      </blockquote>
+
+      <blockquote class="voice-card">
+        <p>
+          &ldquo;I've missed the last train home more times than I can count. I
+          keep going back anyway.&rdquo;
+        </p>
+        <cite>Nate Furlong, fan</cite>
+      </blockquote>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="section-label">Related Listening</p>
+    <h2>What to Play on the Way Home</h2>
+    <ul class="listening-list">
+
+      <li class="listening-item">
+        <h3>For the loop-built, unfinished feeling of Coral Moth</h3>
+        <p>
+          Look for anything that treats repetition as tension rather than
+          comfort &mdash; tracks that loop a single phrase until it starts to
+          feel less like a hook and more like a held breath.
+        </p>
+      </li>
+
+      <li class="listening-item">
+        <h3>For the buried hooks of Jaydee Vex &amp; the Overpass</h3>
+        <p>
+          Seek out records where a genuinely catchy chorus arrives wrapped in
+          feedback and low-end rumble, so the sweetness only shows up once
+          you've sat with the noise around it.
+        </p>
+      </li>
+
+      <li class="listening-item">
+        <h3>For the shape-shifting sets of The Low Orbit</h3>
+        <p>
+          Anything built around a vocal trade-off between two singers, where
+          the arrangement seems to change its mind about where the song is
+          headed halfway through.
+        </p>
+      </li>
+
+      <li class="listening-item">
+        <h3>For the room itself</h3>
+        <p>
+          Skip the polished version entirely and find a live bootleg &mdash;
+          the kind with room noise still audible, someone's conversation
+          bleeding into the quiet part of the song. That's the actual texture
+          of this scene.
+        </p>
+      </li>
+
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <p>Names, venues, and quotations in this feature are fictional composites and do not describe real people or places.</p>
+  <p>&copy; Culture &amp; Nightlife Desk</p>
+</footer>
+
+</body>
+</html>

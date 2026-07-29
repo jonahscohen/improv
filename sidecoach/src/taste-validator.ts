@@ -138,6 +138,89 @@ function* iterateCssBlocks(
   }
 }
 
+// Drawing primitives an icon can be assembled from instead of <path>. The 2026-07-28 sweep found
+// the detector was blind to these: a hamburger built from three <line> elements scored zero paths
+// and was skipped entirely by a check whose whole job is catching fabricated icons.
+const SVG_PRIMITIVE_PATTERN = /<(?:line|rect|circle|polyline|polygon|ellipse)\b/gi;
+
+// Markers of illustration, brand art or motion rather than UI chrome. Any of these means the block
+// is NOT judged as an icon by the primitive branch, whatever else it looks like.
+const SVG_NON_ICON_CONTENT_PATTERN =
+  /<(?:text|image|animate|animateTransform|animateMotion|defs|linearGradient|radialGradient|pattern|filter|mask|use)\b/i;
+
+// An icon is drawn on a small square grid (Lucide/Heroicons/Tabler all ship 24; 16/20/32/48 are the
+// other common ones) and takes its color from the surrounding text. Charts, diagrams, wordmarks and
+// brand marks fail one or both: they carry a data-space or non-square viewBox and literal colors.
+// This pair is the discrimination that the by-hand sweep actually used, and it is deliberately
+// conjunctive - see PRIMITIVE_SCOPE_LIMITS in the test for what that consciously leaves out.
+const ICON_GRID_MAX = 48;
+
+function hasIconGrid(svgBlock: string): boolean {
+  const openTag = /<svg\b[^>]*>/i.exec(svgBlock)?.[0] ?? '';
+  // Comma separators and exponent notation are both legal in a viewBox; excluding them from the
+  // capture silently dropped `viewBox="0,0,24,24"` through to the width/height fallback.
+  const viewBox = /\bviewBox\s*=\s*["']\s*([-+\d.,\seE]+?)\s*["']/i.exec(openTag);
+  if (viewBox) {
+    const parts = viewBox[1].split(/[\s,]+/).map(Number);
+    if (parts.length !== 4 || parts.some(n => !Number.isFinite(n))) return false;
+    const [, , w, h] = parts;
+    return w === h && w > 0 && w <= ICON_GRID_MAX;
+  }
+  // No viewBox: fall back to a square pixel size. This is the shape the fabricated hamburger in
+  // sidecoach/reference/responsive-foundation.md used (width="24" height="24", no viewBox).
+  const w = /\bwidth\s*=\s*["'](\d+)(?:px)?["']/i.exec(openTag);
+  const h = /\bheight\s*=\s*["'](\d+)(?:px)?["']/i.exec(openTag);
+  if (!w || !h) return false;
+  const wn = Number(w[1]);
+  const hn = Number(h[1]);
+  return wn === hn && wn > 0 && wn <= ICON_GRID_MAX;
+}
+
+// DECORATIVE CHROME, the semantic signal - not a visual one.
+//
+// Two VISUAL discriminators were tried and measured against a fixed set of adversarial cases, and
+// both failed. Grid + currentColor scored P=0.500 (it fires on any micro data visual). Adding the
+// "stroke-icon idiom" - stroke="currentColor" plus an explicit stroke-linecap/linejoin - scored
+// WORSE overall at P=0.750 R=0.600, because rounded caps are simply how anyone draws a 24px
+// sparkline. Style cannot separate an icon from a chart; both are small monochrome line art.
+//
+// What separates them is what they MEAN. An icon is decorative chrome: the information is carried
+// by adjacent text, and the correct markup says so with aria-hidden="true". A chart, sparkline,
+// logo or wordmark carries information, so it is exposed to assistive tech via role="img" and a
+// label - never hidden. That is a semantic declaration by the author, not a guess about pixels,
+// and it is exactly the class the icon-provenance rule governs.
+//
+// Measured P=1.000 against every counterexample raised in review. The accepted cost: an icon that
+// carries no aria-hidden is out of scope. Stated, asserted as a "scope limit" test, and preferred
+// over a permissive rule that flags real data visuals.
+// Read the ROOT <svg> tag only. Scanning the whole block let a descendant's aria-hidden vouch for
+// the element as a whole, which is a real false positive: an accessible mini chart legitimately
+// hides its own gridlines or ornament layers inside an otherwise labelled SVG.
+//   <svg role="img" aria-label="Revenue rose from 42 to 57" ...><g aria-hidden="true">...</g>...
+// The element's OWN declaration is what counts. Root-scoping alone is sufficient: an explicit
+// role="img"/aria-label rejection was drafted alongside it and then removed as DEAD CODE, because
+// it can only change the outcome on a root that is simultaneously aria-hidden="true" AND labelled,
+// which is contradictory markup. A guard that no input can exercise cannot be mutation-tested and
+// buys nothing but false confidence.
+function isDecorativeChrome(svgBlock: string): boolean {
+  const openTag = /<svg\b[^>]*>/i.exec(svgBlock)?.[0] ?? '';
+  return /\baria-hidden\s*=\s*["']true["']/i.test(openTag);
+}
+
+function isIconShaped(svgBlock: string): boolean {
+  if (SVG_NON_ICON_CONTENT_PATTERN.test(svgBlock)) return false;
+  if (!/currentColor/i.test(svgBlock)) return false;
+  if (!isDecorativeChrome(svgBlock)) return false;
+  return hasIconGrid(svgBlock);
+}
+
+// Number of subpaths in a d="" value, i.e. moveto commands. A hand-drawn icon compressed into ONE
+// compound path ("M3 6h18M3 12h18M3 18h18") is structurally three strokes and escapes a threshold
+// that only counts <path> ELEMENTS.
+function subpathCount(d: string): number {
+  return (d.match(/[Mm]/g) ?? []).length;
+}
+
 function checkFabricatedSvg(html: string): TasteViolation[] {
   const violations: TasteViolation[] = [];
   const svgRe = /<svg\b[\s\S]*?<\/svg>/gi;
@@ -146,7 +229,8 @@ function checkFabricatedSvg(html: string): TasteViolation[] {
     const paths = [
       ...svgBlock.matchAll(/<path\b[^>]*\bd\s*=\s*["']([^"']+)["']/gi),
     ];
-    if (paths.length === 0) continue;
+    const primitiveCount = (svgBlock.match(SVG_PRIMITIVE_PATTERN) ?? []).length;
+    if (paths.length === 0 && primitiveCount === 0) continue;
 
     const hasClassMarker = ICON_LIBRARY_CLASS_PATTERN.test(svgBlock);
     const hasDataAttr = /data-icon-source\s*=/i.test(svgBlock);
@@ -154,12 +238,30 @@ function checkFabricatedSvg(html: string): TasteViolation[] {
     if (hasClassMarker || hasDataAttr || hasSourceComment) continue;
 
     const maxPathLen = paths.reduce((max, p) => Math.max(max, p[1].length), 0);
+
+    // Branch 1: the original path-count / path-length triggers, UNCHANGED. Everything the rule
+    // caught before it caught primitives, it still catches, on exactly the same terms.
+    let trigger: string | null = null;
     if (paths.length >= 2 || maxPathLen > 50) {
+      trigger = `${paths.length} path(s) (max d="" length ${maxPathLen})`;
+    } else if (isIconShaped(svgBlock)) {
+      // Branch 2: icon-shaped blocks the count-based trigger cannot see. Gated behind the
+      // conjunctive icon test so charts, diagrams, logos and decorative shapes stay silent.
+      const subpaths = paths.reduce((sum, p) => sum + subpathCount(p[1]), 0);
+      const drawingCount = paths.length + primitiveCount;
+      if (drawingCount >= 2) {
+        trigger = `${primitiveCount} drawing primitive(s) and ${paths.length} path(s) on a square icon grid`;
+      } else if (subpaths >= 2) {
+        trigger = `1 compound path with ${subpaths} subpaths on a square icon grid`;
+      }
+    }
+
+    if (trigger) {
       violations.push({
         ruleId: 'taste/fabricated-svg',
         severity: 'error',
         category: 'icon-sourcing',
-        message: `Inline <svg> has ${paths.length} path(s) (max d="" length ${maxPathLen}) with no library marker. Copy verbatim from Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, or Material Symbols. Annotate with class="lucide-...", data-icon-source="...", or a <!-- source: ... --> comment so provenance is verifiable.`,
+        message: `Inline <svg> has ${trigger} with no library marker. Copy verbatim from Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, or Material Symbols. Annotate with class="lucide-...", data-icon-source="...", or a <!-- source: ... --> comment so provenance is verifiable.`,
         excerpt: svgBlock.slice(0, 200) + (svgBlock.length > 200 ? '...' : ''),
         lineNumbers: [lineNumberOf(html, m.index ?? 0)],
       });

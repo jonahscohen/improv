@@ -1,0 +1,41 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# app-ui-minimal-utility-personal-budget (coverage brief, Codex-authored)
+
+title: Personal Budget Dashboard
+register: app-ui
+aestheticStyle: minimal-utility
+audience: Adults tracking monthly household spending and savings goals.
+goal: Help users review their finances and make routine budget adjustments.
+requiredContent:
+- Current month summary
+- Income, spending, and savings goal status
+- Category spending list
+- Recent transactions
+- Alerts for unusual activity
+- Budget adjustment controls
+- Empty state for new users
+constraints:
+- audience: Users need quick comprehension and confidence when handling money.
+- brand-tone-in-words: Clear, practical, calm, and supportive.
+- platform: Responsive web app interface.
+- baseline: Must meet common accessibility expectations and use fictional financial data.
+successCriteria:
+- Users can identify budget status at a glance.
+- Common review and adjustment tasks are straightforward.
+- Sensitive information is presented with appropriate clarity and discretion.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-app-ui-minimal-utility-personal-budget.html

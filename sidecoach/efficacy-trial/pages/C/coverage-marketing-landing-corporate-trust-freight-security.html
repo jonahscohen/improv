@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CargoProof - Freight Security Compliance Platform</title>
+<style>
+  :root {
+    --navy-950: #0a1830;
+    --navy-900: #0d2340;
+    --navy-800: #12315c;
+    --navy-700: #1c4173;
+    --blue-600: #2f6feb;
+    --blue-500: #4a86f2;
+    --ink: #1b2430;
+    --ink-soft: #4a5568;
+    --line: #dfe4ec;
+    --paper: #ffffff;
+    --paper-tint: #f4f7fb;
+    --paper-tint-2: #eef2f9;
+    --green-700: #1e7a4c;
+    --green-050: #e7f5ee;
+    --amber-050: #fdf3e3;
+    --amber-700: #8a5a12;
+    --radius: 10px;
+    --max: 1180px;
+    --shadow-sm: 0 1px 2px rgba(13, 35, 64, 0.06), 0 1px 1px rgba(13, 35, 64, 0.04);
+    --shadow-md: 0 8px 24px rgba(13, 35, 64, 0.10);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img, svg { max-width: 100%; display: block; }
+
+  a { color: inherit; }
+
+  .container {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Skip link */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--navy-950);
+    color: #fff;
+    padding: 12px 18px;
+    z-index: 1000;
+    border-radius: 0 0 8px 0;
+  }
+  .skip-link:focus {
+    left: 0;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--blue-500);
+    outline-offset: 2px;
+  }
+
+  /* Header */
+  header.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: saturate(1.2) blur(6px);
+  }
+
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+  }
+
+  .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    color: var(--navy-950);
+    text-decoration: none;
+  }
+
+  .wordmark .mark {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, var(--navy-800), var(--blue-600));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  nav.primary-nav ul {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+    margin: 0;
+    padding: 0;
+  }
+
+  nav.primary-nav a {
+    text-decoration: none;
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    padding: 8px 2px;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav.primary-nav a:hover {
+    color: var(--navy-950);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.94rem;
+    padding: 11px 20px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-primary {
+    background: var(--blue-600);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #2a5fd1; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--navy-950);
+    border-color: var(--line);
+  }
+  .btn-ghost:hover { border-color: var(--navy-700); background: var(--paper-tint); }
+
+  .btn-lg {
+    padding: 14px 26px;
+    font-size: 1rem;
+    border-radius: 9px;
+  }
+
+  .nav-toggle {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  /* Hero */
+  .hero {
+    background:
+      radial-gradient(1100px 480px at 82% -10%, rgba(47, 111, 235, 0.14), transparent 60%),
+      linear-gradient(180deg, var(--navy-950) 0%, var(--navy-900) 60%, var(--navy-800) 100%);
+    color: #fff;
+    padding: 84px 0 96px;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #bcd2ff;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 6px 12px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.1rem, 3.6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0 0 20px;
+    font-weight: 800;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: #9fc0ff;
+  }
+
+  .hero p.lead {
+    font-size: 1.15rem;
+    color: #d3ddef;
+    max-width: 52ch;
+    margin: 0 0 34px;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+
+  .btn-on-dark.btn-ghost {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+  .btn-on-dark.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: #a9b8d6;
+  }
+  .hero-meta li { list-style: none; display: flex; gap: 8px; align-items: baseline; }
+  .hero-meta ul { display: flex; gap: 28px; flex-wrap: wrap; margin: 0; padding: 0; }
+  .hero-meta .check { color: #7fd6a8; font-weight: 800; }
+
+  /* Hero panel */
+  .hero-panel {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    padding: 26px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .hero-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .hero-panel-header .title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #dfe7f7;
+  }
+
+  .status-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #7fd6a8;
+    background: rgba(127, 214, 168, 0.14);
+    border: 1px solid rgba(127, 214, 168, 0.3);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .panel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.9rem;
+    color: #cfd9ee;
+  }
+  .panel-row:last-child { border-bottom: none; }
+  .panel-row .val {
+    font-weight: 700;
+    color: #fff;
+  }
+  .panel-row .ok { color: #7fd6a8; }
+  .panel-row .warn { color: #f2c069; }
+
+  /* Section shell */
+  section { padding: 88px 0; }
+  .section-tint { background: var(--paper-tint); }
+
+  .section-head {
+    max-width: 720px;
+    margin: 0 0 48px;
+  }
+  .section-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+
+  .kicker {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--blue-600);
+    margin: 0 0 12px;
+  }
+
+  h2 {
+    font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+    letter-spacing: -0.015em;
+    margin: 0 0 14px;
+    color: var(--navy-950);
+    font-weight: 800;
+  }
+
+  .section-head p {
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    margin: 0;
+  }
+
+  /* Problem section */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 44px;
+    align-items: start;
+  }
+
+  .problem-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 18px;
+  }
+
+  .problem-list li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 18px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .problem-list .num {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--amber-050);
+    color: var(--amber-700);
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .problem-list h3 {
+    margin: 0 0 4px;
+    font-size: 1rem;
+    color: var(--navy-950);
+  }
+  .problem-list p {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+  }
+
+  .problem-copy p {
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+  }
+  .problem-copy p + p { margin-top: 16px; }
+
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 28px;
+  }
+  .stat-strip .stat {
+    border-left: 3px solid var(--blue-600);
+    padding-left: 14px;
+  }
+  .stat-strip .stat .n {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--navy-950);
+    display: block;
+  }
+  .stat-strip .stat .l {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+
+  /* Capabilities */
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+
+  .cap-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 24px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cap-card .tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--navy-700);
+    background: var(--paper-tint-2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+
+  .cap-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.06rem;
+    color: var(--navy-950);
+  }
+
+  .cap-card p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  /* Stakeholder benefits */
+  .role-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+
+  .role-card {
+    background: var(--navy-950);
+    color: #fff;
+    border-radius: 12px;
+    padding: 28px 24px;
+  }
+  .role-card:nth-child(2) { background: var(--navy-800); }
+  .role-card:nth-child(3) { background: var(--navy-700); }
+
+  .role-card .role-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9fc0ff;
+    margin-bottom: 10px;
+  }
+
+  .role-card h3 {
+    margin: 0 0 14px;
+    font-size: 1.15rem;
+  }
+
+  .role-card ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+
+  .role-card li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 0.92rem;
+    color: #dfe7f7;
+  }
+
+  .role-card .check {
+    color: #7fd6a8;
+    font-weight: 800;
+    flex: none;
+  }
+
+  /* Integrations */
+  .integration-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .integration-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 16px;
+  }
+
+  .integration-list li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .integration-list .dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--blue-600);
+    margin-top: 8px;
+  }
+
+  .integration-list h3 {
+    margin: 0 0 3px;
+    font-size: 0.98rem;
+    color: var(--navy-950);
+  }
+  .integration-list p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  .integration-diagram {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .diagram-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .diagram-node {
+    flex: 1;
+    text-align: center;
+    padding: 14px 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--navy-950);
+    background: var(--paper-tint);
+  }
+
+  .diagram-arrow {
+    flex: none;
+    color: var(--blue-600);
+    font-weight: 800;
+    font-size: 1.1rem;
+  }
+
+  .diagram-center {
+    margin: 22px 0;
+    text-align: center;
+    padding: 20px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--navy-900), var(--navy-700));
+    color: #fff;
+    font-weight: 800;
+  }
+
+  /* Security */
+  .security-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .sec-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    display: flex;
+    gap: 16px;
+  }
+
+  .sec-card .badge {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--green-050);
+    color: var(--green-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+  }
+
+  .sec-card h3 {
+    margin: 0 0 6px;
+    font-size: 1rem;
+    color: var(--navy-950);
+  }
+  .sec-card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  .security-note {
+    margin-top: 26px;
+    padding: 18px 20px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    background: var(--paper-tint);
+  }
+
+  /* Customers */
+  .customer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+
+  .customer-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 24px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .customer-card .quote {
+    font-size: 0.98rem;
+    color: var(--ink);
+    margin: 0 0 20px;
+    flex: 1;
+  }
+
+  .customer-card .quote::before { content: "\201C"; }
+  .customer-card .quote::after { content: "\201D"; }
+
+  .customer-card .attribution {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+
+  .customer-card .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--navy-800);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+
+  .customer-card .who .name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--navy-950);
+  }
+  .customer-card .who .role {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .customer-disclaimer {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-top: 28px;
+  }
+
+  /* Demo section */
+  .demo-section {
+    background: linear-gradient(180deg, var(--navy-950), var(--navy-900));
+    color: #fff;
+  }
+
+  .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: start;
+  }
+
+  .demo-copy h2 { color: #fff; }
+  .demo-copy p { color: #c9d5ec; font-size: 1.02rem; }
+
+  .demo-copy ul {
+    list-style: none;
+    margin: 26px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .demo-copy li {
+    display: flex;
+    gap: 10px;
+    font-size: 0.92rem;
+    color: #dfe7f7;
+  }
+  .demo-copy .check { color: #7fd6a8; font-weight: 800; }
+
+  form.demo-form {
+    background: #fff;
+    border-radius: 14px;
+    padding: 30px;
+    color: var(--ink);
+    box-shadow: var(--shadow-md);
+  }
+
+  form.demo-form h3 {
+    margin: 0 0 4px;
+    color: var(--navy-950);
+    font-size: 1.15rem;
+  }
+  form.demo-form .sub {
+    margin: 0 0 22px;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--navy-950);
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    font: inherit;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+  }
+
+  .field textarea { resize: vertical; min-height: 84px; }
+
+  .field-hint {
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+  }
+
+  form.demo-form .btn-primary {
+    width: 100%;
+    padding: 13px 20px;
+    font-size: 0.98rem;
+    margin-top: 6px;
+  }
+
+  .form-note {
+    margin-top: 14px;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .form-success {
+    display: none;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--green-050);
+    border: 1px solid #bfe6cf;
+    color: var(--green-700);
+    padding: 16px 18px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    margin-bottom: 16px;
+  }
+  .form-success.visible { display: flex; }
+
+  /* Footer */
+  footer.site-footer {
+    background: var(--navy-950);
+    color: #a9b8d6;
+    padding: 48px 0 28px;
+  }
+
+  .footer-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    flex-wrap: wrap;
+  }
+
+  .footer-brand .wordmark { color: #fff; }
+  .footer-brand p {
+    max-width: 40ch;
+    font-size: 0.86rem;
+    margin: 12px 0 0;
+    color: #93a4c4;
+  }
+
+  .footer-cols {
+    display: flex;
+    gap: 56px;
+    flex-wrap: wrap;
+  }
+
+  .footer-col h4 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #dfe7f7;
+    margin: 0 0 14px;
+  }
+  .footer-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .footer-col a { text-decoration: none; font-size: 0.88rem; color: #a9b8d6; }
+  .footer-col a:hover { color: #fff; }
+
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 24px;
+    font-size: 0.8rem;
+    color: #7d8bab;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* Responsive */
+  @media (max-width: 980px) {
+    .hero-grid, .problem-grid, .integration-wrap, .demo-grid { grid-template-columns: 1fr; }
+    .cap-grid, .role-grid, .customer-grid { grid-template-columns: repeat(2, 1fr); }
+    .security-grid { grid-template-columns: 1fr; }
+    .stat-strip { grid-template-columns: repeat(3, 1fr); }
+    .hero { padding: 60px 0 72px; }
+  }
+
+  @media (max-width: 720px) {
+    nav.primary-nav { display: none; }
+    .nav-toggle { display: inline-flex; align-items: center; justify-content: center; }
+    .header-actions .btn-ghost.desktop-only { display: none; }
+    .cap-grid, .role-grid, .customer-grid { grid-template-columns: 1fr; }
+    .stat-strip { grid-template-columns: 1fr; gap: 16px; }
+    .field-row { grid-template-columns: 1fr; }
+    section { padding: 60px 0; }
+    .footer-top { flex-direction: column; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip-link">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container nav-row">
+    <a href="#top" class="wordmark">
+      <span class="mark" aria-hidden="true">CP</span>
+      CargoProof
+    </a>
+    <nav class="primary-nav" aria-label="Primary">
+      <ul>
+        <li><a href="#capabilities">Capabilities</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#integrations">Integrations</a></li>
+        <li><a href="#customers">Customers</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <a href="#demo" class="btn btn-ghost desktop-only">Sign in</a>
+      <a href="#demo" class="btn btn-primary">Request a demo</a>
+      <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu" id="navToggle">&#9776;</button>
+    </div>
+  </div>
+  <nav id="mobile-menu" class="container" aria-label="Mobile" hidden>
+    <ul style="list-style:none; margin:0; padding: 8px 0 18px; display:grid; gap: 4px;">
+      <li><a href="#capabilities" style="display:block; padding:10px 4px; font-weight:600;">Capabilities</a></li>
+      <li><a href="#security" style="display:block; padding:10px 4px; font-weight:600;">Security</a></li>
+      <li><a href="#integrations" style="display:block; padding:10px 4px; font-weight:600;">Integrations</a></li>
+      <li><a href="#customers" style="display:block; padding:10px 4px; font-weight:600;">Customers</a></li>
+      <li><a href="#demo" style="display:block; padding:10px 4px; font-weight:600;">Sign in</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- Hero -->
+  <section class="hero" id="top">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">Freight security &amp; compliance</span>
+        <h1>Audit-ready freight security, <em>without the spreadsheet chase</em></h1>
+        <p class="lead">CargoProof gives mid-sized carriers one system of record for carrier vetting, chain-of-custody, and incident documentation, so your team walks into every audit with evidence already assembled.</p>
+        <div class="hero-ctas">
+          <a href="#demo" class="btn btn-primary btn-lg">Request a demo</a>
+          <a href="#capabilities" class="btn btn-ghost btn-on-dark btn-lg">See how it works</a>
+        </div>
+        <ul class="hero-meta">
+          <li><span class="check">&#10003;</span> Built for carrier and 3PL operations teams</li>
+          <li><span class="check">&#10003;</span> Deploys alongside your existing TMS and ELD</li>
+          <li><span class="check">&#10003;</span> No lock-in to a single insurance or audit partner</li>
+        </ul>
+      </div>
+      <div class="hero-panel" role="img" aria-label="Illustrative CargoProof compliance dashboard showing audit readiness at 94 percent, three open exceptions, and twelve carrier credentials expiring within thirty days">
+        <div class="hero-panel-header">
+          <span class="title">Compliance overview - Lane 4 Network</span>
+          <span class="status-pill">Live</span>
+        </div>
+        <div class="panel-row"><span>Audit readiness score</span><span class="val ok">94%</span></div>
+        <div class="panel-row"><span>Open exceptions</span><span class="val warn">3</span></div>
+        <div class="panel-row"><span>Carrier credentials expiring in 30 days</span><span class="val">12</span></div>
+        <div class="panel-row"><span>Chain-of-custody records logged (30d)</span><span class="val">4,812</span></div>
+        <div class="panel-row"><span>Last full audit export</span><span class="val ok">Complete</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section aria-labelledby="problem-heading">
+    <div class="container problem-grid">
+      <div class="problem-copy">
+        <p class="kicker">The compliance problem</p>
+        <h2 id="problem-heading">Evidence lives in six systems. Auditors only care about one answer.</h2>
+        <p>Freight security audits touch carrier credentialing, driver vetting, cargo custody logs, and incident records - and at most mid-sized carriers, that evidence is scattered across email threads, shared drives, and disconnected point tools.</p>
+        <p>When a regulator, insurer, or shipper partner asks for proof, compliance teams spend days reconstructing a paper trail instead of minutes retrieving one. Gaps in that trail translate directly into audit findings, higher insurance premiums, and lost shipper confidence.</p>
+        <div class="stat-strip">
+          <div class="stat"><span class="n">3-5 days</span><span class="l">typical audit prep time reported by customers before CargoProof</span></div>
+          <div class="stat"><span class="n">6+</span><span class="l">disconnected systems compliance leads say they reconcile manually</span></div>
+          <div class="stat"><span class="n">1</span><span class="l">system of record after consolidating onto CargoProof</span></div>
+        </div>
+      </div>
+      <ul class="problem-list">
+        <li>
+          <span class="num">1</span>
+          <div>
+            <h3>Fragmented carrier records</h3>
+            <p>Insurance certificates, safety ratings, and credentials tracked in separate spreadsheets that fall out of date.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num">2</span>
+          <div>
+            <h3>Manual chain-of-custody logging</h3>
+            <p>Handoff and custody events captured inconsistently across dispatch, yard, and driver-facing tools.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num">3</span>
+          <div>
+            <h3>Reactive incident documentation</h3>
+            <p>Security and cargo incidents documented after the fact, with inconsistent detail for later review.</p>
+          </div>
+        </li>
+        <li>
+          <span class="num">4</span>
+          <div>
+            <h3>Audit scrambles</h3>
+            <p>Every audit request becomes a cross-team fire drill instead of a scheduled export.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Capabilities -->
+  <section class="section-tint" id="capabilities" aria-labelledby="capabilities-heading">
+    <div class="container">
+      <div class="section-head center">
+        <p class="kicker">Core capabilities</p>
+        <h2 id="capabilities-heading">Everything your compliance program needs, in one platform</h2>
+        <p>Purpose-built for freight security operations, not adapted from a generic GRC tool.</p>
+      </div>
+      <div class="cap-grid">
+        <article class="cap-card">
+          <span class="tag">Vetting</span>
+          <h3>Carrier &amp; driver vetting</h3>
+          <p>Centralize insurance, safety rating, and credential checks with automated expiration tracking and renewal reminders.</p>
+        </article>
+        <article class="cap-card">
+          <span class="tag">Custody</span>
+          <h3>Chain-of-custody logging</h3>
+          <p>Capture handoff events across dispatch, yard, and driver touchpoints in a single, timestamped custody record.</p>
+        </article>
+        <article class="cap-card">
+          <span class="tag">Response</span>
+          <h3>Incident &amp; exception management</h3>
+          <p>Standardize how security incidents and cargo exceptions are logged, escalated, and closed out with a documented trail.</p>
+        </article>
+        <article class="cap-card">
+          <span class="tag">Evidence</span>
+          <h3>Automated audit trail generation</h3>
+          <p>Every action across the platform is logged automatically, so an audit export is a scheduled report, not a scramble.</p>
+        </article>
+        <article class="cap-card">
+          <span class="tag">Visibility</span>
+          <h3>Real-time compliance dashboard</h3>
+          <p>See audit readiness, open exceptions, and expiring credentials across your entire carrier network at a glance.</p>
+        </article>
+        <article class="cap-card">
+          <span class="tag">Reporting</span>
+          <h3>Shipper &amp; insurer reporting</h3>
+          <p>Generate shareable compliance summaries for shipper partners and insurers without exposing your full internal record.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stakeholder benefits -->
+  <section aria-labelledby="roles-heading">
+    <div class="container">
+      <div class="section-head center">
+        <p class="kicker">Built for every stakeholder</p>
+        <h2 id="roles-heading">One platform, three roles it needs to work for</h2>
+        <p>Compliance, operations, and leadership rarely need the same view - CargoProof gives each of them one.</p>
+      </div>
+      <div class="role-grid">
+        <div class="role-card">
+          <p class="role-title">Compliance lead</p>
+          <h3>Walk into audits already prepared</h3>
+          <ul>
+            <li><span class="check">&#10003;</span> One evidence trail instead of six systems to reconcile</li>
+            <li><span class="check">&#10003;</span> Scheduled, exportable audit packets</li>
+            <li><span class="check">&#10003;</span> Alerts before credentials lapse, not after</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <p class="role-title">Operations manager</p>
+          <h3>Keep freight moving without cutting corners</h3>
+          <ul>
+            <li><span class="check">&#10003;</span> Carrier status visible at time of dispatch</li>
+            <li><span class="check">&#10003;</span> Fewer manual handoffs between yard and back office</li>
+            <li><span class="check">&#10003;</span> Faster resolution on flagged exceptions</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <p class="role-title">Executive leadership</p>
+          <h3>Reduce risk exposure with less oversight effort</h3>
+          <ul>
+            <li><span class="check">&#10003;</span> Network-wide audit readiness in one view</li>
+            <li><span class="check">&#10003;</span> Fewer findings and lower insurance friction over time</li>
+            <li><span class="check">&#10003;</span> Defensible documentation if an incident is challenged</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Integrations -->
+  <section class="section-tint" id="integrations" aria-labelledby="integrations-heading">
+    <div class="container integration-wrap">
+      <div>
+        <p class="kicker">Integration overview</p>
+        <h2 id="integrations-heading">Fits into the stack you already run</h2>
+        <p style="color: var(--ink-soft); margin: 0 0 26px;">CargoProof sits alongside your TMS and ELD rather than replacing them, syncing the compliance-relevant data automatically.</p>
+        <ul class="integration-list">
+          <li>
+            <span class="dot"></span>
+            <div>
+              <h3>TMS synchronization</h3>
+              <p>Two-way sync with common transportation management systems for load, carrier, and lane data.</p>
+            </div>
+          </li>
+          <li>
+            <span class="dot"></span>
+            <div>
+              <h3>ELD &amp; telematics feeds</h3>
+              <p>Pull custody-relevant location and hours-of-service events directly from connected ELD providers.</p>
+            </div>
+          </li>
+          <li>
+            <span class="dot"></span>
+            <div>
+              <h3>Open API &amp; webhooks</h3>
+              <p>Push compliance events into internal tools, or pull CargoProof data into existing reporting pipelines.</p>
+            </div>
+          </li>
+          <li>
+            <span class="dot"></span>
+            <div>
+              <h3>Single sign-on</h3>
+              <p>Standards-based SSO so access follows your existing identity provider and offboarding process.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="integration-diagram" aria-hidden="true">
+        <div class="diagram-row">
+          <div class="diagram-node">TMS</div>
+          <span class="diagram-arrow">&#8594;</span>
+          <div class="diagram-node">ELD / Telematics</div>
+        </div>
+        <div class="diagram-center">CargoProof compliance layer</div>
+        <div class="diagram-row">
+          <div class="diagram-node">Identity provider (SSO)</div>
+          <span class="diagram-arrow">&#8594;</span>
+          <div class="diagram-node">Reporting &amp; API</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section id="security" aria-labelledby="security-heading">
+    <div class="container">
+      <div class="section-head center">
+        <p class="kicker">Security &amp; data handling</p>
+        <h2 id="security-heading">Treated with the same rigor as the freight it protects</h2>
+        <p>Practices designed around how compliance data is actually used - and who should and shouldn't see it.</p>
+      </div>
+      <div class="security-grid">
+        <div class="sec-card">
+          <span class="badge" aria-hidden="true">&#10003;</span>
+          <div>
+            <h3>Encryption in transit and at rest</h3>
+            <p>All data is encrypted in transit and at rest, including uploaded documents and custody records.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <span class="badge" aria-hidden="true">&#10003;</span>
+          <div>
+            <h3>Role-based access control</h3>
+            <p>Granular permissions so drivers, dispatch, compliance, and leadership see only what their role requires.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <span class="badge" aria-hidden="true">&#10003;</span>
+          <div>
+            <h3>Immutable audit logging</h3>
+            <p>Every read and write to compliance records is logged in a tamper-evident audit trail.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <span class="badge" aria-hidden="true">&#10003;</span>
+          <div>
+            <h3>Configurable data retention</h3>
+            <p>Retention windows aligned to your regulatory obligations, with defensible deletion when a window closes.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <span class="badge" aria-hidden="true">&#10003;</span>
+          <div>
+            <h3>Vendor &amp; sub-processor review</h3>
+            <p>A documented review process for any third party that touches customer data, disclosed on request.</p>
+          </div>
+        </div>
+        <div class="sec-card">
+          <span class="badge" aria-hidden="true">&#10003;</span>
+          <div>
+            <h3>Incident response commitment</h3>
+            <p>A defined internal response process and customer notification commitment in the event of a security incident.</p>
+          </div>
+        </div>
+      </div>
+      <p class="security-note">Our security program is built around internal controls we can demonstrate directly to your compliance team on request, rather than a badge on this page. Ask us for our current security overview during your demo.</p>
+    </div>
+  </section>
+
+  <!-- Customers -->
+  <section class="section-tint" id="customers" aria-labelledby="customers-heading">
+    <div class="container">
+      <div class="section-head center">
+        <p class="kicker">Customer proof points</p>
+        <h2 id="customers-heading">Trusted by growing carrier and 3PL teams</h2>
+        <p>Illustrative examples of the outcomes teams describe after consolidating onto CargoProof.</p>
+      </div>
+      <div class="customer-grid">
+        <article class="customer-card">
+          <p class="quote">Our last DOT audit took half a day instead of the better part of a week. Everything the auditor asked for was already exportable.</p>
+          <div class="attribution">
+            <span class="avatar" aria-hidden="true">MF</span>
+            <div class="who">
+              <div class="name">Dana Whitfield</div>
+              <div class="role">Compliance Director, Meridian Freight Co.</div>
+            </div>
+          </div>
+        </article>
+        <article class="customer-card">
+          <p class="quote">Dispatch finally has visibility into carrier credential status before a load goes out, not after something goes wrong.</p>
+          <div class="attribution">
+            <span class="avatar" aria-hidden="true">HL</span>
+            <div class="who">
+              <div class="name">Marcus Reyes</div>
+              <div class="role">VP of Operations, Highline Logistics</div>
+            </div>
+          </div>
+        </article>
+        <article class="customer-card">
+          <p class="quote">We consolidated four spreadsheets and a shared drive into one system. Our insurer noticed the difference at renewal.</p>
+          <div class="attribution">
+            <span class="avatar" aria-hidden="true">CT</span>
+            <div class="who">
+              <div class="name">Priya Anand</div>
+              <div class="role">Head of Risk &amp; Compliance, Cascade Transport Group</div>
+            </div>
+          </div>
+        </article>
+      </div>
+      <p class="customer-disclaimer">Meridian Freight Co., Highline Logistics, and Cascade Transport Group are illustrative composites used to represent typical customer outcomes.</p>
+    </div>
+  </section>
+
+  <!-- Demo -->
+  <section class="demo-section" id="demo" aria-labelledby="demo-heading">
+    <div class="container demo-grid">
+      <div class="demo-copy">
+        <p class="kicker" style="color:#9fc0ff;">Next step</p>
+        <h2 id="demo-heading">See CargoProof against your own carrier network</h2>
+        <p>A 30-minute walkthrough using a compliance scenario relevant to your fleet size and lanes - no generic sales deck.</p>
+        <ul>
+          <li><span class="check">&#10003;</span> Walkthrough led by a compliance specialist, not a generalist rep</li>
+          <li><span class="check">&#10003;</span> Reviews integration fit with your current TMS and ELD</li>
+          <li><span class="check">&#10003;</span> No cost or commitment to evaluate</li>
+        </ul>
+      </div>
+      <form class="demo-form" id="demoForm" novalidate>
+        <div class="form-success" id="formSuccess" role="status">
+          <span aria-hidden="true">&#10003;</span>
+          <span>Thanks - your request is in. A CargoProof specialist will reach out within one business day to schedule your walkthrough.</span>
+        </div>
+        <h3>Request a demo</h3>
+        <p class="sub">Tell us a bit about your fleet and we'll tailor the walkthrough.</p>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="firstName">First name</label>
+            <input type="text" id="firstName" name="firstName" autocomplete="given-name" required>
+          </div>
+          <div class="field">
+            <label for="lastName">Last name</label>
+            <input type="text" id="lastName" name="lastName" autocomplete="family-name" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="workEmail">Work email</label>
+          <input type="email" id="workEmail" name="workEmail" autocomplete="email" required>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="company">Company</label>
+            <input type="text" id="company" name="company" autocomplete="organization" required>
+          </div>
+          <div class="field">
+            <label for="fleetSize">Fleet size</label>
+            <select id="fleetSize" name="fleetSize" required>
+              <option value="">Select one</option>
+              <option value="1-50">1-50 vehicles</option>
+              <option value="51-200">51-200 vehicles</option>
+              <option value="201-500">201-500 vehicles</option>
+              <option value="500+">500+ vehicles</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="notes">What would you like us to focus on? (optional)</label>
+          <textarea id="notes" name="notes" placeholder="e.g. carrier vetting, chain-of-custody, an upcoming audit"></textarea>
+          <span class="field-hint">This helps us tailor the walkthrough to your operation.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Request a demo</button>
+        <p class="form-note">By submitting, you agree to be contacted by CargoProof about your request.</p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="#top" class="wordmark">
+          <span class="mark" aria-hidden="true">CP</span>
+          CargoProof
+        </a>
+        <p>Freight security compliance for mid-sized carriers and 3PLs - one system of record for vetting, custody, and audit readiness.</p>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#capabilities">Capabilities</a></li>
+            <li><a href="#integrations">Integrations</a></li>
+            <li><a href="#security">Security</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#customers">Customers</a></li>
+            <li><a href="#demo">Request a demo</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Trust</h4>
+          <ul>
+            <li><a href="#security">Data handling</a></li>
+            <li><a href="#demo">Talk to a specialist</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 CargoProof. All rights reserved.</span>
+      <span>Illustrative product page for evaluation purposes.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+
+    var toggle = document.getElementById("navToggle");
+    var menu = document.getElementById("mobile-menu");
+
+    if (toggle && menu) {
+      toggle.addEventListener("click", function () {
+        var isOpen = !menu.hasAttribute("hidden");
+        if (isOpen) {
+          menu.setAttribute("hidden", "");
+          toggle.setAttribute("aria-expanded", "false");
+        } else {
+          menu.removeAttribute("hidden");
+          toggle.setAttribute("aria-expanded", "true");
+        }
+      });
+
+      menu.addEventListener("click", function (e) {
+        if (e.target.tagName === "A") {
+          menu.setAttribute("hidden", "");
+          toggle.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
+
+    var form = document.getElementById("demoForm");
+    var success = document.getElementById("formSuccess");
+
+    if (form && success) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (typeof form.reportValidity === "function" && !form.reportValidity()) {
+          return;
+        }
+        success.classList.add("visible");
+        success.setAttribute("tabindex", "-1");
+        success.focus();
+        form.reset();
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>

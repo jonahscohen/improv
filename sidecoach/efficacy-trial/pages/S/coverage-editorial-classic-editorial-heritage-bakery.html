@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>A Hundred Years at the Mouth of the Oven - The Corrin Falls Quarterly</title>
+<meta name="description" content="As Amsel Bakehouse marks its centennial, three generations of one family reckon with inheritance, exhaustion, and the plain arithmetic of dough.">
+<style>
+  /* ---------------------------------------------------------------------
+     Reset
+  --------------------------------------------------------------------- */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body, h1, h2, h3, p, figure, blockquote, dl, dt, dd, ol, ul, time { margin: 0; padding: 0; }
+  ol, ul { list-style: none; }
+  img { display: block; max-width: 100%; }
+
+  /* ---------------------------------------------------------------------
+     Tokens
+  --------------------------------------------------------------------- */
+  :root {
+    /* Color: OKLCH, tinted neutrals, warm bakery palette */
+    --paper:        oklch(97% 0.012 85);
+    --paper-alt:     oklch(94% 0.018 78);
+    --surface:       oklch(99% 0.006 82);
+    --ink:           oklch(24% 0.028 55);
+    --ink-soft:      oklch(42% 0.024 55);
+    --ink-faint:     oklch(56% 0.02 55);
+    --rule:          oklch(85% 0.02 70);
+    --rule-strong:   oklch(74% 0.025 65);
+    --accent:        oklch(46% 0.135 42);
+    --accent-text:   oklch(38% 0.13 42);
+    --accent-soft:   oklch(92% 0.032 48);
+
+    --shadow-soft: 0 1px 2px rgba(0,0,0,0.06), 0 6px 20px rgba(0,0,0,0.08);
+
+    /* Type */
+    --font-display: Baskerville, "Baskerville Old Face", "Big Caslon", Cambria, Georgia, serif;
+    --font-body: Avenir, "Avenir Next", Optima, "Century Gothic", sans-serif;
+
+    --text-caption:   0.8125rem;
+    --text-meta:      0.9375rem;
+    --text-body:      1.125rem;
+    --text-standfirst: clamp(1.3125rem, 1.2rem + 0.55vw, 1.625rem);
+    --text-h2:        clamp(1.75rem, 1.5rem + 1.15vw, 2.25rem);
+    --text-pullquote: clamp(1.625rem, 1.4rem + 1.35vw, 2.375rem);
+    --text-h1:        clamp(2.5rem, 1.85rem + 3.2vw, 4.25rem);
+
+    /* Space: 4pt grid */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-24: 6rem;
+
+    /* Motion: prescribed named easings only */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+    /* Radius: concentric, card 16 = inner badge 8 + padding 8 */
+    --radius-sm: 8px;
+    --radius-md: 16px;
+
+    color-scheme: light dark;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:        oklch(19% 0.016 55);
+      --paper-alt:     oklch(24% 0.02 55);
+      --surface:       oklch(22% 0.018 55);
+      --ink:           oklch(92% 0.016 82);
+      --ink-soft:      oklch(76% 0.02 80);
+      --ink-faint:     oklch(62% 0.018 78);
+      --rule:          oklch(34% 0.022 62);
+      --rule-strong:   oklch(42% 0.026 60);
+      --accent:        oklch(74% 0.125 44);
+      --accent-text:   oklch(80% 0.11 46);
+      --accent-soft:   oklch(30% 0.045 46);
+      --shadow-soft: 0 1px 2px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.32);
+    }
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    .article-head h1, .section h2, .sidebar-card h2 { font-weight: 600; }
+  }
+
+  /* ---------------------------------------------------------------------
+     Base
+  --------------------------------------------------------------------- */
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.65;
+    font-weight: 400;
+    text-rendering: optimizeLegibility;
+  }
+
+  a { color: var(--accent-text); }
+
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0; border: 0;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -3rem;
+    left: var(--space-4);
+    background: var(--ink);
+    color: var(--paper);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    z-index: 100;
+    transition: top 200ms var(--ease-out);
+  }
+  .skip-link:focus {
+    top: var(--space-4);
+  }
+
+  /* ---------------------------------------------------------------------
+     Reading progress: scroll-linked, 0ms, no easing (per motion spec)
+  --------------------------------------------------------------------- */
+  .progress-track {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--rule);
+    z-index: 60;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 100%;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+
+  /* ---------------------------------------------------------------------
+     Layout shell
+  --------------------------------------------------------------------- */
+  .page {
+    max-width: 1360px;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  .masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-block: var(--space-6);
+    border-bottom: 1px solid var(--rule);
+    flex-wrap: wrap;
+  }
+  .masthead-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: 0.01em;
+  }
+  .masthead-issue {
+    font-size: var(--text-caption);
+    color: var(--ink-faint);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  main { display: block; }
+
+  .article-head {
+    max-width: 46rem;
+    padding-block: var(--space-16) var(--space-8);
+  }
+
+  .kicker {
+    display: inline-block;
+    font-size: var(--text-caption);
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+    margin-bottom: var(--space-4);
+  }
+
+  .article-head h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-h1);
+    font-weight: 700;
+    line-height: 1.06;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin-bottom: var(--space-6);
+  }
+
+  .standfirst {
+    font-family: var(--font-display);
+    font-size: var(--text-standfirst);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.45;
+    color: var(--ink-soft);
+    max-width: 42rem;
+    margin-bottom: var(--space-8);
+  }
+
+  .byline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    font-size: var(--text-meta);
+    color: var(--ink-faint);
+    border-top: 1px solid var(--rule);
+    padding-top: var(--space-4);
+  }
+  .byline-name { color: var(--ink); font-weight: 600; }
+  .byline time { font-variant-numeric: tabular-nums; }
+  .byline-sep { color: var(--rule-strong); }
+
+  /* ---------------------------------------------------------------------
+     Photo placeholders: no remote images; abstract, self-contained texture
+  --------------------------------------------------------------------- */
+  figure.photo {
+    margin-block: var(--space-8);
+  }
+  .photo-frame {
+    aspect-ratio: 3 / 2;
+    border-radius: var(--radius-sm);
+    background:
+      repeating-linear-gradient(135deg, var(--paper-alt) 0 2px, transparent 2px 4px),
+      linear-gradient(160deg, var(--accent-soft) 0%, var(--paper-alt) 55%, var(--surface) 100%);
+    box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-frame span {
+    font-size: var(--text-caption);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: color-mix(in oklch, var(--paper) 70%, transparent);
+    padding: var(--space-1) var(--space-3);
+    border-radius: 999px;
+  }
+  figure.photo figcaption {
+    margin-top: var(--space-3);
+    font-size: var(--text-caption);
+    font-style: italic;
+    color: var(--ink-faint);
+    max-width: 46rem;
+    line-height: 1.5;
+  }
+  figure.lead-photo .photo-frame { aspect-ratio: 16 / 9; }
+
+  /* ---------------------------------------------------------------------
+     Article grid
+  --------------------------------------------------------------------- */
+  .article-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+    padding-bottom: var(--space-24);
+  }
+
+  .article-body {
+    max-width: 46rem;
+  }
+
+  .section { margin-bottom: var(--space-12); }
+  .section h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-h2);
+    font-weight: 700;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin-bottom: var(--space-6);
+    max-width: 32ch;
+  }
+
+  .article-body p {
+    max-width: 70ch;
+    margin-bottom: var(--space-4);
+  }
+  .article-body p:last-child { margin-bottom: 0; }
+
+  .lede p::first-letter {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 3.4em;
+    line-height: 0.82;
+    float: left;
+    padding-right: var(--space-2);
+    padding-top: 0.05em;
+    color: var(--accent-text);
+  }
+
+  .pull-quote {
+    margin-block: var(--space-12);
+    padding-inline-start: var(--space-8);
+    border-inline-start: 3px solid var(--accent);
+    max-width: 40rem;
+  }
+  .pull-quote p {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-pullquote);
+    line-height: 1.35;
+    color: var(--ink);
+    margin-bottom: var(--space-4);
+    text-wrap: balance;
+  }
+  .pull-quote p::before { content: "\201C"; }
+  .pull-quote p::after { content: "\201D"; }
+  .pull-quote cite {
+    display: block;
+    font-style: normal;
+    font-size: var(--text-meta);
+    color: var(--ink-faint);
+  }
+  .pull-quote cite::before {
+    content: "";
+    display: inline-block;
+    width: 1.5em;
+    height: 1px;
+    background: var(--rule-strong);
+    vertical-align: middle;
+    margin-inline-end: var(--space-2);
+  }
+
+  /* ---------------------------------------------------------------------
+     Sidebar
+  --------------------------------------------------------------------- */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .sidebar-card {
+    container-type: inline-size;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-soft);
+  }
+  .sidebar-card h2 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: var(--space-1);
+  }
+  .sidebar-card .card-kicker {
+    display: block;
+    font-size: var(--text-caption);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+    margin-bottom: var(--space-2);
+  }
+  .sidebar-card .card-intro {
+    font-size: var(--text-meta);
+    color: var(--ink-soft);
+    margin-bottom: var(--space-6);
+  }
+
+  .timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    position: relative;
+    padding-inline-start: var(--space-6);
+    border-inline-start: 2px solid var(--rule);
+  }
+  .timeline-list li { position: relative; }
+  .timeline-list li::before {
+    content: "";
+    position: absolute;
+    left: calc(-1 * var(--space-6) - 5px);
+    top: 0.3em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--surface);
+  }
+  .timeline-year {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.0625rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    margin-bottom: var(--space-1);
+  }
+  .timeline-event {
+    display: block;
+    font-size: var(--text-meta);
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .goods-list { display: flex; flex-direction: column; gap: var(--space-6); }
+  .goods-item {
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--rule);
+  }
+  .goods-item:last-child { padding-bottom: 0; border-bottom: none; }
+  .goods-item dt {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.0625rem;
+    margin-bottom: var(--space-1);
+  }
+  .goods-item dd {
+    font-size: var(--text-meta);
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  @container (min-width: 340px) {
+    .goods-item { display: grid; grid-template-columns: 9.5rem 1fr; gap: var(--space-4); align-items: baseline; }
+    .goods-item dt { margin-bottom: 0; }
+  }
+
+  /* ---------------------------------------------------------------------
+     End matter
+  --------------------------------------------------------------------- */
+  .end-matter {
+    max-width: 46rem;
+    border-top: 1px solid var(--rule);
+    padding-top: var(--space-8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .contributor-note {
+    font-size: var(--text-meta);
+    color: var(--ink-faint);
+    max-width: 32rem;
+  }
+  .back-to-top {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding-inline: var(--space-4);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: var(--text-meta);
+    color: var(--ink);
+    background: var(--surface);
+    transition: background-color 200ms var(--ease-out), transform 150ms var(--ease-out), border-color 200ms var(--ease-out);
+  }
+  .back-to-top:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .back-to-top:active {
+    transform: scale(0.96);
+  }
+
+  /* ---------------------------------------------------------------------
+     Responsive: Bencium tiers, mobile-first
+  --------------------------------------------------------------------- */
+  @media (min-width: 480px) {
+    .article-head { padding-block: var(--space-16) var(--space-8); }
+  }
+
+  @media (min-width: 768px) {
+    .goods-list { flex-direction: column; }
+  }
+
+  @media (min-width: 1024px) {
+    .article-layout {
+      grid-template-columns: minmax(0, 46rem) minmax(18rem, 22rem);
+      align-items: start;
+    }
+    .sidebar { position: sticky; top: var(--space-8); }
+  }
+
+  @media (min-width: 1440px) {
+    .article-layout { gap: var(--space-24); }
+  }
+
+  /* ---------------------------------------------------------------------
+     Motion: entrance only, gated behind no-preference; reduced by default
+  --------------------------------------------------------------------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .anim-in {
+      opacity: 0;
+      animation: fade-up 600ms var(--ease-out) forwards;
+      animation-delay: calc(var(--i, 0) * 80ms);
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<a id="top"></a>
+<a class="skip-link" href="#main-article">Skip to article</a>
+
+<div class="progress-track" aria-hidden="true">
+  <div class="progress-fill" id="progressFill"></div>
+</div>
+
+<div class="page">
+  <header class="masthead">
+    <span class="masthead-title">The Corrin Falls Quarterly</span>
+    <span class="masthead-issue">Summer Issue · Food &amp; Place</span>
+  </header>
+
+  <main id="main-article">
+    <article>
+      <header class="article-head">
+        <p class="kicker anim-in" style="--i:0">Feature - Food &amp; Place</p>
+        <h1 class="anim-in" style="--i:1">A Hundred Years at the Mouth of the Oven</h1>
+        <p class="standfirst anim-in" style="--i:2">In a converted feed mill on Corrin Falls&rsquo; Mill Street, three generations of the Amsel family have kept a single brick oven alight for a century. As the bakehouse marks its centennial, its current keeper reckons with inheritance, exhaustion, and the plain arithmetic of dough.</p>
+        <div class="byline anim-in" style="--i:3">
+          <span class="byline-name">By Margaret Holloway</span>
+          <span class="byline-sep">&middot;</span>
+          <span>Contributing Writer</span>
+          <span class="byline-sep">&middot;</span>
+          <time datetime="2026-06-14">June 14, 2026</time>
+          <span class="byline-sep">&middot;</span>
+          <span>11 min read</span>
+        </div>
+      </header>
+
+      <figure class="photo lead-photo">
+        <div class="photo-frame" aria-hidden="true"><span>Photograph</span></div>
+        <figcaption>Photograph placeholder: the Amsel Bakehouse storefront on Mill Street, roughly twenty minutes before opening.</figcaption>
+      </figure>
+
+      <div class="article-layout">
+        <div class="article-body">
+
+          <section class="section lede">
+            <p>At twenty past four, Ruth Amsel Doyle unlocks the same door her grandfather propped open with a flour sack in 1926. The street outside is still dark enough that the bakehouse&rsquo;s single window is the brightest thing on the block, and for the next hour it will be the only proof that Corrin Falls is awake at all. Inside, the air already smells of caraway and scorched sugar, and the oven, brick, coal-born, gas-fed since 1965, unnamed by anyone but called Number Three by everyone, is exactly as warm as it was when she left it eight hours ago. It has not gone fully cold, her father likes to say, since the Coolidge administration.</p>
+            <p>This is not, on its face, a remarkable claim. Ovens are machines; keeping one warm is a matter of fuel and attention, not miracle. But talk to anyone on Mill Street long enough and the oven starts to sound like something closer to a family member: cranky, dependable, older than everyone who tends it, and, this year, turning one hundred alongside the business built around it.</p>
+          </section>
+
+          <section class="section">
+            <h2>A Loaf No One Asked For</h2>
+            <p>Josef Amsel arrived in Corrin Falls in the spring of 1926 with a sourdough starter wrapped in cloth, thirty-one dollars, and no particular plan beyond finding a town without a bakery. He found one, technically. Corrin Falls had a general store that sold bread shipped in from the county seat, dense and two days stale by the time it reached the shelf, and he rented the ground floor of a defunct feed mill on the strength of a handshake and a demonstration loaf.</p>
+            <p>The rye he baked that first week was heavier and more sour than anything the town had eaten, and by his own account it took the better part of a year before Corrin Falls decided it liked being asked to chew. What changed the town&rsquo;s mind, according to family lore, was not the bread itself so much as the hour: Josef opened before the mill workers&rsquo; shift began and stayed open past the last one home, and a hungry town will forgive an unfamiliar loaf if it is warm and it is there.</p>
+          </section>
+
+          <blockquote class="pull-quote">
+            <p>My grandfather used to say the oven doesn&rsquo;t forgive a lie. You can&rsquo;t rush a loaf and expect it to taste like you didn&rsquo;t.</p>
+            <cite>Ruth Amsel Doyle, third-generation owner</cite>
+          </blockquote>
+
+          <section class="section">
+            <h2>What the Depression Could Not Take</h2>
+            <p>The bakehouse&rsquo;s first real test arrived within a decade of its opening. When the regional mills cut hours and half of Mill Street&rsquo;s workforce went without full pay, Josef kept the ovens running on a system closer to barter than commerce: a loaf for an afternoon&rsquo;s labor, a standing tab settled in eggs or coal or nothing at all. Family records, kept in a ledger that survives in a drawer behind the register, show entire months where paying customers were outnumbered by trades. The bakehouse operated at a loss for the better part of four years and stayed open anyway, a decision Josef never explained beyond a shrug his son would later describe as the most eloquent thing the old man ever did.</p>
+            <p>Wartime brought a different constraint: sugar and wheat rationing forced the bakehouse to reformulate nearly everything it made. The notebook of substitutions from those years, honey standing in for sugar, potato starch stretching flour that wasn&rsquo;t there, is treated today less as an archive than as a second recipe box, one the family still consults when a shortage of a different kind makes the old workarounds relevant again.</p>
+          </section>
+
+          <section class="section">
+            <h2>The Fire, and What Rebuilding Taught</h2>
+            <p>In February of 1979, a fault in the storefront&rsquo;s wiring started a fire that gutted the front room while Walter Amsel, Josef&rsquo;s son, running the bakehouse by then, watched from the sidewalk in his coat over pajamas. The oven, separated from the fire by a brick firewall original to the building&rsquo;s mill days, came through untouched. Everything in front of it did not.</p>
+            <p>What Walter remembers most from that winter is not the damage but the response to it: within a week, off-duty carpenters from three streets over had reframed the storefront on their own time, and the town&rsquo;s hardware store extended credit with no due date attached. The bakehouse reopened five weeks after the fire, selling bread out of a half-rebuilt room, and a line the family later had painted small on the inside of the front door: rebuilt by the street that ate our bread.</p>
+          </section>
+
+          <figure class="photo">
+            <div class="photo-frame" aria-hidden="true"><span>Photograph</span></div>
+            <figcaption>Photograph placeholder: the line painted inside the bakehouse&rsquo;s front door, added after the 1979 rebuild.</figcaption>
+          </figure>
+
+          <section class="section">
+            <h2>Walter&rsquo;s Kitchen, Ruth&rsquo;s Inheritance</h2>
+            <p>Ruth Amsel Doyle did not grow up assuming she would run the bakehouse. She left Corrin Falls for a decade, came back at twenty-nine for reasons she describes only as &ldquo;the ordinary reasons people come back,&rdquo; and began an apprenticeship under her father that she now calls the hardest and least sentimental education of her life. Walter taught her the rye formula the way it had been taught to him: by hand, by feel, with no written measurements for the parts that mattered most, and made clear that inheriting the bakehouse was not the same as inheriting the right to change it.</p>
+            <p>She has changed it anyway, carefully. The hours are shorter than her grandfather&rsquo;s were. The bakehouse now closes one day a week, a concession Walter resisted for years and Ruth implemented within a month of taking over, reasoning that a business that cannot survive its owner&rsquo;s single day off is not, in fact, surviving. She added a hire, then two. She kept the hand-shaping her father insisted on, over the objections of at least one consultant who suggested mechanizing the rye line to keep pace with demand, on the grounds that the shape of a hand-formed loaf is the one thing a customer can see before they&rsquo;ve tasted anything at all.</p>
+          </section>
+
+          <figure class="photo">
+            <div class="photo-frame" aria-hidden="true"><span>Photograph</span></div>
+            <figcaption>Photograph placeholder: Ruth Amsel Doyle shaping the morning&rsquo;s rye by hand, a technique she declined to mechanize.</figcaption>
+          </figure>
+
+          <section class="section">
+            <h2>The Arithmetic of a Loaf</h2>
+            <p>Ask Ruth what a hundred years actually adds up to and she does not reach for anything sentimental first. She reaches for numbers: roughly eleven thousand mornings, give or take the days the bakehouse has closed for weather, illness, or the one day a week it now permits itself. Something over two million loaves, by a count her father kept for decades and she has continued less out of curiosity than habit. A formula for rye that has changed, by her estimate, four times in a hundred years, each change small enough that a regular customer would not have noticed without being told.</p>
+            <p>The sentimentality, when it comes, arrives sideways: in the fact that she still uses her grandfather&rsquo;s peel, worn smooth in a grip pattern that does not quite match her own hand and that she has never bothered to adjust to. In the ledger, still kept by hand, still recording the rare trade of bread for labor that comes up perhaps twice a year and that she has never once refused. In the particular ache of a four a.m. wake-up that her father had for forty years and that she now understands was never really about the bread.</p>
+          </section>
+
+          <section class="section">
+            <h2>A Centennial, Counted in Loaves</h2>
+            <p>The bakehouse is marking its hundredth year the way it has marked most things: without much ceremony. There will be a single afternoon in the fall when the storefront hosts a table for the town, free bread and short remarks, organized by neighbors rather than by Ruth, who says she would rather be in the kitchen. The formula for that day&rsquo;s loaf has not been decided, though she suspects it will be the rye, because it is always the rye.</p>
+            <p>What she is watching more closely than the anniversary is her son. Theo is fourteen and has started coming in on Saturdays, not because anyone has asked him to, and not, as far as Ruth can tell, because he has decided on anything. He feeds the starter when she is busy. He has begun, this year, to ask questions about the parts of the formula that are not written down. Ruth does not push it, has told him more than once that the bakehouse will still be there if he chooses something else entirely, and means it. But she has also, without quite admitting to it, started teaching him to read the oven the way her father once taught her: not by thermometer, but by smell, by the particular sound the crust makes at the exact moment it is ready to come out, a sound the ovens across four generations have made, apparently, in exactly the same way.</p>
+            <p>At twenty past four tomorrow, she will unlock the same door again.</p>
+          </section>
+
+        </div>
+
+        <aside class="sidebar" aria-label="Supplementary information">
+          <div class="sidebar-card">
+            <span class="card-kicker">Timeline</span>
+            <h2>A Century, Marked</h2>
+            <p class="card-intro">Key milestones in the bakehouse&rsquo;s hundred years on Mill Street.</p>
+            <ol class="timeline-list">
+              <li><span class="timeline-year">1926</span><span class="timeline-event">Josef Amsel opens the bakehouse in a converted feed mill on Mill Street.</span></li>
+              <li><span class="timeline-year">1933</span><span class="timeline-event">The bakehouse trades bread for labor and goods through the worst years of the Depression.</span></li>
+              <li><span class="timeline-year">1944</span><span class="timeline-event">Wartime rationing forces a season of reformulated recipes; the substitution notebook begins.</span></li>
+              <li><span class="timeline-year">1958</span><span class="timeline-event">Walter Amsel takes over from his father and adds the Honey Wheat Braid.</span></li>
+              <li><span class="timeline-year">1979</span><span class="timeline-event">A wiring fire guts the storefront; the oven survives behind an original brick firewall.</span></li>
+              <li><span class="timeline-year">1998</span><span class="timeline-event">Ruth Amsel Doyle returns to Corrin Falls and begins her apprenticeship.</span></li>
+              <li><span class="timeline-year">2011</span><span class="timeline-event">The Corrin Rye is named in a regional food guide and becomes the bakehouse&rsquo;s signature export.</span></li>
+              <li><span class="timeline-year">2026</span><span class="timeline-event">The bakehouse turns one hundred; a fourth generation begins learning the starter.</span></li>
+            </ol>
+          </div>
+
+          <div class="sidebar-card">
+            <span class="card-kicker">Sidebar</span>
+            <h2>What to Order</h2>
+            <p class="card-intro">The four items that keep Mill Street&rsquo;s regulars coming back.</p>
+            <dl class="goods-list">
+              <div class="goods-item">
+                <dt>Corrin Rye</dt>
+                <dd>A dense caraway sourdough, unchanged in essentials since 1926, still shaped by hand each morning.</dd>
+              </div>
+              <div class="goods-item">
+                <dt>Honey Wheat Braid</dt>
+                <dd>Walter Amsel&rsquo;s 1958 addition; a lightly sweet braided loaf best eaten the day it&rsquo;s baked.</dd>
+              </div>
+              <div class="goods-item">
+                <dt>Almond Kipferl</dt>
+                <dd>Crescent-shaped almond pastries, made in small batches and usually gone by nine.</dd>
+              </div>
+              <div class="goods-item">
+                <dt>Feast Day Braid</dt>
+                <dd>An egg-rich braided bread reserved for holidays and the bakehouse&rsquo;s own centennial table.</dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="end-matter">
+        <p class="contributor-note">Names, dates, and identifying details in this feature belong to a fictional bakehouse and family, composed for illustrative purposes.</p>
+        <a class="back-to-top" href="#top">Back to top &uarr;</a>
+      </footer>
+    </article>
+  </main>
+</div>
+
+<script>
+(function () {
+  var fill = document.getElementById('progressFill');
+  if (!fill) { return; }
+  function update() {
+    var doc = document.documentElement;
+    var scrollTop = doc.scrollTop || document.body.scrollTop || 0;
+    var scrollHeight = (doc.scrollHeight - doc.clientHeight) || 1;
+    var ratio = Math.min(1, Math.max(0, scrollTop / scrollHeight));
+    fill.style.transform = 'scaleX(' + ratio + ')';
+  }
+  document.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
+})();
+</script>
+</body>
+</html>

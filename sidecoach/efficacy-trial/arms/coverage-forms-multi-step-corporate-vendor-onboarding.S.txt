@@ -1,0 +1,635 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# forms-multi-step-corporate-vendor-onboarding (coverage brief, Codex-authored)
+
+title: Vendor Onboarding Application
+register: forms
+aestheticStyle: multi-step-corporate
+audience: Suppliers applying to work with a mid-sized enterprise procurement team.
+goal: Guide vendors through submitting company, compliance, and payment details for review.
+requiredContent:
+- Step overview
+- Company profile fields
+- Primary contact information
+- Compliance attestations
+- Tax and payment details
+- Document upload placeholders
+- Review step
+- Submission confirmation
+constraints:
+- audience: Applicants may need to gather information from several departments.
+- brand-tone-in-words: Formal, clear, procedural, and helpful.
+- platform: Responsive web form suitable for desktop completion.
+- baseline: Must meet common accessibility expectations and support saving or returning as a described capability.
+successCriteria:
+- Applicants understand progress and remaining requirements.
+- Complex information is broken into manageable sections.
+- The completed submission can be reviewed before final send.
+
+PROJECT GUIDANCE (ordered steps to execute)
+-----
+Register: Design SERVES the product (app UI, dashboard, tool)
+Design laws loaded for product register:
+  - Color & Contrast (8 rules)
+  - Typography (11 rules)
+  - Spatial Design (8 rules)
+  - Motion Design (8 rules)
+  - Interaction Design (8 rules)
+  - Responsive Design (8 rules)
+  - UX Writing (8 rules)
+  - Register-specific: Design SERVES the product (app UI, admin, dashboard, tool)
+
+Brand metadata:
+  Users: Suppliers applying to work with a mid-sized enterprise procurement team.
+  Purpose: Not specified
+  Personality: Formal, clear, procedural, and helpful.
+
+Pre-flight warnings:
+⚠️  DESIGN.md not found - run /sidecoach document or create manually for full design system support
+⚠️  Anti-references not defined in PRODUCT.md - add what designs to avoid for better category-reflex detection
+⚠️  Strategic principles not defined - these guide design law application
+
+Next flows:
+  - Flow B: Component Research (if designing components)
+  - Flow C: Font Research (if refining typography)
+  - Flow D: Design References (if gathering inspiration)
+Brand personality: Formal, clear, procedural, and helpful.
+Design approach: undefined
+
+Interaction Domain Rules (8 Component States):
+- 8 interactive states required: Default, Hover, Focus, Active, Disabled, Loading, Error, Success
+- Focus rings via :focus-visible (keyboard only), 2-3px, high contrast 3:1+, offset 2px
+- Placeholders ≠ labels; always use visible <label>
+- Validate on blur not keystroke (exception: password strength real-time)
+- Skeleton screens > spinners for perceived performance
+- <dialog> native or `inert` attribute for focus trapping in modals
+- Popover API for tooltips/dropdowns/light-dismiss overlays
+- Undo > Confirm for destructive actions
+
+Default, Hover, Focus, Active, Disabled, Loading, Error, Success
+
+Writing Domain Rules (Labels & Microcopy):
+- Button labels: specific verb + object ("Save changes" not "OK")
+- Destructive actions name the destruction ("Delete 5 items" not "Proceed")
+- Error messages: what happened, why, how to fix (don't blame user)
+- Empty states are onboarding: acknowledge, explain value, provide action
+- Voice constant, tone adapts to moment (success: celebratory, error: empathetic)
+- Never humor for errors (users frustrated, be helpful not cute)
+- Icon buttons need aria-label for screen readers
+- Avoid redundant copy and filler words; every word earns its place
+
+Semantic Markup Requirements:
+
+Accessibility Patterns:
+
+Interaction States Matrix:
+
+Component Validation Results:
+
+0 component patterns identified. Run Flow G to implement patterns with interaction states and writing guidelines.
+Brand personality: Formal, clear, procedural, and helpful.
+
+Typography Domain Rules (11 principles):
+- Body text max 65-75 characters per line
+- Hierarchy via scale AND weight: >=1.25 ratio between consecutive sizes
+- No flat scales (e.g., 14/16/18/20 is flat; 14/18/24/32 has ratio)
+- Line-height adjusts with measure: longer lines need taller line-height
+- Light-on-dark: +0.05-0.1 line-height, +0.01-0.02em letter-spacing, weight bump
+- ALL-CAPS needs 5-12% letter-spacing
+- Semantic token naming: --text-body not --font-size-16
+- Minimum 16px for web, 44px+ touch targets, rem/em sizing for accessibility
+- Choose a real typeface; never leave content on the bare system stack. Set body and headings to a font-family you deliberately picked. The bare system-ui / -apple-system stack and its monoculture members (Arial, Helvetica, Times, Georgia, Verdana, Segoe UI) are what you get when nobody chose, not a decision. Because this document must stay self-contained with no external fonts, lead your body and heading font-family with a characterful OS-installed face (Iowan Old Style, Charter, Baskerville, or Cambria for serif; Optima, Avenir, Futura, or Gill Sans for sans) ahead of any generic fallback, rather than defaulting to the system stack.
+- Pair typefaces deliberately, and cap it at two: give one characterful display face to headings and one readable text face to body, contrasting across classification (one serif with one sans) while sharing a mood. Safe self-contained pairings from the OS-installed faces above: Futura or Gill Sans headings over Charter or Iowan Old Style body; Baskerville or Cambria headings over Avenir or Optima body. One family used everywhere is fine when it is carried by real weight and size contrast, and a superfamily drawn as a matched sans-plus-serif set is the safest pair; a third typeface is noise. Two faces from the same class can work, but only with a real axis of contrast (weight, width, optical size, or era); without one, two similar sans read as a mistake rather than a decision, so contrast across classification when unsure.
+- Scale display and heading type fluidly with clamp() between breakpoints instead of fixed sizes or a stack of media-query font-size overrides: font-size: clamp(MIN, PREFERRED, MAX), where PREFERRED mixes a rem base with a viewport term, e.g., clamp(2rem, 1.5rem + 2.5vw, 3.5rem). The rem term is mandatory: a pure-vw preferred value defeats browser zoom and fails WCAG 1.4.4 (text must still reach 200%). Use one clamp per scale step so the hierarchy breathes between a min and a max viewport while preserving the >=1.25 ratio at both ends; keep body text on a fixed rem so measure stays stable.
+
+Font Pairing Strategy:
+Pair serif heading with sans-serif body for classic + modern blend
+Stick to 1-2 font families maximum to avoid visual noise
+Ensure 1.25+ size ratio between heading and body for clear hierarchy
+Use geometric sans-serif for clean, minimal brands
+Use text serif for editorial, elegant, or premium personality
+
+Recommended approach:
+1. Select heading font that matches brand personality
+2. Pair with body font using the pairing rules above
+3. Validate font metrics (line height, ascent, descent)
+4. Test OpenType features for your typography needs
+5. Check web font loading performance
+
+4 font candidates available. Run Flow F to extract design tokens with selected typefaces.
+Register: product
+Design approach: modern
+
+Color Domain Rules (OKLCH Commitment):
+- Use OKLCH color space, never HSL or RGB for strategic colors
+- Tint every neutral with chroma 0.005-0.015 toward brand hue
+- Reduce chroma near white/black to avoid garish appearance
+- 4 color commitment levels: Restrained(<=10% accent only), Committed(30-60%), Full(3-4 named), Drenched(surface IS color)
+- WCAG AA minimum: 4.5:1 on body text, 3:1 on large text and UI components
+- Never use pure gray, black (#000), or white (#fff)
+- Dark mode differs from light: surfaces for depth, reduced text weight, adjusted saturation
+- Alpha is design smell: indicates incomplete palette
+
+Semantic Colors: ensure meaning is consistent across light/dark modes
+Contrast Validation: WCAG AA minimum 4.5:1 for text, 3:1 for UI
+Saturation & Vibrancy: appropriate for register (product vs brand)
+
+Spatial Domain Rules (4pt Grid System):
+- 4pt base spacing system: 4/8/12/16/24/32/48/64/96px
+- Use gap property over margins to eliminate margin-collapse
+- Vary spacing for visual rhythm; identical padding = monotony
+- Cards are lazy answer: use only when truly best affordance, never nested
+- Hierarchy through multiple dimensions: size 3:1+, weight contrast, color, position, space
+- Squint test validates visual hierarchy from distance
+- Touch targets minimum 40x40px via padding or pseudo-element
+- Container queries for component-relative layouts
+
+Touch Targets: minimum 40x40px for interactive elements
+White Space: balance density with breathing room
+Container Queries: responsive without media queries
+
+Design References Analysis:
+- Total found: 0
+- High quality (low AI slop): 0
+- Flagged as oversaturated: 0
+
+High-Quality References (genericityScore < 0.6):
+
+Proceed to Flow E (Motion Patterns) for animation design validation.
+Brand personality: Formal, clear, procedural, and helpful.
+Register: product
+Motion intensity: restrained (restrained for product)
+
+Motion Domain Rules (Duration, Easing, No Layout Animation):
+- Duration rule: 100-150ms feedback, 200-300ms state changes, 300-500ms layout, 500-800ms entrance
+- Exit animations: 75% of enter duration
+- Easing curves: ease-out for entrance, ease-in for exit, ease-in-out for toggle
+- Only exponential easing: ease-out-quart, quint, expo (no bounce/elastic)
+- Never animate CSS layout properties (width, height, top, left, margin)
+- Stagger with CSS custom properties: animation-delay: calc(var(--i) * 50ms)
+- Reduced motion support required: @media prefers-reduced-motion with fade alternative
+- Will-change only when animation imminent (:hover, .animating state)
+
+PRESCRIBED NAMED EASINGS (use these by name, do not improvise):
+- --ease-out: cubic-bezier(0.23, 1, 0.32, 1)
+- --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1)
+- --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1)
+  Use case: Default ease-out for entrances and primary state changes. Stronger deceleration than Material out.
+  Use case: Bidirectional state changes - toggle, accordion open/close, theme switch.
+  Use case: Drawer / sheet / modal slide animations specifically. Faster initial pull, smoother settle.
+
+BANNED EASINGS (will be flagged as findings if generated):
+- ease-in (alone, not ease-in-out) is banned for UI motion - feels sluggish and unmotivated.
+- Bounce curve (`cubic-bezier(0.34, 1.56, 0.64, 1)`) - banned. Bounce is theatre, not feedback.
+- Elastic curve (`cubic-bezier(0.68, -0.6, 0.32, 1.6)`) - banned. Elastic is novelty motion.
+- ease-out-back contains overshoot - reads as cartoonish in UI motion.
+
+Exponential-Only Easing:
+Only cubic-bezier curves with exponential curves (out-quart, out-quint, etc.)
+NO linear, ease-in, step functions, or bounce/elastic
+Rationale: exponential curves feel natural (deceleration after force)
+
+FREQUENCY-FIRST DECISION (Emil Kowalski):
+Before specifying any animation, answer: "How many times per day will the user see this?"
+- 100+/day (cmd+k, dock, nav, primary CTA) -> NO animation. Ever. The optimal experience is instant.
+- 10-100/day (modals, panels, secondary nav) -> Subtle, fast (100-200ms).
+- <10/day (page transitions, onboarding, settings) -> Generous, expressive motion permitted.
+
+Layout Property Animation FORBIDDEN:
+Never animate width, height, top, left, margin, padding, font-size
+Instead: animate transform (translate, scale, rotate) or opacity
+Layout animation blocks paint, causes jank, terrible performance
+
+Recommended Easing Curves:
+- ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94) (150ms, feedback)
+- ease-in-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94) (120ms, exit)
+
+Stagger Patterns:
+- Base stagger: 50ms between items
+- For 10+ items: use cubic-bezier easing, not linear
+- Never compound stagger (parents + children both stagger)
+
+Reduced-Motion Strategies (prefers-reduced-motion):
+Entrance animations: fade-in at 100% opacity (no duration)
+Exit animations: fade-out to 0% opacity (no duration)
+State changes: instant, no transition
+Feedback: instant visual feedback, no easing
+Stagger: apply to children with 50ms base, not compound across parents
+Prefers-reduced-motion: apply @media (prefers-reduced-motion) throughout
+
+2 motion patterns available for product register. Run Flow H to integrate motion into component interactions.
+Context requirements not met: designTokens
+Component: button
+Register: product
+
+Token-Backed Component Defaults:
+- Primary CTA background: (undefined in DESIGN.md)
+- Primary CTA text: (undefined in DESIGN.md)
+- Button/input radius: (undefined in DESIGN.md)
+- Floating card shadow: (undefined in DESIGN.md)
+
+Interaction Domain (8 States):
+- 8 interactive states required: Default, Hover, Focus, Active, Disabled, Loading, Error, Success
+- Focus rings via :focus-visible (keyboard only), 2-3px, high contrast 3:1+, offset 2px
+- Placeholders ≠ labels; always use visible <label>
+- Validate on blur not keystroke (exception: password strength real-time)
+- Skeleton screens > spinners for perceived performance
+- <dialog> native or `inert` attribute for focus trapping in modals
+- Popover API for tooltips/dropdowns/light-dismiss overlays
+- Undo > Confirm for destructive actions
+
+Writing Domain (Semantic Copy):
+- Button labels: specific verb + object ("Save changes" not "OK")
+- Destructive actions name the destruction ("Delete 5 items" not "Proceed")
+- Error messages: what happened, why, how to fix (don't blame user)
+- Empty states are onboarding: acknowledge, explain value, provide action
+- Voice constant, tone adapts to moment (success: celebratory, error: empathetic)
+- Never humor for errors (users frustrated, be helpful not cute)
+- Icon buttons need aria-label for screen readers
+- Avoid redundant copy and filler words; every word earns its place
+
+Forms Domain (apply when the component has inputs) - Vercel web-interface-guidelines:
+- a11y/form-control-labelled: a11y/form-control-labelled
+- a11y/form-error-association: a11y/form-error-association
+- a11y/form-placeholder-not-label: a11y/form-placeholder-not-label
+- a11y/form-input-type: a11y/form-input-type
+- a11y/form-choice-label-target: a11y/form-choice-label-target
+- a11y/form-autocomplete: a11y/form-autocomplete
+- a11y/form-inputmode: a11y/form-inputmode
+- a11y/form-never-block-paste: a11y/form-never-block-paste
+- a11y/form-spellcheck-off: a11y/form-spellcheck-off
+- a11y/form-idempotent-submit: a11y/form-idempotent-submit
+- a11y/form-inline-errors: a11y/form-inline-errors
+- a11y/form-focus-first-error: a11y/form-focus-first-error
+- a11y/form-no-pm-non-auth: a11y/form-no-pm-non-auth
+- a11y/form-textarea-submit: a11y/form-textarea-submit
+- a11y/form-no-pre-disable-submit: a11y/form-no-pre-disable-submit
+- a11y/form-autofocus-sparingly: a11y/form-autofocus-sparingly
+
+Component States to Implement:
+- Default: ARIA=Yes, Keyboard=Yes, Copy=No
+- Hover: ARIA=Yes, Keyboard=Yes, Copy=No
+- Focus: ARIA=Yes, Keyboard=Yes, Copy=No
+- Active: ARIA=Yes, Keyboard=Yes, Copy=No
+- Disabled: ARIA=No, Keyboard=No, Copy=No
+- Loading: ARIA=Yes, Keyboard=Yes, Copy=Yes
+- Error: ARIA=Yes, Keyboard=Yes, Copy=Yes
+- Success: ARIA=Yes, Keyboard=Yes, Copy=Yes
+
+ARIA & Accessibility Requirements (per state):
+- Default: aria-label required for icon-only triggers
+- Hover: no semantic change required
+- Focus: :focus-visible ring for keyboard users (2-3px offset)
+- Active: visual feedback (scale, color, or shadow shift)
+- Disabled: aria-disabled="true" + suppressed pointer events
+- Loading: aria-busy="true" + spinner or skeleton
+- Error: aria-invalid="true" + descriptive error message
+- Success: aria-live="polite" confirmation
+
+Copy guidance: pull verbs and concrete nouns from this product's DESIGN.md / PRODUCT.md - do not import generic examples. Cite the source line you used.
+
+Testing Checklist:
+- All 8 states rendered correctly (Default, Hover, Focus, Active, Disabled, Loading, Error, Success)
+- Keyboard navigation works (Tab through all states)
+- Screen reader announces purpose and state
+- Focus ring visible on Focus state
+- Copy matches writing domain rules
+- Responsive: no overflow or misalignment on mobile/tablet
+- Side-by-side comparison with design source confirms visual match
+Brand Personality: Formal, clear, procedural, and helpful.
+Register: product
+Motion Intensity: restrained (product prefers restrained)
+
+
+Token-Backed Motion Defaults:
+- Default exit ease: (undefined in DESIGN.md)
+- State-transition ease: (undefined in DESIGN.md)
+- Snappy press ease: (undefined in DESIGN.md)
+- Feedback duration: (undefined in DESIGN.md)
+- State-change duration: (undefined in DESIGN.md)
+
+Motion Domain Rules (Duration, Easing, No Layout Animation):
+- Duration rule: 100-150ms feedback, 200-300ms state changes, 300-500ms layout, 500-800ms entrance
+- Exit animations: 75% of enter duration
+- Easing curves: ease-out for entrance, ease-in for exit, ease-in-out for toggle
+- Only exponential easing: ease-out-quart, quint, expo (no bounce/elastic)
+- Never animate CSS layout properties (width, height, top, left, margin)
+- Stagger with CSS custom properties: animation-delay: calc(var(--i) * 50ms)
+- Reduced motion support required: @media prefers-reduced-motion with fade alternative
+- Will-change only when animation imminent (:hover, .animating state)
+
+Animation Template Strategy:
+- entrance: 200ms, cubic-bezier(0.23, 1, 0.32, 1)... (Page/section reveals, fade-in, slide-in from edges)
+- feedback: 100ms, cubic-bezier(0.23, 1, 0.32, 1)... (Button clicks, state changes, micro-interactions)
+- state_change: 150ms, cubic-bezier(0.77, 0, 0.175, 1... (Toggle states, modal opens, panel slides)
+- drawer_modal: 260ms, cubic-bezier(0.32, 0.72, 0, 1)... (Drawer/sheet/modal slides - the one place an asymmetric curve helps the affordance)
+- scroll_linked: 0ms, linear... (Parallax, reveal-on-scroll, fixed-scroll indicators - the only place linear is correct)
+- exit: 100ms, cubic-bezier(0.23, 1, 0.32, 1)... (Modal close, fade-out, slide-out to edges. Faster than entrance (asymmetric timing).)
+
+Exponential-Only Easing (NO linear, bounce, elastic):
+entrance: ease-out-quart/quint/expo (deceleration feels natural)
+feedback: swift ease-out (responsive to user)
+exit: ease-in curves (objects leave screen gracefully)
+scroll-linked: linear (scroll events control timing)
+
+Layout Property Animation FORBIDDEN:
+Never animate: width, height, top, left, margin, padding, font-size
+Instead: animate transform (translate, scale, rotate) or opacity
+Layout animation blocks paint, causes jank, kills performance
+
+Reduced-Motion Accessibility:
+@media (prefers-reduced-motion) {
+  /* entrance: fade-in at 100% opacity, duration: 0 */
+  /* feedback: instant, no easing */
+  /* exit: fade-out to 0% opacity, duration: 0 */
+}
+
+Performance Validation:
+- Test on actual devices (not just desktop)
+- Target 60 FPS smooth playback
+- Use will-change sparingly (only when animation imminent)
+- Avoid animate-all, use specific properties
+- Make animations interruptible (allow user to cancel/skip)
+
+Stack-specific implementation (framework=vanilla):
+- Loading: <script src=...> tag for GSAP from CDN, then DOMContentLoaded listener for the animation code
+- Cleanup: beforeunload handler calls ctx.revert()
+- Scope boundary: page lifecycle
+
+Example:
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+  <script>
+    let ctx;
+    document.addEventListener('DOMContentLoaded', () => {
+      ctx = gsap.context(() => {
+        gsap.from('.headline', {
+          y: 40,
+          opacity: 0,
+          duration: 0.6,
+          ease: 'power3.out',
+          stagger: 0.08,
+        });
+      });
+    });
+    window.addEventListener('beforeunload', () => ctx?.revert());
+  </script>
+- Note: For ES module setups, import gsap from a bundler entry point instead of a script tag
+- Note: gsap.context() is optional for a single one-shot animation - it shines when multiple animations share lifecycle
+Accessibility Target: WCAG 2.1 Level AA (required standard)
+
+Domain-by-Domain Accessibility Audit:
+
+Color Domain:
+  [pass] 1.4.3 Contrast (Minimum): 4.5:1 for normal text, 3:1 for large text/UI
+  [pass] 1.4.11 Non-text Contrast: 3:1 for graphical elements and UI components
+  [pass] 2.4.7 Focus Visible: Focus indicator always visible
+  [warn] Verify text/background contrast ratios with axe or Lighthouse
+  [warn] Check UI component contrast (buttons, inputs, borders)
+  [warn] Ensure focus ring has sufficient contrast against background
+
+Typography Domain:
+  [pass] 1.4.8 Visual Presentation: Line spacing >=1.5, text alignment not justified
+  [pass] 1.4.4 Resize text: Allow 200% zoom without loss of functionality
+  [pass] 3.3.1 Error Identification: Errors identified and described in text
+  [warn] Verify font sizing uses rem/em (not px) for scaling
+  [warn] Check line-height >= 1.5 for body text
+  [warn] Ensure text resizes to 200% without horizontal scroll
+
+Spatial Domain:
+  [pass] 2.5.5 Target Size (Enhanced): 44x44px minimum for all interactive elements
+  [pass] 2.4.3 Focus Order: Logical keyboard navigation order
+  [pass] 1.3.5 Identify Input Purpose: Input fields properly labeled
+  [warn] Measure touch targets: all interactive >=40x40px (44x44px enhanced)
+  [warn] Verify tab order logical and intuitive
+  [warn] Check all form inputs have associated labels
+
+Motion Domain:
+  [pass] 2.3.3 Animation from Interactions: prefers-reduced-motion respected
+  [pass] 2.3.2 Animation from Interactions: Avoid motion > 5 seconds
+  [pass] 2.4.7 Focus Visible: Focus indication never removed
+  [warn] Verify @media (prefers-reduced-motion) implemented
+  [warn] Check animations <= 5 seconds or user-triggered
+  [warn] Ensure focus ring always visible on interactions
+
+Interaction Domain:
+  [pass] 2.4.3 Focus Order: Logical, meaningful keyboard navigation
+  [pass] 2.4.7 Focus Visible: 2-3px visible focus indicator
+  [pass] 3.3.1 Error Identification: Clear error messages
+  [pass] 3.3.4 Error Prevention: Confirm destructive actions
+  [warn] Test keyboard-only navigation (no mouse)
+  [warn] Verify all 8 states have keyboard support
+  [warn] Check error messages are helpful and specific
+  [warn] Confirm destructive actions require confirmation
+
+Responsive Domain:
+  [pass] 1.3.4 Orientation: Don't restrict to single orientation
+  [pass] 1.4.10 Reflow: Content flows horizontally/vertically without loss
+  [pass] 2.5.7 Dragging Movements: Alternatives to drag-and-drop
+  [warn] Test landscape and portrait orientations
+  [warn] Verify no horizontal scroll at 1280px viewport
+  [warn] Check touch targets work on all device types
+
+Writing Domain:
+  [pass] 2.4.2 Page Titled: Every page has descriptive title
+  [pass] 2.4.6 Headings and Labels: Descriptive, not generic
+  [pass] 3.2.4 Consistent Identification: Navigation consistent across pages
+  [pass] 3.3.2 Labels or Instructions: Clear instructions for inputs
+  [warn] Verify page titles are unique and descriptive
+  [warn] Check headings are semantic (h1, h2, etc.) not divs
+  [warn] Ensure all labels are visible, not just placeholders
+  [warn] Check error messages match writing domain rules
+
+Screen Reader Testing (Mandatory):
+- VoiceOver (macOS/iOS): Test on Safari with full screen reader interaction
+- NVDA (Windows): Test on Firefox with full screen reader interaction
+- JAWS (Windows): Commercial screen reader, verify critical flows
+
+Testing Tools & Resources:
+- Automated: axe DevTools, Lighthouse, WebAIM, WAVE
+- Manual: keyboard navigation (Tab, Enter, Space, Arrows)
+- Screen readers: VoiceOver (macOS), NVDA (Windows), JAWS (commercial)
+- Color contrast: WebAIM Contrast Checker, Polychroma
+
+Severity Prioritization for Fixes:
+- Critical: Blocks core function (login, payment, submission impossible)
+- High: Significantly impacts experience (can't find content, confusing navigation)
+- Medium: Affects some users in some scenarios (minor color contrast, skip links)
+- Low: Polish (keyboard shortcut hints, extra ARIA)
+
+Common Failures to Prevent:
+[fail] Placeholder instead of <label> (text disappears on focus)
+[fail] divs with role="button" (no keyboard support)
+[fail] No visible focus ring
+[fail] Color alone to convey meaning (needs text or pattern)
+[fail] Modal without focus trapping or aria-modal
+[fail] Images without alt text
+[fail] Unescaped HTML in ARIA labels
+[fail] Touch targets < 40x40px
+[fail] No prefers-reduced-motion support
+Responsive Validation: Bencium 5-tier breakpoint table + WCAG 2.5.5 hit-area floor (44x44) + named anti-patterns + iOS-Safari gotchas.
+
+BREAKPOINT TABLE (Bencium, prescribed):
+- XS (0-479px): primary=Single column | nav=Hamburger or bottom-bar | table=Stacked cards
+- SM (480-767px): primary=Single column with breathing room | nav=Bottom navigation | table=Stacked cards
+- MD (768-1023px): primary=Two columns where content permits | nav=Sidebar (left) or full nav (top) | table=Horizontal scroll or condensed
+- LG (1024-1439px): primary=Multi-column with full feature surface | nav=Full nav bar | table=Full table with sorting
+- XL (1440px+): primary=Max-width container, no further expansion | nav=Full nav with actions | table=Full table with sticky headers
+
+PATTERN TRANSITIONS PER BREAKPOINT:
+- Navigation: hamburger menu (XS) -> bottom tab bar (SM) -> sidebar (MD) -> full nav bar (LG/XL)
+- Tables: stacked cards (XS/SM) -> horizontal scroll (MD) -> full table (LG+)
+- Filters: full-screen modal (XS) -> drawer (SM) -> sidebar (MD+)
+- Forms: single column (XS/SM/MD) -> two column (LG+)
+- Hero: stacked (XS/SM) -> side-by-side (MD+)
+- Card grid: 1 col (XS/SM) -> 2 col (MD) -> 3 col (LG) -> 3-4 col (XL)
+- Toast: full-width bottom (XS/SM) -> top-right (MD+)
+
+HIT AREA FLOOR (44x44px, WCAG 2.5.5 enhanced):
+- Every interactive target at every breakpoint, not just mobile.
+- Extend with pseudo-element when the visual is smaller than the hit target.
+- Never let hit areas of two elements overlap.
+
+NAMED RESPONSIVE ANTI-PATTERNS:
+- Desktop-first CSS with min-width queries adding mobile as exception (mobile-first is mandatory)
+- Hiding content via display:none on mobile without an alternative path
+- 100vh on iOS without svh/dvh/lvh - address-bar shrink causes content jump
+- Hover-only interactions with no touch equivalent (long-press, tap-to-reveal, or always-visible)
+- Fixed-position elements that overlap content on iOS Safari (the address-bar shrink gotcha)
+- Modal overlays that do not fit the smallest target viewport
+- Tables that require horizontal scroll without a card-stacked alternative
+- Breakpoints chosen from a device-list, not from where content breaks
+
+iOS SAFARI VIEWPORT GOTCHAS:
+- Use svh (small viewport height) / dvh (dynamic) / lvh (large) instead of vh for full-screen elements
+- env(safe-area-inset-*) for notches and dynamic island
+- Test in real Safari - DevTools simulation misses the address-bar behavior
+
+TOUCH vs MOUSE DETECTION:
+- @media (pointer: fine) - desktop with mouse
+- @media (pointer: coarse) - touch device
+- @media (hover: hover) - device that supports persistent hover
+- @media (hover: none) - device without hover
+- Use these, not screen size alone, to gate hover-revealed UI
+
+CONTAINER QUERIES vs MEDIA QUERIES:
+- Media queries: viewport-wide changes (page layout, nav)
+- Container queries: component-internal adaptations (card content reflow)
+- Use container queries on cards, lists, and embedded components
+
+MANDATORY VERIFICATION STEPS (before flowJ tactical polish):
+1. Render at 375px width and screenshot
+2. Render at 768px and screenshot
+3. Render at 1024px and screenshot
+4. Check that nav fits at 375px without overflow
+5. Measure hit areas at 375px (>= 44x44)
+6. Confirm no horizontal scroll appears anywhere except intentional scroll regions
+7. Confirm hover interactions have touch fallbacks
+8. Confirm safe-area-inset on iOS-like viewports
+9. Confirm prefers-reduced-motion respected at every breakpoint
+
+RESPONSIVE DEGRADE PLAN TEMPLATE (per component emitted):
+- Behavior at XS (0-479): [explicit]
+- Behavior at SM (480-767): [explicit]
+- Behavior at MD (768-1023): [explicit]
+- Hit area sizes at each breakpoint
+- Any content that hides; where it goes instead
+- Test cases at each breakpoint
+Validation Matrix: 24-Rule Framework (24/24 rules pass - 100.0%)
+= 24-point Polish Standard
++ 0-rule registry-backed Domain Validator (forms a11y + page quality)
++ Linguistic Ban Scan (slop words + rhetorical templates)
++ Absolute Ban Detector (5 named anti-patterns)
+
+ABSOLUTE BAN SCAN: 0 findings. The 5 named bans (side-stripe-borders, gradient-text, glassmorphism-default, hero-metric-template, modal-as-first-thought) are clean.
+
+LINGUISTIC BAN SCAN: 0 findings. Project copy passes slop-word + rhetorical-template checks.
+
+POLISH STANDARD (24 rules):
+- Polish: 24/24 pass
+
+EXTENDED DOMAINS (0 rules):
+- Extended: 0/0 pass
+- Domains: a11y (18), polish (3), theming (1)
+
+SCALE & PRESS (Required):
+- Add scale(0.96) on active/press state to all buttons, links, interactive components
+- Gives tactile, pressable feeling without changing layout
+
+RADIUS & SPACING (Required):
+- Use concentric radius: outer container = inner element radius + padding
+- Example: button 8px + 4px padding = 12px container outer radius
+
+SHADOWS (Required):
+- All shadows use rgba(0,0,0,0.1) or surface tint, never rgb/hsl
+- Preserves theme colors in light/dark modes
+
+TRANSITIONS (Required):
+- Never use transition: all
+- Specify: transition: background-color 200ms, transform 300ms
+- Separate timing for different properties (transform faster than color)
+
+HIT AREAS (Required):
+- All interactive targets minimum 40x40px (mobile-friendly)
+- Padding around icons to reach 40px, not icon size itself
+
+TEXT & TYPOGRAPHY (Optional):
+- text-wrap: balance on headings (prevents widow lines)
+- font-smoothing: antialiased on light text over dark bg
+- font-variant-numeric: tabular-nums on any dynamic numbers
+
+ICONS & IMAGES (Optional):
+- Icon state changes via opacity+scale+blur (e.g., opacity 0→1, scale 0.25→1, blur 4px→0)
+- Image borders: rgba(0,0,0,0.1) or subtle tint overlay, never bright colors
+
+ANIMATION OPTIMIZATION (Optional):
+- will-change on max 2-3 elements per page (not on every :hover)
+- Exit animations 2-3x faster than entrance (feels snappier)
+- Initial={false} on AnimatePresence children to prevent layout shift
+- Stagger entrance and exit differently (not symmetric)
+
+OPTICAL ALIGNMENT (Optional):
+- Visual center differs from geometric center (especially circles, icons)
+- Adjust baseline alignment on text near icons
+
+## craft (verb command)
+Shape brief confirmed before any code was written; gates were not compressed.
+Component patterns researched before any UI was built; design references vetted for AI-slop.
+Motion patterns researched before motion was integrated; easing tokens selected, not invented.
+Production bar enforced: real content, semantic-first markup, deliberate spacing, full state coverage.
+Motion integrated: easing tokens applied to interactive components, reduced-motion respected.
+Accessibility verified: WCAG 2.1 AA scan complete, contrast and focus ring checks passed.
+Responsive verified: rendered at XS/SM/MD/LG/XL, 44x44 hit areas measured, nav pattern transitions confirmed, iOS svh/dvh checked.
+After the first pass, iterate visually against the brief and the approved direction; patch material defects and re-inspect.
+
+### Parity checklist
+- Shape brief confirmed
+- component research
+- motion patterns researched
+- Production bar
+- Real content
+- Semantic first
+- Iterate Visually
+- motion integrated
+- accessibility verified
+- responsive verified
+
+### Sidecoach additions (parity-plus)
+- sidecoach brand verification gate
+- BuildReport
+- polish-standard domain grade
+- memory entry
+-----
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/S/coverage-forms-multi-step-corporate-vendor-onboarding.html

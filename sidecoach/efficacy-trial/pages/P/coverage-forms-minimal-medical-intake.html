@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New Patient Intake Form</title>
+<style>
+  :root {
+    --color-bg: #f7f8f7;
+    --color-surface: #ffffff;
+    --color-border: #d8dcda;
+    --color-border-strong: #a8b0ac;
+    --color-text: #1f2924;
+    --color-text-muted: #566058;
+    --color-accent: #2b5c4d;
+    --color-accent-dark: #1c3f34;
+    --color-focus: #1a5fb4;
+    --color-error: #9a2f2f;
+    --color-error-bg: #fbeeee;
+    --color-success-bg: #eaf3ee;
+    --color-success-border: #2b5c4d;
+    --radius: 6px;
+    --max-width: 42rem;
+    font-size: 16px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #14181a;
+      --color-surface: #1c2226;
+      --color-border: #333c40;
+      --color-border-strong: #4a5559;
+      --color-text: #e9edec;
+      --color-text-muted: #aab4b0;
+      --color-accent: #6fbf9e;
+      --color-accent-dark: #8fd4b6;
+      --color-focus: #7fb3f0;
+      --color-error: #e28f8f;
+      --color-error-bg: #3a2323;
+      --color-success-bg: #1e2e26;
+      --color-success-border: #6fbf9e;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .page {
+    max-width: var(--max-width);
+    margin: 0 auto;
+  }
+
+  header.intro {
+    margin-bottom: 2rem;
+  }
+
+  header.intro h1 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: var(--color-text);
+  }
+
+  header.intro p {
+    color: var(--color-text-muted);
+    margin: 0 0 0.5rem;
+    max-width: 38rem;
+  }
+
+  .required-key {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.9rem;
+    display: inline-block;
+    margin-top: 0.25rem;
+  }
+
+  .required-key .req-mark {
+    color: var(--color-error);
+    font-weight: 700;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  fieldset {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.25rem 1.5rem;
+    margin: 0;
+  }
+
+  legend {
+    font-size: 1.05rem;
+    font-weight: 600;
+    padding: 0 0.4rem;
+    color: var(--color-accent-dark);
+  }
+
+  .field-hint {
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+    margin: 0 0 1rem;
+  }
+
+  .field {
+    margin-bottom: 1rem;
+  }
+
+  .field:last-child {
+    margin-bottom: 0;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 40rem) {
+    .field-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+    font-size: 0.96rem;
+  }
+
+  .optional-tag {
+    font-weight: 400;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+  }
+
+  .req-mark {
+    color: var(--color-error);
+  }
+
+  input[type="text"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="date"],
+  select,
+  textarea {
+    width: 100%;
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.7rem;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 4.5rem;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  a:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 1px;
+  }
+
+  input:disabled,
+  textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .checkbox-row,
+  .radio-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    min-height: 2.75rem;
+    padding: 0.25rem 0;
+  }
+
+  .checkbox-row input,
+  .radio-row input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+  }
+
+  .checkbox-row label,
+  .radio-row label {
+    font-weight: 400;
+    margin-bottom: 0;
+  }
+
+  .checklist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.1rem 1rem;
+  }
+
+  @media (max-width: 30rem) {
+    .checklist-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .inline-hint {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-top: 0.3rem;
+  }
+
+  .error-message {
+    color: var(--color-error);
+    font-size: 0.88rem;
+    margin-top: 0.3rem;
+    display: none;
+  }
+
+  .field.invalid input,
+  .field.invalid textarea,
+  .field.invalid select {
+    border-color: var(--color-error);
+  }
+
+  .field.invalid .error-message {
+    display: block;
+  }
+
+  .consent-box {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+    max-height: 9rem;
+    overflow-y: auto;
+    font-size: 0.92rem;
+    color: var(--color-text-muted);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    border-radius: var(--radius);
+    padding: 0.7rem 1.4rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: #ffffff;
+    border-color: var(--color-accent);
+  }
+
+  .btn-primary:hover {
+    background: var(--color-accent-dark);
+    border-color: var(--color-accent-dark);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-bg);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .form-status {
+    font-size: 0.92rem;
+    color: var(--color-text-muted);
+    margin-right: auto;
+  }
+
+  /* Review step */
+  .review-panel {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+
+  .review-panel h2 {
+    font-size: 1.2rem;
+    margin: 0 0 0.25rem;
+  }
+
+  .review-panel > p.field-hint {
+    margin-bottom: 1.25rem;
+  }
+
+  .review-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .review-section:last-of-type {
+    margin-bottom: 1.5rem;
+  }
+
+  .review-section h3 {
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-muted);
+    margin: 0 0 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.35rem;
+  }
+
+  .review-item {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    padding: 0.15rem 0;
+  }
+
+  .review-item dt {
+    flex: 0 0 11rem;
+    color: var(--color-text-muted);
+  }
+
+  .review-item dd {
+    margin: 0;
+    flex: 1;
+    word-break: break-word;
+  }
+
+  @media (max-width: 30rem) {
+    .review-item {
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+    .review-item dt {
+      flex: none;
+    }
+  }
+
+  .confirmation-panel {
+    border: 1px solid var(--color-success-border);
+    background: var(--color-success-bg);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: left;
+  }
+
+  .confirmation-panel h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+    color: var(--color-accent-dark);
+  }
+
+  .confirmation-panel p {
+    color: var(--color-text);
+    margin: 0 0 0.5rem;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="intro">
+      <h1>New Patient Intake Form</h1>
+      <p>Thank you for taking a few minutes to share this information before your appointment. Everything you enter here helps your care team prepare for your visit. You can take your time - nothing is submitted until you review it on the final step.</p>
+      <p class="required-key"><span class="req-mark" aria-hidden="true">*</span> marks a required field. Anything not marked is optional.</p>
+    </header>
+
+    <div id="form-status-live" class="visually-hidden" role="status" aria-live="polite"></div>
+
+    <form id="intake-form" novalidate autocomplete="on">
+
+      <fieldset>
+        <legend>Patient contact details</legend>
+        <p class="field-hint">So we can reach you and confirm your identity at check-in.</p>
+
+        <div class="field">
+          <label for="full-name">Full legal name <span class="req-mark" aria-hidden="true">*</span></label>
+          <input type="text" id="full-name" name="full-name" autocomplete="name" required aria-required="true" aria-describedby="full-name-error">
+          <p class="error-message" id="full-name-error">Please enter your full name.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="dob">Date of birth <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="date" id="dob" name="dob" autocomplete="bday" required aria-required="true" aria-describedby="dob-error">
+            <p class="error-message" id="dob-error">Please enter your date of birth.</p>
+          </div>
+          <div class="field">
+            <label for="phone">Phone number <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="tel" id="phone" name="phone" autocomplete="tel" required aria-required="true" aria-describedby="phone-error" placeholder="(555) 555-5555">
+            <p class="error-message" id="phone-error">Please enter a phone number where we can reach you.</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="email">Email address <span class="optional-tag">(optional)</span></label>
+          <input type="email" id="email" name="email" autocomplete="email" aria-describedby="email-error">
+          <p class="error-message" id="email-error">Please enter a valid email address.</p>
+        </div>
+
+        <div class="field">
+          <label for="address">Home address <span class="req-mark" aria-hidden="true">*</span></label>
+          <input type="text" id="address" name="address" autocomplete="street-address" required aria-required="true" aria-describedby="address-error" placeholder="Street, city, state, ZIP">
+          <p class="error-message" id="address-error">Please enter your home address.</p>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Insurance information</legend>
+        <p class="field-hint">If you are not sure of an exact number, bring your insurance card to your appointment and enter what you can.</p>
+
+        <div class="field">
+          <label for="insurance-provider">Insurance provider <span class="req-mark" aria-hidden="true">*</span></label>
+          <input type="text" id="insurance-provider" name="insurance-provider" required aria-required="true" aria-describedby="insurance-provider-error">
+          <p class="error-message" id="insurance-provider-error">Please enter your insurance provider, or "self-pay" if none.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="member-id">Member ID <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="member-id" name="member-id" required aria-required="true" aria-describedby="member-id-error">
+            <p class="error-message" id="member-id-error">Please enter your member ID.</p>
+          </div>
+          <div class="field">
+            <label for="group-number">Group number <span class="optional-tag">(optional)</span></label>
+            <input type="text" id="group-number" name="group-number">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="policy-holder">Policy holder name, if different from you <span class="optional-tag">(optional)</span></label>
+          <input type="text" id="policy-holder" name="policy-holder">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Emergency contact</legend>
+        <p class="field-hint">Someone we can reach if we are unable to reach you.</p>
+
+        <div class="field">
+          <label for="emergency-name">Contact name <span class="req-mark" aria-hidden="true">*</span></label>
+          <input type="text" id="emergency-name" name="emergency-name" required aria-required="true" aria-describedby="emergency-name-error">
+          <p class="error-message" id="emergency-name-error">Please enter an emergency contact name.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="emergency-relationship">Relationship to you <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="emergency-relationship" name="emergency-relationship" required aria-required="true" aria-describedby="emergency-relationship-error" placeholder="e.g. spouse, parent, friend">
+            <p class="error-message" id="emergency-relationship-error">Please describe this person's relationship to you.</p>
+          </div>
+          <div class="field">
+            <label for="emergency-phone">Contact phone number <span class="req-mark" aria-hidden="true">*</span></label>
+            <input type="tel" id="emergency-phone" name="emergency-phone" required aria-required="true" aria-describedby="emergency-phone-error">
+            <p class="error-message" id="emergency-phone-error">Please enter a phone number for this contact.</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Current medications</legend>
+        <p class="field-hint">Include prescription medications, over-the-counter medications, and supplements you take regularly.</p>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="no-medications" name="no-medications">
+          <label for="no-medications">I am not currently taking any medications</label>
+        </div>
+
+        <div class="field" id="medications-field">
+          <label for="medications">List each medication, with dosage and how often you take it <span class="req-mark" aria-hidden="true">*</span></label>
+          <textarea id="medications" name="medications" required aria-required="true" aria-describedby="medications-error" placeholder="e.g. Lisinopril 10mg, once daily"></textarea>
+          <p class="error-message" id="medications-error">Please list your current medications, or check "I am not currently taking any medications" above.</p>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Allergies</legend>
+        <p class="field-hint">Include medication, food, and environmental allergies, and what happens when you are exposed.</p>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="no-allergies" name="no-allergies">
+          <label for="no-allergies">I have no known allergies</label>
+        </div>
+
+        <div class="field" id="allergies-field">
+          <label for="allergies">List each allergy and your reaction to it <span class="req-mark" aria-hidden="true">*</span></label>
+          <textarea id="allergies" name="allergies" required aria-required="true" aria-describedby="allergies-error" placeholder="e.g. Penicillin, causes rash"></textarea>
+          <p class="error-message" id="allergies-error">Please list your allergies, or check "I have no known allergies" above.</p>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Medical history checklist</legend>
+        <p class="field-hint">Check any conditions that apply to you, now or in the past. This helps your provider give you safer, more relevant care.</p>
+
+        <div class="checklist-grid">
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-diabetes" name="history" value="Diabetes">
+            <label for="hist-diabetes">Diabetes</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-hypertension" name="history" value="High blood pressure">
+            <label for="hist-hypertension">High blood pressure</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-heart" name="history" value="Heart disease">
+            <label for="hist-heart">Heart disease</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-asthma" name="history" value="Asthma or lung disease">
+            <label for="hist-asthma">Asthma or lung disease</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-cancer" name="history" value="Cancer">
+            <label for="hist-cancer">Cancer</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-kidney" name="history" value="Kidney disease">
+            <label for="hist-kidney">Kidney disease</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-mental-health" name="history" value="Anxiety, depression, or other mental health condition">
+            <label for="hist-mental-health">Anxiety, depression, or other mental health condition</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-surgery" name="history" value="Previous surgery">
+            <label for="hist-surgery">Previous surgery</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-pregnancy" name="history" value="Currently pregnant or possibly pregnant">
+            <label for="hist-pregnancy">Currently pregnant or possibly pregnant</label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="hist-none" name="history" value="None of the above">
+            <label for="hist-none">None of the above</label>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top: 0.75rem;">
+          <label for="history-other">Anything else we should know <span class="optional-tag">(optional)</span></label>
+          <textarea id="history-other" name="history-other" placeholder="Other conditions, past hospitalizations, or family history you'd like us to know about"></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Consent acknowledgement</legend>
+        <p class="field-hint">Please read before continuing.</p>
+
+        <div class="consent-box" tabindex="0" aria-label="Consent statement">
+          <p>I confirm that the information I have provided on this form is accurate and complete to the best of my knowledge. I understand that this information will be used by my care team to provide safe and appropriate treatment, and that I may update it at any time by speaking with clinic staff. I understand I have the right to ask questions about anything on this form before my appointment.</p>
+        </div>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="consent" name="consent" required aria-required="true" aria-describedby="consent-error">
+          <label for="consent">I have read and agree to the statement above <span class="req-mark" aria-hidden="true">*</span></label>
+        </div>
+        <p class="error-message" id="consent-error">Please confirm you have read and agree to the consent statement.</p>
+      </fieldset>
+
+      <div class="actions" id="form-actions">
+        <button type="button" class="btn-primary" id="review-button">Review my information</button>
+      </div>
+    </form>
+
+    <section class="review-panel hidden" id="review-panel" aria-labelledby="review-heading">
+      <h2 id="review-heading">Review your information</h2>
+      <p class="field-hint">Please check everything below carefully. You can go back and make changes, or confirm and submit if everything looks correct.</p>
+
+      <div id="review-content"></div>
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" id="edit-button">Go back and edit</button>
+        <button type="button" class="btn-primary" id="submit-button">Confirm and submit</button>
+      </div>
+    </section>
+
+    <section class="confirmation-panel hidden" id="confirmation-panel" tabindex="-1" aria-labelledby="confirmation-heading">
+      <h2 id="confirmation-heading">Thank you - your intake form is complete</h2>
+      <p>Your information has been recorded for your upcoming appointment. If anything changes before your visit, such as a new medication or allergy, please let the front desk know when you arrive.</p>
+    </section>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var form = document.getElementById("intake-form");
+  var reviewButton = document.getElementById("review-button");
+  var editButton = document.getElementById("edit-button");
+  var submitButton = document.getElementById("submit-button");
+  var reviewPanel = document.getElementById("review-panel");
+  var reviewContent = document.getElementById("review-content");
+  var confirmationPanel = document.getElementById("confirmation-panel");
+  var liveStatus = document.getElementById("form-status-live");
+
+  var noMedications = document.getElementById("no-medications");
+  var medicationsField = document.getElementById("medications-field");
+  var medicationsInput = document.getElementById("medications");
+
+  var noAllergies = document.getElementById("no-allergies");
+  var allergiesField = document.getElementById("allergies-field");
+  var allergiesInput = document.getElementById("allergies");
+
+  function toggleDependentField(checkbox, wrapperEl, inputEl) {
+    if (checkbox.checked) {
+      inputEl.value = "";
+      inputEl.required = false;
+      inputEl.disabled = true;
+      wrapperEl.classList.add("hidden");
+    } else {
+      inputEl.required = true;
+      inputEl.disabled = false;
+      wrapperEl.classList.remove("hidden");
+    }
+  }
+
+  noMedications.addEventListener("change", function () {
+    toggleDependentField(noMedications, medicationsField, medicationsInput);
+  });
+
+  noAllergies.addEventListener("change", function () {
+    toggleDependentField(noAllergies, allergiesField, allergiesInput);
+  });
+
+  function clearErrors() {
+    var invalidFields = form.querySelectorAll(".field.invalid, .checkbox-row.invalid");
+    invalidFields.forEach(function (el) {
+      el.classList.remove("invalid");
+    });
+  }
+
+  function markInvalid(inputEl) {
+    var wrapper = inputEl.closest(".field") || inputEl.closest(".checkbox-row");
+    if (wrapper) {
+      wrapper.classList.add("invalid");
+    }
+  }
+
+  function validateForm() {
+    clearErrors();
+    var invalidEls = [];
+    var requiredEls = form.querySelectorAll("[required]");
+    requiredEls.forEach(function (el) {
+      if (el.disabled) { return; }
+      var valid = el.checkValidity();
+      if (!valid) {
+        markInvalid(el);
+        invalidEls.push(el);
+      }
+    });
+    return invalidEls;
+  }
+
+  function fieldLabel(id) {
+    var label = form.querySelector('label[for="' + id + '"]');
+    if (!label) { return id; }
+    return label.textContent.replace("*", "").trim();
+  }
+
+  function value(id) {
+    var el = document.getElementById(id);
+    if (!el) { return ""; }
+    return el.value.trim();
+  }
+
+  function buildReviewSection(title, rows) {
+    var visibleRows = rows.filter(function (row) { return row.value !== ""; });
+    if (visibleRows.length === 0) { return ""; }
+    var html = '<div class="review-section"><h3>' + title + '</h3><dl>';
+    visibleRows.forEach(function (row) {
+      html += '<div class="review-item"><dt>' + row.label + '</dt><dd>' + row.value + '</dd></div>';
+    });
+    html += '</dl></div>';
+    return html;
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function populateReview() {
+    var checkedHistory = Array.prototype.slice
+      .call(form.querySelectorAll('input[name="history"]:checked'))
+      .map(function (el) { return el.value; })
+      .join(", ");
+
+    var medicationsValue = noMedications.checked
+      ? "Not currently taking any medications"
+      : escapeHtml(value("medications"));
+
+    var allergiesValue = noAllergies.checked
+      ? "No known allergies"
+      : escapeHtml(value("allergies"));
+
+    var html = "";
+
+    html += buildReviewSection("Patient contact details", [
+      { label: "Full name", value: escapeHtml(value("full-name")) },
+      { label: "Date of birth", value: escapeHtml(value("dob")) },
+      { label: "Phone number", value: escapeHtml(value("phone")) },
+      { label: "Email address", value: escapeHtml(value("email")) },
+      { label: "Home address", value: escapeHtml(value("address")) }
+    ]);
+
+    html += buildReviewSection("Insurance information", [
+      { label: "Insurance provider", value: escapeHtml(value("insurance-provider")) },
+      { label: "Member ID", value: escapeHtml(value("member-id")) },
+      { label: "Group number", value: escapeHtml(value("group-number")) },
+      { label: "Policy holder", value: escapeHtml(value("policy-holder")) }
+    ]);
+
+    html += buildReviewSection("Emergency contact", [
+      { label: "Contact name", value: escapeHtml(value("emergency-name")) },
+      { label: "Relationship", value: escapeHtml(value("emergency-relationship")) },
+      { label: "Contact phone", value: escapeHtml(value("emergency-phone")) }
+    ]);
+
+    html += buildReviewSection("Current medications", [
+      { label: "Medications", value: medicationsValue }
+    ]);
+
+    html += buildReviewSection("Allergies", [
+      { label: "Allergies", value: allergiesValue }
+    ]);
+
+    html += buildReviewSection("Medical history", [
+      { label: "Conditions checked", value: escapeHtml(checkedHistory) },
+      { label: "Additional notes", value: escapeHtml(value("history-other")) }
+    ]);
+
+    html += buildReviewSection("Consent", [
+      { label: "Consent given", value: document.getElementById("consent").checked ? "Yes" : "" }
+    ]);
+
+    reviewContent.innerHTML = html;
+  }
+
+  reviewButton.addEventListener("click", function () {
+    var invalidEls = validateForm();
+    if (invalidEls.length > 0) {
+      liveStatus.textContent = "There are " + invalidEls.length + " field" + (invalidEls.length === 1 ? "" : "s") + " that need attention before you can review your information.";
+      invalidEls[0].focus();
+      return;
+    }
+
+    populateReview();
+    form.classList.add("hidden");
+    reviewPanel.classList.remove("hidden");
+    liveStatus.textContent = "Showing a review of your information. Please check it before submitting.";
+    reviewPanel.querySelector("h2").focus();
+  });
+
+  editButton.addEventListener("click", function () {
+    reviewPanel.classList.add("hidden");
+    form.classList.remove("hidden");
+    liveStatus.textContent = "Returned to the form for editing.";
+    form.querySelector("h1, legend, input, textarea");
+    document.getElementById("full-name").focus();
+  });
+
+  submitButton.addEventListener("click", function () {
+    submitButton.disabled = true;
+    reviewPanel.classList.add("hidden");
+    confirmationPanel.classList.remove("hidden");
+    liveStatus.textContent = "Your intake form has been submitted. Thank you.";
+    confirmationPanel.focus();
+  });
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+  });
+})();
+</script>
+</body>
+</html>

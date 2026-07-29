@@ -1,0 +1,42 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# editorial-restrained-public-health-brief (coverage brief, Codex-authored)
+
+title: Public Health Research Explainer
+register: editorial
+aestheticStyle: restrained
+audience: General readers seeking a careful explanation of new public health research.
+goal: Explain a fictional study’s findings, limits, and practical implications without overstating certainty.
+requiredContent:
+- Article title
+- Short summary
+- Study context
+- Key findings
+- What the study does not prove
+- Expert commentary from fictional sources
+- Practical takeaways
+- Links section with placeholder source descriptions
+constraints:
+- audience: Readers may have varied scientific literacy and may be sensitive to health claims.
+- brand-tone-in-words: Careful, balanced, plain, and responsible.
+- platform: Responsive news or public-interest article page.
+- baseline: Must be accessible and clearly distinguish evidence from interpretation.
+successCriteria:
+- Readers understand the finding and its limits.
+- The article avoids alarm, hype, or unsupported advice.
+- Important caveats are visible and understandable.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-editorial-restrained-public-health-brief.html

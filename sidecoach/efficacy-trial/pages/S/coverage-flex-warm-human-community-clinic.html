@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Community Clinic Appointment Guide | Harbor Street Health</title>
+<meta name="description" content="Find services, cost and eligibility information, appointment options, walk-in hours, language support, and what to bring to your visit at Harbor Street Health.">
+<style>
+  :root {
+    color-scheme: light dark;
+
+    /* Type */
+    --font-heading: Baskerville, "Iowan Old Style", Cambria, Georgia, serif;
+    --font-body: Avenir, Optima, "Segoe UI", Roboto, sans-serif;
+
+    /* 4pt spacing scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    /* Motion */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-feedback: 120ms;
+    --dur-state: 220ms;
+    --dur-entrance: 500ms;
+
+    /* Color - OKLCH, warm/human register */
+    --color-bg: oklch(97% 0.012 75);
+    --color-surface: oklch(99% 0.007 75);
+    --color-surface-raised: oklch(100% 0.005 75);
+    --color-border: oklch(87% 0.014 70);
+    --color-text: oklch(24% 0.02 55);
+    --color-text-muted: oklch(42% 0.022 55);
+    --color-primary: oklch(47% 0.135 35);
+    --color-primary-hover: oklch(41% 0.135 35);
+    --color-primary-active: oklch(38% 0.13 35);
+    --color-on-primary: oklch(98% 0.008 35);
+    --color-accent: oklch(46% 0.075 195);
+    --color-accent-bg: oklch(94% 0.03 195);
+    --color-focus: oklch(45% 0.16 260);
+    --color-success-bg: oklch(94% 0.045 150);
+    --color-success-text: oklch(32% 0.09 150);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: oklch(20% 0.014 60);
+      --color-surface: oklch(24% 0.016 60);
+      --color-surface-raised: oklch(28% 0.018 60);
+      --color-border: oklch(36% 0.02 60);
+      --color-text: oklch(93% 0.012 70);
+      --color-text-muted: oklch(76% 0.018 70);
+      --color-primary: oklch(72% 0.12 40);
+      --color-primary-hover: oklch(78% 0.12 40);
+      --color-primary-active: oklch(66% 0.12 40);
+      --color-on-primary: oklch(16% 0.02 40);
+      --color-accent: oklch(78% 0.07 195);
+      --color-accent-bg: oklch(30% 0.045 195);
+      --color-focus: oklch(78% 0.13 250);
+      --color-success-bg: oklch(30% 0.06 150);
+      --color-success-text: oklch(88% 0.09 150);
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--color-text);
+    text-wrap: balance;
+    margin: 0 0 var(--space-4);
+  }
+
+  h1 { font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3.75rem); }
+  h2 { font-size: clamp(1.5rem, 1.28rem + 1.1vw, 2.125rem); }
+  h3 { font-size: clamp(1.125rem, 1.03rem + 0.5vw, 1.375rem); }
+
+  p { margin: 0 0 var(--space-4); max-width: 68ch; }
+
+  a {
+    color: var(--color-accent);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 0.15em;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -100px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    padding: var(--space-3) var(--space-4);
+    border-radius: 8px;
+    z-index: 100;
+    transition: top var(--dur-state) var(--ease-out);
+    font-weight: 600;
+  }
+  .skip-link:focus-visible {
+    top: var(--space-4);
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin-inline: auto;
+    padding-inline: var(--space-6);
+  }
+
+  /* Header */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in oklch, var(--color-bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .header-inner {
+    max-width: 1120px;
+    margin-inline: auto;
+    padding: var(--space-4) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .clinic-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+    margin: 0;
+  }
+  .quicknav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .quicknav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: 999px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    transition: background-color var(--dur-feedback) var(--ease-out),
+                border-color var(--dur-feedback) var(--ease-out),
+                transform var(--dur-feedback) var(--ease-out);
+  }
+  .quicknav a:hover {
+    background: var(--color-accent-bg);
+    border-color: var(--color-accent);
+  }
+  .quicknav a:active {
+    transform: scale(0.96);
+  }
+  .quicknav a[aria-current="true"] {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  /* Hero */
+  .hero {
+    padding: var(--space-16) 0 var(--space-12);
+  }
+  .hero .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-accent);
+    margin: 0 0 var(--space-3);
+  }
+  .hero-lede {
+    font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+    color: var(--color-text-muted);
+    max-width: 62ch;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin: var(--space-6) 0;
+  }
+  .hero-reassure {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+    border-radius: 16px;
+    padding: var(--space-4) var(--space-6);
+    max-width: 62ch;
+    font-size: 0.9375rem;
+  }
+  .hero-reassure strong { font-weight: 700; }
+
+  .anim-in {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fade-up var(--dur-entrance) var(--ease-out) forwards;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  @keyframes fade-up {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .anim-in { opacity: 1; transform: none; animation: none; }
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-3) var(--space-6);
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: background-color var(--dur-feedback) var(--ease-out),
+                border-color var(--dur-feedback) var(--ease-out),
+                transform var(--dur-feedback) var(--ease-out);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+  .btn-primary:hover { background: var(--color-primary-hover); }
+  .btn-primary:active { background: var(--color-primary-active); }
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--color-border);
+    color: var(--color-text);
+  }
+  .btn-secondary:hover {
+    border-color: var(--color-accent);
+    background: var(--color-accent-bg);
+  }
+
+  /* Sections */
+  section.block {
+    padding: var(--space-12) 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .block-head {
+    max-width: 62ch;
+    margin-bottom: var(--space-8);
+  }
+  .block-head p { color: var(--color-text-muted); }
+
+  /* Service / info cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+  @media (min-width: 768px) {
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .card-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: var(--space-6);
+  }
+  .card h3 { margin-bottom: var(--space-2); }
+  .card p { margin-bottom: 0; color: var(--color-text-muted); font-size: 0.9375rem; }
+
+  /* Definition-style rows for eligibility / contact */
+  .info-rows {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-1) var(--space-6);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .info-row:last-child { border-bottom: none; }
+  @media (min-width: 768px) {
+    .info-row { grid-template-columns: minmax(160px, 220px) 1fr; align-items: baseline; }
+  }
+  .info-row dt {
+    font-weight: 700;
+    font-family: var(--font-heading);
+  }
+  .info-row dd {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  /* Checklist */
+  .checklist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-3);
+  }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+  .checklist .mark {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-accent-bg);
+    color: var(--color-accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8125rem;
+  }
+
+  /* Accordion (FAQ) */
+  .faq {
+    display: grid;
+    gap: var(--space-3);
+  }
+  .faq details {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 0;
+  }
+  .faq summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-6);
+    font-weight: 700;
+    min-height: 44px;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: "";
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--color-accent);
+    border-bottom: 2px solid var(--color-accent);
+    transform: rotate(45deg);
+    transition: transform var(--dur-state) var(--ease-drawer);
+  }
+  .faq details[open] summary::after {
+    transform: rotate(-135deg);
+  }
+  .faq .faq-body {
+    padding: 0 var(--space-6) var(--space-6);
+    color: var(--color-text-muted);
+  }
+  .faq .faq-body p:last-child { margin-bottom: 0; }
+
+  /* Language chips */
+  .lang-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .lang-list li {
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-accent-bg);
+    color: var(--color-accent);
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  address {
+    font-style: normal;
+  }
+
+  footer.site-footer {
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-12) 0 var(--space-16);
+  }
+  footer.site-footer p {
+    color: var(--color-text-muted);
+    font-size: 0.9375rem;
+  }
+
+  @media (min-width: 768px) {
+    .header-inner { flex-direction: row; align-items: center; justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="header-inner">
+    <p class="clinic-name">Harbor Street Health</p>
+    <nav aria-label="Page sections">
+      <ul class="quicknav" id="quicknav">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#eligibility">Cost &amp; Eligibility</a></li>
+        <li><a href="#appointments">Appointments</a></li>
+        <li><a href="#walk-in">Walk-In</a></li>
+        <li><a href="#languages">Languages</a></li>
+        <li><a href="#prepare">What to Bring</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero wrap">
+    <p class="eyebrow anim-in" style="--i:0">Community clinic, open to everyone</p>
+    <h1 class="anim-in" style="--i:1">You're welcome here, whatever your situation.</h1>
+    <p class="hero-lede anim-in" style="--i:2">
+      Harbor Street Health offers affordable primary care and support services to people who
+      live nearby. Insured or not, documented or not, first visit or tenth &mdash; there is a way
+      for you to get care here.
+    </p>
+    <div class="hero-actions anim-in" style="--i:3">
+      <a class="btn btn-primary" href="tel:+15555550142">Call to schedule a visit</a>
+      <a class="btn btn-secondary" href="#walk-in">See walk-in hours</a>
+    </div>
+    <p class="hero-reassure anim-in" style="--i:4">
+      <strong>Not sure where to start?</strong> That's normal, and it's what our front desk is for.
+      Call the number above and say "I'm not sure what I need" &mdash; someone will help you figure
+      it out, in plain language, at no cost to ask.
+    </p>
+  </section>
+
+  <section class="block wrap" id="services">
+    <div class="block-head">
+      <h2>Services offered</h2>
+      <p>Harbor Street Health is a full primary care clinic. Most residents can get everything
+        they need for everyday health right here, without a referral to start.</p>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Primary &amp; preventive care</h3>
+        <p>Checkups, physicals, and ongoing care from a doctor or nurse practitioner who gets
+          to know you over time.</p>
+      </div>
+      <div class="card">
+        <h3>Same-day sick visits</h3>
+        <p>Cold, flu, infection, injury &mdash; we hold same-day slots every morning for
+          anyone who needs to be seen that day.</p>
+      </div>
+      <div class="card">
+        <h3>Chronic condition care</h3>
+        <p>Ongoing management for diabetes, high blood pressure, asthma, and other conditions
+          that need regular check-ins.</p>
+      </div>
+      <div class="card">
+        <h3>Vaccinations &amp; screenings</h3>
+        <p>Routine immunizations, blood pressure and cholesterol checks, cancer screenings,
+          and other preventive tests.</p>
+      </div>
+      <div class="card">
+        <h3>Behavioral health support</h3>
+        <p>Counseling and support for stress, anxiety, depression, and other concerns, with
+          same-clinic referrals when more help is needed.</p>
+      </div>
+      <div class="card">
+        <h3>Specialist referrals</h3>
+        <p>When you need care beyond what we offer, we connect you directly to a specialist
+          and help you understand the next step.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block wrap" id="eligibility">
+    <div class="block-head">
+      <h2>Eligibility and payment</h2>
+      <p>No one is turned away from Harbor Street Health because they can't pay. Here's how
+        cost and eligibility actually work.</p>
+    </div>
+    <dl class="info-rows">
+      <div class="info-row">
+        <dt>Sliding-scale fees</dt>
+        <dd>Your visit cost is based on household income and size. Many residents pay a small
+          flat fee per visit; some pay nothing. We calculate this with you at check-in, not
+          before.</dd>
+      </div>
+      <div class="info-row">
+        <dt>Insurance accepted</dt>
+        <dd>Medicaid, Medicare, and most private insurance plans. Bring your card if you have
+          one, but you do not need insurance to be seen.</dd>
+      </div>
+      <div class="info-row">
+        <dt>Uninsured residents</dt>
+        <dd>You are welcome here. Discounted self-pay rates apply automatically, and financial
+          assistance can lower the cost further.</dd>
+      </div>
+      <div class="info-row">
+        <dt>Immigration status</dt>
+        <dd>We do not ask about immigration status, and it never affects the care you receive
+          or what you are charged.</dd>
+      </div>
+      <div class="info-row">
+        <dt>Financial assistance</dt>
+        <dd>Ask the front desk for a financial assistance application at any visit. Approval
+          can apply retroactively to that day's care.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="block wrap" id="appointments">
+    <div class="block-head">
+      <h2>Appointment options</h2>
+      <p>There are a few ways to get on the schedule, depending on how soon you need to be seen.</p>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Call to schedule</h3>
+        <p>Phone (555) 555-0142, Monday through Friday, 8:00 a.m. to 5:30 p.m. This is the
+          fastest way to book a routine visit.</p>
+      </div>
+      <div class="card">
+        <h3>Same-day sick visits</h3>
+        <p>Call as early in the day as possible. We hold a limited number of same-day slots
+          each morning for urgent, non-emergency needs.</p>
+      </div>
+      <div class="card">
+        <h3>New patient visits</h3>
+        <p>Your first appointment runs about 45 minutes so we can properly get to know your
+          health history. Returning visits are usually 20 minutes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block wrap" id="walk-in">
+    <div class="block-head">
+      <h2>Walk-in guidance</h2>
+      <p>Prefer not to call ahead, or don't have a phone handy? You can walk in.</p>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>When can I walk in?</summary>
+        <div class="faq-body">
+          <p>Monday through Friday, 8:00 a.m. to 4:00 p.m. Walk-ins are seen in the order they
+            arrive, after anyone with a scheduled appointment at that time.</p>
+        </div>
+      </details>
+      <details>
+        <summary>How long is the wait?</summary>
+        <div class="faq-body">
+          <p>Typically 20 to 60 minutes, longer on Monday mornings. Front desk staff can give
+            you a realistic estimate when you arrive, and you're welcome to leave and come back.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Should I call ahead instead?</summary>
+        <div class="faq-body">
+          <p>If you know you need a specific test, a longer visit, or an interpreter for a
+            language other than Spanish, calling ahead helps us prepare. For everything else,
+            walking in works just as well.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="block wrap" id="languages">
+    <div class="block-head">
+      <h2>Language support</h2>
+      <p>Care is available in your language, whether or not our front-desk staff speaks it.</p>
+    </div>
+    <p>Front-desk and clinical staff speak English and Spanish on-site every day. For every
+      other language, we connect you with a free phone interpreter during your visit &mdash;
+      just let us know when you arrive or when you call.</p>
+    <ul class="lang-list" aria-label="Languages supported through our interpreter line">
+      <li>Spanish</li>
+      <li>Mandarin</li>
+      <li>Vietnamese</li>
+      <li>Arabic</li>
+      <li>Haitian Creole</li>
+      <li>Tagalog</li>
+      <li>Portuguese</li>
+      <li>Russian</li>
+      <li>American Sign Language</li>
+      <li>and more on request</li>
+    </ul>
+  </section>
+
+  <section class="block wrap" id="prepare">
+    <div class="block-head">
+      <h2>What to bring</h2>
+      <p>Bring what you have &mdash; nothing on this list is required to be seen.</p>
+    </div>
+    <ul class="checklist">
+      <li><span class="mark" aria-hidden="true">1</span>
+        <span>Insurance card, if you have one. If not, that's fine &mdash; just let us know.</span></li>
+      <li><span class="mark" aria-hidden="true">2</span>
+        <span>A list of current medications, or the pill bottles themselves.</span></li>
+      <li><span class="mark" aria-hidden="true">3</span>
+        <span>Any recent medical records or test results, if you have access to them.</span></li>
+      <li><span class="mark" aria-hidden="true">4</span>
+        <span>A photo ID, if you have one. It is not required to receive care.</span></li>
+      <li><span class="mark" aria-hidden="true">5</span>
+        <span>Questions written down in advance, so nothing gets forgotten in the visit.</span></li>
+    </ul>
+  </section>
+
+  <section class="block wrap" id="contact">
+    <div class="block-head">
+      <h2>Contact information</h2>
+      <p>Reach us by phone, or come by in person during business hours.</p>
+    </div>
+    <dl class="info-rows">
+      <div class="info-row">
+        <dt>Address</dt>
+        <dd><address>128 Harbor Street, Cedar Falls</address></dd>
+      </div>
+      <div class="info-row">
+        <dt>Phone</dt>
+        <dd><a href="tel:+15555550142">(555) 555-0142</a></dd>
+      </div>
+      <div class="info-row">
+        <dt>Fax</dt>
+        <dd>(555) 555-0143</dd>
+      </div>
+      <div class="info-row">
+        <dt>Hours</dt>
+        <dd>Monday&ndash;Friday, 8:00 a.m.&ndash;6:00 p.m.<br>Saturday, 9:00 a.m.&ndash;1:00 p.m.<br>Closed Sunday</dd>
+      </div>
+    </dl>
+  </section>
+</main>
+
+<footer class="site-footer wrap">
+  <p>Harbor Street Health provides care regardless of ability to pay, insurance status, or
+    immigration status. If you're unsure whether we can help, call us &mdash; that call alone
+    won't cost you anything.</p>
+</footer>
+
+<script>
+  (function () {
+    if (!('IntersectionObserver' in window)) return;
+    var links = Array.prototype.slice.call(document.querySelectorAll('#quicknav a'));
+    var sections = links
+      .map(function (link) {
+        var id = link.getAttribute('href').slice(1);
+        return document.getElementById(id);
+      })
+      .filter(Boolean);
+
+    var observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          var link = links.find(function (l) {
+            return l.getAttribute('href') === '#' + entry.target.id;
+          });
+          if (!link) return;
+          if (entry.isIntersecting) {
+            links.forEach(function (l) { l.removeAttribute('aria-current'); });
+            link.setAttribute('aria-current', 'true');
+          }
+        });
+      },
+      { rootMargin: '-40% 0px -55% 0px' }
+    );
+
+    sections.forEach(function (section) { observer.observe(section); });
+  })();
+</script>
+</body>
+</html>

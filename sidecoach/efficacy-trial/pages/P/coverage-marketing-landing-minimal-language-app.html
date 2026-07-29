@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DailyPhrase - A calmer way to learn a language</title>
+<style>
+  :root {
+    --ink: #1c2321;
+    --ink-soft: #4b5754;
+    --paper: #faf9f6;
+    --paper-raised: #ffffff;
+    --line: #e4e1d8;
+    --accent: #3d6b5c;
+    --accent-soft: #e8efeb;
+    --accent-deep: #2a4d41;
+    --radius: 10px;
+    --max-width: 1040px;
+    font-size: 17px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  .wrap {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Skip link */
+  .skip-link {
+    position: absolute;
+    left: -999px;
+    top: 0;
+    background: var(--ink);
+    color: #fff;
+    padding: 10px 16px;
+    z-index: 100;
+    border-radius: 0 0 6px 0;
+  }
+  .skip-link:focus {
+    left: 0;
+  }
+
+  /* Header */
+  header.site-header {
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  nav.top-nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  nav.top-nav a {
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  nav.top-nav a:hover,
+  nav.top-nav a:focus-visible {
+    color: var(--ink);
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 11px 22px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover,
+  .btn-primary:focus-visible {
+    background: var(--accent-deep);
+  }
+
+  .btn-quiet {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .btn-quiet:hover,
+  .btn-quiet:focus-visible {
+    border-color: var(--ink-soft);
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--accent-deep);
+    outline-offset: 2px;
+  }
+
+  .nav-cta {
+    display: none;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 84px 0 72px;
+  }
+
+  .hero-inner {
+    max-width: 680px;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent-deep);
+    margin: 0 0 18px;
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 4.5vw, 3.1rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    margin: 0 0 20px;
+    font-weight: 650;
+  }
+
+  .hero-promise {
+    font-size: 1.2rem;
+    color: var(--ink-soft);
+    margin: 0 0 32px;
+    max-width: 52ch;
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .hero-note {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+
+  /* Sections */
+  section {
+    padding: 64px 0;
+  }
+
+  section.alt {
+    background: var(--paper-raised);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .section-head {
+    max-width: 620px;
+    margin: 0 0 40px;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    font-weight: 620;
+  }
+
+  .section-head p {
+    color: var(--ink-soft);
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  /* Benefits */
+  .benefit-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+
+  .benefit-card {
+    padding: 4px 0;
+  }
+
+  .benefit-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    color: var(--accent-deep);
+  }
+
+  .benefit-card h3 {
+    font-size: 1.08rem;
+    margin: 0 0 8px;
+    font-weight: 620;
+  }
+
+  .benefit-card p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.98rem;
+  }
+
+  /* Sample lesson */
+  .lesson-demo {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .lesson-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+
+  .lesson-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+
+  .lesson-progress {
+    width: 100px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .lesson-progress span {
+    display: block;
+    height: 100%;
+    width: 60%;
+    background: var(--accent);
+    border-radius: 999px;
+  }
+
+  .lesson-phrase {
+    font-size: 1.4rem;
+    font-weight: 620;
+    margin: 0 0 6px;
+  }
+
+  .lesson-translation {
+    color: var(--ink-soft);
+    margin: 0 0 20px;
+    font-size: 0.98rem;
+  }
+
+  .lesson-options {
+    display: grid;
+    gap: 10px;
+  }
+
+  .lesson-option {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    background: var(--paper-raised);
+  }
+
+  .lesson-option.correct {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    font-weight: 600;
+  }
+
+  .lesson-copy h3 {
+    font-size: 1.3rem;
+    margin: 0 0 14px;
+    font-weight: 620;
+  }
+
+  .lesson-copy ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--ink-soft);
+  }
+
+  .lesson-copy li {
+    margin-bottom: 10px;
+  }
+
+  /* Pricing */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .price-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px;
+    background: var(--paper-raised);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .price-card.featured {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+    position: relative;
+  }
+
+  .price-badge {
+    position: absolute;
+    top: -13px;
+    left: 28px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .price-name {
+    font-weight: 620;
+    font-size: 1.05rem;
+    margin: 4px 0 6px;
+  }
+
+  .price-amount {
+    font-size: 2rem;
+    font-weight: 650;
+    margin: 0 0 4px;
+    letter-spacing: -0.02em;
+  }
+
+  .price-amount span {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  .price-detail {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    margin: 0 0 20px;
+  }
+
+  .price-features {
+    list-style: none;
+    margin: 0 0 24px;
+    padding: 0;
+    flex-grow: 1;
+  }
+
+  .price-features li {
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    padding: 7px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .price-features li:first-child {
+    border-top: none;
+  }
+
+  .price-card .btn {
+    text-align: center;
+    width: 100%;
+  }
+
+  /* Testimonials */
+  .testimonial-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  .testimonial-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px;
+    background: var(--paper-raised);
+  }
+
+  .testimonial-quote {
+    margin: 0 0 20px;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+
+  .testimonial-quote::before {
+    content: "\201C";
+  }
+  .testimonial-quote::after {
+    content: "\201D";
+  }
+
+  .testimonial-person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 650;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .testimonial-name {
+    font-weight: 620;
+    font-size: 0.92rem;
+    margin: 0;
+  }
+
+  .testimonial-role {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  /* Trust strip */
+  .trust-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    justify-content: space-between;
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+  }
+
+  .trust-strip span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Final CTA */
+  .final-cta {
+    text-align: center;
+    padding: 80px 0;
+  }
+
+  .final-cta h2 {
+    font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+    font-weight: 650;
+  }
+
+  .final-cta p {
+    color: var(--ink-soft);
+    max-width: 46ch;
+    margin: 0 auto 32px;
+    font-size: 1.05rem;
+  }
+
+  .final-cta .hero-actions {
+    justify-content: center;
+  }
+
+  /* Signup form */
+  .signup-panel {
+    max-width: 480px;
+    margin: 40px auto 0;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px;
+    text-align: left;
+  }
+
+  .signup-panel h3 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+    font-weight: 620;
+  }
+
+  .signup-panel p.form-sub {
+    margin: 0 0 20px;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  label.field-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .field-wrap {
+    flex: 1 1 220px;
+  }
+
+  input[type="email"] {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  input[type="email"]:focus-visible {
+    outline: 2px solid var(--accent-deep);
+    outline-offset: 1px;
+  }
+
+  .signup-panel .btn-primary {
+    margin-top: 12px;
+    width: 100%;
+    text-align: center;
+    border: none;
+    font-size: 1rem;
+    padding: 13px 22px;
+  }
+
+  .form-fineprint {
+    margin: 14px 0 0;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .form-success {
+    display: none;
+    margin-top: 16px;
+    padding: 12px 14px;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .form-success.visible {
+    display: block;
+  }
+
+  /* Footer */
+  footer.site-footer {
+    border-top: 1px solid var(--line);
+    padding: 40px 0;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+  }
+
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 22px;
+  }
+
+  .footer-links a {
+    text-decoration: none;
+    color: var(--ink-soft);
+  }
+
+  .footer-links a:hover,
+  .footer-links a:focus-visible {
+    color: var(--ink);
+  }
+
+  /* Utility */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 860px) {
+    nav.top-nav a:not(.nav-cta-link) {
+      display: none;
+    }
+
+    .benefit-grid,
+    .pricing-grid,
+    .testimonial-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .lesson-demo {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+
+    .trust-strip {
+      justify-content: flex-start;
+      gap: 18px 32px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    :root {
+      font-size: 16px;
+    }
+
+    .hero {
+      padding: 56px 0 48px;
+    }
+
+    section {
+      padding: 48px 0;
+    }
+
+    .form-row {
+      flex-direction: column;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    * {
+      transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <a href="#top" class="brand" aria-label="DailyPhrase home">
+      <span class="brand-mark" aria-hidden="true">DP</span>
+      <span>DailyPhrase</span>
+    </a>
+    <nav class="top-nav" aria-label="Primary">
+      <a href="#benefits">Why it works</a>
+      <a href="#lesson">Sample lesson</a>
+      <a href="#pricing">Plans</a>
+      <a href="#testimonials">Stories</a>
+      <a class="btn btn-primary" href="#signup">Start free trial</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="top">
+    <div class="wrap hero-inner">
+      <p class="eyebrow">Language practice, ten minutes a day</p>
+      <h1>Learn a language in the time you already have.</h1>
+      <p class="hero-promise">DailyPhrase turns spare minutes into steady progress, with short daily lessons built to fit a full schedule instead of fighting it.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#signup">Start your free trial</a>
+        <a class="btn btn-quiet" href="#lesson">See a sample lesson</a>
+      </div>
+      <p class="hero-note">Free for 14 days. No card required to start.</p>
+    </div>
+  </section>
+
+  <section id="benefits" aria-labelledby="benefits-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="benefits-heading">Built for people with a full plate</h2>
+        <p>Every part of DailyPhrase is designed around the same idea: small, consistent sessions beat long, occasional ones.</p>
+      </div>
+      <div class="benefit-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">&#9201;</div>
+          <h3>Ten-minute lessons</h3>
+          <p>Each daily session is scoped to fit a coffee break, so practice never competes with the rest of your day.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">&#128200;</div>
+          <h3>Progress you can see</h3>
+          <p>A simple streak and skill tracker shows exactly what you have learned and what is coming next.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">&#128172;</div>
+          <h3>Real conversation phrases</h3>
+          <p>Lessons focus on phrases people actually use, not vocabulary lists you will never say out loud.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">&#128260;</div>
+          <h3>Spaced review, built in</h3>
+          <p>DailyPhrase resurfaces older phrases right before you would forget them, so review happens automatically.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">&#128179;</div>
+          <h3>Pause anytime</h3>
+          <p>Travel, a busy week, a change of plans - pause your subscription without losing your progress or streak.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" aria-hidden="true">&#127919;</div>
+          <h3>One habit, not a hobby project</h3>
+          <p>No feeds, no leaderboards, no noise. Just the next lesson, ready when you have a spare ten minutes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="lesson" aria-labelledby="lesson-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="lesson-heading">What a daily lesson looks like</h2>
+        <p>Every lesson follows the same calm structure, so there is nothing new to figure out each morning.</p>
+      </div>
+      <div class="lesson-demo">
+        <div class="lesson-card" role="group" aria-label="Sample lesson preview">
+          <div class="lesson-meta">
+            <span>Day 12 &middot; Ordering coffee</span>
+            <span class="lesson-progress" aria-hidden="true"><span></span></span>
+          </div>
+          <p class="lesson-phrase">"Un caf&eacute; con leche, por favor."</p>
+          <p class="lesson-translation">Translation: "A coffee with milk, please."</p>
+          <div class="lesson-options" role="group" aria-label="Answer choices">
+            <div class="lesson-option correct">A coffee with milk, please.</div>
+            <div class="lesson-option">A tea with sugar, please.</div>
+            <div class="lesson-option">The check, please.</div>
+          </div>
+        </div>
+        <div class="lesson-copy">
+          <h3>Three minutes of listening. Three minutes of speaking. Four minutes of review.</h3>
+          <ul>
+            <li>You hear a short phrase spoken at a natural pace, then repeat it aloud.</li>
+            <li>A quick multiple-choice check confirms you understood the meaning, not just the sound.</li>
+            <li>The lesson closes with two or three phrases from earlier days, timed to keep them fresh.</li>
+            <li>A short note explains one grammar point in plain language, only when it is useful.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" aria-labelledby="pricing-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="pricing-heading">Simple plans, no surprises</h2>
+        <p>Pick a rhythm that matches how you learn. Every plan includes the same lessons and features.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <p class="price-name">Monthly</p>
+          <p class="price-amount">$12<span>/month</span></p>
+          <p class="price-detail">Billed monthly. Cancel anytime.</p>
+          <ul class="price-features">
+            <li>Full lesson library</li>
+            <li>Spaced review system</li>
+            <li>Progress tracking</li>
+            <li>Pause or cancel anytime</li>
+          </ul>
+          <a class="btn btn-quiet" href="#signup">Start free trial</a>
+        </div>
+        <div class="price-card featured">
+          <span class="price-badge">Most chosen</span>
+          <p class="price-name">Annual</p>
+          <p class="price-amount">$6<span>/month</span></p>
+          <p class="price-detail">Billed once a year, $72 total. Save 50%.</p>
+          <ul class="price-features">
+            <li>Everything in Monthly</li>
+            <li>Offline lesson downloads</li>
+            <li>Priority lesson requests</li>
+            <li>Pause or cancel anytime</li>
+          </ul>
+          <a class="btn btn-primary" href="#signup">Start free trial</a>
+        </div>
+        <div class="price-card">
+          <p class="price-name">Family</p>
+          <p class="price-amount">$18<span>/month</span></p>
+          <p class="price-detail">Up to 4 people, billed monthly.</p>
+          <ul class="price-features">
+            <li>Everything in Monthly</li>
+            <li>Separate progress per person</li>
+            <li>Shared billing, one plan</li>
+            <li>Pause or cancel anytime</li>
+          </ul>
+          <a class="btn btn-quiet" href="#signup">Start free trial</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt" id="testimonials" aria-labelledby="testimonials-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="testimonials-heading">People who made it a habit</h2>
+        <p>Three different schedules, three different reasons DailyPhrase fit in.</p>
+      </div>
+      <div class="testimonial-grid">
+        <div class="testimonial-card">
+          <p class="testimonial-quote">I tried two other apps first and always fell off after a week. Ten minutes before work is the only routine that has actually stuck.</p>
+          <div class="testimonial-person">
+            <span class="avatar" aria-hidden="true">MK</span>
+            <div>
+              <p class="testimonial-name">Maria K.</p>
+              <p class="testimonial-role">Working parent, learning Spanish</p>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <p class="testimonial-quote">The review timing is what sold me. Old phrases come back right when I am about to forget them, not on some random schedule.</p>
+          <div class="testimonial-person">
+            <span class="avatar" aria-hidden="true">DT</span>
+            <div>
+              <p class="testimonial-name">David T.</p>
+              <p class="testimonial-role">Frequent traveler, learning Japanese</p>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <p class="testimonial-quote">I compared it against a more gamified app and picked this one because it felt calmer. No pressure, just a clear next lesson every day.</p>
+          <div class="testimonial-person">
+            <span class="avatar" aria-hidden="true">SO</span>
+            <div>
+              <p class="testimonial-name">Sofia O.</p>
+              <p class="testimonial-role">Graduate student, learning French</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="trust-strip" role="list" aria-label="Trust indicators">
+        <span role="listitem">14-day free trial</span>
+        <span role="listitem">Cancel anytime, no fees</span>
+        <span role="listitem">No card required to start</span>
+        <span role="listitem">Progress saved even if you pause</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta" id="signup" aria-labelledby="signup-heading">
+    <div class="wrap">
+      <h2 id="signup-heading">Ten minutes a day. See where it takes you.</h2>
+      <p>Start your free trial today. No pressure, no commitment, just your next lesson waiting when you are ready.</p>
+
+      <div class="signup-panel">
+        <h3>Start your 14-day free trial</h3>
+        <p class="form-sub">We will send your first lesson today.</p>
+        <form id="trial-form" novalidate>
+          <div class="form-row">
+            <div class="field-wrap">
+              <label class="field-label" for="trial-email">Email address</label>
+              <input type="email" id="trial-email" name="email" placeholder="you@example.com" required autocomplete="email">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Start free trial</button>
+          <p class="form-fineprint">No card required. Cancel anytime during the trial with no charge.</p>
+          <p class="form-success" id="form-success" role="status">Thanks - check your inbox for your first lesson.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-row">
+    <span>&copy; 2026 DailyPhrase. All rights reserved.</span>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="#pricing">Plans</a>
+      <a href="#testimonials">Stories</a>
+      <a href="#signup">Start trial</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+
+    var form = document.getElementById("trial-form");
+    var success = document.getElementById("form-success");
+
+    if (!form) {
+      return;
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      var emailField = document.getElementById("trial-email");
+      if (!emailField || !emailField.checkValidity()) {
+        if (emailField) {
+          emailField.reportValidity();
+        }
+        return;
+      }
+
+      success.classList.add("visible");
+      form.querySelector("button[type=submit]").setAttribute("disabled", "disabled");
+      emailField.setAttribute("disabled", "disabled");
+    });
+  })();
+</script>
+
+</body>
+</html>

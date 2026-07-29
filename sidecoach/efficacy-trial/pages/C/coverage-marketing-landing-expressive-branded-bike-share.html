@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoopLane Bike Share &mdash; Grab a bike, loop the neighborhood</title>
+<meta name="description" content="LoopLane bike share: find a bike in minutes, ride, and dock it near your stop. Memberships and pay-per-ride, no app account required at the station.">
+<style>
+  :root {
+    --navy: #12182b;
+    --navy-soft: #1d2440;
+    --lime: #c9f24a;
+    --lime-soft: #eafccb;
+    --coral: #ff6b4a;
+    --coral-dark: #e04e2f;
+    --cream: #fbf8f0;
+    --ink: #12182b;
+    --paper: #ffffff;
+    --line: rgba(18, 24, 43, 0.12);
+    --radius-lg: 28px;
+    --radius-md: 18px;
+    --radius-sm: 10px;
+    --shadow-soft: 0 18px 40px rgba(18, 24, 43, 0.12);
+    --container: 1180px;
+    font-size: 16px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img, svg { display: block; max-width: 100%; }
+
+  a { color: inherit; }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -3.5rem;
+    background: var(--navy);
+    color: var(--lime);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    z-index: 200;
+    transition: top 0.2s ease;
+  }
+  .skip-link:focus {
+    top: 1rem;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--coral);
+    outline-offset: 3px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: var(--container);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* ---------- Header ---------- */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(251, 248, 240, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 0;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 800;
+    font-size: 1.3rem;
+    text-decoration: none;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .brand-word-loop { color: var(--navy); }
+  .brand-word-lane {
+    background: var(--lime);
+    color: var(--navy);
+    padding: 0.05em 0.4em;
+    border-radius: 0.4em;
+    transform: rotate(-2deg);
+    display: inline-block;
+  }
+
+  .main-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.9rem;
+  }
+
+  .main-nav a {
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.98rem;
+    color: var(--navy);
+    position: relative;
+    padding: 0.25rem 0;
+  }
+  .main-nav a::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: -2px;
+    height: 2px;
+    background: var(--coral);
+    transition: right 0.2s ease;
+  }
+  .main-nav a:hover::after,
+  .main-nav a:focus-visible::after { right: 0; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 0.98rem;
+    text-decoration: none;
+    border-radius: 999px;
+    padding: 0.85rem 1.6rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    font-family: inherit;
+  }
+  .btn:hover { transform: translateY(-2px); }
+
+  .btn-primary {
+    background: var(--coral);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(255, 107, 74, 0.35);
+  }
+  .btn-primary:hover { background: var(--coral-dark); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--navy);
+    border-color: var(--navy);
+  }
+  .btn-secondary:hover { background: var(--navy); color: #fff; }
+
+  .btn-light {
+    background: var(--lime);
+    color: var(--navy);
+  }
+  .btn-light:hover { background: #b9e433; }
+
+  .btn-block { width: 100%; }
+
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--navy);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+  }
+  .nav-toggle span {
+    display: block;
+    height: 2px;
+    width: 22px;
+    margin: 0 auto;
+    background: var(--navy);
+    border-radius: 2px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .nav-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  @media (max-width: 860px) {
+    .nav-toggle { display: flex; }
+    .main-nav {
+      position: fixed;
+      inset: 0 0 0 auto;
+      top: 68px;
+      height: calc(100% - 68px);
+      width: min(80vw, 320px);
+      background: var(--navy);
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 2rem 1.75rem;
+      gap: 1.4rem;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+      overflow-y: auto;
+    }
+    .main-nav.is-open { transform: translateX(0); }
+    .main-nav a { color: var(--lime-soft); font-size: 1.15rem; }
+    .main-nav a::after { display: none; }
+    .main-nav .btn-primary { width: 100%; margin-top: 0.5rem; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 4.5rem 0 5rem;
+  }
+
+  .hero-blob {
+    position: absolute;
+    border-radius: 42% 58% 65% 35% / 45% 40% 60% 55%;
+    z-index: 0;
+    opacity: 0.9;
+  }
+  .hero-blob--lime {
+    width: 460px; height: 460px;
+    top: -140px; right: -120px;
+    background: var(--lime);
+    animation: float-a 14s ease-in-out infinite;
+  }
+  .hero-blob--coral {
+    width: 220px; height: 220px;
+    bottom: -60px; right: 22%;
+    background: var(--coral);
+    opacity: 0.18;
+    animation: float-b 11s ease-in-out infinite;
+  }
+  @keyframes float-a {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(-18px, 22px) rotate(8deg); }
+  }
+  @keyframes float-b {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(14px, -16px) rotate(-10deg); }
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.78rem;
+    background: var(--navy);
+    color: var(--lime);
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    margin-bottom: 1.4rem;
+  }
+  .eyebrow-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--lime);
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  h1 {
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0 0 1.25rem;
+    font-weight: 800;
+  }
+  h1 .accent { color: var(--coral); }
+
+  .hero-lede {
+    font-size: 1.2rem;
+    color: rgba(18, 24, 43, 0.78);
+    max-width: 46ch;
+    margin: 0 0 2rem;
+  }
+
+  .hero-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    margin-bottom: 2.4rem;
+  }
+
+  .hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
+  .hero-stat strong {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--navy);
+  }
+  .hero-stat span {
+    font-size: 0.88rem;
+    color: rgba(18, 24, 43, 0.65);
+  }
+
+  .hero-art {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wheel-card {
+    background: var(--navy);
+    border-radius: var(--radius-lg);
+    padding: 2.4rem;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.4rem;
+    transform: rotate(-2deg);
+    width: 100%;
+    max-width: 380px;
+  }
+  .wheel-card svg { width: 180px; height: 180px; }
+  .wheel-card p {
+    color: var(--lime-soft);
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .wheel-card small {
+    color: rgba(234, 252, 203, 0.7);
+    font-weight: 500;
+    text-align: center;
+    display: block;
+  }
+
+  /* ---------- Sections ---------- */
+  section { padding: 5rem 0; }
+
+  .section-head {
+    max-width: 640px;
+    margin: 0 auto 3rem;
+    text-align: center;
+  }
+  .section-head .eyebrow { background: transparent; color: var(--coral-dark); padding: 0; margin-bottom: 0.9rem; }
+  .section-head h2 {
+    font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.9rem;
+  }
+  .section-head p {
+    color: rgba(18, 24, 43, 0.72);
+    font-size: 1.08rem;
+    margin: 0;
+  }
+
+  /* How it works */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+  }
+  .step-card {
+    background: var(--paper);
+    border-radius: var(--radius-lg);
+    padding: 2.2rem;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--lime);
+    color: var(--navy);
+    font-weight: 800;
+    font-size: 1.3rem;
+    margin-bottom: 1.2rem;
+  }
+  .step-card h3 {
+    font-size: 1.25rem;
+    margin: 0 0 0.6rem;
+    font-weight: 800;
+  }
+  .step-card p {
+    margin: 0;
+    color: rgba(18, 24, 43, 0.72);
+  }
+  .step-connector {
+    position: absolute;
+    top: 3.4rem;
+    left: calc(100% + 0.4rem);
+    width: calc(1.75rem - 0.8rem);
+    height: 2px;
+    background: repeating-linear-gradient(to right, var(--coral) 0 6px, transparent 6px 12px);
+  }
+  .step-card:last-child .step-connector { display: none; }
+
+  @media (max-width: 860px) {
+    .steps { grid-template-columns: 1fr; }
+    .step-connector { display: none; }
+  }
+
+  /* Pricing */
+  .pricing-section { background: var(--navy); color: var(--cream); }
+  .pricing-section .section-head p { color: rgba(251, 248, 240, 0.72); }
+  .pricing-section .section-head .eyebrow { color: var(--lime); }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+    align-items: stretch;
+  }
+  .price-card {
+    background: var(--navy-soft);
+    border-radius: var(--radius-lg);
+    padding: 2.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    position: relative;
+  }
+  .price-card.is-featured {
+    background: var(--lime);
+    color: var(--navy);
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-soft);
+  }
+  .price-badge {
+    position: absolute;
+    top: -14px;
+    right: 1.5rem;
+    background: var(--coral);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+  }
+  .price-card h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .price-amount {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .price-amount span {
+    font-size: 1rem;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+  .price-card ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    flex-grow: 1;
+  }
+  .price-card li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.96rem;
+  }
+  .price-card li::before {
+    content: "";
+    flex-shrink: 0;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--coral);
+    margin-top: 0.5em;
+  }
+  .price-card.is-featured li::before { background: var(--navy); }
+
+  @media (max-width: 860px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+    .price-card.is-featured { transform: none; }
+  }
+
+  /* Coverage */
+  .coverage-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 3rem;
+    align-items: center;
+  }
+  .coverage-copy p { color: rgba(18, 24, 43, 0.75); font-size: 1.06rem; }
+  .coverage-note {
+    background: var(--lime-soft);
+    border-radius: var(--radius-md);
+    padding: 1.2rem 1.4rem;
+    font-size: 0.95rem;
+    color: var(--navy);
+    margin-top: 1.5rem;
+  }
+  .coverage-map {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 1.6rem;
+    box-shadow: var(--shadow-soft);
+  }
+  .coverage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem;
+  }
+  .zone-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-sm);
+    background: var(--cream);
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+  .zone-chip .zone-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--coral);
+    flex-shrink: 0;
+  }
+  .zone-chip:nth-child(3n+1) .zone-dot { background: var(--coral); }
+  .zone-chip:nth-child(3n+2) .zone-dot { background: var(--navy); }
+  .zone-chip:nth-child(3n+3) .zone-dot { background: #2f8f5b; }
+
+  /* Safety */
+  .safety-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+    margin-bottom: 3rem;
+  }
+  .safety-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+  }
+  .safety-card .step-number { background: var(--coral); color: #fff; width: 42px; height: 42px; font-size: 1.1rem; }
+  .safety-card h3 { font-size: 1.1rem; margin: 0.9rem 0 0.5rem; font-weight: 800; }
+  .safety-card p { margin: 0; color: rgba(18, 24, 43, 0.72); font-size: 0.97rem; }
+
+  .support-card {
+    background: var(--navy);
+    color: var(--cream);
+    border-radius: var(--radius-lg);
+    padding: 2.4rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  .support-item h4 {
+    margin: 0 0 0.4rem;
+    color: var(--lime);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 800;
+  }
+  .support-item p, .support-item a {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--cream);
+  }
+  .support-item span {
+    display: block;
+    font-weight: 400;
+    font-size: 0.88rem;
+    color: rgba(251, 248, 240, 0.65);
+    margin-top: 0.3rem;
+  }
+
+  @media (max-width: 860px) {
+    .safety-grid { grid-template-columns: 1fr; }
+    .support-card { grid-template-columns: 1fr; }
+    .coverage-layout { grid-template-columns: 1fr; }
+  }
+
+  /* Sign-up */
+  .signup-section {
+    background: var(--lime);
+    border-radius: var(--radius-lg);
+    margin: 0 1.5rem;
+    padding: 3.5rem 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .signup-inner {
+    max-width: 560px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .signup-section h2 {
+    font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.75rem;
+    color: var(--navy);
+  }
+  .signup-section > .section-lede {
+    color: rgba(18, 24, 43, 0.75);
+    font-size: 1.05rem;
+    margin: 0 0 2rem;
+  }
+  .signup-form {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .signup-form .field {
+    flex: 1 1 260px;
+    text-align: left;
+  }
+  .signup-form label {
+    display: block;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    color: var(--navy);
+  }
+  .signup-form input[type="email"] {
+    width: 100%;
+    padding: 0.9rem 1.1rem;
+    border-radius: 999px;
+    border: 2px solid var(--navy);
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .signup-form input[type="email"]:focus-visible {
+    outline: 3px solid var(--coral-dark);
+    outline-offset: 2px;
+  }
+  .signup-form .btn { align-self: flex-end; white-space: nowrap; }
+  .signup-fineprint {
+    margin-top: 1.1rem;
+    font-size: 0.85rem;
+    color: rgba(18, 24, 43, 0.65);
+  }
+  .signup-confirm {
+    margin-top: 1.25rem;
+    background: var(--navy);
+    color: var(--lime-soft);
+    border-radius: var(--radius-sm);
+    padding: 0.9rem 1.2rem;
+    font-weight: 700;
+    display: none;
+  }
+  .signup-confirm.is-visible { display: block; }
+
+  /* Footer */
+  .site-footer {
+    padding: 4rem 0 2.5rem;
+  }
+  .footer-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2.5rem;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2.5rem;
+    margin-bottom: 1.75rem;
+  }
+  .footer-brand p {
+    max-width: 34ch;
+    color: rgba(18, 24, 43, 0.68);
+    font-size: 0.95rem;
+  }
+  .footer-links {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+  }
+  .footer-col h5 {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: rgba(18, 24, 43, 0.55);
+    margin: 0 0 0.9rem;
+  }
+  .footer-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .footer-col a {
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .footer-col a:hover { color: var(--coral-dark); }
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: rgba(18, 24, 43, 0.6);
+  }
+
+  @media (max-width: 640px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-art { order: -1; }
+    .signup-form .btn { align-self: stretch; }
+    .signup-section { padding: 2.5rem 1.5rem; margin: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="#top">
+      <svg class="brand-mark" viewBox="0 0 48 48" role="img" aria-label="LoopLane logo">
+        <circle cx="14" cy="34" r="9" fill="none" stroke="#12182b" stroke-width="3.5"/>
+        <circle cx="34" cy="34" r="9" fill="none" stroke="#ff6b4a" stroke-width="3.5"/>
+        <path d="M14 34 L24 14 L34 34 M20 22 H30" fill="none" stroke="#12182b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span><span class="brand-word-loop">Loop</span><span class="brand-word-lane">Lane</span></span>
+    </a>
+
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" id="nav-toggle">
+      <span></span><span></span><span></span>
+      <span class="visually-hidden">Menu</span>
+    </button>
+
+    <nav class="main-nav" id="main-nav" aria-label="Primary">
+      <a href="#how-it-works">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#coverage">Coverage</a>
+      <a href="#safety">Safety</a>
+      <a class="btn btn-primary" href="#signup">Find a bike</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main-content">
+
+  <section class="hero" id="top">
+    <div class="hero-blob hero-blob--lime" aria-hidden="true"></div>
+    <div class="hero-blob hero-blob--coral" aria-hidden="true"></div>
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <span class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span>Now rolling through the neighborhood</span>
+        <h1>Grab a bike. Go where you're going. <span class="accent">Loop back</span> whenever.</h1>
+        <p class="hero-lede">LoopLane puts a bike within a five-minute walk almost anywhere in town. Unlock one with your phone, ride, and drop it at any station near your stop &mdash; no bike ownership required.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="#signup">Find a bike near me</a>
+          <a class="btn btn-secondary" href="#how-it-works">See how it works</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <strong>140+</strong>
+            <span>Stations citywide</span>
+          </div>
+          <div class="hero-stat">
+            <strong>24/7</strong>
+            <span>Unlock anytime</span>
+          </div>
+          <div class="hero-stat">
+            <strong>$0</strong>
+            <span>To sign up</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-art">
+        <div class="wheel-card">
+          <svg viewBox="0 0 200 200" role="img" aria-label="Illustration of a bike wheel">
+            <circle cx="100" cy="100" r="82" fill="none" stroke="#c9f24a" stroke-width="6"/>
+            <circle cx="100" cy="100" r="14" fill="#c9f24a"/>
+            <g stroke="#eafccb" stroke-width="3">
+              <line x1="100" y1="100" x2="100" y2="22"/>
+              <line x1="100" y1="100" x2="153" y2="47"/>
+              <line x1="100" y1="100" x2="178" y2="100"/>
+              <line x1="100" y1="100" x2="153" y2="153"/>
+              <line x1="100" y1="100" x2="100" y2="178"/>
+              <line x1="100" y1="100" x2="47" y2="153"/>
+              <line x1="100" y1="100" x2="22" y2="100"/>
+              <line x1="100" y1="100" x2="47" y2="47"/>
+            </g>
+          </svg>
+          <p>One tap. One ride. No dock key to remember.</p>
+          <small>Every station shows live bike counts in real time.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Three steps, no learning curve</h2>
+        <p>New to bike share? LoopLane is built so your first ride feels as easy as your fiftieth.</p>
+      </div>
+      <div class="steps">
+        <div class="step-card">
+          <span class="step-number">1</span>
+          <h3>Find a bike</h3>
+          <p>Check any station map for the nearest available bike, or use the free LoopLane app to see live counts across the coverage area.</p>
+          <span class="step-connector" aria-hidden="true"></span>
+        </div>
+        <div class="step-card">
+          <span class="step-number">2</span>
+          <h3>Unlock and ride</h3>
+          <p>Scan the code on the bike or tap your LoopLane card at the dock. No app account needed at the station &mdash; just scan and go.</p>
+          <span class="step-connector" aria-hidden="true"></span>
+        </div>
+        <div class="step-card">
+          <span class="step-number">3</span>
+          <h3>Dock it and done</h3>
+          <p>Return the bike to any station in the coverage area. You're only charged for the time you actually rode, down to the minute.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing-section" id="pricing">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Membership &amp; pricing</span>
+        <h2>Pay per ride, or ride all month</h2>
+        <p>Pick whichever fits how often you ride. Switch or cancel anytime from the app.</p>
+      </div>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <h3>Pay-per-ride</h3>
+          <div class="price-amount">$2 <span>to unlock</span></div>
+          <ul>
+            <li>Plus $0.15 per minute</li>
+            <li>No monthly commitment</li>
+            <li>Good for occasional trips</li>
+            <li>Pay with card or the app</li>
+          </ul>
+          <a class="btn btn-secondary btn-block" href="#signup">Start riding</a>
+        </div>
+        <div class="price-card is-featured">
+          <span class="price-badge">Most popular</span>
+          <h3>Monthly rider</h3>
+          <div class="price-amount">$15 <span>/ month</span></div>
+          <ul>
+            <li>Unlimited 45-minute rides</li>
+            <li>$0.10 per minute after that</li>
+            <li>Cancel anytime, no contract</li>
+            <li>Priority customer support</li>
+          </ul>
+          <a class="btn btn-primary btn-block" href="#signup">Get the monthly pass</a>
+        </div>
+        <div class="price-card">
+          <h3>Annual local</h3>
+          <div class="price-amount">$120 <span>/ year</span></div>
+          <ul>
+            <li>Unlimited 60-minute rides</li>
+            <li>Best value for daily commuters</li>
+            <li>One free guest pass monthly</li>
+            <li>Locked-in rate all year</li>
+          </ul>
+          <a class="btn btn-secondary btn-block" href="#signup">Choose annual</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="coverage">
+    <div class="container coverage-layout">
+      <div class="coverage-copy">
+        <span class="eyebrow">Coverage area</span>
+        <h2>Wherever you're headed, there's probably a dock</h2>
+        <p>LoopLane currently covers about 14 square miles across downtown, the university district, riverfront park, and six residential neighborhoods, with new stations added every season based on where riders actually want them.</p>
+        <div class="coverage-note">
+          Don't see your block on the list? Stations get added based on rider requests &mdash; tell us where you'd ride and it goes on the shortlist for the next expansion.
+        </div>
+      </div>
+      <div class="coverage-map">
+        <div class="coverage-grid">
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>Downtown Core</div>
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>University District</div>
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>Riverfront Park</div>
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>Maple Heights</div>
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>Old Mill</div>
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>Harbor Row</div>
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>East Commons</div>
+          <div class="zone-chip"><span class="zone-dot" aria-hidden="true"></span>Station Square</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="safety">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Safety &amp; support</span>
+        <h2>Built to feel safe for a first ride</h2>
+        <p>Every bike is inspected regularly, and help is never more than a tap or a call away.</p>
+      </div>
+      <div class="safety-grid">
+        <div class="safety-card">
+          <span class="step-number">1</span>
+          <h3>Bikes checked daily</h3>
+          <p>Staff inspect brakes, tires, and lights across every station each day, and any reported issue locks that bike from further use until it's serviced.</p>
+        </div>
+        <div class="safety-card">
+          <span class="step-number">2</span>
+          <h3>Lit for every ride</h3>
+          <p>All bikes have front and rear lights that switch on automatically at dusk, plus reflective decals so you're visible after dark.</p>
+        </div>
+        <div class="safety-card">
+          <span class="step-number">3</span>
+          <h3>Report in one tap</h3>
+          <p>See a problem bike? Flag it from the app or the number on the frame and it's pulled from service before the next rider unlocks it.</p>
+        </div>
+      </div>
+      <div class="support-card">
+        <div class="support-item">
+          <h4>Talk to a person</h4>
+          <a href="tel:+18005550199">1-800-555-0199</a>
+          <span>Daily, 6am &ndash; midnight</span>
+        </div>
+        <div class="support-item">
+          <h4>Email support</h4>
+          <a href="mailto:ride@looplane.town">ride@looplane.town</a>
+          <span>Replies within one business day</span>
+        </div>
+        <div class="support-item">
+          <h4>In the app</h4>
+          <p>Live chat &amp; help center</p>
+          <span>Available 24/7 for riders</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="signup">
+    <div class="container">
+      <div class="signup-section">
+        <div class="signup-inner">
+          <h2>Your first ride is on us</h2>
+          <p class="section-lede">Sign up in under a minute. New riders get a free 30-minute ride to try LoopLane out &mdash; no credit card required to join.</p>
+          <form class="signup-form" id="signup-form" novalidate>
+            <div class="field">
+              <label for="signup-email">Email address</label>
+              <input type="email" id="signup-email" name="email" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <button class="btn btn-primary" type="submit">Get my free ride code</button>
+          </form>
+          <p class="signup-fineprint">No credit card required to sign up. Memberships can be cancelled anytime from the app.</p>
+          <div class="signup-confirm" id="signup-confirm" role="status" aria-live="polite">
+            You're on the list! Check your inbox &mdash; your free ride code is on its way.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a class="brand" href="#top">
+          <span><span class="brand-word-loop">Loop</span><span class="brand-word-lane">Lane</span></span>
+        </a>
+        <p>Neighborhood bike share built for quick trips, easy commutes, and everyone in between.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h5>Ride</h5>
+          <ul>
+            <li><a href="#how-it-works">How it works</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#coverage">Coverage area</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5>Support</h5>
+          <ul>
+            <li><a href="#safety">Safety</a></li>
+            <li><a href="tel:+18005550199">1-800-555-0199</a></li>
+            <li><a href="mailto:ride@looplane.town">ride@looplane.town</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 LoopLane Bike Share. Ride safe, loop often.</span>
+      <span>Docked bikes only. Helmets recommended.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+
+    var navToggle = document.getElementById("nav-toggle");
+    var mainNav = document.getElementById("main-nav");
+
+    if (navToggle && mainNav) {
+      navToggle.addEventListener("click", function () {
+        var isOpen = mainNav.classList.toggle("is-open");
+        navToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      });
+
+      mainNav.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          mainNav.classList.remove("is-open");
+          navToggle.setAttribute("aria-expanded", "false");
+        });
+      });
+    }
+
+    var form = document.getElementById("signup-form");
+    var confirm = document.getElementById("signup-confirm");
+
+    if (form && confirm) {
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        confirm.classList.add("is-visible");
+        form.reset();
+      });
+    }
+  })();
+</script>
+</body>
+</html>

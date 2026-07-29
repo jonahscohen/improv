@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where the Ovens Never Cooled - Harrow &amp; Field</title>
+<style>
+  :root {
+    --paper: #f6f1e7;
+    --paper-alt: #eee6d4;
+    --paper-deep: #e7dcc3;
+    --ink: #241d17;
+    --ink-soft: #52453a;
+    --ink-faint: #7c6d5d;
+    --rule: #c9b997;
+    --rule-strong: #a9926a;
+    --accent: #7c2d20;
+    --accent-soft: #9c5233;
+    --serif-display: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+    --serif-body: Georgia, "Times New Roman", Times, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --measure: 68ch;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif-body);
+    font-size: clamp(1rem, 0.94rem + 0.28vw, 1.125rem);
+    line-height: 1.65;
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  a:focus-visible,
+  button:focus-visible {
+    outline: 3px solid var(--accent-soft);
+    outline-offset: 3px;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -999px;
+    top: auto;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.75em 1.25em;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    z-index: 100;
+  }
+
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+  }
+
+  img,
+  .placeholder-art {
+    max-width: 100%;
+  }
+
+  /* ---------- Masthead ---------- */
+
+  .masthead {
+    border-bottom: 3px solid var(--ink);
+    padding: 1.75rem 1.25rem 1.1rem;
+  }
+
+  .masthead-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .wordmark {
+    font-family: var(--serif-display);
+    font-weight: 700;
+    font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.1rem);
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+
+  .wordmark .amp {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .masthead-meta {
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  /* ---------- Article shell ---------- */
+
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 1.25rem 4rem;
+  }
+
+  .feature-header {
+    max-width: var(--measure);
+    margin: 3rem auto 2.25rem;
+    text-align: left;
+  }
+
+  .kicker {
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.9rem;
+  }
+
+  h1 {
+    font-family: var(--serif-display);
+    font-size: clamp(2.1rem, 1.7rem + 2.2vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    margin: 0 0 1.1rem;
+    color: var(--ink);
+  }
+
+  .standfirst {
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.4rem);
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 0 0 1.6rem;
+  }
+
+  .byline-block {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    align-items: baseline;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.85rem 0;
+    font-family: var(--sans);
+  }
+
+  .byline {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .pubdate {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Figures / photo placeholders ---------- */
+
+  figure {
+    margin: 0 0 2rem;
+  }
+
+  .placeholder-art {
+    aspect-ratio: 16 / 10;
+    width: 100%;
+    border-radius: 2px;
+    background:
+      repeating-linear-gradient(
+        135deg,
+        rgba(36, 29, 23, 0.06) 0px,
+        rgba(36, 29, 23, 0.06) 2px,
+        transparent 2px,
+        transparent 10px
+      ),
+      linear-gradient(160deg, #d8c9a8 0%, #cbb98e 45%, #b9a274 100%);
+    border: 1px solid var(--rule-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .placeholder-art::after {
+    content: "Photograph";
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(36, 29, 23, 0.55);
+    background: rgba(246, 241, 231, 0.72);
+    padding: 0.4em 0.9em;
+    border: 1px solid rgba(36, 29, 23, 0.25);
+  }
+
+  figcaption {
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--ink-faint);
+    margin-top: 0.6rem;
+    max-width: var(--measure);
+  }
+
+  figcaption .credit {
+    display: inline-block;
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+
+  .hero-photo {
+    max-width: 1120px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .hero-photo .placeholder-art {
+    aspect-ratio: 21 / 9;
+  }
+
+  .inline-photo {
+    max-width: var(--measure);
+  }
+
+  /* ---------- Layout grid ---------- */
+
+  .layout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.9fr) minmax(260px, 1fr);
+    gap: 3rem;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .layout-grid {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+  }
+
+  .article-body {
+    max-width: var(--measure);
+  }
+
+  .article-body section {
+    margin-bottom: 1.75rem;
+  }
+
+  .article-body h2 {
+    font-family: var(--serif-display);
+    font-size: clamp(1.3rem, 1.2rem + 0.5vw, 1.6rem);
+    line-height: 1.25;
+    margin: 0 0 0.9rem;
+    color: var(--ink);
+  }
+
+  .article-body p {
+    margin: 0 0 1.1rem;
+  }
+
+  .lede::first-letter {
+    font-family: var(--serif-display);
+    font-size: 3.6em;
+    float: left;
+    line-height: 0.82;
+    padding: 0.05em 0.08em 0 0;
+    color: var(--accent);
+  }
+
+  .section-break {
+    border: 0;
+    height: 1px;
+    max-width: var(--measure);
+    margin: 2.25rem 0;
+    background: var(--rule);
+    position: relative;
+  }
+
+  .section-break::after {
+    content: "\2022 \2022 \2022";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--paper);
+    padding: 0 0.75rem;
+    color: var(--rule-strong);
+    letter-spacing: 0.4em;
+    font-size: 0.7rem;
+  }
+
+  /* ---------- Pull quote ---------- */
+
+  .pull-quote {
+    margin: 2rem 0 2.25rem;
+    padding: 0.25rem 0 0.25rem 1.6rem;
+    border-left: 4px solid var(--accent);
+    max-width: var(--measure);
+  }
+
+  .pull-quote p {
+    font-family: var(--serif-display);
+    font-style: italic;
+    font-size: clamp(1.3rem, 1.15rem + 0.6vw, 1.65rem);
+    line-height: 1.4;
+    color: var(--ink);
+    margin: 0 0 0.7rem;
+  }
+
+  .pull-quote cite {
+    font-family: var(--sans);
+    font-style: normal;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Sidebar ---------- */
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .sidebar-card {
+    background: var(--paper-alt);
+    border: 1px solid var(--rule);
+    padding: 1.5rem 1.4rem 1.6rem;
+  }
+
+  .sidebar-card h2 {
+    font-family: var(--serif-display);
+    font-size: 1.15rem;
+    margin: 0 0 1.1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  /* Timeline */
+
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 1.1rem;
+    border-left: 2px solid var(--rule-strong);
+  }
+
+  .timeline li {
+    position: relative;
+    padding: 0 0 1.3rem 1.1rem;
+  }
+
+  .timeline li:last-child {
+    padding-bottom: 0;
+  }
+
+  .timeline li::before {
+    content: "";
+    position: absolute;
+    left: -1.42rem;
+    top: 0.35rem;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--paper-alt);
+  }
+
+  .timeline .year {
+    display: block;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--accent);
+    margin-bottom: 0.2rem;
+  }
+
+  .timeline p {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  /* Signature goods */
+
+  .goods-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .goods-list li {
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .goods-list li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .goods-list li:first-child {
+    padding-top: 0;
+  }
+
+  .goods-list h3 {
+    font-family: var(--serif-display);
+    font-size: 1.02rem;
+    margin: 0 0 0.3rem;
+  }
+
+  .goods-list p {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .goods-list .since {
+    display: block;
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 0.35rem;
+  }
+
+  /* ---------- Footer ---------- */
+
+  .site-footer {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to article</a>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="wordmark">HARROW <span class="amp">&amp;</span> FIELD</p>
+    <p class="masthead-meta">A Quarterly of Regional Life &nbsp;&middot;&nbsp; Food &amp; Place</p>
+  </div>
+</header>
+
+<main id="main-content">
+  <article class="feature">
+
+    <header class="feature-header">
+      <p class="kicker">Profile</p>
+      <h1>Where the Ovens Never Cooled</h1>
+      <p class="standfirst">For a hundred years, three generations of the Marchetti family have opened the same oven door before dawn on Cedar Falls&rsquo; Elm Street. As Larkspur Bakehouse marks its centennial, the story of a neighborhood that grew up around bread.</p>
+      <div class="byline-block">
+        <p class="byline">By Margaret Osei</p>
+        <p class="pubdate">Published <time datetime="2026-03-12">March 12, 2026</time> &nbsp;&middot;&nbsp; Spring Issue</p>
+      </div>
+    </header>
+
+    <figure class="photo-placeholder hero-photo">
+      <div class="placeholder-art" role="img" aria-label="Archival photograph of the Larkspur Bakehouse storefront on Elm Street, taken during the bakery's fiftieth year in 1976, showing a modest brick facade with a hand-painted sign."></div>
+      <figcaption>The Elm Street storefront, photographed in the bakehouse&rsquo;s fiftieth year, 1976. <span class="credit">Photograph placeholder, Larkspur Bakehouse family archive.</span></figcaption>
+    </figure>
+
+    <div class="layout-grid">
+      <div class="article-body">
+
+        <section>
+          <p class="lede">Before the rest of Elm Street stirs, the light is already on at Larkspur Bakehouse. It has been on at this hour, more or less, for one hundred years. Elena Marchetti unlocks the side door at twenty past four, the same door her grandmother used, worn pale at the handle by three generations of the same grip. Inside, the ovens are already warm; they never fully cool, she says, not on a night with a delivery due before sunrise. &ldquo;My grandmother used to say the oven keeps its own schedule. We just show up to agree with it.&rdquo;</p>
+          <p>This spring, Larkspur turns one hundred, and Cedar Falls is planning to notice. The bakery has outlasted two recessions, a fire, a highway that rerouted the town&rsquo;s main artery two blocks east, and the slow disappearance of nearly every other business that opened alongside it in 1926. What remains is a narrow storefront with a hand-lettered window, a converted brick oven that has been relined twice but never replaced, and a family that has never let the business pass outside its name.</p>
+        </section>
+
+        <hr class="section-break" aria-hidden="true">
+
+        <section>
+          <h2>A Coal-Fired Beginning</h2>
+          <p>Antonio and Ilaria Marchetti arrived in Cedar Falls in the spring of 1925 with two trunks, a set of iron bannetons, and no English beyond what they had picked up on the crossing. Antonio had trained as a baker outside Bari; Ilaria kept the books and, by most accounts in the family, kept the recipes too, adjusting her husband&rsquo;s ratios for local flour that behaved nothing like the wheat back home. They spent a year saving wages from a mill bakery two towns over before signing a lease on the narrow storefront at 214 Elm Street.</p>
+          <p>The bakehouse opened in March of 1926 with a single coal-fired oven, built into the back wall by a mason Antonio had befriended at the mill. There was no sign at first. Just the smell, which, by all family accounts, did the advertising the Marchettis couldn&rsquo;t yet afford in a language they didn&rsquo;t yet speak fluently. Within a year, the bakery was selling out its morning bread by seven o&rsquo;clock most days.</p>
+        </section>
+
+        <figure class="photo-placeholder inline-photo">
+          <div class="placeholder-art" role="img" aria-label="Portrait-style photograph of Antonio and Ilaria Marchetti standing in front of the original brick oven, circa 1930, in work aprons dusted with flour."></div>
+          <figcaption>Antonio and Ilaria Marchetti beside the original brick oven, circa 1930. <span class="credit">Photograph placeholder, Larkspur Bakehouse family archive.</span></figcaption>
+        </figure>
+
+        <hr class="section-break" aria-hidden="true">
+
+        <section>
+          <h2>Surviving on Credit and Flour</h2>
+          <p>The Depression hit Elm Street hard, and it hit the Marchettis too, but not fatally. Ledgers kept from the period, still stored in a fireproof box behind the counter, show a business that survived less on profit than on barter: bread traded for shoe repair, for coal, for the labor of a neighbor who fixed the delivery cart&rsquo;s wheel three separate winters. &ldquo;They didn&rsquo;t turn anyone away who was hungry,&rdquo; Elena says. &ldquo;Not because they could afford to be generous. Because they remembered what it was to need someone to be generous with them.&rdquo;</p>
+          <p>By the time Antonio and Ilaria&rsquo;s son, Salvatore, returned from military service in 1948, the bakery had become something closer to a fixture than a storefront. Salvatore took over daily operations that year, and over the following decade he pushed the business toward what would become its defining identity: a wider oven, a slower ferment, and in 1962, the dense, faintly caraway-scented sourdough rye that customers still ask for by name.</p>
+        </section>
+
+        <blockquote class="pull-quote">
+          <p>&ldquo;Every loaf is a small argument against forgetting. You can taste when a place remembers who it is.&rdquo;</p>
+          <cite>Elena Marchetti, third-generation owner and head baker</cite>
+        </blockquote>
+
+        <section>
+          <h2>The Third Generation</h2>
+          <p>Elena Marchetti did not plan to run the bakery. She studied literature at a state university two hours north and spent much of her twenties assuming the storefront on Elm Street was her father&rsquo;s to keep, not hers to inherit. But she had worked the counter every summer since she was twelve, and when her father&rsquo;s health made the early mornings untenable in 2011, she came home &ldquo;for a season,&rdquo; she says, and stayed.</p>
+          <p>Under Elena, the bakery has changed without quite changing. The pastry case has widened to include a laminated cardamom bun and a seasonal fruit galette that would have puzzled her grandfather. But the rye recipe is untouched, weighed on the same brass scale, and the oven, relined in 1979 after a fire and again in 2003, is still the one Antonio&rsquo;s mason built into the back wall. &ldquo;I&rsquo;m not interested in being a museum,&rdquo; Elena says. &ldquo;But I am interested in not being the generation that lets it go quiet.&rdquo;</p>
+        </section>
+
+        <hr class="section-break" aria-hidden="true">
+
+        <section>
+          <h2>A Neighborhood Kept Warm</h2>
+          <p>Ask around Elm Street and the bakery comes up less as a business than as a landmark of the ordinary kind: the place that opens before anything else does, the smell that tells longtime residents which way the wind is blowing. Harold Ferris, who has bought a loaf of Elm Street Rye every Saturday for over thirty years, says he has watched three Marchettis learn to shape dough behind that counter. &ldquo;You don&rsquo;t think about a bakery being a hundred years old until somebody tells you,&rdquo; he says. &ldquo;Then you realize you&rsquo;ve been coming your whole life and it was already old when you started.&rdquo;</p>
+          <p>That sense of continuity is, in its way, the real subject of the centennial. Cedar Falls has changed considerably since 1926: the highway, the mill closures, the slow arrival of newer businesses with newer names. Larkspur Bakehouse has not been immune to any of it. But it has stayed put, and stayed itself, in a way that has become rarer with every passing decade.</p>
+        </section>
+
+        <figure class="photo-placeholder inline-photo">
+          <div class="placeholder-art" role="img" aria-label="Photograph of Elena Marchetti shaping dough at a wooden worktable in the same back room where her grandmother once worked, morning light coming through a small window."></div>
+          <figcaption>Elena Marchetti shapes dough in the same back room where her grandmother once worked. <span class="credit">Photograph placeholder, Larkspur Bakehouse family archive.</span></figcaption>
+        </figure>
+
+        <hr class="section-break" aria-hidden="true">
+
+        <section>
+          <h2>One Hundred Years, One Oven</h2>
+          <p>This month, Larkspur Bakehouse will mark its centennial with what Elena describes, somewhat sheepishly, as &ldquo;the smallest possible party a hundred years deserves&rdquo;: an open oven day, a reprint of Ilaria&rsquo;s original fig loaf recipe on the counter for anyone who wants it, and, if the weather holds, tables set up on the sidewalk where the delivery cart used to stand.</p>
+          <p>There is no plan, Elena says, to expand, franchise, or otherwise scale a business that has always measured its success in a different unit: loaves sold out by a certain hour, regulars who still come by name. &ldquo;A hundred years isn&rsquo;t an ending,&rdquo; she says, pulling a tray of rye from the oven her great-grandfather&rsquo;s friend built by hand. &ldquo;It&rsquo;s just the number we happen to be counting on. The oven doesn&rsquo;t know it&rsquo;s a milestone. It just wants to be fed again tomorrow.&rdquo;</p>
+        </section>
+
+      </div>
+
+      <aside class="sidebar">
+
+        <div class="sidebar-card timeline-card">
+          <h2>A Century on Elm Street</h2>
+          <ol class="timeline">
+            <li>
+              <span class="year">1926</span>
+              <p>Antonio and Ilaria Marchetti open Larkspur Bakehouse on Elm Street with a single coal-fired oven.</p>
+            </li>
+            <li>
+              <span class="year">1933</span>
+              <p>The bakery survives the Depression largely on barter, trading bread for repairs, coal, and produce.</p>
+            </li>
+            <li>
+              <span class="year">1948</span>
+              <p>Salvatore Marchetti, the founders&rsquo; son, takes over daily operations after returning from military service.</p>
+            </li>
+            <li>
+              <span class="year">1962</span>
+              <p>The bakehouse widens its oven and introduces the sourdough rye that becomes its signature loaf.</p>
+            </li>
+            <li>
+              <span class="year">1979</span>
+              <p>A fire damages the original storefront; neighbors help rebuild the oven and dining room within four months.</p>
+            </li>
+            <li>
+              <span class="year">1994</span>
+              <p>Elena Marchetti, granddaughter of the founders, begins working the counter after school.</p>
+            </li>
+            <li>
+              <span class="year">2011</span>
+              <p>Elena takes over as head baker, widening the pastry case while keeping the original oven in daily use.</p>
+            </li>
+            <li>
+              <span class="year">2026</span>
+              <p>Larkspur Bakehouse celebrates its centennial year on Elm Street.</p>
+            </li>
+          </ol>
+        </div>
+
+        <div class="sidebar-card goods-card">
+          <h2>The Signature Case</h2>
+          <ul class="goods-list">
+            <li>
+              <h3>Elm Street Rye</h3>
+              <p>A dense, faintly caraway-scented sourdough rye, fermented over two days on the same brass scale Salvatore introduced.</p>
+              <span class="since">Since 1962</span>
+            </li>
+            <li>
+              <h3>Ilaria&rsquo;s Fig Loaf</h3>
+              <p>Dried fig and walnut worked into a rustic country dough, from a recipe passed down in Ilaria Marchetti&rsquo;s own hand.</p>
+              <span class="since">Since 1927</span>
+            </li>
+            <li>
+              <h3>Centennial Miche</h3>
+              <p>A large, slow-fermented country loaf introduced for the anniversary year, meant for slicing thick and sharing.</p>
+              <span class="since">New for 2026</span>
+            </li>
+            <li>
+              <h3>Morning Twist</h3>
+              <p>A cardamom-laminated pastry, Elena&rsquo;s own addition to a case that had gone largely unchanged for decades.</p>
+              <span class="since">Since 2013</span>
+            </li>
+            <li>
+              <h3>Saturday Braid</h3>
+              <p>An egg-enriched braided loaf baked only on weekends, traditionally the first thing to sell out.</p>
+              <span class="since">Since 1951</span>
+            </li>
+          </ul>
+        </div>
+
+      </aside>
+    </div>
+
+  </article>
+</main>
+
+<footer class="site-footer">
+  <p>Harrow &amp; Field &nbsp;&middot;&nbsp; A Quarterly of Regional Life &nbsp;&middot;&nbsp; Spring Issue</p>
+</footer>
+
+</body>
+</html>

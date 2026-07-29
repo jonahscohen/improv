@@ -1,0 +1,4 @@
+coverage-product-minimal-utility-password-manager VERDICT: A
+coverage-product-playful-kids-cooking-kit VERDICT: A
+coverage-forms-multi-step-corporate-vendor-onboarding VERDICT: B
+coverage-product-data-dense-climate-risk-dashboard VERDICT: A

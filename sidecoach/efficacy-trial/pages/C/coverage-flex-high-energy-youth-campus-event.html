@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BuildBurst Weekend - Student Innovation Weekend</title>
+<meta name="description" content="BuildBurst Weekend is a free, three-day campus innovation challenge open to every major and every experience level. Register solo or as a team.">
+<style>
+  :root {
+    --navy: #14102B;
+    --navy-soft: #201A45;
+    --navy-softer: #2A2358;
+    --indigo: #6C4CF1;
+    --indigo-deep: #4B2FD1;
+    --coral: #FF6B4A;
+    --yellow: #FFD23F;
+    --white: #FFFFFF;
+    --offwhite: #F7F5FF;
+    --ink: #14102B;
+    --muted-on-light: #55507A;
+    --muted-on-dark: #C9C3F0;
+    --border-on-light: #E1DBF7;
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --radius-sm: 10px;
+    --max-w: 1140px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--white);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-weight: 800;
+    line-height: 1.12;
+    margin: 0 0 0.5em;
+    letter-spacing: -0.01em;
+  }
+
+  p { margin: 0 0 1em; }
+
+  a { color: var(--indigo); }
+
+  img, svg { max-width: 100%; display: block; }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -3rem;
+    background: var(--yellow);
+    color: var(--navy);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    z-index: 1000;
+    transition: top 0.15s ease;
+  }
+  .skip-link:focus {
+    top: 1rem;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible {
+    outline: 3px solid var(--yellow);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .wrap {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+  }
+
+  /* Header / nav */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    background: var(--navy);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 0;
+    gap: 1rem;
+  }
+
+  .logo {
+    color: var(--white);
+    font-weight: 800;
+    font-size: 1.15rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+  .logo .dot {
+    width: 0.6em;
+    height: 0.6em;
+    border-radius: 50%;
+    background: var(--yellow);
+    display: inline-block;
+  }
+
+  .primary-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .primary-nav ul {
+    list-style: none;
+    display: flex;
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .primary-nav a {
+    color: var(--muted-on-dark);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .primary-nav a:hover,
+  .primary-nav a:focus-visible {
+    color: var(--white);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 999px;
+    padding: 0.8rem 1.5rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+
+  .btn-cta {
+    background: var(--yellow);
+    color: var(--navy);
+  }
+  .btn-cta:hover { box-shadow: 0 8px 20px rgba(255, 210, 63, 0.35); }
+
+  .btn-outline-dark {
+    background: transparent;
+    border-color: rgba(255,255,255,0.35);
+    color: var(--white);
+  }
+  .btn-outline-dark:hover { border-color: var(--white); }
+
+  .btn-outline-light {
+    background: transparent;
+    border-color: var(--indigo);
+    color: var(--indigo);
+  }
+  .btn-outline-light:hover { background: var(--offwhite); }
+
+  .btn-small {
+    padding: 0.6rem 1.1rem;
+    font-size: 0.9rem;
+  }
+
+  .nav-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .nav-toggle .bar {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: var(--white);
+    margin: 5px 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .nav-toggle[aria-expanded="true"] .bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+  .nav-toggle[aria-expanded="true"] .bar:nth-child(2) {
+    opacity: 0;
+  }
+  .nav-toggle[aria-expanded="true"] .bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  @media (max-width: 860px) {
+    .nav-toggle { display: block; }
+    .primary-nav {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--navy-soft);
+      flex-direction: column;
+      align-items: stretch;
+      padding: 1.5rem;
+      display: none;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .primary-nav.is-open { display: flex; }
+    .primary-nav ul {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .primary-nav .nav-cta { margin-top: 0.5rem; }
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(150deg, var(--navy) 0%, var(--navy-softer) 45%, var(--indigo-deep) 100%);
+    color: var(--white);
+    padding: clamp(3rem, 8vw, 6rem) 0 clamp(2.5rem, 6vw, 4rem);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before,
+  .hero::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+    opacity: 0.35;
+  }
+  .hero::before {
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, var(--coral) 0%, transparent 70%);
+    top: -160px;
+    right: -120px;
+  }
+  .hero::after {
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, var(--yellow) 0%, transparent 70%);
+    bottom: -140px;
+    left: -100px;
+  }
+
+  .hero .wrap { position: relative; z-index: 1; }
+
+  .hero-eyebrow { color: var(--yellow); }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.25rem);
+    margin-top: 0.5rem;
+    max-width: 16ch;
+  }
+
+  .hero-sub {
+    font-size: clamp(1.05rem, 2vw, 1.3rem);
+    color: var(--muted-on-dark);
+    max-width: 46ch;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 2.5rem;
+  }
+
+  .badge {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: var(--white);
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .stat-strip {
+    background: var(--navy-soft);
+    color: var(--white);
+    padding: 1.75rem 0;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    text-align: center;
+  }
+  .stat-grid dt {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 800;
+    color: var(--yellow);
+  }
+  .stat-grid dd {
+    margin: 0.25rem 0 0;
+    color: var(--muted-on-dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  @media (max-width: 700px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Generic section rhythm */
+  section {
+    padding: clamp(3rem, 7vw, 5.5rem) 0;
+  }
+  .section-light { background: var(--white); }
+  .section-tint { background: var(--offwhite); }
+  .section-dark {
+    background: var(--navy);
+    color: var(--white);
+  }
+  .section-dark .muted { color: var(--muted-on-dark); }
+  .section-light .muted, .section-tint .muted { color: var(--muted-on-light); }
+
+  .section-head {
+    max-width: 60ch;
+    margin-bottom: 2.5rem;
+  }
+  .section-head h2 {
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+  }
+  .section-eyebrow {
+    color: var(--indigo);
+  }
+  .section-dark .section-eyebrow { color: var(--yellow); }
+
+  /* Who should attend */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+  @media (max-width: 980px) {
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .card-grid { grid-template-columns: 1fr; }
+  }
+
+  .persona-card {
+    background: var(--white);
+    border: 1px solid var(--border-on-light);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+  }
+  .persona-card h3 {
+    font-size: 1.05rem;
+    margin-bottom: 0.4rem;
+  }
+  .persona-card p {
+    color: var(--muted-on-light);
+    font-size: 0.95rem;
+    margin-bottom: 0;
+  }
+  .persona-card .tag {
+    display: inline-block;
+    background: var(--offwhite);
+    color: var(--indigo-deep);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Schedule */
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  @media (max-width: 860px) {
+    .schedule-grid { grid-template-columns: 1fr; }
+  }
+  .day-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-on-light);
+    padding: 1.75rem;
+  }
+  .day-card h3 {
+    font-size: 1.2rem;
+    color: var(--indigo-deep);
+  }
+  .day-card .day-date {
+    display: block;
+    color: var(--muted-on-light);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .day-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .day-list li {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--border-on-light);
+    font-size: 0.92rem;
+  }
+  .day-list li:first-child { border-top: none; }
+  .day-time {
+    flex: 0 0 auto;
+    font-weight: 700;
+    color: var(--navy);
+    white-space: nowrap;
+    min-width: 5.5rem;
+  }
+  .day-desc { color: var(--muted-on-light); }
+
+  /* Teams */
+  .team-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 860px) {
+    .team-options { grid-template-columns: 1fr; }
+  }
+  .team-card {
+    background: var(--navy-soft);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .team-card h3 {
+    font-size: 1.05rem;
+    color: var(--yellow);
+    margin-bottom: 0.5rem;
+  }
+  .team-card p {
+    color: var(--muted-on-dark);
+    font-size: 0.92rem;
+    margin-bottom: 0;
+  }
+
+  .note-box {
+    margin-top: 2rem;
+    background: var(--navy-soft);
+    border-left: 4px solid var(--coral);
+    border-radius: var(--radius-sm);
+    padding: 1.1rem 1.4rem;
+    color: var(--muted-on-dark);
+    font-size: 0.95rem;
+  }
+  .note-box strong { color: var(--white); }
+
+  /* Prizes */
+  .prize-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+  @media (max-width: 980px) {
+    .prize-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .prize-grid { grid-template-columns: 1fr; }
+  }
+  .prize-card {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-on-light);
+    padding: 1.5rem;
+    text-align: left;
+  }
+  .prize-card .amount {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--indigo-deep);
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .prize-card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+  }
+  .prize-card p {
+    color: var(--muted-on-light);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+  }
+
+  .support-list {
+    margin-top: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem 2rem;
+    padding: 0;
+    list-style: none;
+  }
+  @media (max-width: 700px) {
+    .support-list { grid-template-columns: 1fr; }
+  }
+  .support-list li {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    color: var(--muted-on-light);
+    font-size: 0.95rem;
+  }
+  .support-list li::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-top: 0.4rem;
+    border-radius: 50%;
+    background: var(--coral);
+  }
+
+  /* FAQ */
+  .faq-list {
+    max-width: 760px;
+  }
+  .faq-item {
+    border-bottom: 1px solid var(--border-on-light);
+  }
+  .faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 0;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary .icon {
+    flex: 0 0 auto;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--offwhite);
+    color: var(--indigo-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    transition: transform 0.15s ease;
+  }
+  .faq-item[open] summary .icon {
+    transform: rotate(45deg);
+  }
+  .faq-item p {
+    color: var(--muted-on-light);
+    padding-bottom: 1.25rem;
+    max-width: 65ch;
+  }
+
+  /* Register */
+  .register-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 2.5rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .register-layout { grid-template-columns: 1fr; }
+  }
+
+  .register-recap {
+    background: var(--navy-soft);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+  }
+  .register-recap dl {
+    margin: 1.5rem 0 0;
+  }
+  .register-recap dt {
+    color: var(--yellow);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 1rem;
+  }
+  .register-recap dt:first-child { margin-top: 0; }
+  .register-recap dd {
+    margin: 0.2rem 0 0;
+    color: var(--white);
+    font-size: 1rem;
+  }
+
+  .register-form {
+    background: var(--white);
+    color: var(--ink);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+  }
+  .field {
+    margin-bottom: 1.25rem;
+  }
+  .field label,
+  fieldset legend {
+    display: block;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  .field .hint {
+    display: block;
+    font-weight: 400;
+    color: var(--muted-on-light);
+    font-size: 0.82rem;
+    margin-top: 0.25rem;
+  }
+  .field input[type="text"],
+  .field input[type="email"],
+  .field select {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border-on-light);
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--white);
+    color: var(--ink);
+  }
+  .field input:focus,
+  .field select:focus {
+    border-color: var(--indigo);
+  }
+
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+  }
+  .radio-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+  }
+  .radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.95rem;
+  }
+  .radio-option input {
+    margin-top: 0.25rem;
+  }
+
+  .register-form .btn { width: 100%; margin-top: 0.5rem; }
+
+  .success-panel {
+    background: var(--white);
+    color: var(--ink);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    border: 2px solid var(--indigo);
+  }
+  .success-panel h3 {
+    color: var(--indigo-deep);
+    font-size: 1.3rem;
+  }
+  .success-panel p { color: var(--muted-on-light); }
+  .success-panel .btn { margin-top: 1rem; }
+
+  [hidden] { display: none !important; }
+
+  /* Footer */
+  .site-footer {
+    background: var(--navy);
+    color: var(--muted-on-dark);
+    padding: 3rem 0 2rem;
+    font-size: 0.9rem;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 2rem;
+  }
+  @media (max-width: 700px) {
+    .footer-grid { grid-template-columns: 1fr; }
+  }
+  .site-footer h2 {
+    color: var(--white);
+    font-size: 1.1rem;
+    margin-bottom: 0.6rem;
+  }
+  .site-footer ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .site-footer li { margin-bottom: 0.5rem; }
+  .site-footer a {
+    color: var(--muted-on-dark);
+    text-decoration: underline;
+  }
+  .site-footer a:hover { color: var(--white); }
+  .footer-bottom {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    font-size: 0.82rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="wrap nav-row">
+    <a class="logo" href="#top">
+      <span class="dot" aria-hidden="true"></span>
+      BuildBurst Weekend
+    </a>
+    <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+      <ul>
+        <li><a href="#who">Who's it for</a></li>
+        <li><a href="#schedule">Schedule</a></li>
+        <li><a href="#teams">Teams</a></li>
+        <li><a href="#prizes">Prizes</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <a class="btn btn-cta btn-small nav-cta" href="#register">Register Now</a>
+    </nav>
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="primary-nav">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="visually-hidden">Toggle menu</span>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="top">
+    <div class="wrap">
+      <span class="eyebrow hero-eyebrow">October 16-18, 2026 &bull; Meridian University</span>
+      <h1>BuildBurst Weekend</h1>
+      <p class="hero-sub">Three days. Every major. One campus-wide challenge to build something that actually matters, with a team you haven't met yet.</p>
+      <p class="hero-sub">No experience required. No idea required either - you'll find both on day one.</p>
+      <div class="hero-actions">
+        <a class="btn btn-cta" href="#register">Register Now</a>
+        <a class="btn btn-outline-dark" href="#schedule">See the Schedule</a>
+      </div>
+      <div class="hero-badges">
+        <span class="badge">Free to attend</span>
+        <span class="badge">All majors welcome</span>
+        <span class="badge">No experience needed</span>
+        <span class="badge">Teams of 1-5</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="stat-strip">
+    <div class="wrap">
+      <dl class="stat-grid">
+        <div>
+          <dt>3</dt>
+          <dd>Days on campus</dd>
+        </div>
+        <div>
+          <dt>6</dt>
+          <dd>Hands-on workshops</dd>
+        </div>
+        <div>
+          <dt>100+</dt>
+          <dd>Students expected</dd>
+        </div>
+        <div>
+          <dt>$4,500</dt>
+          <dd>In team prizes</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <section class="section-light" id="who">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow section-eyebrow">Who should come</span>
+        <h2>Short answer: you.</h2>
+        <p class="muted">BuildBurst Weekend is built for students who've never done anything like this, and for students who do this every weekend. Both groups belong in the same room.</p>
+      </div>
+      <div class="card-grid">
+        <div class="persona-card">
+          <span class="tag">New to this</span>
+          <h3>Never built anything before</h3>
+          <p>Bring curiosity. Mentors and teammates handle the rest, and half the room is in the same boat.</p>
+        </div>
+        <div class="persona-card">
+          <span class="tag">Any major</span>
+          <h3>Deep in your field, want to apply it</h3>
+          <p>Engineering, business, design, health sciences, the humanities - every field solves problems differently. We want yours in the mix.</p>
+        </div>
+        <div class="persona-card">
+          <span class="tag">Team seekers</span>
+          <h3>Looking for your people</h3>
+          <p>Cross-major teams are the whole point. You'll meet collaborators you'd never run into in a lecture hall.</p>
+        </div>
+        <div class="persona-card">
+          <span class="tag">Also valid</span>
+          <h3>Here for the food and the prizes</h3>
+          <p>That's a completely legitimate reason to show up, and you'll leave with more than you expected.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-tint" id="schedule">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow section-eyebrow">The weekend</span>
+        <h2>How it runs, hour by hour</h2>
+        <p class="muted">Arrive whenever your schedule allows on Friday. The real building happens Saturday and Sunday.</p>
+      </div>
+      <div class="schedule-grid">
+        <div class="day-card">
+          <h3>Friday</h3>
+          <span class="day-date">October 16</span>
+          <ul class="day-list">
+            <li><span class="day-time">5:00 PM</span><span class="day-desc">Check-in opens, Innovation Commons Atrium</span></li>
+            <li><span class="day-time">6:00 PM</span><span class="day-desc">Opening kickoff, challenge themes announced</span></li>
+            <li><span class="day-time">6:45 PM</span><span class="day-desc">Team formation mixer, for anyone without a team</span></li>
+            <li><span class="day-time">8:00 PM</span><span class="day-desc">Building begins, dinner served</span></li>
+          </ul>
+        </div>
+        <div class="day-card">
+          <h3>Saturday</h3>
+          <span class="day-date">October 17</span>
+          <ul class="day-list">
+            <li><span class="day-time">9:00 AM</span><span class="day-desc">Breakfast, mentor office hours open</span></li>
+            <li><span class="day-time">11:00 AM</span><span class="day-desc">Workshop: rapid prototyping</span></li>
+            <li><span class="day-time">2:00 PM</span><span class="day-desc">Workshop: pitching in three minutes</span></li>
+            <li><span class="day-time">All day</span><span class="day-desc">Mentors circulating, meals and snacks provided</span></li>
+            <li><span class="day-time">9:00 PM</span><span class="day-desc">Optional late-night building lounge opens</span></li>
+          </ul>
+        </div>
+        <div class="day-card">
+          <h3>Sunday</h3>
+          <span class="day-date">October 18</span>
+          <ul class="day-list">
+            <li><span class="day-time">9:00 AM</span><span class="day-desc">Breakfast, final building hours</span></li>
+            <li><span class="day-time">11:00 AM</span><span class="day-desc">Project submissions due</span></li>
+            <li><span class="day-time">12:00 PM</span><span class="day-desc">Demos, open to all attendees and guests</span></li>
+            <li><span class="day-time">3:00 PM</span><span class="day-desc">Judging and awards</span></li>
+            <li><span class="day-time">4:00 PM</span><span class="day-desc">Closing celebration</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-dark" id="teams">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow section-eyebrow">Team formation</span>
+        <h2>Find your team, or bring one</h2>
+        <p class="muted">Most attendees show up without a full team. That is normal, and Friday is built around it.</p>
+      </div>
+      <div class="team-options">
+        <div class="team-card">
+          <h3>Register as a team</h3>
+          <p>Already have 2 to 5 people? Everyone registers individually and lists the same team name. You start building Friday night.</p>
+        </div>
+        <div class="team-card">
+          <h3>Register solo</h3>
+          <p>You'll fill out a short interest form and get matched into a team at Friday's mixer, based on skills and the kind of problem you want to work on.</p>
+        </div>
+        <div class="team-card">
+          <h3>Register with one teammate</h3>
+          <p>Come as a pair and grow your team to full size at the mixer, or stay a duo. Both are common and both work fine.</p>
+        </div>
+      </div>
+      <div class="note-box">
+        <strong>No team is too small or too mismatched.</strong> Teams that mix majors consistently do best, since every project needs people who think differently about the same problem.
+      </div>
+    </div>
+  </section>
+
+  <section class="section-light" id="prizes">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow section-eyebrow">Prizes and support</span>
+        <h2>What you walk away with</h2>
+        <p class="muted">Prizes are nice. The mentorship, workshops, and meals are what most people remember.</p>
+      </div>
+      <div class="prize-grid">
+        <div class="prize-card">
+          <span class="amount">$2,500</span>
+          <h3>Grand prize</h3>
+          <p>Team prize plus fast-tracked interviews with campus career partners.</p>
+        </div>
+        <div class="prize-card">
+          <span class="amount">$1,000</span>
+          <h3>Runner-up</h3>
+          <p>Awarded to the second-place team by judge scoring.</p>
+        </div>
+        <div class="prize-card">
+          <span class="amount">$500</span>
+          <h3>Best first-time team</h3>
+          <p>For a team where every member is at their first event like this.</p>
+        </div>
+        <div class="prize-card">
+          <span class="amount">$500</span>
+          <h3>Most cross-disciplinary</h3>
+          <p>Recognizes a team spanning three or more majors.</p>
+        </div>
+      </div>
+      <ul class="support-list">
+        <li>Mentors on-site the entire weekend, from a mix of majors and industries</li>
+        <li>Beginner-friendly workshops that assume no prior experience</li>
+        <li>All meals, snacks, and coffee provided, no cost to you</li>
+        <li>Starter kits with templates, so nobody begins from a blank page</li>
+        <li>A quiet room and rest area available all weekend for breaks</li>
+        <li>On-call tech support for laptops, chargers, and equipment loans</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section-tint" id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow section-eyebrow">Questions</span>
+        <h2>Frequently asked questions</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Do I need experience to join?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>No. Roughly half of BuildBurst attendees have never done anything like this before. Every workshop and mentor is built with that in mind.</p>
+        </details>
+        <details class="faq-item">
+          <summary>I don't have a team. Can I still come?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>Yes, most people don't. Friday's mixer exists specifically to match solo students into teams before building starts.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What does it cost?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>Nothing. Meals, snacks, and materials are included for every registered, currently enrolled student.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What should I bring?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>A laptop if you have one, though it isn't required for every role on a team. Bring a phone charger and comfortable clothes. We provide everything else.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can first-year students join?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>Yes. Every year and every major is welcome, including first-years and incoming transfer students.</p>
+        </details>
+        <details class="faq-item">
+          <summary>I have class Friday afternoon. Can I still participate?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>Yes. Check-in runs from 5 to 6 PM and the core building happens Saturday and Sunday. Arriving right at 5 works fine.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What if my idea doesn't go anywhere by Sunday?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>Most ideas don't turn into a finished product in one weekend, and that's expected. The goal is the experience, the team, and the skills, not a launched company.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Is there a registration deadline?<span class="icon" aria-hidden="true">+</span></summary>
+          <p>Register by October 9, 2026. Spots are limited by venue capacity, so earlier is safer.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-dark" id="register">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow section-eyebrow">Last step</span>
+        <h2>Reserve your spot</h2>
+        <p class="muted">Registration takes about two minutes. You can update your team status any time before October 9.</p>
+      </div>
+      <div class="register-layout">
+        <div class="register-recap">
+          <h3 class="visually-hidden">Event details</h3>
+          <dl>
+            <dt>Dates</dt>
+            <dd>October 16-18, 2026</dd>
+            <dt>Location</dt>
+            <dd>Innovation Commons &amp; Founders Quad, Meridian University</dd>
+            <dt>Cost</dt>
+            <dd>Free for all currently enrolled students</dd>
+            <dt>Registration deadline</dt>
+            <dd>October 9, 2026</dd>
+            <dt>Who can join</dt>
+            <dd>Any student, any year, any major, any experience level</dd>
+          </dl>
+        </div>
+
+        <div id="register-form-wrap">
+          <form class="register-form" id="register-form" novalidate>
+            <h3 class="visually-hidden">Registration form</h3>
+            <div class="field">
+              <label for="full-name">Full name</label>
+              <input type="text" id="full-name" name="full-name" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label for="email">Campus email</label>
+              <input type="email" id="email" name="email" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label for="major">Major or field of study</label>
+              <input type="text" id="major" name="major" placeholder="e.g. Mechanical Engineering, Undecided, Studio Art" required>
+              <span class="hint">Undecided is a completely fine answer.</span>
+            </div>
+            <div class="field">
+              <label for="year">Year</label>
+              <select id="year" name="year" required>
+                <option value="" disabled selected>Select your year</option>
+                <option value="first-year">First-year</option>
+                <option value="second-year">Second-year</option>
+                <option value="third-year">Third-year</option>
+                <option value="fourth-year-plus">Fourth-year or beyond</option>
+                <option value="graduate">Graduate student</option>
+              </select>
+            </div>
+            <fieldset>
+              <legend>Team status</legend>
+              <div class="radio-row">
+                <label class="radio-option">
+                  <input type="radio" name="team-status" value="solo" required>
+                  <span>Registering solo, match me at the mixer</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="team-status" value="partial">
+                  <span>Registering with 1 to 4 teammates already</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="team-status" value="unsure">
+                  <span>Not sure yet</span>
+                </label>
+              </div>
+            </fieldset>
+            <div class="field">
+              <label for="team-name">Team name <span class="hint" style="display:inline">(optional)</span></label>
+              <input type="text" id="team-name" name="team-name" placeholder="Skip this if you don't have one yet">
+            </div>
+            <button type="submit" class="btn btn-cta">Reserve my spot</button>
+          </form>
+        </div>
+
+        <div class="success-panel" id="success-panel" role="status" tabindex="-1" hidden>
+          <h3>You're on the list.</h3>
+          <p>Watch your campus email for a confirmation and details about Friday's mixer. See you October 16.</p>
+          <a class="btn btn-outline-light" href="#top">Back to top</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h2>BuildBurst Weekend</h2>
+        <p>A student innovation program at Meridian University. Open to every currently enrolled student, every major, every experience level.</p>
+      </div>
+      <div>
+        <h2>Contact</h2>
+        <ul>
+          <li><a href="mailto:buildburst@meridian.edu">buildburst@meridian.edu</a></li>
+          <li>Innovation Commons, 400 Founders Way</li>
+          <li>Meridian University</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Jump to</h2>
+        <ul>
+          <li><a href="#who">Who's it for</a></li>
+          <li><a href="#schedule">Schedule</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#register">Register</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Need an accommodation to participate? Email us and we'll take care of it before the weekend starts.</p>
+      <p>BuildBurst Weekend is a fictional event used for demonstration purposes.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var toggle = document.getElementById('nav-toggle');
+    var nav = document.getElementById('primary-nav');
+
+    toggle.addEventListener('click', function () {
+      var isOpen = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!isOpen));
+      nav.classList.toggle('is-open', !isOpen);
+    });
+
+    nav.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        toggle.setAttribute('aria-expanded', 'false');
+        nav.classList.remove('is-open');
+      });
+    });
+
+    var form = document.getElementById('register-form');
+    var formWrap = document.getElementById('register-form-wrap');
+    var successPanel = document.getElementById('success-panel');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (typeof form.reportValidity === 'function' && !form.reportValidity()) {
+        return;
+      }
+      formWrap.hidden = true;
+      successPanel.hidden = false;
+      successPanel.focus();
+    });
+  })();
+</script>
+
+</body>
+</html>

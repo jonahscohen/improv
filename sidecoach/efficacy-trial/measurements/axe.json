@@ -1,0 +1,640 @@
+{
+  "measuredAt": "2026-07-28T23:28:24.676Z",
+  "tool": "axe-core@4.12.1",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "pages": [
+    {
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 32,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "arm": "S",
+      "violations": 0,
+      "nodes": 0,
+      "byImpact": {},
+      "rules": []
+    },
+    {
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 28,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "page-has-heading-one"
+      ]
+    },
+    {
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 2,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "arm": "S",
+      "violations": 2,
+      "nodes": 3,
+      "byImpact": {
+        "critical": 1,
+        "serious": 1
+      },
+      "rules": [
+        "aria-allowed-attr",
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 16,
+      "byImpact": {
+        "serious": 2
+      },
+      "rules": [
+        "color-contrast",
+        "scrollable-region-focusable"
+      ]
+    },
+    {
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "arm": "P",
+      "violations": 2,
+      "nodes": 28,
+      "byImpact": {
+        "minor": 1,
+        "serious": 1
+      },
+      "rules": [
+        "aria-allowed-role",
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 41,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "arm": "C",
+      "violations": 3,
+      "nodes": 7,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 2
+      },
+      "rules": [
+        "color-contrast",
+        "landmark-one-main",
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 15,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 7,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "arm": "C",
+      "violations": 1,
+      "nodes": 8,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "arm": "P",
+      "violations": 3,
+      "nodes": 6,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 2
+      },
+      "rules": [
+        "color-contrast",
+        "landmark-no-duplicate-banner",
+        "landmark-unique"
+      ]
+    },
+    {
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "arm": "C",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 4,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "arm": "C",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 5,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "arm": "C",
+      "violations": 1,
+      "nodes": 15,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 5,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 2,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-flex-warm-human-community-clinic",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 3,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-flex-warm-human-community-clinic",
+      "arm": "P",
+      "violations": 2,
+      "nodes": 8,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-flex-warm-human-community-clinic",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 2,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-forms-minimal-medical-intake",
+      "arm": "C",
+      "violations": 1,
+      "nodes": 12,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "listitem"
+      ]
+    },
+    {
+      "id": "coverage-forms-minimal-medical-intake",
+      "arm": "P",
+      "violations": 2,
+      "nodes": 44,
+      "byImpact": {
+        "moderate": 2
+      },
+      "rules": [
+        "landmark-one-main",
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-forms-minimal-medical-intake",
+      "arm": "S",
+      "violations": 2,
+      "nodes": 22,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "landmark-one-main"
+      ]
+    },
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 38,
+      "byImpact": {
+        "serious": 2
+      },
+      "rules": [
+        "color-contrast",
+        "dlitem"
+      ]
+    },
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "html-has-lang"
+      ]
+    },
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "arm": "S",
+      "violations": 0,
+      "nodes": 0,
+      "byImpact": {},
+      "rules": []
+    },
+    {
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "arm": "C",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "arm": "P",
+      "violations": 2,
+      "nodes": 2,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "heading-order"
+      ]
+    },
+    {
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 12,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "heading-order"
+      ]
+    },
+    {
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "arm": "P",
+      "violations": 0,
+      "nodes": 0,
+      "byImpact": {},
+      "rules": []
+    },
+    {
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "arm": "S",
+      "violations": 0,
+      "nodes": 0,
+      "byImpact": {},
+      "rules": []
+    },
+    {
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 37,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "heading-order"
+      ]
+    },
+    {
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "arm": "P",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 3,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 28,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "arm": "P",
+      "violations": 3,
+      "nodes": 8,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 2
+      },
+      "rules": [
+        "color-contrast",
+        "heading-order",
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 34,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-product-minimal-utility-password-manager",
+      "arm": "C",
+      "violations": 1,
+      "nodes": 1,
+      "byImpact": {
+        "moderate": 1
+      },
+      "rules": [
+        "region"
+      ]
+    },
+    {
+      "id": "coverage-product-minimal-utility-password-manager",
+      "arm": "P",
+      "violations": 0,
+      "nodes": 0,
+      "byImpact": {},
+      "rules": []
+    },
+    {
+      "id": "coverage-product-minimal-utility-password-manager",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 8,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "arm": "C",
+      "violations": 2,
+      "nodes": 3,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "heading-order"
+      ]
+    },
+    {
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "arm": "P",
+      "violations": 2,
+      "nodes": 6,
+      "byImpact": {
+        "serious": 1,
+        "moderate": 1
+      },
+      "rules": [
+        "color-contrast",
+        "heading-order"
+      ]
+    },
+    {
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "arm": "S",
+      "violations": 1,
+      "nodes": 2,
+      "byImpact": {
+        "serious": 1
+      },
+      "rules": [
+        "color-contrast"
+      ]
+    }
+  ]
+}

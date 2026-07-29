@@ -1,0 +1,41 @@
+You are building one web page.
+
+OUTPUT CONTRACT (format only - it says nothing about how the page should be designed)
+- Write the complete page to the absolute file path given at the end of this prompt.
+- Exactly ONE file. All CSS in a <style> element and all JavaScript, if any, in a <script>
+  element inside that same file.
+- Fully self-contained and offline: no CDN links, no remote stylesheets, no remote fonts, no
+  remote images, no fetch/XHR/WebSocket calls. Inline or omit every asset.
+- Do not create, edit, or delete any other file anywhere.
+- Do not print the page contents in your reply and do not add commentary inside the page.
+- When the file is written, reply with the single word DONE and nothing else.
+
+BRIEF
+-----
+# marketing-landing-minimal-language-app (coverage brief, Codex-authored)
+
+title: Language Practice Subscription
+register: marketing/landing
+aestheticStyle: minimal
+audience: Busy adults who want a manageable daily language-learning habit.
+goal: Introduce a subscription language practice app and encourage trial sign-ups.
+requiredContent:
+- Product name: DailyPhrase
+- One-sentence product promise
+- Main benefits
+- Sample daily lesson content described in words
+- Subscription options
+- Testimonials from three user types
+- Trial sign-up action
+constraints:
+- audience: Users have limited time and may compare against other learning tools.
+- brand-tone-in-words: Calm, clear, encouraging, and efficient.
+- platform: Responsive web landing page.
+- baseline: Must be accessible, readable, and self-contained with placeholder text only.
+successCriteria:
+- The offering is understandable within a short visit.
+- The trial path is clear without pressuring the user.
+- The page communicates habit-building value and trustworthiness.
+
+-----
+Write the page to: /Users/spare3/Documents/Github/improv/sidecoach/efficacy-trial/pages/C/coverage-marketing-landing-minimal-language-app.html

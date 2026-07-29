@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DailyPhrase - Language Practice Subscription</title>
+<meta name="description" content="DailyPhrase turns ten quiet minutes a day into real, lasting conversational progress. Start a free trial.">
+<style>
+  :root {
+    --bg: #faf8f4;
+    --surface: #ffffff;
+    --ink: #1f2420;
+    --ink-muted: #5c655f;
+    --ink-faint: #8a9189;
+    --line: #e4e0d6;
+    --line-strong: #cfc9ba;
+    --accent: #2e5c4d;
+    --accent-dark: #21453a;
+    --accent-soft: #e9f0ec;
+    --accent-contrast: #ffffff;
+    --focus-ring: #1b6f5c;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 14px;
+    --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --max-width: 1120px;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    color: var(--ink);
+    line-height: 1.2;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .container {
+    width: 100%;
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  /* Skip link */
+  .skip-link {
+    position: absolute;
+    left: 16px;
+    top: -60px;
+    background: var(--accent-dark);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    z-index: 1000;
+    transition: top 0.15s ease;
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  .skip-link:focus {
+    top: 16px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  /* Header */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(250, 248, 244, 0.92);
+    backdrop-filter: saturate(140%) blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .logo {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  .logo-mark {
+    color: var(--accent);
+  }
+
+  .primary-nav {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .primary-nav ul {
+    display: flex;
+    gap: 28px;
+  }
+
+  .primary-nav a {
+    text-decoration: none;
+    font-size: 15px;
+    color: var(--ink-muted);
+    padding: 6px 2px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .primary-nav a:hover,
+  .primary-nav a:focus-visible {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+  }
+
+  .nav-toggle {
+    display: none;
+    background: none;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    white-space: nowrap;
+  }
+
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-dark);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--ink);
+  }
+
+  .btn-block {
+    width: 100%;
+  }
+
+  .btn-sm {
+    padding: 9px 16px;
+    font-size: 14px;
+  }
+
+  /* Hero */
+  .hero {
+    padding-top: 88px;
+    padding-bottom: 88px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    gap: 64px;
+    align-items: center;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-size: clamp(34px, 4.4vw, 52px);
+    letter-spacing: -0.01em;
+  }
+
+  .hero-promise {
+    margin-top: 22px;
+    font-size: 19px;
+    color: var(--ink-muted);
+    max-width: 46ch;
+  }
+
+  .hero-actions {
+    margin-top: 34px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .hero-note {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    margin-top: 46px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+
+  .hero-stat-number {
+    font-family: var(--font-serif);
+    font-size: 26px;
+    color: var(--ink);
+    display: block;
+  }
+
+  .hero-stat-label {
+    font-size: 13px;
+    color: var(--ink-faint);
+    margin-top: 4px;
+  }
+
+  /* Hero visual: a stylized lesson card, no icons, typographic only */
+  .hero-visual {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: 0 24px 48px -32px rgba(31, 36, 32, 0.28);
+  }
+
+  .device-frame {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .device-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--accent-soft);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .device-topbar-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-dark);
+  }
+
+  .device-topbar-day {
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+
+  .device-body {
+    padding: 22px 18px;
+  }
+
+  .lesson-phrase-label {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .lesson-phrase {
+    font-family: var(--font-serif);
+    font-size: 21px;
+    margin-top: 8px;
+  }
+
+  .lesson-phrase-translation {
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+
+  .lesson-progress {
+    margin-top: 22px;
+  }
+
+  .lesson-progress-track {
+    height: 6px;
+    background: var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .lesson-progress-fill {
+    height: 100%;
+    width: 60%;
+    background: var(--accent);
+    border-radius: 999px;
+  }
+
+  .lesson-progress-caption {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+
+  /* Section shell */
+  section {
+    padding-top: 96px;
+    padding-bottom: 96px;
+  }
+
+  .section-alt {
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .section-head {
+    max-width: 640px;
+    margin-bottom: 56px;
+  }
+
+  .section-head.centered {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+
+  .section-eyebrow {
+    display: block;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .section-head h2 {
+    font-size: clamp(26px, 3.2vw, 36px);
+  }
+
+  .section-head p {
+    margin-top: 16px;
+    color: var(--ink-muted);
+    font-size: 17px;
+  }
+
+  /* Benefits */
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px;
+  }
+
+  .benefit-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 28px 24px;
+    background: var(--bg);
+  }
+
+  .benefit-index {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    color: var(--accent);
+    border: 1px solid var(--accent-soft);
+    background: var(--accent-soft);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+
+  .benefit-card h3 {
+    font-size: 18px;
+  }
+
+  .benefit-card p {
+    margin-top: 10px;
+    font-size: 15px;
+    color: var(--ink-muted);
+  }
+
+  /* Sample lesson */
+  .lesson-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 56px;
+    align-items: start;
+  }
+
+  .lesson-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .lesson-step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 18px;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .lesson-step:first-child {
+    padding-top: 0;
+  }
+
+  .lesson-step:last-child {
+    border-bottom: none;
+  }
+
+  .lesson-step-marker {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    color: var(--accent-dark);
+    background: var(--surface);
+  }
+
+  .lesson-step-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .lesson-step-title h3 {
+    font-size: 17px;
+  }
+
+  .lesson-step-time {
+    font-size: 12px;
+    color: var(--ink-faint);
+    border: 1px solid var(--line);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  .lesson-step p {
+    margin-top: 8px;
+    font-size: 15px;
+    color: var(--ink-muted);
+  }
+
+  .lesson-panel {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    background: var(--bg);
+  }
+
+  .lesson-panel-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .lesson-panel-meta span {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .lesson-panel h3 {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  .lesson-scenario {
+    margin-top: 22px;
+    padding: 20px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+  }
+
+  .lesson-scenario p + p {
+    margin-top: 10px;
+  }
+
+  .lesson-scenario-label {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .lesson-options {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .lesson-option {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 14px;
+    background: var(--bg);
+  }
+
+  .lesson-option.is-suggested {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* Pricing */
+  .billing-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px;
+    margin: 0 auto;
+  }
+
+  .billing-toggle-option {
+    border: none;
+    background: transparent;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    color: var(--ink-muted);
+    cursor: pointer;
+  }
+
+  .billing-toggle-option[aria-pressed="true"] {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .billing-toggle-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 28px;
+  }
+
+  .plans-grid {
+    margin-top: 48px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+  }
+
+  .plan-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .plan-card.is-featured {
+    border-color: var(--accent);
+    box-shadow: 0 24px 48px -32px rgba(46, 92, 77, 0.4);
+  }
+
+  .plan-badge {
+    position: absolute;
+    top: -13px;
+    left: 28px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+
+  .plan-name {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: var(--font-sans);
+  }
+
+  .plan-audience {
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--ink-faint);
+  }
+
+  .plan-price {
+    margin-top: 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .plan-price-amount {
+    font-family: var(--font-serif);
+    font-size: 34px;
+  }
+
+  .plan-price-period {
+    font-size: 14px;
+    color: var(--ink-faint);
+  }
+
+  .plan-price-note {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--ink-faint);
+    min-height: 18px;
+  }
+
+  .plan-features {
+    margin-top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-grow: 1;
+  }
+
+  .plan-features li {
+    display: flex;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+
+  .plan-features li::before {
+    content: "";
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .plan-card .btn {
+    margin-top: 26px;
+  }
+
+  .plans-footnote {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--ink-faint);
+  }
+
+  /* Testimonials */
+  .testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+  }
+
+  .testimonial-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 30px 26px;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .testimonial-type {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .testimonial-quote {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    line-height: 1.5;
+    flex-grow: 1;
+  }
+
+  .testimonial-person {
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .testimonial-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: var(--font-serif);
+  }
+
+  .testimonial-name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .testimonial-detail {
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  /* Final CTA */
+  .cta-section {
+    text-align: center;
+  }
+
+  .cta-section .section-head {
+    margin-bottom: 40px;
+  }
+
+  .trial-form {
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .trial-form-field {
+    flex-grow: 1;
+    text-align: left;
+  }
+
+  .trial-form label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+  }
+
+  .trial-form input[type="email"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .trial-form input[type="email"]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .trial-form .btn {
+    margin-top: 21px;
+  }
+
+  .trial-confirmation {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px 18px;
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    color: var(--accent-dark);
+    display: none;
+  }
+
+  .trial-confirmation.is-visible {
+    display: block;
+  }
+
+  .cta-note {
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  /* Footer */
+  .site-footer {
+    border-top: 1px solid var(--line);
+    padding-top: 48px;
+    padding-bottom: 48px;
+    background: var(--surface);
+  }
+
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .footer-brand p {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--ink-faint);
+    max-width: 32ch;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 56px;
+    flex-wrap: wrap;
+  }
+
+  .footer-links h4 {
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 14px;
+  }
+
+  .footer-links ul {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .footer-links a {
+    font-size: 14px;
+    text-decoration: none;
+    color: var(--ink-muted);
+  }
+
+  .footer-links a:hover {
+    color: var(--ink);
+  }
+
+  .footer-bottom {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .hero-inner {
+      grid-template-columns: 1fr;
+      gap: 48px;
+    }
+
+    .hero-visual {
+      order: -1;
+      max-width: 480px;
+    }
+
+    .benefits-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lesson-layout {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+
+    .plans-grid,
+    .testimonials-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .primary-nav ul {
+      display: none;
+    }
+
+    .nav-toggle {
+      display: inline-flex;
+    }
+
+    section {
+      padding-top: 64px;
+      padding-bottom: 64px;
+    }
+
+    .hero {
+      padding-top: 56px;
+      padding-bottom: 56px;
+    }
+
+    .benefits-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .plans-grid,
+    .testimonials-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-stats {
+      gap: 22px;
+    }
+
+    .trial-form {
+      flex-direction: column;
+    }
+
+    .trial-form .btn {
+      margin-top: 0;
+      width: 100%;
+    }
+
+    .footer-inner {
+      flex-direction: column;
+    }
+
+    .footer-links {
+      gap: 32px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .container {
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="#top" class="logo"><span class="logo-mark">Daily</span>Phrase</a>
+    <nav class="primary-nav" aria-label="Primary">
+      <ul>
+        <li><a href="#benefits">Benefits</a></li>
+        <li><a href="#sample-lesson">Sample lesson</a></li>
+        <li><a href="#plans">Plans</a></li>
+        <li><a href="#stories">Stories</a></li>
+      </ul>
+      <a href="#start-trial" class="btn btn-primary btn-sm">Start free trial</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="mobileNav" type="button">Menu</button>
+  </div>
+  <nav id="mobileNav" class="container" aria-label="Mobile" hidden>
+    <ul style="display:flex; flex-direction:column; gap:4px; padding-bottom:18px;">
+      <li><a href="#benefits" style="display:block; padding:10px 0; text-decoration:none; color:var(--ink-muted);">Benefits</a></li>
+      <li><a href="#sample-lesson" style="display:block; padding:10px 0; text-decoration:none; color:var(--ink-muted);">Sample lesson</a></li>
+      <li><a href="#plans" style="display:block; padding:10px 0; text-decoration:none; color:var(--ink-muted);">Plans</a></li>
+      <li><a href="#stories" style="display:block; padding:10px 0; text-decoration:none; color:var(--ink-muted);">Stories</a></li>
+      <li><a href="#start-trial" class="btn btn-primary btn-sm" style="margin-top:8px;">Start free trial</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main-content">
+
+  <section class="hero" id="top">
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <span class="eyebrow">Language practice, made daily</span>
+        <h1>Ten calm minutes a day. Real conversational progress.</h1>
+        <p class="hero-promise">DailyPhrase turns ten quiet minutes a day into real, lasting conversational progress, so the habit sticks even on your busiest weeks.</p>
+        <div class="hero-actions">
+          <a href="#start-trial" class="btn btn-primary">Start your free trial</a>
+          <a href="#sample-lesson" class="btn btn-ghost">See a sample lesson</a>
+        </div>
+        <p class="hero-note">14-day free trial. No credit card required to start.</p>
+
+        <div class="hero-stats">
+          <div>
+            <span class="hero-stat-number">10 min</span>
+            <span class="hero-stat-label">Median daily session</span>
+          </div>
+          <div>
+            <span class="hero-stat-number">83%</span>
+            <span class="hero-stat-label">Keep a two-week streak</span>
+          </div>
+          <div>
+            <span class="hero-stat-number">12</span>
+            <span class="hero-stat-label">Languages available</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="device-frame">
+          <div class="device-topbar">
+            <span class="device-topbar-title">Today's lesson</span>
+            <span class="device-topbar-day">Day 14 - Spanish</span>
+          </div>
+          <div class="device-body">
+            <span class="lesson-phrase-label">New phrase</span>
+            <p class="lesson-phrase">"¿Cómo estuvo tu fin de semana?"</p>
+            <p class="lesson-phrase-translation">How was your weekend?</p>
+            <div class="lesson-progress">
+              <div class="lesson-progress-track">
+                <div class="lesson-progress-fill"></div>
+              </div>
+              <div class="lesson-progress-caption">
+                <span>Step 3 of 5</span>
+                <span>6 min left</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="benefits">
+    <div class="container">
+      <div class="section-head">
+        <span class="section-eyebrow">Why it works</span>
+        <h2>Built around habits, not hours</h2>
+        <p>DailyPhrase is designed for people comparing it against apps that ask for more time than they have. Every part of the experience protects your ten minutes.</p>
+      </div>
+
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-index">1</div>
+          <h3>Habit-sized lessons</h3>
+          <p>Every lesson is scoped to ten minutes, so showing up daily beats any single long session.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-index">2</div>
+          <h3>Speaking comes first</h3>
+          <p>You practice real phrases out loud before memorizing grammar rules, so it feels useful right away.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-index">3</div>
+          <h3>Progress you can see</h3>
+          <p>A simple streak and a weekly recap show the habit taking hold, without pressure or guilt-driven reminders.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-index">4</div>
+          <h3>Fits a busy schedule</h3>
+          <p>Pause a lesson, resume later, or shift your practice time without losing progress or momentum.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sample-lesson" class="section-alt">
+    <div class="container">
+      <div class="section-head">
+        <span class="section-eyebrow">Inside a lesson</span>
+        <h2>What today's habit actually looks like</h2>
+        <p>No surprises before you start a trial. Here is the full shape of a single Tuesday lesson, described step by step.</p>
+      </div>
+
+      <div class="lesson-layout">
+        <ol class="lesson-steps">
+          <li class="lesson-step">
+            <span class="lesson-step-marker">1</span>
+            <div>
+              <div class="lesson-step-title">
+                <h3>Warm-up recall</h3>
+                <span class="lesson-step-time">2 min</span>
+              </div>
+              <p>You revisit yesterday's three phrases with quick recall prompts, so nothing is learned once and forgotten.</p>
+            </div>
+          </li>
+          <li class="lesson-step">
+            <span class="lesson-step-marker">2</span>
+            <div>
+              <div class="lesson-step-title">
+                <h3>New phrase</h3>
+                <span class="lesson-step-time">3 min</span>
+              </div>
+              <p>You learn a natural way to greet a coworker and ask about their weekend, with a plain-language breakdown of each word.</p>
+            </div>
+          </li>
+          <li class="lesson-step">
+            <span class="lesson-step-marker">3</span>
+            <div>
+              <div class="lesson-step-title">
+                <h3>Listen and repeat</h3>
+                <span class="lesson-step-time">2 min</span>
+              </div>
+              <p>You hear the phrase spoken at a natural pace, then repeat it aloud twice to build muscle memory for the sound.</p>
+            </div>
+          </li>
+          <li class="lesson-step">
+            <span class="lesson-step-marker">4</span>
+            <div>
+              <div class="lesson-step-title">
+                <h3>Real-life scenario</h3>
+                <span class="lesson-step-time">2 min</span>
+              </div>
+              <p>You choose how you would respond in a short workplace conversation, using the phrase you just learned.</p>
+            </div>
+          </li>
+          <li class="lesson-step">
+            <span class="lesson-step-marker">5</span>
+            <div>
+              <div class="lesson-step-title">
+                <h3>Wrap-up</h3>
+                <span class="lesson-step-time">1 min</span>
+              </div>
+              <p>A one-line recap and a preview of tomorrow's phrase, so tomorrow's ten minutes start already warmed up.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="lesson-panel">
+          <div class="lesson-panel-meta">
+            <span>Scenario preview</span>
+            <span>Beginner track</span>
+          </div>
+          <h3>A coworker asks about your weekend</h3>
+          <p style="color: var(--ink-muted); font-size: 15px;">You're getting coffee before a Monday meeting. A coworker turns to you and asks about your weekend. How do you respond?</p>
+
+          <div class="lesson-scenario">
+            <span class="lesson-scenario-label">Choose a response</span>
+            <div class="lesson-options">
+              <div class="lesson-option is-suggested">"Fue tranquilo, gracias. ¿Y el tuyo?" - It was quiet, thanks. And yours?</div>
+              <div class="lesson-option">"Muy ocupado, la verdad." - Pretty busy, honestly.</div>
+              <div class="lesson-option">"Prefiero no hablar de eso." - I'd rather not talk about it.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="plans">
+    <div class="container">
+      <div class="section-head centered">
+        <span class="section-eyebrow">Subscription options</span>
+        <h2>Choose your pace</h2>
+        <p>Every plan includes the full lesson library, progress tracking, and a 14-day free trial. Switch or cancel anytime.</p>
+      </div>
+
+      <div class="billing-toggle-wrap">
+        <div class="billing-toggle" role="group" aria-label="Billing period">
+          <button type="button" class="billing-toggle-option" id="billMonthlyBtn" aria-pressed="true">Monthly</button>
+          <button type="button" class="billing-toggle-option" id="billAnnualBtn" aria-pressed="false">Annual - save 35%</button>
+        </div>
+      </div>
+
+      <div class="plans-grid">
+        <div class="plan-card">
+          <p class="plan-name">Individual</p>
+          <p class="plan-audience">For one steady daily habit</p>
+          <div class="plan-price">
+            <span class="plan-price-amount" data-monthly="$12.99" data-annual="$7.42">$12.99</span>
+            <span class="plan-price-period">/ month</span>
+          </div>
+          <p class="plan-price-note" data-monthly-note="Billed monthly" data-annual-note="Billed $89 per year">Billed monthly</p>
+          <ul class="plan-features">
+            <li>Full lesson library, 12 languages</li>
+            <li>Daily streak and weekly recap</li>
+            <li>Offline lesson downloads</li>
+          </ul>
+          <a href="#start-trial" class="btn btn-ghost btn-block">Start free trial</a>
+        </div>
+
+        <div class="plan-card is-featured">
+          <span class="plan-badge">Best value</span>
+          <p class="plan-name">Annual</p>
+          <p class="plan-audience">For learners committing to the year</p>
+          <div class="plan-price">
+            <span class="plan-price-amount" data-monthly="$12.99" data-annual="$7.42">$12.99</span>
+            <span class="plan-price-period">/ month</span>
+          </div>
+          <p class="plan-price-note" data-monthly-note="Billed monthly" data-annual-note="Billed $89 per year">Billed monthly</p>
+          <ul class="plan-features">
+            <li>Everything in Individual</li>
+            <li>Priority access to new languages</li>
+            <li>Printable phrase-review sheets</li>
+          </ul>
+          <a href="#start-trial" class="btn btn-primary btn-block">Start free trial</a>
+        </div>
+
+        <div class="plan-card">
+          <p class="plan-name">Family</p>
+          <p class="plan-audience">For up to four people, one household</p>
+          <div class="plan-price">
+            <span class="plan-price-amount">$14.99</span>
+            <span class="plan-price-period">/ month</span>
+          </div>
+          <p class="plan-price-note">Up to 4 accounts included</p>
+          <ul class="plan-features">
+            <li>Everything in Individual, per member</li>
+            <li>Separate progress for each account</li>
+            <li>One shared billing summary</li>
+          </ul>
+          <a href="#start-trial" class="btn btn-ghost btn-block">Start free trial</a>
+        </div>
+      </div>
+
+      <p class="plans-footnote">All prices shown are placeholders for illustration. No payment is collected during your 14-day trial.</p>
+    </div>
+  </section>
+
+  <section id="stories" class="section-alt">
+    <div class="container">
+      <div class="section-head centered">
+        <span class="section-eyebrow">Real routines</span>
+        <h2>Built for people with a full calendar</h2>
+        <p>Three different reasons to learn a language. One shared need for a habit that fits.</p>
+      </div>
+
+      <div class="testimonials-grid">
+        <article class="testimonial-card">
+          <p class="testimonial-type">The relocating professional</p>
+          <p class="testimonial-quote">"I had three months before the move and no time for a classroom. Ten minutes before my first coffee turned out to be exactly enough."</p>
+          <div class="testimonial-person">
+            <span class="testimonial-avatar">PN</span>
+            <div>
+              <p class="testimonial-name">Priya N.</p>
+              <p class="testimonial-detail">Relocated for work, learning Portuguese</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="testimonial-card">
+          <p class="testimonial-type">The reconnecting learner</p>
+          <p class="testimonial-quote">"I'd tried two other apps and quit both within a week. This is the first one that didn't make me feel behind. It just met me where I was."</p>
+          <div class="testimonial-person">
+            <span class="testimonial-avatar">MT</span>
+            <div>
+              <p class="testimonial-name">Marcus T.</p>
+              <p class="testimonial-detail">Reconnecting with a family language</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="testimonial-card">
+          <p class="testimonial-type">The frequent traveler</p>
+          <p class="testimonial-quote">"I use the ten minutes on the train before client visits. The phrases are the ones I actually end up saying, not textbook filler."</p>
+          <div class="testimonial-person">
+            <span class="testimonial-avatar">ER</span>
+            <div>
+              <p class="testimonial-name">Elena R.</p>
+              <p class="testimonial-detail">Travels quarterly for client visits</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="start-trial" class="cta-section">
+    <div class="container">
+      <div class="section-head centered">
+        <span class="section-eyebrow">Start today</span>
+        <h2>Try DailyPhrase free for 14 days</h2>
+        <p>No credit card required. No pressure to decide today, either. Cancel anytime before your trial ends and you won't be charged.</p>
+      </div>
+
+      <form class="trial-form" id="trialForm" novalidate>
+        <div class="trial-form-field">
+          <label for="trialEmail">Email address</label>
+          <input type="email" id="trialEmail" name="trialEmail" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Start free trial</button>
+      </form>
+
+      <div class="trial-confirmation" id="trialConfirmation" role="status" aria-live="polite">
+        You're set. Placeholder confirmation: check your inbox for a link to begin your first lesson.
+      </div>
+
+      <p class="cta-note">By starting a trial you agree to placeholder Terms and a placeholder Privacy Policy.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <a href="#top" class="logo"><span class="logo-mark">Daily</span>Phrase</a>
+      <p>A calm, efficient way to build a real daily language habit, ten minutes at a time.</p>
+    </div>
+    <div class="footer-links">
+      <div>
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#benefits">Benefits</a></li>
+          <li><a href="#sample-lesson">Sample lesson</a></li>
+          <li><a href="#plans">Plans</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#stories">Stories</a></li>
+          <li><a href="#start-trial">Start a trial</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <span>&copy; <span id="currentYear">2026</span> DailyPhrase. Placeholder content for illustration only.</span>
+    <span>Made for people with ten minutes, not two hours.</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+
+    // Mobile nav toggle
+    var navToggle = document.getElementById("navToggle");
+    var mobileNav = document.getElementById("mobileNav");
+
+    if (navToggle && mobileNav) {
+      navToggle.addEventListener("click", function () {
+        var isOpen = navToggle.getAttribute("aria-expanded") === "true";
+        navToggle.setAttribute("aria-expanded", String(!isOpen));
+        if (isOpen) {
+          mobileNav.setAttribute("hidden", "");
+          navToggle.textContent = "Menu";
+        } else {
+          mobileNav.removeAttribute("hidden");
+          navToggle.textContent = "Close";
+        }
+      });
+
+      mobileNav.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          mobileNav.setAttribute("hidden", "");
+          navToggle.setAttribute("aria-expanded", "false");
+          navToggle.textContent = "Menu";
+        });
+      });
+    }
+
+    // Billing toggle
+    var monthlyBtn = document.getElementById("billMonthlyBtn");
+    var annualBtn = document.getElementById("billAnnualBtn");
+    var priceAmounts = document.querySelectorAll(".plan-price-amount[data-monthly]");
+    var priceNotes = document.querySelectorAll(".plan-price-note[data-monthly-note]");
+
+    function setBilling(mode) {
+      var isAnnual = mode === "annual";
+      monthlyBtn.setAttribute("aria-pressed", String(!isAnnual));
+      annualBtn.setAttribute("aria-pressed", String(isAnnual));
+
+      priceAmounts.forEach(function (el) {
+        el.textContent = isAnnual ? el.getAttribute("data-annual") : el.getAttribute("data-monthly");
+      });
+      priceNotes.forEach(function (el) {
+        el.textContent = isAnnual ? el.getAttribute("data-annual-note") : el.getAttribute("data-monthly-note");
+      });
+    }
+
+    if (monthlyBtn && annualBtn) {
+      monthlyBtn.addEventListener("click", function () { setBilling("monthly"); });
+      annualBtn.addEventListener("click", function () { setBilling("annual"); });
+    }
+
+    // Trial form (local placeholder confirmation only, no network calls)
+    var trialForm = document.getElementById("trialForm");
+    var trialConfirmation = document.getElementById("trialConfirmation");
+    var trialEmail = document.getElementById("trialEmail");
+
+    if (trialForm && trialConfirmation) {
+      trialForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (trialEmail && trialEmail.checkValidity()) {
+          trialConfirmation.classList.add("is-visible");
+          trialForm.reset();
+        } else if (trialEmail) {
+          trialEmail.reportValidity();
+        }
+      });
+    }
+
+    // Footer year
+    var yearEl = document.getElementById("currentYear");
+    if (yearEl) {
+      yearEl.textContent = String(new Date().getFullYear());
+    }
+  })();
+</script>
+
+</body>
+</html>

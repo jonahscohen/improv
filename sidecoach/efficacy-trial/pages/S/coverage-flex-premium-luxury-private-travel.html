@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Private Travel Concierge Overview | Meridian Private Travel</title>
+<meta name="description" content="Meridian Private Travel plans complex, highly personal journeys for travelers who expect discretion, expertise, and a plan that holds up once they are on the road.">
+<style>
+  :root {
+    --font-heading: 'Baskerville', 'Iowan Old Style', 'Cambria', serif;
+    --font-body: 'Optima', 'Avenir', 'Century Gothic', sans-serif;
+
+    --ink-950: oklch(18% 0.02 260);
+    --ink-900: oklch(23% 0.02 260);
+    --ink-700: oklch(38% 0.018 260);
+    --ink-500: oklch(52% 0.016 260);
+    --ink-300: oklch(70% 0.014 260);
+
+    --paper-050: oklch(98% 0.008 80);
+    --paper-100: oklch(95% 0.01 80);
+    --paper-200: oklch(91% 0.012 80);
+    --border-subtle: oklch(87% 0.012 80);
+
+    --accent-700: oklch(46% 0.11 75);
+    --accent-600: oklch(56% 0.1 75);
+    --accent-500: oklch(64% 0.09 75);
+    --accent-100: oklch(93% 0.03 75);
+
+    --success-600: oklch(50% 0.14 148);
+    --success-100: oklch(94% 0.045 148);
+    --error-600: oklch(50% 0.19 27);
+    --error-100: oklch(94% 0.05 27);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 20px;
+
+    --text-small: 0.875rem;
+    --text-body: 1rem;
+    --text-body-lg: 1.125rem;
+    --text-h4: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+    --text-h3: clamp(1.5rem, 1.32rem + 0.9vw, 1.875rem);
+    --text-h2: clamp(1.875rem, 1.55rem + 1.6vw, 2.75rem);
+    --text-h1: clamp(2.5rem, 1.85rem + 3vw, 4rem);
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
+
+    --max-width: 1200px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--ink-900);
+    background: var(--paper-050);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--ink-950);
+    margin: 0 0 var(--space-4);
+    text-wrap: balance;
+  }
+
+  h1 { font-size: var(--text-h1); }
+  h2 { font-size: var(--text-h2); }
+  h3 { font-size: var(--text-h3); margin-bottom: var(--space-2); }
+  h4 { font-size: var(--text-h4); }
+
+  p { margin: 0 0 var(--space-4); max-width: 62ch; }
+
+  a { color: var(--accent-700); }
+
+  ul, ol { margin: 0; padding: 0; list-style: none; }
+
+  button { font-family: inherit; font-size: inherit; }
+
+  img { max-width: 100%; display: block; }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -60px;
+    background: var(--ink-950);
+    color: var(--paper-050);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    z-index: 1000;
+    text-decoration: none;
+    transition: top 200ms var(--ease-out);
+  }
+  .skip-link:focus { top: var(--space-4); }
+
+  :focus-visible {
+    outline: 3px solid var(--accent-600);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  .section-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: var(--space-16) var(--space-6);
+  }
+
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+  }
+
+  .section-lede { color: var(--ink-700); font-size: var(--text-body-lg); }
+
+  /* Header */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    background: var(--paper-050);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .header-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: var(--space-4) var(--space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .brand {
+    font-family: var(--font-heading);
+    font-size: var(--text-h4);
+    color: var(--ink-950);
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+  }
+  .brand-sub {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-500);
+    font-weight: 500;
+    margin-top: var(--space-1);
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    min-height: 44px;
+    cursor: pointer;
+    color: var(--ink-900);
+    transition: background-color 200ms var(--ease-out), transform 150ms var(--ease-out);
+  }
+  .nav-toggle:hover { background: var(--paper-200); }
+  .nav-toggle:active { transform: scale(0.96); }
+
+  .nav-toggle-bars {
+    position: relative;
+    width: 18px;
+    height: 12px;
+    display: inline-block;
+  }
+  .nav-toggle-bars::before,
+  .nav-toggle-bars::after,
+  .nav-toggle-bars span {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+  }
+  .nav-toggle-bars::before { top: 0; }
+  .nav-toggle-bars::after { bottom: 0; }
+  .nav-toggle-bars-mid {
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+  }
+
+  .nav-toggle-label { font-size: var(--text-small); font-weight: 600; }
+
+  .primary-nav {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(320px, 85vw);
+    height: 100vh;
+    height: 100dvh;
+    background: var(--paper-050);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-24) var(--space-6) var(--space-6);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    transition: transform 260ms var(--ease-drawer);
+    overflow-y: auto;
+  }
+  .primary-nav.is-open { transform: translateX(0); }
+
+  .primary-nav a {
+    color: var(--ink-700);
+    text-decoration: none;
+    font-size: var(--text-body-lg);
+    padding: var(--space-2) 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .primary-nav a:hover { color: var(--accent-700); }
+
+  .primary-nav a.nav-cta {
+    margin-top: var(--space-4);
+    background: var(--ink-950);
+    color: var(--paper-050);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-6);
+    border-bottom: none;
+    justify-content: center;
+    font-weight: 600;
+    transition: background-color 200ms var(--ease-out), transform 150ms var(--ease-out);
+  }
+  .primary-nav a.nav-cta:hover { background: var(--accent-700); }
+  .primary-nav a.nav-cta:active { transform: scale(0.96); }
+
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: oklch(18% 0.02 260 / 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 260ms var(--ease-out);
+    z-index: 150;
+  }
+  .nav-backdrop.is-visible { opacity: 1; pointer-events: auto; }
+
+  @media (min-width: 1024px) {
+    .nav-toggle { display: none; }
+    .nav-backdrop { display: none; }
+    .primary-nav {
+      position: static;
+      width: auto;
+      height: auto;
+      flex-direction: row;
+      align-items: center;
+      gap: var(--space-6);
+      padding: 0;
+      box-shadow: none;
+      transform: none;
+      background: transparent;
+      overflow: visible;
+    }
+    .primary-nav a {
+      width: auto;
+      border-bottom: none;
+      font-size: var(--text-small);
+      min-height: auto;
+      padding: var(--space-2) 0;
+    }
+    .primary-nav a.nav-cta {
+      margin-top: 0;
+    }
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: var(--text-body);
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out),
+      border-color 200ms var(--ease-out), transform 150ms var(--ease-out), box-shadow 200ms var(--ease-out);
+  }
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary {
+    background: var(--ink-950);
+    color: var(--paper-050);
+    border-color: var(--ink-950);
+  }
+  .btn-primary:hover { background: var(--accent-700); border-color: var(--accent-700); box-shadow: var(--shadow-sm); }
+  .btn-primary:disabled,
+  .btn-primary[aria-disabled="true"] {
+    background: var(--ink-300);
+    border-color: var(--ink-300);
+    color: var(--paper-100);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-950);
+    border-color: var(--ink-950);
+  }
+  .btn-ghost:hover { background: var(--paper-200); }
+
+  .btn-on-dark {
+    background: var(--paper-050);
+    color: var(--ink-950);
+    border-color: var(--paper-050);
+  }
+  .btn-on-dark:hover { background: var(--accent-500); border-color: var(--accent-500); color: var(--ink-950); }
+
+  .btn-outline-on-dark {
+    background: transparent;
+    color: var(--paper-050);
+    border-color: oklch(98% 0.008 80 / 0.5);
+  }
+  .btn-outline-on-dark:hover { background: oklch(98% 0.008 80 / 0.1); border-color: var(--paper-050); }
+
+  .btn-spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    display: none;
+    animation: spin 700ms linear infinite;
+  }
+  .btn.is-loading .btn-spinner { display: inline-block; }
+  .btn.is-loading .btn-label-default { display: none; }
+  .btn .btn-label-loading,
+  .btn .btn-label-success { display: none; }
+  .btn.is-loading .btn-label-loading { display: inline; }
+  .btn.is-success .btn-label-default,
+  .btn.is-success .btn-spinner { display: none; }
+  .btn.is-success .btn-label-success { display: inline; }
+  .btn.is-success { background: var(--success-600); border-color: var(--success-600); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Hero */
+  .hero {
+    background: var(--ink-950);
+    color: var(--paper-050);
+  }
+  .hero .section-inner { padding-top: var(--space-24); padding-bottom: var(--space-24); }
+  .hero .eyebrow { color: var(--accent-500); }
+  .hero h1 { color: var(--paper-050); max-width: 18ch; }
+  .hero-lede { color: oklch(90% 0.012 80); font-size: var(--text-body-lg); max-width: 56ch; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-8); }
+
+  /* Reveal on scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 500ms var(--ease-out), transform 500ms var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 60ms);
+  }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .btn-spinner { animation-duration: 1400ms; opacity: 0.7; }
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  /* Promise */
+  .promise { background: var(--paper-050); }
+  .promise .promise-grid {
+    display: grid;
+    gap: var(--space-8);
+  }
+  @media (min-width: 768px) {
+    .promise .promise-grid { grid-template-columns: 1fr 1fr; align-items: start; gap: var(--space-12); }
+  }
+
+  /* Journeys */
+  .journeys { background: var(--paper-100); }
+  .journey-list {
+    display: grid;
+    gap: var(--space-6);
+    margin-top: var(--space-8);
+  }
+  @media (min-width: 768px) {
+    .journey-list { grid-template-columns: 1fr 1fr; }
+  }
+  .journey-item {
+    padding: var(--space-6) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .journey-item p { margin-bottom: 0; color: var(--ink-700); }
+
+  /* Process */
+  .process { background: var(--paper-050); }
+  .process-list {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+    counter-reset: step;
+  }
+  @media (min-width: 768px) {
+    .process-list { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .process-list { grid-template-columns: repeat(4, 1fr); }
+  }
+  .process-item { display: flex; flex-direction: column; gap: var(--space-2); }
+  .step-index {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3);
+    color: var(--accent-600);
+    line-height: 1;
+  }
+  .process-item p { color: var(--ink-700); margin-bottom: 0; }
+
+  /* Itineraries */
+  .itineraries { background: var(--ink-950); color: var(--paper-050); }
+  .itineraries h2 { color: var(--paper-050); }
+  .itineraries .section-lede { color: oklch(85% 0.012 80); }
+  .itinerary-grid {
+    display: grid;
+    gap: var(--space-6);
+    margin-top: var(--space-8);
+    container-type: inline-size;
+    container-name: itinerary-grid;
+  }
+  @media (min-width: 768px) {
+    .itinerary-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1024px) {
+    .itinerary-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .itinerary-card {
+    background: var(--ink-900);
+    border: 1px solid oklch(98% 0.008 80 / 0.12);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .itinerary-card .itinerary-meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+  }
+  @container itinerary-grid (min-width: 480px) {
+    .itinerary-card .itinerary-meta { flex-direction: row; gap: var(--space-4); }
+  }
+  .itinerary-card .itinerary-duration {
+    font-size: var(--text-small);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-500);
+    font-weight: 600;
+  }
+  .itinerary-card h3 { color: var(--paper-050); font-size: var(--text-h4); }
+  .itinerary-card p { color: oklch(85% 0.012 80); margin-bottom: 0; font-size: var(--text-small); }
+
+  /* Engagement */
+  .engagement { background: var(--paper-100); }
+  .engagement-grid {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+  }
+  @media (min-width: 768px) {
+    .engagement-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .engagement-tier {
+    padding: var(--space-6) var(--space-8) var(--space-8);
+    background: var(--paper-050);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+  }
+  .engagement-tier h3 { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+  .engagement-tier .tier-tag {
+    font-family: var(--font-body);
+    font-size: var(--text-small);
+    color: var(--ink-500);
+    font-weight: 500;
+  }
+  .engagement-tier ul { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+  .engagement-tier li {
+    padding-left: var(--space-4);
+    position: relative;
+    color: var(--ink-700);
+    font-size: var(--text-small);
+  }
+  .engagement-tier li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent-600);
+  }
+  .engagement-note { margin-top: var(--space-8); color: var(--ink-700); font-size: var(--text-small); max-width: 68ch; }
+
+  /* Standards */
+  .standards { background: var(--paper-050); }
+  .standards-list {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+  }
+  @media (min-width: 768px) {
+    .standards-list { grid-template-columns: 1fr 1fr; }
+  }
+  .standards-item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .standards-item .standard-mark {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-top: 0.5em;
+    border-radius: 50%;
+    background: var(--accent-600);
+  }
+  .standards-item p { margin: 0; color: var(--ink-700); }
+  .standards-item strong { color: var(--ink-950); }
+
+  /* Consultation form */
+  .consultation { background: var(--paper-100); }
+  .consultation-layout {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+  }
+  @media (min-width: 1024px) {
+    .consultation-layout { grid-template-columns: 0.9fr 1.1fr; align-items: start; }
+  }
+
+  .consultation-form {
+    background: var(--paper-050);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .field { display: flex; flex-direction: column; gap: var(--space-2); }
+  .field label {
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--ink-950);
+  }
+  .field .field-hint { font-size: var(--text-small); color: var(--ink-500); }
+  .field input,
+  .field textarea {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    color: var(--ink-950);
+    background: var(--paper-050);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    min-height: 44px;
+    transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+  }
+  .field textarea { min-height: 120px; resize: vertical; }
+  .field input:hover,
+  .field textarea:hover { border-color: var(--ink-500); }
+  .field input:focus-visible,
+  .field textarea:focus-visible {
+    outline: 3px solid var(--accent-600);
+    outline-offset: 1px;
+    border-color: var(--accent-600);
+  }
+  .field.has-error input,
+  .field.has-error textarea {
+    border-color: var(--error-600);
+  }
+  .field-error {
+    display: none;
+    color: var(--error-600);
+    font-size: var(--text-small);
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .field.has-error .field-error { display: flex; }
+
+  .form-row { display: grid; gap: var(--space-6); }
+  @media (min-width: 480px) {
+    .form-row-split { grid-template-columns: 1fr 1fr; }
+  }
+
+  .form-status {
+    min-height: 24px;
+    font-size: var(--text-small);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    padding: 0;
+    transition: padding 200ms var(--ease-out), background-color 200ms var(--ease-out);
+  }
+  .form-status.is-error {
+    color: var(--error-600);
+    background: var(--error-100);
+    padding: var(--space-3) var(--space-4);
+  }
+  .form-status.is-success {
+    color: var(--success-600);
+    background: var(--success-100);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .consultation-context h3 { margin-top: var(--space-8); }
+  .consultation-context h3:first-child { margin-top: 0; }
+  .consultation-context p { color: var(--ink-700); }
+  .consultation-context ul { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); }
+  .consultation-context li { color: var(--ink-700); font-size: var(--text-small); padding-left: var(--space-4); position: relative; }
+  .consultation-context li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent-600);
+  }
+
+  /* Footer */
+  .site-footer {
+    background: var(--ink-950);
+    color: oklch(85% 0.012 80);
+  }
+  .footer-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: var(--space-12) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .footer-inner .brand-footer {
+    font-family: var(--font-heading);
+    font-size: var(--text-h4);
+    color: var(--paper-050);
+    margin: 0;
+  }
+  .footer-inner p { margin: 0; max-width: 70ch; font-size: var(--text-small); }
+  .footer-fine-print { color: var(--ink-300); }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="#top">Meridian<span class="brand-sub">Private Travel</span></a>
+
+    <button class="nav-toggle" type="button" id="nav-toggle" aria-expanded="false" aria-controls="primary-nav">
+      <span class="nav-toggle-bars" aria-hidden="true"><span class="nav-toggle-bars-mid"></span></span>
+      <span class="nav-toggle-label">Menu</span>
+    </button>
+
+    <div class="nav-backdrop" id="nav-backdrop"></div>
+
+    <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+      <a href="#promise">Our Promise</a>
+      <a href="#journeys">Journeys</a>
+      <a href="#process">Process</a>
+      <a href="#itineraries">Itineraries</a>
+      <a href="#standards">Standards</a>
+      <a href="#consultation" class="nav-cta">Request a Consultation</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="top">
+    <div class="section-inner">
+      <p class="eyebrow">Private Travel, Considered</p>
+      <h1>Journeys built around your life, not a brochure</h1>
+      <p class="hero-lede">Meridian Private Travel plans complex, highly personal itineraries for travelers who expect discretion, expertise, and a plan that still holds up once they are actually on the road.</p>
+      <div class="hero-actions">
+        <a class="btn btn-on-dark" href="#consultation">Request a Consultation</a>
+        <a class="btn btn-outline-on-dark" href="#process">See How We Plan</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="promise" id="promise">
+    <div class="section-inner">
+      <h2 class="reveal">Our promise</h2>
+      <div class="promise-grid">
+        <p class="section-lede reveal">Most travel planning breaks down at the seams: a beautiful hotel booked next to a transfer that does not exist, a "custom" itinerary assembled from the same six templates every other agency uses. Meridian starts from your actual constraints and preferences, then designs the trip around them.</p>
+        <p class="reveal" style="--i: 1;">You work with one advisor who stays with you from the first conversation through your return home. They coordinate flights, lodging, private guides, ground transportation, and the small logistics that usually fall through the cracks, so the plan reads as one coherent trip rather than a stack of confirmation emails.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="journeys" id="journeys">
+    <div class="section-inner">
+      <h2 class="reveal">Journeys we plan</h2>
+      <p class="section-lede reveal">A representative range of the trips our advisors take on. If yours does not fit neatly into a category below, that is usually a sign it belongs with us.</p>
+      <ul class="journey-list">
+        <li class="journey-item reveal" style="--i: 1;">
+          <h3>Multi-generational family journeys</h3>
+          <p>Itineraries that work for a seven-year-old and a seventy-year-old on the same trip, with built-in rest days and lodging that keeps everyone under one roof.</p>
+        </li>
+        <li class="journey-item reveal" style="--i: 2;">
+          <h3>Milestone and celebration travel</h3>
+          <p>Anniversaries, significant birthdays, and retirements planned around the moment itself, not just the destination.</p>
+        </li>
+        <li class="journey-item reveal" style="--i: 3;">
+          <h3>Remote expedition and adventure travel</h3>
+          <p>Access to regions with limited infrastructure, arranged with local operators we have vetted directly and stayed with ourselves.</p>
+        </li>
+        <li class="journey-item reveal" style="--i: 4;">
+          <h3>Extended sabbaticals and slow travel</h3>
+          <p>Multi-month stays in one or two bases, with the visa, housing, and logistics groundwork done before you leave.</p>
+        </li>
+        <li class="journey-item reveal" style="--i: 5;">
+          <h3>Business-personal hybrid trips</h3>
+          <p>A work trip with a real vacation attached, sequenced so neither half competes with the other for your energy.</p>
+        </li>
+        <li class="journey-item reveal" style="--i: 6;">
+          <h3>Honeymoons and anniversaries</h3>
+          <p>Privacy-first planning, with quiet arrival details and a pace that leaves room to change your mind mid-trip.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="process" id="process">
+    <div class="section-inner">
+      <h2 class="reveal">How planning works</h2>
+      <p class="section-lede reveal">Four stages, the same for every trip regardless of complexity.</p>
+      <ol class="process-list">
+        <li class="process-item reveal" style="--i: 1;">
+          <span class="step-index" aria-hidden="true">01</span>
+          <h3>Discovery call</h3>
+          <p>A conversation about how you actually travel: pace, budget range, non-negotiables, and what has gone wrong on past trips.</p>
+        </li>
+        <li class="process-item reveal" style="--i: 2;">
+          <span class="step-index" aria-hidden="true">02</span>
+          <h3>Itinerary architecture</h3>
+          <p>Your advisor builds a day-by-day structure first, then fills it with specific properties, guides, and transfers.</p>
+        </li>
+        <li class="process-item reveal" style="--i: 3;">
+          <span class="step-index" aria-hidden="true">03</span>
+          <h3>Refinement and confirmation</h3>
+          <p>You review, adjust, and approve. Bookings are only confirmed once the full itinerary is locked, not piece by piece.</p>
+        </li>
+        <li class="process-item reveal" style="--i: 4;">
+          <span class="step-index" aria-hidden="true">04</span>
+          <h3>In-trip support</h3>
+          <p>A direct line to your advisor for the duration of the trip, for anything from a missed connection to a last-minute change of plan.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="itineraries" id="itineraries">
+    <div class="section-inner">
+      <h2 class="reveal">Recent itineraries</h2>
+      <p class="section-lede reveal">Fictional examples, shared to illustrate the range and depth of the planning rather than any specific past client.</p>
+      <div class="itinerary-grid">
+        <article class="itinerary-card reveal" style="--i: 1;">
+          <div class="itinerary-meta">
+            <span class="itinerary-duration">16 Days</span>
+            <span class="itinerary-duration">Northern Japan</span>
+          </div>
+          <h3>Late Autumn in Northern Japan</h3>
+          <p>A family of five moved between Kanazawa, the Noto Peninsula, and rural onsen towns, with a private car and driver for the stretches without reliable rail service.</p>
+        </article>
+        <article class="itinerary-card reveal" style="--i: 2;">
+          <div class="itinerary-meta">
+            <span class="itinerary-duration">21 Days</span>
+            <span class="itinerary-duration">Southern Africa</span>
+          </div>
+          <h3>A Three-Generation Southern Africa Expedition</h3>
+          <p>Two mobile camps in Botswana followed by a fixed lodge stay in Namibia, sequenced so the youngest and oldest travelers were never more than a short flight from a clinic.</p>
+        </article>
+        <article class="itinerary-card reveal" style="--i: 3;">
+          <div class="itinerary-meta">
+            <span class="itinerary-duration">10 Days</span>
+            <span class="itinerary-duration">Adriatic Coast</span>
+          </div>
+          <h3>Adriatic Coast by Private Sail</h3>
+          <p>A chartered sail from Split to Kotor for a milestone anniversary, with three land nights built in for a couple who gets seasick after four days at sea.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="engagement" id="engagement">
+    <div class="section-inner">
+      <h2 class="reveal">How working together works</h2>
+      <p class="section-lede reveal">Two ways to engage an advisor, depending on how often you travel with us.</p>
+      <div class="engagement-grid">
+        <div class="engagement-tier reveal" style="--i: 1;">
+          <h3>Single-Journey Planning <span class="tier-tag">Per trip</span></h3>
+          <p>A complimentary discovery call, followed by a scoped planning fee based on trip length and complexity, discussed plainly before any work begins.</p>
+          <ul>
+            <li>One advisor for the full trip lifecycle</li>
+            <li>Planning fee confirmed after discovery call</li>
+            <li>In-trip support included</li>
+          </ul>
+        </div>
+        <div class="engagement-tier reveal" style="--i: 2;">
+          <h3>Atelier Membership <span class="tier-tag">Annual</span></h3>
+          <p>For clients who travel with us more than once a year. An annual arrangement that keeps the same advisor across trips and prioritizes your itinerary requests.</p>
+          <ul>
+            <li>Continuity with one advisor year over year</li>
+            <li>Priority scheduling during peak booking windows</li>
+            <li>Reduced planning fees on repeat itineraries</li>
+          </ul>
+        </div>
+      </div>
+      <p class="engagement-note">Exact fees and membership terms are set during your discovery call, once we understand the shape of your travel. We do not quote a number before that conversation happens.</p>
+    </div>
+  </section>
+
+  <section class="standards" id="standards">
+    <div class="section-inner">
+      <h2 class="reveal">Client service standards</h2>
+      <p class="section-lede reveal">What you can expect from every advisor, on every trip.</p>
+      <ul class="standards-list">
+        <li class="standards-item reveal" style="--i: 1;">
+          <span class="standard-mark" aria-hidden="true"></span>
+          <p><strong>One advisor, start to finish.</strong> The person on your discovery call is the person who plans, confirms, and supports your trip.</p>
+        </li>
+        <li class="standards-item reveal" style="--i: 2;">
+          <span class="standard-mark" aria-hidden="true"></span>
+          <p><strong>A staffed support line while you travel.</strong> Reached directly, not through a shared queue or an outsourced call center.</p>
+        </li>
+        <li class="standards-item reveal" style="--i: 3;">
+          <span class="standard-mark" aria-hidden="true"></span>
+          <p><strong>One business day response.</strong> For planning inquiries before a trip is underway.</p>
+        </li>
+        <li class="standards-item reveal" style="--i: 4;">
+          <span class="standard-mark" aria-hidden="true"></span>
+          <p><strong>Full documentation, delivered plainly.</strong> A complete itinerary in digital and printed form, with every confirmation number in one place.</p>
+        </li>
+        <li class="standards-item reveal" style="--i: 5;">
+          <span class="standard-mark" aria-hidden="true"></span>
+          <p><strong>Direct vetting.</strong> Every property, guide, and operator we recommend has been visited or used firsthand by our team.</p>
+        </li>
+        <li class="standards-item reveal" style="--i: 6;">
+          <span class="standard-mark" aria-hidden="true"></span>
+          <p><strong>Honest limits.</strong> If a request is not realistic for the timeline or destination, we say so during planning, not after you have arrived.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="consultation" id="consultation">
+    <div class="section-inner">
+      <h2 class="reveal">Request a consultation</h2>
+      <p class="section-lede reveal">Tell us about the trip you have in mind. A member of our team will follow up to schedule your discovery call.</p>
+
+      <div class="consultation-layout">
+        <form class="consultation-form reveal" id="consultation-form" novalidate>
+          <div class="form-row form-row-split">
+            <div class="field" id="field-name">
+              <label for="full-name">Full name</label>
+              <input type="text" id="full-name" name="full-name" autocomplete="name" required aria-describedby="full-name-error" spellcheck="false">
+              <span class="field-error" id="full-name-error" role="alert">Enter your full name.</span>
+            </div>
+            <div class="field" id="field-email">
+              <label for="email">Email address</label>
+              <input type="email" id="email" name="email" autocomplete="email" inputmode="email" required aria-describedby="email-error" spellcheck="false">
+              <span class="field-error" id="email-error" role="alert">Enter a valid email address.</span>
+            </div>
+          </div>
+
+          <div class="form-row form-row-split">
+            <div class="field" id="field-phone">
+              <label for="phone">Phone <span class="field-hint">(optional)</span></label>
+              <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel">
+            </div>
+            <div class="field" id="field-window">
+              <label for="travel-window">Preferred travel window</label>
+              <input type="text" id="travel-window" name="travel-window" autocomplete="off" placeholder="e.g. March 2027" aria-describedby="travel-window-hint">
+              <span class="field-hint" id="travel-window-hint">Approximate is fine.</span>
+            </div>
+          </div>
+
+          <div class="field" id="field-message">
+            <label for="trip-details">Tell us about the trip</label>
+            <textarea id="trip-details" name="trip-details" required aria-describedby="trip-details-error" placeholder="Who is traveling, roughly where, and what matters most to you"></textarea>
+            <span class="field-error" id="trip-details-error" role="alert">Tell us a little about the trip you have in mind.</span>
+          </div>
+
+          <div class="form-status" id="form-status" aria-live="polite"></div>
+
+          <button class="btn btn-primary" type="submit" id="submit-btn">
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span class="btn-label-default">Send Consultation Request</span>
+            <span class="btn-label-loading">Sending Request…</span>
+            <span class="btn-label-success">Request Sent</span>
+          </button>
+        </form>
+
+        <div class="consultation-context reveal" style="--i: 1;">
+          <h3>Before you write</h3>
+          <p>Discovery calls are complimentary and run about thirty minutes. There is no obligation to continue past that conversation.</p>
+          <h3>What to include</h3>
+          <ul>
+            <li>Who is traveling, including ages if children are involved</li>
+            <li>A rough sense of timing, even if it is not fixed</li>
+            <li>Anything that has gone wrong on a past trip you would rather avoid</li>
+          </ul>
+          <h3>What happens next</h3>
+          <p>An advisor reviews your request and reaches out within one business day to schedule your discovery call.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <p class="brand-footer">Meridian Private Travel</p>
+    <p>A private travel planning service for travelers whose trips are complex enough to need a single advisor rather than a search engine.</p>
+    <p class="footer-fine-print">This page describes a fictional service for illustrative purposes. Itineraries, client examples, and service details are representative, not records of actual trips.</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+
+    var navToggle = document.getElementById("nav-toggle");
+    var primaryNav = document.getElementById("primary-nav");
+    var navBackdrop = document.getElementById("nav-backdrop");
+
+    function openNav() {
+      primaryNav.classList.add("is-open");
+      navBackdrop.classList.add("is-visible");
+      navToggle.setAttribute("aria-expanded", "true");
+    }
+    function closeNav() {
+      primaryNav.classList.remove("is-open");
+      navBackdrop.classList.remove("is-visible");
+      navToggle.setAttribute("aria-expanded", "false");
+    }
+    function isNavOpen() {
+      return primaryNav.classList.contains("is-open");
+    }
+
+    if (navToggle && primaryNav && navBackdrop) {
+      navToggle.addEventListener("click", function () {
+        if (isNavOpen()) { closeNav(); } else { openNav(); }
+      });
+      navBackdrop.addEventListener("click", closeNav);
+      primaryNav.addEventListener("click", function (event) {
+        if (event.target.tagName === "A") { closeNav(); }
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && isNavOpen()) {
+          closeNav();
+          navToggle.focus();
+        }
+      });
+      window.addEventListener("resize", function () {
+        if (window.innerWidth >= 1024 && isNavOpen()) { closeNav(); }
+      });
+    }
+
+    var revealTargets = document.querySelectorAll(".reveal");
+    if ("IntersectionObserver" in window && revealTargets.length) {
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.15 }
+      );
+      revealTargets.forEach(function (el) { observer.observe(el); });
+    } else {
+      revealTargets.forEach(function (el) { el.classList.add("is-visible"); });
+    }
+
+    var form = document.getElementById("consultation-form");
+    var submitBtn = document.getElementById("submit-btn");
+    var statusEl = document.getElementById("form-status");
+
+    var fields = [
+      { input: document.getElementById("full-name"), wrap: document.getElementById("field-name"), validate: function (v) { return v.trim().length > 0; } },
+      { input: document.getElementById("email"), wrap: document.getElementById("field-email"), validate: function (v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); } },
+      { input: document.getElementById("trip-details"), wrap: document.getElementById("field-message"), validate: function (v) { return v.trim().length > 0; } }
+    ];
+
+    function setFieldError(field, hasError) {
+      field.wrap.classList.toggle("has-error", hasError);
+      field.input.setAttribute("aria-invalid", hasError ? "true" : "false");
+    }
+
+    fields.forEach(function (field) {
+      field.input.addEventListener("blur", function () {
+        setFieldError(field, !field.validate(field.input.value));
+      });
+    });
+
+    if (form) {
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        if (submitBtn.classList.contains("is-loading") || submitBtn.classList.contains("is-success")) {
+          return;
+        }
+
+        var firstInvalid = null;
+        var anyInvalid = false;
+
+        fields.forEach(function (field) {
+          var invalid = !field.validate(field.input.value);
+          setFieldError(field, invalid);
+          if (invalid) {
+            anyInvalid = true;
+            if (!firstInvalid) { firstInvalid = field.input; }
+          }
+        });
+
+        if (anyInvalid) {
+          statusEl.textContent = "Please fix the highlighted fields before sending.";
+          statusEl.className = "form-status is-error";
+          if (firstInvalid) { firstInvalid.focus(); }
+          return;
+        }
+
+        statusEl.textContent = "";
+        statusEl.className = "form-status";
+        submitBtn.classList.add("is-loading");
+        submitBtn.setAttribute("aria-busy", "true");
+        submitBtn.disabled = true;
+
+        window.setTimeout(function () {
+          submitBtn.classList.remove("is-loading");
+          submitBtn.classList.add("is-success");
+          submitBtn.removeAttribute("aria-busy");
+          statusEl.textContent = "Request received. An advisor will follow up within one business day.";
+          statusEl.className = "form-status is-success";
+        }, 900);
+      });
+    }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Short Walks After Meals Linked to Modest Blood Sugar Changes, Small Study Finds</title>
+<style>
+  :root {
+    --bg: #faf8f4;
+    --bg-raised: #f2efe8;
+    --text: #201e1b;
+    --text-muted: #5a564d;
+    --rule: #ded8ca;
+    --accent: #2f4a52;
+    --accent-soft: #e8eef0;
+    --caution: #a5691f;
+    --caution-bg: #f6ecdb;
+    --caution-border: #d3a35a;
+    --focus: #2f4a52;
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", Times, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1917;
+      --bg-raised: #232220;
+      --text: #ece9e2;
+      --text-muted: #a8a396;
+      --rule: #3a3834;
+      --accent: #8fb8c2;
+      --accent-soft: #223034;
+      --caution: #e0ac5f;
+      --caution-bg: #2e2717;
+      --caution-border: #6b5027;
+      --focus: #8fb8c2;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 1rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -999px;
+    top: auto;
+    background: var(--accent);
+    color: #fff;
+    padding: 0.75em 1.25em;
+    border-radius: 0 0 6px 0;
+    z-index: 100;
+    text-decoration: none;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+  }
+
+  .skip-link:focus {
+    left: 0;
+    top: 0;
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+  }
+
+  .wrap {
+    max-width: 42rem;
+    margin: 0 auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .site-header {
+    border-bottom: 1px solid var(--rule);
+    padding: 1.5rem 0;
+  }
+
+  .kicker {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .article-head {
+    padding-top: 2.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(1.75rem, 1.35rem + 1.8vw, 2.6rem);
+    line-height: 1.18;
+    margin: 0 0 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  .standfirst {
+    font-family: var(--sans);
+    font-size: clamp(1.05rem, 1rem + 0.3vw, 1.2rem);
+    line-height: 1.55;
+    color: var(--text-muted);
+    margin: 0 0 1.25rem;
+    max-width: 38rem;
+  }
+
+  .byline {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+    border-top: 1px solid var(--rule);
+    padding-top: 0.9rem;
+  }
+
+  .byline .updated {
+    display: block;
+    margin-top: 0.2rem;
+  }
+
+  nav.toc {
+    padding: 1rem 1.5rem;
+    background: var(--bg-raised);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 0.5rem;
+  }
+
+  nav.toc p.toc-label {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  nav.toc ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0;
+  }
+
+  nav.toc li {
+    font-size: 0.88rem;
+  }
+
+  nav.toc li:not(:last-child)::after {
+    content: "\00b7";
+    margin: 0 0.55rem;
+    color: var(--rule);
+  }
+
+  nav.toc a {
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+
+  nav.toc a:hover,
+  nav.toc a:focus-visible {
+    border-bottom-color: currentColor;
+  }
+
+  section {
+    padding-top: 2.25rem;
+    padding-bottom: 2.25rem;
+  }
+
+  section + section {
+    border-top: 1px solid var(--rule);
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+    letter-spacing: -0.005em;
+  }
+
+  p {
+    margin: 0 0 1rem;
+    max-width: 38rem;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  ul, ol {
+    margin: 0 0 1rem;
+    padding-left: 1.3rem;
+    max-width: 38rem;
+  }
+
+  li {
+    margin-bottom: 0.55rem;
+  }
+
+  li:last-child {
+    margin-bottom: 0;
+  }
+
+  strong {
+    font-weight: 700;
+  }
+
+  details {
+    margin-top: 1.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    background: var(--bg-raised);
+    max-width: 38rem;
+  }
+
+  details[open] {
+    padding-bottom: 1.1rem;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  summary::marker {
+    color: var(--accent);
+  }
+
+  details ul {
+    margin-top: 0.9rem;
+    margin-bottom: 0;
+  }
+
+  .evidence-note {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 0.9rem 1.1rem;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.95rem;
+    max-width: 38rem;
+  }
+
+  .callout {
+    background: var(--caution-bg);
+  }
+
+  .callout .callout-label {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--caution);
+    border: 1px solid var(--caution-border);
+    padding: 0.2rem 0.55rem;
+    border-radius: 3px;
+    margin-bottom: 0.85rem;
+  }
+
+  .callout ul {
+    margin-top: 0;
+  }
+
+  blockquote {
+    margin: 0 0 1.5rem;
+    padding-left: 1.2rem;
+    border-left: 3px solid var(--rule);
+    max-width: 38rem;
+  }
+
+  blockquote:last-of-type {
+    margin-bottom: 0;
+  }
+
+  blockquote p {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  blockquote cite {
+    display: block;
+    margin-top: 0.5rem;
+    font-family: var(--sans);
+    font-style: normal;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .disclaimer {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .source-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-width: 38rem;
+  }
+
+  .source-list li {
+    padding: 1rem 0;
+    border-top: 1px solid var(--rule);
+    margin-bottom: 0;
+  }
+
+  .source-list li:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .source-title {
+    margin: 0 0 0.2rem;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .source-meta {
+    margin: 0 0 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .source-desc {
+    margin: 0;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    max-width: 36rem;
+  }
+
+  .site-footer {
+    border-top: 1px solid var(--rule);
+    padding: 2rem 1.5rem 2.5rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .site-footer p {
+    max-width: none;
+  }
+
+  @media (max-width: 30rem) {
+    .article-head {
+      padding-top: 1.75rem;
+    }
+
+    section {
+      padding-top: 1.75rem;
+      padding-bottom: 1.75rem;
+    }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <p class="kicker">Public Health Research Explainer</p>
+  </div>
+</header>
+
+<main id="main">
+  <article>
+    <div class="wrap article-head">
+      <h1>Short Walks After Meals Linked to Modest Blood Sugar Changes, Small Study Finds</h1>
+      <p class="standfirst">A university pilot study found that brief walks taken shortly after eating were associated with smaller blood sugar spikes in a small group of healthy adults. The researchers and outside reviewers describe the result as preliminary, not as a basis for a new health recommendation.</p>
+      <p class="byline">
+        Research explainer prepared by the Health Desk. Reviewed for clarity by an independent editor.
+        <span class="updated">Published July 28, 2026 &middot; Study not yet peer-reviewed</span>
+      </p>
+    </div>
+
+    <nav class="toc wrap" aria-label="Jump to section">
+      <p class="toc-label">In this article</p>
+      <ul>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#context">Study context</a></li>
+        <li><a href="#findings">Key findings</a></li>
+        <li><a href="#limits">What it doesn't prove</a></li>
+        <li><a href="#commentary">Expert commentary</a></li>
+        <li><a href="#takeaways">Takeaways</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ul>
+    </nav>
+
+    <section id="summary" class="wrap">
+      <h2>Short summary</h2>
+      <p>Researchers at a public university's kinesiology department asked 42 adults without diagnosed diabetes to wear continuous glucose monitors for two weeks. On some days participants sat quietly after meals; on others they took a short walk. On average, the walking condition was associated with a smaller rise in blood sugar after eating. The response varied a great deal between individuals, the study was small and brief, and it has not yet completed peer review. Researchers describe the result as a reason to study the question further, not as new guidance for how anyone should eat or exercise.</p>
+    </section>
+
+    <section id="context" class="wrap">
+      <h2>Study context</h2>
+      <p>The idea that light movement after eating might affect blood sugar is not new; a handful of small trials over the past decade have looked at walking, standing, or light activity in the period after a meal. This study, conducted by a kinesiology research group at a mid-sized public university, was designed as a short pilot to test the idea in a controlled but limited way, using equipment that is now inexpensive enough for a small research budget.</p>
+      <p>Forty-two adults between the ages of 28 and 61 were recruited from the surrounding community. None had a diagnosis of diabetes or prediabetes at enrollment. Each participant completed one week under each condition &mdash; a supervised 10&ndash;15 minute walk within an hour of their largest daily meal, and a matched week of quiet sitting for the same duration &mdash; with the order randomly assigned. The study was funded through the university's internal research grant program. It has been submitted to a peer-reviewed journal but, as of publication, has not completed that review.</p>
+      <details>
+        <summary>Methodology at a glance</summary>
+        <ul>
+          <li>42 participants, no diagnosed diabetes or prediabetes at enrollment</li>
+          <li>One week walking condition, one week seated condition, order randomized</li>
+          <li>Continuous glucose monitors worn throughout both weeks</li>
+          <li>Walks were 10&ndash;15 minutes, self-paced, taken within an hour of the day's largest meal</li>
+          <li>Funded by internal university grant; not yet independently peer-reviewed</li>
+        </ul>
+      </details>
+    </section>
+
+    <section id="findings" class="wrap">
+      <h2>Key findings</h2>
+      <ul>
+        <li>On average, post-meal blood sugar spikes were smaller during the walking week than during the seated week.</li>
+        <li>The difference was most noticeable after the day's largest meal, when blood sugar rises tend to be biggest to begin with.</li>
+        <li>Individual responses varied widely. Some participants showed a clear difference between conditions; others showed very little.</li>
+        <li>The study did not find a meaningful difference in fasting blood sugar measured the following morning between the two conditions.</li>
+      </ul>
+      <p class="evidence-note"><strong>What the data show:</strong> a measured association between a short post-meal walk and a smaller average glucose spike in this specific group, over this specific two-week period. The data do not show why this happens, how long the effect might last, or whether it would hold in a larger or more varied group of people.</p>
+    </section>
+
+    <section id="limits" class="wrap callout">
+      <span class="callout-label">Important caveats</span>
+      <h2>What this study does not prove</h2>
+      <ul>
+        <li>It does not show that walking after meals prevents diabetes or reverses existing blood sugar problems &mdash; no one in the study had a diabetes diagnosis.</li>
+        <li>It does not establish an ideal walk length, distance, or pace. The study tested one specific approach, not a range of options.</li>
+        <li>It has not yet been peer-reviewed, meaning outside experts have not yet checked the study's methods and conclusions through that formal process.</li>
+        <li>It cannot rule out other explanations for the difference, such as participants eating somewhat differently on the days they knew they would be walking.</li>
+        <li>Continuous glucose monitor readings are a research tool used to observe trends. They are not the same as a clinical diabetes test and should not be used to self-diagnose.</li>
+        <li>With 42 participants over two weeks, the study cannot tell us whether the effect would hold over months or years, or in people with different health conditions.</li>
+      </ul>
+    </section>
+
+    <section id="commentary" class="wrap">
+      <h2>Expert commentary</h2>
+      <blockquote>
+        <p>"This fits with a small but growing body of research suggesting that light movement after eating can blunt how high blood sugar rises. That's a genuinely interesting direction. But a 42-person, two-week pilot study is not a basis for a clinical recommendation on its own, and I'd want to see it replicated in a larger, more diverse group before drawing firm conclusions."</p>
+        <cite>Dr. Helena Cordts, endocrinologist, not affiliated with the study</cite>
+      </blockquote>
+      <blockquote>
+        <p>"We designed this as a first step, not a final answer. Our sample was small and mostly healthy, so we can't say how this would apply to people managing diabetes or other conditions. We're hoping the results are useful enough to justify a larger, independently reviewed trial, and we'd encourage readers to wait for that before changing their routines because of this study alone."</p>
+        <cite>Dr. Samuel Okafor, lead researcher on the pilot study</cite>
+      </blockquote>
+    </section>
+
+    <section id="takeaways" class="wrap">
+      <h2>Practical takeaways</h2>
+      <ul>
+        <li>For most healthy adults, a short walk after eating is low-risk and consistent with general physical activity guidance that already exists independent of this study.</li>
+        <li>This single pilot study is not strong enough evidence to justify a specific new routine, and it should not be read as a treatment or prevention strategy for any diagnosed condition.</li>
+        <li>Anyone managing diabetes, prediabetes, or another condition that affects blood sugar should talk with a healthcare provider before changing habits based on this or any single study.</li>
+        <li>Readers interested in the topic may want to watch for the study's peer-reviewed publication and for any larger follow-up trials, rather than treating this pilot as a settled answer.</li>
+      </ul>
+      <p class="disclaimer">This article is a research explainer, not medical advice. It describes one preliminary study and the questions that remain open. It does not replace guidance from a qualified healthcare provider.</p>
+    </section>
+
+    <section id="sources" class="wrap">
+      <h2>Sources and further reading</h2>
+      <ul class="source-list">
+        <li>
+          <p class="source-title"><a href="#">Study preprint: "Post-meal walking and continuous glucose response in a healthy adult cohort"</a></p>
+          <p class="source-meta">Preprint &middot; pending peer review</p>
+          <p class="source-desc">Placeholder entry: would link to the full study write-up, including methods and raw summary data, once posted to a preprint server.</p>
+        </li>
+        <li>
+          <p class="source-title"><a href="#">University research office plain-language summary</a></p>
+          <p class="source-meta">Institutional summary</p>
+          <p class="source-desc">Placeholder entry: would link to the university's own non-technical summary of the pilot study and its funding disclosure.</p>
+        </li>
+        <li>
+          <p class="source-title"><a href="#">Related prior research on post-meal activity and glucose response</a></p>
+          <p class="source-meta">Background reading</p>
+          <p class="source-desc">Placeholder entry: would link to earlier, similarly small studies on light activity after eating, for readers who want broader context.</p>
+        </li>
+        <li>
+          <p class="source-title"><a href="#">General physical activity guidance</a></p>
+          <p class="source-meta">Independent guidance</p>
+          <p class="source-desc">Placeholder entry: would link to established public health activity guidance that exists independently of this study.</p>
+        </li>
+      </ul>
+    </section>
+  </article>
+</main>
+
+<footer class="site-footer wrap">
+  <p>This page is a fictional research explainer produced for illustrative purposes. The study, researchers, and quotations described above are invented and do not refer to real people, institutions, or published research.</p>
+</footer>
+</body>
+</html>

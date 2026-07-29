@@ -1,0 +1,1292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pet Care Planner — The Alvarez-Kim Household</title>
+<style>
+  /* ============ RESET ============ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  ul, ol { list-style: none; margin: 0; padding: 0; }
+  h1, h2, h3, h4, p, fieldset, legend { margin: 0; padding: 0; border: 0; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  input, select, textarea { font: inherit; color: inherit; }
+  img, svg { display: block; max-width: 100%; }
+  a { color: inherit; }
+
+  /* ============ DESIGN TOKENS ============ */
+  :root {
+    color-scheme: light;
+
+    /* type */
+    --font-heading: 'Gill Sans', 'Gill Sans MT', 'Futura', sans-serif;
+    --font-body: 'Charter', 'Iowan Old Style', serif;
+
+    --text-meta: 0.875rem;
+    --text-body: 1rem;
+    --text-h4: 1.25rem;
+    --text-h3: clamp(1.5625rem, 1.45rem + 0.5vw, 1.75rem);
+    --text-h2: clamp(1.953rem, 1.7rem + 1vw, 2.25rem);
+
+    --leading-body: 1.6;
+    --leading-tight: 1.25;
+
+    /* spacing (4pt grid) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    /* radius (concentric: control 10px + 12px pad -> card 22px; kept simple as 10/16/20) */
+    --radius-control: 10px;
+    --radius-card: 16px;
+    --radius-dialog: 20px;
+    --radius-pill: 999px;
+
+    /* motion (prescribed named easings, do not improvise) */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-feedback: 100ms;
+    --dur-state: 150ms;
+    --dur-entrance: 400ms;
+    --dur-drawer: 260ms;
+
+    /* color: OKLCH, neutrals tinted toward brand hue 38 */
+    --color-bg: oklch(97% 0.012 38);
+    --color-surface: oklch(99% 0.007 38);
+    --color-surface-raised: oklch(100% 0.004 38);
+    --color-border: oklch(87% 0.02 38);
+    --color-border-strong: oklch(78% 0.03 38);
+    --color-text: oklch(24% 0.02 38);
+    --color-text-muted: oklch(43% 0.02 38);
+
+    --color-brand: oklch(50% 0.17 38);
+    --color-brand-hover: oklch(45% 0.17 38);
+    --color-brand-active: oklch(41% 0.16 38);
+    --color-brand-soft: oklch(93% 0.04 38);
+    --color-brand-soft-text: oklch(32% 0.1 38);
+    --color-on-brand: oklch(99% 0.01 38);
+
+    --color-success: oklch(38% 0.1 150);
+    --color-success-bg: oklch(94% 0.05 150);
+    --color-success-border: oklch(75% 0.09 150);
+
+    --color-warn: oklch(38% 0.11 85);
+    --color-warn-bg: oklch(93% 0.06 85);
+    --color-warn-border: oklch(78% 0.1 85);
+
+    --color-danger: oklch(38% 0.16 18);
+    --color-danger-bg: oklch(94% 0.06 18);
+    --color-danger-border: oklch(74% 0.13 18);
+
+    --color-neutral-bg: oklch(93% 0.012 38);
+    --color-neutral-text: oklch(38% 0.015 38);
+
+    --color-focus-ring: oklch(52% 0.19 255);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --color-bg: oklch(21% 0.014 38);
+      --color-surface: oklch(25% 0.015 38);
+      --color-surface-raised: oklch(29% 0.016 38);
+      --color-border: oklch(36% 0.02 38);
+      --color-border-strong: oklch(46% 0.025 38);
+      --color-text: oklch(94% 0.01 38);
+      --color-text-muted: oklch(74% 0.015 38);
+
+      --color-brand: oklch(74% 0.14 38);
+      --color-brand-hover: oklch(79% 0.13 38);
+      --color-brand-active: oklch(68% 0.15 38);
+      --color-brand-soft: oklch(32% 0.05 38);
+      --color-brand-soft-text: oklch(88% 0.06 38);
+      --color-on-brand: oklch(18% 0.02 38);
+
+      --color-success: oklch(85% 0.09 150);
+      --color-success-bg: oklch(30% 0.05 150);
+      --color-success-border: oklch(46% 0.08 150);
+
+      --color-warn: oklch(86% 0.1 85);
+      --color-warn-bg: oklch(32% 0.05 85);
+      --color-warn-border: oklch(48% 0.09 85);
+
+      --color-danger: oklch(85% 0.11 18);
+      --color-danger-bg: oklch(32% 0.06 18);
+      --color-danger-border: oklch(50% 0.11 18);
+
+      --color-neutral-bg: oklch(33% 0.014 38);
+      --color-neutral-text: oklch(84% 0.015 38);
+
+      --color-focus-ring: oklch(78% 0.14 255);
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.38);
+      --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.46);
+    }
+    body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  }
+
+  /* ============ BASE ============ */
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    min-height: 100dvh;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    line-height: var(--leading-tight);
+    font-weight: 700;
+    color: var(--color-text);
+    text-wrap: balance;
+  }
+  h2 { font-size: var(--text-h2); }
+  h3 { font-size: var(--text-h3); }
+  h4 { font-size: var(--text-h4); }
+  p { max-width: 70ch; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  .skip-link {
+    position: absolute; top: -100%; left: var(--space-4);
+    background: var(--color-brand); color: var(--color-on-brand);
+    padding: var(--space-3) var(--space-4); border-radius: var(--radius-control);
+    z-index: 200; transition: top var(--dur-state) var(--ease-out);
+  }
+  .skip-link:focus-visible { top: var(--space-4); }
+
+  /* ============ LAYOUT SHELL ============ */
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .app-header {
+    position: sticky; top: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-4);
+    padding-top: max(var(--space-4), env(safe-area-inset-top));
+    background: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .app-header__brand { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+  .brand-mark { flex-shrink: 0; width: 40px; height: 40px; color: var(--color-brand); }
+  .app-header__eyebrow {
+    font-size: var(--text-meta); color: var(--color-text-muted);
+    text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600;
+    margin: 0 0 2px;
+  }
+  .app-header__title {
+    font-size: 1.125rem; line-height: 1.2; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .app-header__actions { position: relative; display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; }
+
+  .icon-button {
+    position: relative;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: var(--radius-pill);
+    color: var(--color-text);
+    transition: background-color var(--dur-state) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+  .icon-button svg { width: 22px; height: 22px; }
+  .icon-button:hover { background: var(--color-neutral-bg); }
+  .icon-button:active { transform: scale(0.96); }
+  .icon-button .notif-dot {
+    position: absolute; top: 9px; right: 10px; width: 9px; height: 9px;
+    border-radius: 50%; background: var(--color-danger-border);
+    border: 2px solid var(--color-surface-raised);
+  }
+
+  .avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-family: var(--font-heading); font-weight: 700; font-size: 0.9375rem;
+    color: var(--color-on-brand);
+    border: 2px solid var(--color-surface-raised);
+  }
+  .avatar--a { background: var(--color-brand); }
+  .avatar--b { background: oklch(56% 0.12 150); }
+  .avatar--c { background: oklch(56% 0.13 250); }
+  .avatar-stack { display: flex; }
+  .avatar-stack .avatar { margin-left: -10px; }
+  .avatar-stack .avatar:first-child { margin-left: 0; }
+
+  /* Notifications popover */
+  .notif-panel {
+    position: absolute; top: 56px; right: 0; margin: 0;
+    width: min(320px, 88vw);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-4);
+    color: var(--color-text);
+    animation: panel-in var(--dur-drawer) var(--ease-drawer);
+  }
+  .notif-panel:not(.is-open-fallback):not([open]) { display: none; }
+  .notif-panel h2 { font-size: var(--text-h4); margin-bottom: var(--space-3); }
+  .notif-panel li + li { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+  .notif-panel li p { font-size: var(--text-meta); color: var(--color-text-muted); }
+  .notif-panel li strong { display: block; font-size: var(--text-body); font-weight: 600; margin-bottom: 2px; }
+
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ============ NAV ============ */
+  .section-nav {
+    display: flex;
+    gap: var(--space-1);
+    z-index: 30;
+  }
+  .section-nav__link {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; min-width: 44px; min-height: 44px; padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-control);
+    text-decoration: none;
+    color: var(--color-text-muted);
+    font-size: 0.75rem; font-weight: 600;
+    transition: color var(--dur-state) var(--ease-out), background-color var(--dur-state) var(--ease-out);
+  }
+  .section-nav__link svg { width: 22px; height: 22px; }
+  .section-nav__link:hover { color: var(--color-text); background: var(--color-neutral-bg); }
+  .section-nav__link[aria-current="page"] { color: var(--color-brand); }
+  .section-nav__link:active { transform: scale(0.96); }
+
+  .app-main { flex: 1; min-width: 0; }
+
+  .section { padding: var(--space-8) var(--space-4) var(--space-4); max-width: 880px; margin: 0 auto; }
+  .section + .section { border-top: 1px solid var(--color-border); }
+  .section__header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
+  .section__lede { color: var(--color-text-muted); font-size: var(--text-meta); margin-top: var(--space-1); max-width: 60ch; }
+
+  /* ============ PET CARDS ============ */
+  .pet-row {
+    display: flex; gap: var(--space-4); overflow-x: auto;
+    padding-bottom: var(--space-2); scrollbar-width: thin;
+    container-type: inline-size;
+  }
+  .pet-card {
+    flex: 0 0 auto; width: 216px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-sm);
+    animation: item-in var(--dur-entrance) var(--ease-out) backwards;
+    animation-delay: calc(var(--i) * 50ms);
+  }
+  .pet-card__avatar {
+    width: 48px; height: 48px; border-radius: var(--radius-control);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-heading); font-weight: 700; font-size: 1.125rem;
+    color: var(--color-on-brand); margin-bottom: var(--space-3);
+  }
+  .pet-card__name { font-size: var(--text-h4); }
+  .pet-card__meta { color: var(--color-text-muted); font-size: var(--text-meta); margin: 2px 0 var(--space-3); }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.01em;
+    padding: 4px var(--space-2); border-radius: var(--radius-pill);
+    white-space: nowrap;
+  }
+  .status-badge--success { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
+  .status-badge--warn { background: var(--color-warn-bg); color: var(--color-warn); border: 1px solid var(--color-warn-border); }
+  .status-badge--danger { background: var(--color-danger-bg); color: var(--color-danger); border: 1px solid var(--color-danger-border); }
+  .status-badge--neutral { background: var(--color-neutral-bg); color: var(--color-neutral-text); border: 1px solid var(--color-border-strong); }
+  .status-badge__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .status-badge--danger .status-badge__dot { animation: pulse-dot 1.6s var(--ease-in-out) infinite; }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(1.25); }
+  }
+
+  /* ============ LISTS (tasks / meds / appointments) ============ */
+  .task-list, .med-list, .appt-list { container-type: inline-size; }
+  .task-list { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-8); }
+
+  .task-row {
+    display: flex; align-items: center; gap: var(--space-3);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-border-strong);
+    border-radius: var(--radius-card);
+    padding: var(--space-3) var(--space-4);
+    animation: item-in var(--dur-entrance) var(--ease-out) backwards;
+    animation-delay: calc(var(--i) * 50ms);
+    transition: border-color var(--dur-state) var(--ease-out), background-color var(--dur-state) var(--ease-out);
+  }
+  .task-row.is-overdue { border-left-color: var(--color-danger-border); }
+  .task-row.is-complete { border-left-color: var(--color-success-border); }
+  .task-row.is-complete .task-row__title { text-decoration: line-through; color: var(--color-text-muted); }
+
+  .task-checkbox {
+    flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--color-border-strong);
+    background: var(--color-surface);
+    transition: background-color var(--dur-state) var(--ease-out), border-color var(--dur-state) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+  .task-checkbox:hover { border-color: var(--color-brand); }
+  .task-checkbox:active { transform: scale(0.96); }
+  .task-checkbox svg { width: 20px; height: 20px; color: var(--color-on-brand); opacity: 0; transition: opacity var(--dur-feedback) var(--ease-out); }
+  .task-checkbox[aria-checked="true"] { background: var(--color-success); border-color: var(--color-success); }
+  .task-checkbox[aria-checked="true"] svg { opacity: 1; }
+
+  .task-row__body { flex: 1; min-width: 0; }
+  .task-row__title { font-weight: 600; }
+  .task-row__meta-inline { font-weight: 400; color: var(--color-text-muted); }
+  .task-row__meta { font-size: var(--text-meta); color: var(--color-text-muted); margin-top: 2px; }
+
+  @container (max-width: 420px) {
+    .task-row { flex-wrap: wrap; }
+    .task-row__body { flex-basis: 100%; order: 3; margin-top: var(--space-2); }
+  }
+
+  /* Medication list */
+  .med-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  .med-row {
+    display: flex; align-items: center; gap: var(--space-4);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-border-strong);
+    border-radius: var(--radius-card);
+    padding: var(--space-4);
+    animation: item-in var(--dur-entrance) var(--ease-out) backwards;
+    animation-delay: calc(var(--i) * 50ms);
+  }
+  .med-row.is-overdue { border-left-color: var(--color-danger-border); background: var(--color-danger-bg); }
+  .med-row.is-complete { border-left-color: var(--color-success-border); }
+  .med-row__icon {
+    flex-shrink: 0; width: 44px; height: 44px; border-radius: var(--radius-control);
+    display: flex; align-items: center; justify-content: center;
+    background: var(--color-brand-soft); color: var(--color-brand-soft-text);
+  }
+  .med-row__icon svg { width: 22px; height: 22px; }
+  .med-row__body { flex: 1; min-width: 0; }
+  .med-row__title { font-weight: 700; }
+  .med-row__meta { font-size: var(--text-meta); color: var(--color-text-muted); margin: 2px 0 var(--space-2); }
+  .med-row__action { flex-shrink: 0; }
+
+  @container (max-width: 440px) {
+    .med-row { flex-wrap: wrap; }
+    .med-row__body { flex-basis: 100%; order: 2; }
+    .med-row__action { order: 3; width: 100%; }
+  }
+
+  /* Appointments */
+  .appt-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  .appt-row {
+    display: flex; align-items: center; gap: var(--space-4);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-4);
+    animation: item-in var(--dur-entrance) var(--ease-out) backwards;
+    animation-delay: calc(var(--i) * 50ms);
+  }
+  .appt-row__date {
+    flex-shrink: 0; width: 56px; text-align: center;
+    background: var(--color-brand-soft); color: var(--color-brand-soft-text);
+    border-radius: var(--radius-control); padding: var(--space-2) 0;
+  }
+  .appt-row__month { display: block; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; }
+  .appt-row__day { display: block; font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; line-height: 1; margin-top: 2px; }
+  .appt-row__body { flex: 1; min-width: 0; }
+  .appt-row__title { font-weight: 600; }
+  .appt-row__meta { font-size: var(--text-meta); color: var(--color-text-muted); margin-top: 2px; }
+
+  @container (max-width: 440px) {
+    .appt-row { flex-wrap: wrap; }
+    .appt-row__body { flex-basis: 100%; order: 2; margin-top: var(--space-2); }
+    .appt-row__action { order: 3; width: 100%; }
+  }
+
+  /* ============ CAREGIVER GRID ============ */
+  .caregiver-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); }
+  .caregiver-card {
+    container-type: inline-size;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    padding: var(--space-4);
+    display: flex; gap: var(--space-3); align-items: flex-start;
+    animation: item-in var(--dur-entrance) var(--ease-out) backwards;
+    animation-delay: calc(var(--i) * 50ms);
+  }
+  .caregiver-card__body { flex: 1; min-width: 0; }
+  .caregiver-card__name { font-weight: 700; display: flex; align-items: center; gap: var(--space-2); }
+  .caregiver-card__tag { font-size: 0.6875rem; font-weight: 700; color: var(--color-text-muted); background: var(--color-neutral-bg); padding: 2px var(--space-2); border-radius: var(--radius-pill); }
+  .caregiver-card__progress { font-size: var(--text-meta); color: var(--color-text-muted); margin: 2px 0 var(--space-2); }
+  .progress-track { height: 8px; border-radius: var(--radius-pill); background: var(--color-neutral-bg); overflow: hidden; }
+  .progress-fill { display: block; height: 100%; background: var(--color-brand); border-radius: var(--radius-pill); transition: width var(--dur-entrance) var(--ease-out); }
+
+  @container (max-width: 240px) {
+    .caregiver-card { flex-direction: column; }
+  }
+
+  /* ============ BUTTONS ============ */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+    min-height: 44px; padding: 0 var(--space-4);
+    border-radius: var(--radius-control);
+    font-weight: 700; font-size: 0.9375rem;
+    border: 1px solid transparent;
+    transition: background-color var(--dur-state) var(--ease-out), border-color var(--dur-state) var(--ease-out), transform var(--dur-feedback) var(--ease-out), box-shadow var(--dur-state) var(--ease-out);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  .btn--primary { background: var(--color-brand); color: var(--color-on-brand); }
+  .btn--primary:hover:not(:disabled) { background: var(--color-brand-hover); }
+  .btn--primary:active:not(:disabled) { background: var(--color-brand-active); }
+
+  .btn--secondary { background: var(--color-surface); color: var(--color-text); border-color: var(--color-border-strong); }
+  .btn--secondary:hover:not(:disabled) { background: var(--color-neutral-bg); }
+
+  .btn--ghost { background: transparent; color: var(--color-text-muted); }
+  .btn--ghost:hover { background: var(--color-neutral-bg); color: var(--color-text); }
+
+  .btn--success { background: var(--color-success); color: var(--color-on-brand); }
+
+  .btn .spinner {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4); border-top-color: currentColor;
+    animation: spin 700ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fab {
+    position: fixed; right: var(--space-4);
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    z-index: 35;
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    min-height: 52px; padding: 0 var(--space-6) 0 var(--space-4);
+    background: var(--color-brand); color: var(--color-on-brand);
+    border-radius: var(--radius-pill); box-shadow: var(--shadow-lg);
+    font-weight: 700; font-family: var(--font-heading);
+    transition: background-color var(--dur-state) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+  .fab svg { width: 22px; height: 22px; }
+  .fab:hover { background: var(--color-brand-hover); }
+  .fab:active { transform: scale(0.96); }
+
+  /* ============ FORMS / DIALOG ============ */
+  .add-task-dialog {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-dialog);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    padding: 0;
+    width: min(480px, calc(100vw - 32px));
+    max-height: min(680px, 88dvh);
+    box-shadow: var(--shadow-lg);
+    animation: dialog-in var(--dur-drawer) var(--ease-drawer);
+  }
+  .add-task-dialog::backdrop { background: rgba(0, 0, 0, 0.32); animation: backdrop-in var(--dur-state) var(--ease-out); }
+  @keyframes dialog-in { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
+  @keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .add-task-dialog__inner { padding: var(--space-6); overflow-y: auto; max-height: min(680px, 88dvh); position: relative; }
+  .add-task-dialog h2 { font-size: var(--text-h3); margin-bottom: 4px; }
+  .dialog-subtitle { color: var(--color-text-muted); font-size: var(--text-meta); margin-bottom: var(--space-6); }
+
+  .field { margin-bottom: var(--space-4); }
+  .field label, .field legend {
+    display: block; font-weight: 700; font-size: 0.875rem; margin-bottom: var(--space-2);
+    font-family: var(--font-heading);
+  }
+  .field input[type="text"], .field input[type="time"], .field select, .field textarea {
+    width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3);
+    background: var(--color-surface); color: var(--color-text);
+    border: 1.5px solid var(--color-border-strong); border-radius: var(--radius-control);
+    transition: border-color var(--dur-state) var(--ease-out), box-shadow var(--dur-state) var(--ease-out);
+  }
+  .field textarea { min-height: 72px; resize: vertical; }
+  .field input:hover, .field select:hover, .field textarea:hover { border-color: var(--color-brand); }
+  .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+    border-color: var(--color-focus-ring);
+  }
+  .field.has-error input, .field.has-error select {
+    border-color: var(--color-danger-border);
+  }
+  .field-error {
+    display: flex; align-items: flex-start; gap: 6px;
+    color: var(--color-danger); font-size: var(--text-meta); margin-top: var(--space-2); font-weight: 600;
+  }
+  .field-error svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+  .field-error[hidden] { display: none; }
+
+  .field--radio-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+  .field--radio-group label {
+    display: flex; align-items: center; gap: var(--space-2); font-weight: 400; font-size: var(--text-body);
+    font-family: var(--font-body);
+    padding: var(--space-2) var(--space-2); border: 1.5px solid var(--color-border); border-radius: var(--radius-control);
+    min-height: 44px;
+  }
+  .field--radio-group input { width: 18px; height: 18px; accent-color: var(--color-brand); }
+
+  .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-6); }
+  .dialog-close-x {
+    position: absolute; top: var(--space-4); right: var(--space-4);
+    width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-muted);
+    transition: background-color var(--dur-state) var(--ease-out);
+  }
+  .dialog-close-x:hover { background: var(--color-neutral-bg); }
+  .dialog-close-x svg { width: 18px; height: 18px; }
+
+  /* ============ TOAST ============ */
+  .toast-region {
+    position: fixed; z-index: 90;
+    left: var(--space-4); right: var(--space-4); bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: var(--space-2);
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--color-success);
+    color: var(--color-on-brand);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-md);
+    font-weight: 600; font-size: 0.9375rem;
+    display: flex; align-items: center; gap: var(--space-2);
+    animation: toast-in var(--dur-entrance) var(--ease-out);
+  }
+  .toast svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .toast.is-leaving { animation: toast-out var(--dur-feedback) var(--ease-in-out) forwards; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes toast-out { from { opacity: 1; } to { opacity: 0; } }
+
+  /* ============ ENTRANCE KEYFRAME ============ */
+  @keyframes item-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ============ REDUCED MOTION ============ */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* ============ RESPONSIVE: mobile-first ============ */
+  /* XS/SM default: bottom tab bar */
+  .section-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    justify-content: space-around;
+    background: var(--color-surface-raised);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-1) var(--space-2);
+    padding-bottom: max(var(--space-1), env(safe-area-inset-bottom));
+  }
+  .app-main { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+
+  @media (min-width: 768px) {
+    .app-shell { flex-direction: row; }
+    .section-nav {
+      position: sticky; top: 0; left: auto; right: auto; bottom: auto;
+      flex-direction: column; justify-content: flex-start; align-items: stretch;
+      width: 220px; height: 100dvh; border-top: 0; border-right: 1px solid var(--color-border);
+      padding: var(--space-6) var(--space-3);
+      gap: var(--space-2);
+    }
+    .section-nav__link { flex-direction: row; justify-content: flex-start; font-size: var(--text-body); padding: var(--space-2) var(--space-3); }
+    .app-main { padding-bottom: 0; flex: 1; min-width: 0; }
+    .fab { bottom: var(--space-6); }
+    .toast-region { left: auto; width: 360px; }
+    .pet-row { flex-wrap: wrap; overflow: visible; }
+    .pet-card { width: auto; flex: 1 1 220px; }
+    .caregiver-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (min-width: 1024px) {
+    .section { padding-left: var(--space-8); padding-right: var(--space-8); }
+    .section-nav { width: 248px; }
+  }
+
+  @media (min-width: 1440px) {
+    .app-header, .section { max-width: 1120px; margin-left: auto; margin-right: auto; width: 100%; }
+    .app-header { max-width: none; }
+    .app-header > * { max-width: 1120px; }
+  }
+
+  /* Touch vs hover gate for FAB label collapse on small hover-incapable screens */
+  @media (hover: none) and (pointer: coarse) and (max-width: 479px) {
+    .fab span { display: none; }
+    .fab { padding: 0 14px; }
+  }
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-header__brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <circle cx="20" cy="20" r="18" fill="var(--color-brand-soft)"/>
+          <circle cx="14" cy="17" r="2.2" fill="currentColor"/>
+          <circle cx="26" cy="17" r="2.2" fill="currentColor"/>
+          <path d="M13 25c2.5 3 11.5 3 14 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+        </svg>
+        <div>
+          <p class="app-header__eyebrow">Household overview</p>
+          <h1 class="app-header__title">The Alvarez-Kim Household</h1>
+        </div>
+      </div>
+      <div class="app-header__actions">
+        <button type="button" class="icon-button" id="notif-button" popovertarget="notif-panel" aria-label="Open notifications: 1 unread">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="notif-dot" aria-hidden="true"></span>
+        </button>
+        <div class="avatar-stack" aria-hidden="true">
+          <span class="avatar avatar--a">J</span>
+          <span class="avatar avatar--b">P</span>
+          <span class="avatar avatar--c">S</span>
+        </div>
+      </div>
+      <div id="notif-panel" popover class="notif-panel" aria-labelledby="notif-panel-title">
+        <h2 id="notif-panel-title">Notifications</h2>
+        <ul>
+          <li>
+            <strong>Clementine's medication is overdue</strong>
+            <p>Methimazole 2.5mg was due at 8:00 AM &mdash; assigned to Priya.</p>
+          </li>
+          <li>
+            <strong>Upcoming: Reginald's follow-up</strong>
+            <p>Post-dental check with Dr. Osei in 3 days.</p>
+          </li>
+        </ul>
+      </div>
+    </header>
+
+    <nav class="section-nav" aria-label="Sections">
+      <a class="section-nav__link" href="#pets" data-section="pets">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="2"/><circle cx="9.5" cy="10" r="1.4" fill="currentColor"/><circle cx="14.5" cy="10" r="1.4" fill="currentColor"/><path d="M9 14.5c1 1 5 1 6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>Pets</span>
+      </a>
+      <a class="section-nav__link" href="#today" data-section="today" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3" stroke="currentColor" stroke-width="2"/><path d="M4 9.5h16" stroke="currentColor" stroke-width="2"/><path d="M8 3.5v3M16 3.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Today</span>
+      </a>
+      <a class="section-nav__link" href="#appointments" data-section="appointments">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Appointments</span>
+      </a>
+      <a class="section-nav__link" href="#household" data-section="household">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="10" r="2.4" stroke="currentColor" stroke-width="2"/><path d="M4 19c.6-3 2.4-5 5-5s4.4 2 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.5 19c.4-2.2 1.6-3.6 3-3.9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Household</span>
+      </a>
+    </nav>
+
+    <main class="app-main" id="main-content">
+      <!-- PET PROFILE SUMMARY -->
+      <section class="section" id="pets" aria-labelledby="pets-heading">
+        <div class="section__header">
+          <div>
+            <h2 id="pets-heading">Your pets</h2>
+            <p class="section__lede">A quick look at who's under this roof and how things stand today.</p>
+          </div>
+        </div>
+        <ul class="pet-row">
+          <li class="pet-card" style="--i:0">
+            <div class="pet-card__avatar" style="background: var(--color-brand);">B</div>
+            <h3 class="pet-card__name">Biscuit</h3>
+            <p class="pet-card__meta">Corgi mix &middot; 4 years old</p>
+            <span class="status-badge status-badge--success"><span class="status-badge__dot" aria-hidden="true"></span>All caught up</span>
+          </li>
+          <li class="pet-card" style="--i:1">
+            <div class="pet-card__avatar" style="background: oklch(56% 0.12 150);">C</div>
+            <h3 class="pet-card__name">Clementine</h3>
+            <p class="pet-card__meta">Tabby cat &middot; 2 years old</p>
+            <span class="status-badge status-badge--danger"><span class="status-badge__dot" aria-hidden="true"></span>Needs attention</span>
+          </li>
+          <li class="pet-card" style="--i:2">
+            <div class="pet-card__avatar" style="background: oklch(56% 0.13 250);">R</div>
+            <h3 class="pet-card__name">Sir Reginald Pumpernickel III</h3>
+            <p class="pet-card__meta">Holland Lop rabbit &middot; 1 year old</p>
+            <span class="status-badge status-badge--neutral"><span class="status-badge__dot" aria-hidden="true"></span>On track</span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- TODAY'S CARE TASKS + MEDICATION -->
+      <section class="section" id="today" aria-labelledby="today-heading">
+        <div class="section__header">
+          <div>
+            <h2 id="today-heading">Today's care tasks</h2>
+            <p class="section__lede">Check items off as they're done. Overdue items are marked so nothing slips through.</p>
+          </div>
+        </div>
+        <ul class="task-list" id="today-tasks-list">
+          <li class="task-row is-complete" data-assignee="Jordan" data-status="done" style="--i:0">
+            <button type="button" class="task-checkbox" role="checkbox" aria-checked="true" aria-label='Mark "Feed Biscuit breakfast" as not done'>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="task-row__body">
+              <p class="task-row__title">Feed Biscuit breakfast <span class="task-row__meta-inline">(1 cup kibble)</span></p>
+              <p class="task-row__meta"><span class="tnum">7:30 AM</span> &middot; Biscuit &middot; Jordan</p>
+            </div>
+            <span class="status-badge status-badge--success">Done</span>
+          </li>
+          <li class="task-row is-complete" data-assignee="Priya" data-status="done" style="--i:1">
+            <button type="button" class="task-checkbox" role="checkbox" aria-checked="true" aria-label='Mark "Refresh Clementine&#39;s water and litter" as not done'>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="task-row__body">
+              <p class="task-row__title">Refresh Clementine's water and litter</p>
+              <p class="task-row__meta"><span class="tnum">9:15 AM</span> &middot; Clementine &middot; Priya</p>
+            </div>
+            <span class="status-badge status-badge--success">Done</span>
+          </li>
+          <li class="task-row" data-assignee="Sam" data-status="upcoming" style="--i:2">
+            <button type="button" class="task-checkbox" role="checkbox" aria-checked="false" aria-label='Mark "Refresh Reginald&#39;s hay and water" as done'></button>
+            <div class="task-row__body">
+              <p class="task-row__title">Refresh Reginald's hay and water</p>
+              <p class="task-row__meta"><span class="tnum">12:30 PM</span> &middot; Sir Reginald Pumpernickel III &middot; Sam</p>
+            </div>
+            <span class="status-badge status-badge--neutral">Upcoming</span>
+          </li>
+          <li class="task-row" data-assignee="Jordan" data-status="upcoming" style="--i:3">
+            <button type="button" class="task-checkbox" role="checkbox" aria-checked="false" aria-label='Mark "Evening walk for Biscuit" as done'></button>
+            <div class="task-row__body">
+              <p class="task-row__title">Evening walk for Biscuit</p>
+              <p class="task-row__meta"><span class="tnum">6:00 PM</span> &middot; Biscuit &middot; Jordan</p>
+            </div>
+            <span class="status-badge status-badge--neutral">Upcoming</span>
+          </li>
+          <li class="task-row" data-assignee="Priya" data-status="upcoming" style="--i:4">
+            <button type="button" class="task-checkbox" role="checkbox" aria-checked="false" aria-label='Mark "Feed Biscuit dinner" as done'></button>
+            <div class="task-row__body">
+              <p class="task-row__title">Feed Biscuit dinner</p>
+              <p class="task-row__meta"><span class="tnum">9:00 PM</span> &middot; Biscuit &middot; Priya</p>
+            </div>
+            <span class="status-badge status-badge--neutral">Upcoming</span>
+          </li>
+        </ul>
+
+        <div class="section__header">
+          <div>
+            <h3 id="meds-heading">Medication reminders</h3>
+            <p class="section__lede">Dosages and timing for anyone giving medication today.</p>
+          </div>
+        </div>
+        <ul class="med-list" id="medication-list" aria-labelledby="meds-heading">
+          <li class="med-row is-overdue" data-assignee="Priya" data-status="overdue" style="--i:0">
+            <div class="med-row__icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="9" width="16" height="6" rx="3" stroke="currentColor" stroke-width="2"/><path d="M12 9v6" stroke="currentColor" stroke-width="2"/></svg>
+            </div>
+            <div class="med-row__body">
+              <p class="med-row__title">Clementine &mdash; Methimazole 2.5mg</p>
+              <p class="med-row__meta">Due <span class="tnum">8:00 AM</span> &middot; Assigned to Priya</p>
+              <span class="status-badge status-badge--danger"><span class="status-badge__dot" aria-hidden="true"></span>Overdue by 1h 40m</span>
+            </div>
+            <button type="button" class="btn btn--secondary med-row__action">Mark medication given</button>
+          </li>
+          <li class="med-row" data-assignee="Sam" data-status="upcoming" style="--i:1">
+            <div class="med-row__icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="9" width="16" height="6" rx="3" stroke="currentColor" stroke-width="2"/><path d="M12 9v6" stroke="currentColor" stroke-width="2"/></svg>
+            </div>
+            <div class="med-row__body">
+              <p class="med-row__title">Sir Reginald Pumpernickel III &mdash; Metacam 0.3ml</p>
+              <p class="med-row__meta">Due <span class="tnum">2:00 PM</span> &middot; Assigned to Sam &middot; Post-dental recovery</p>
+              <span class="status-badge status-badge--neutral">Upcoming</span>
+            </div>
+            <button type="button" class="btn btn--secondary med-row__action">Mark medication given</button>
+          </li>
+          <li class="med-row" data-assignee="Jordan" data-status="upcoming" style="--i:2">
+            <div class="med-row__icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="9" width="16" height="6" rx="3" stroke="currentColor" stroke-width="2"/><path d="M12 9v6" stroke="currentColor" stroke-width="2"/></svg>
+            </div>
+            <div class="med-row__body">
+              <p class="med-row__title">Biscuit &mdash; Joint supplement chew</p>
+              <p class="med-row__meta">Due <span class="tnum">6:00 PM</span> &middot; Assigned to Jordan</p>
+              <span class="status-badge status-badge--neutral">Upcoming</span>
+            </div>
+            <button type="button" class="btn btn--secondary med-row__action">Mark medication given</button>
+          </li>
+        </ul>
+      </section>
+
+      <!-- UPCOMING APPOINTMENTS -->
+      <section class="section" id="appointments" aria-labelledby="appointments-heading">
+        <div class="section__header">
+          <div>
+            <h2 id="appointments-heading">Upcoming appointments</h2>
+            <p class="section__lede">Vet visits and grooming on the calendar for the household.</p>
+          </div>
+        </div>
+        <ul class="appt-list">
+          <li class="appt-row" style="--i:0">
+            <div class="appt-row__date" aria-hidden="true"><span class="appt-row__month">JUL</span><span class="appt-row__day tnum">30</span></div>
+            <div class="appt-row__body">
+              <p class="appt-row__title">Clementine's annual checkup + bloodwork</p>
+              <p class="appt-row__meta">Dr. Osei &middot; Maple Street Veterinary &middot; Thu, <span class="tnum">10:15 AM</span></p>
+            </div>
+            <button type="button" class="btn btn--ghost appt-row__action">View Clementine's appointment</button>
+          </li>
+          <li class="appt-row" style="--i:1">
+            <div class="appt-row__date" aria-hidden="true"><span class="appt-row__month">AUG</span><span class="appt-row__day tnum">1</span></div>
+            <div class="appt-row__body">
+              <p class="appt-row__title">Biscuit's nail trim and grooming</p>
+              <p class="appt-row__meta">Pawfectly Groomed &middot; Sat, <span class="tnum">2:00 PM</span></p>
+            </div>
+            <button type="button" class="btn btn--ghost appt-row__action">View Biscuit's appointment</button>
+          </li>
+          <li class="appt-row" style="--i:2">
+            <div class="appt-row__date" aria-hidden="true"><span class="appt-row__month">AUG</span><span class="appt-row__day tnum">3</span></div>
+            <div class="appt-row__body">
+              <p class="appt-row__title">Reginald's post-dental follow-up</p>
+              <p class="appt-row__meta">Dr. Osei &middot; Maple Street Veterinary &middot; Mon, <span class="tnum">9:30 AM</span></p>
+            </div>
+            <button type="button" class="btn btn--ghost appt-row__action">View Reginald's appointment</button>
+          </li>
+        </ul>
+      </section>
+
+      <!-- SHARED CAREGIVER ASSIGNMENTS -->
+      <section class="section" id="household" aria-labelledby="household-heading">
+        <div class="section__header">
+          <div>
+            <h2 id="household-heading">Shared caregiver assignments</h2>
+            <p class="section__lede">Who's covering what today, so nothing is assumed to be someone else's job.</p>
+          </div>
+        </div>
+        <div class="caregiver-grid">
+          <article class="caregiver-card" data-assignee="Jordan" style="--i:0">
+            <span class="avatar avatar--a" aria-hidden="true">J</span>
+            <div class="caregiver-card__body">
+              <p class="caregiver-card__name">Jordan <span class="caregiver-card__tag">You</span></p>
+              <p class="caregiver-card__progress"><span class="tnum caregiver-card__count">1 of 3</span> tasks done today</p>
+              <div class="progress-track" role="img" aria-label="Jordan: 1 of 3 tasks done today"><span class="progress-fill" style="width:33%"></span></div>
+            </div>
+          </article>
+          <article class="caregiver-card" data-assignee="Priya" style="--i:1">
+            <span class="avatar avatar--b" aria-hidden="true">P</span>
+            <div class="caregiver-card__body">
+              <p class="caregiver-card__name">Priya</p>
+              <p class="caregiver-card__progress"><span class="tnum caregiver-card__count">1 of 3</span> tasks done today</p>
+              <div class="progress-track" role="img" aria-label="Priya: 1 of 3 tasks done today"><span class="progress-fill" style="width:33%"></span></div>
+            </div>
+          </article>
+          <article class="caregiver-card" data-assignee="Sam" style="--i:2">
+            <span class="avatar avatar--c" aria-hidden="true">S</span>
+            <div class="caregiver-card__body">
+              <p class="caregiver-card__name">Sam</p>
+              <p class="caregiver-card__progress"><span class="tnum caregiver-card__count">0 of 2</span> tasks done today</p>
+              <div class="progress-track" role="img" aria-label="Sam: 0 of 2 tasks done today"><span class="progress-fill" style="width:0%"></span></div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ADD TASK ENTRY POINT -->
+  <button type="button" class="fab" id="open-add-task" aria-haspopup="dialog">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+    <span>Add a task</span>
+  </button>
+
+  <dialog class="add-task-dialog" id="add-task-dialog" aria-labelledby="add-task-title">
+    <div class="add-task-dialog__inner">
+      <button type="button" class="dialog-close-x" id="close-task-x" aria-label="Close add a task dialog">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <h2 id="add-task-title">Add a task</h2>
+      <p class="dialog-subtitle">This shows up on Today's care tasks for the whole household.</p>
+      <form id="add-task-form" novalidate>
+        <div class="field" id="name-field">
+          <label for="task-name">Task name</label>
+          <input type="text" id="task-name" name="task-name" autocomplete="off" spellcheck="false" aria-describedby="task-name-error">
+          <p class="field-error" id="task-name-error" role="alert" hidden>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Enter a task name so your household knows what to do.
+          </p>
+        </div>
+        <div class="field" id="pet-field">
+          <label for="task-pet">Pet</label>
+          <select id="task-pet" name="task-pet" aria-describedby="task-pet-error">
+            <option value="">Choose a pet</option>
+            <option>Biscuit</option>
+            <option>Clementine</option>
+            <option>Sir Reginald Pumpernickel III</option>
+          </select>
+          <p class="field-error" id="task-pet-error" role="alert" hidden>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Choose which pet this task is for.
+          </p>
+        </div>
+        <div class="field">
+          <label for="task-assignee">Assigned to</label>
+          <select id="task-assignee" name="task-assignee">
+            <option>Jordan</option>
+            <option>Priya</option>
+            <option>Sam</option>
+          </select>
+        </div>
+        <fieldset class="field field--radio-group">
+          <legend>Category</legend>
+          <label><input type="radio" name="task-category" value="Feeding" checked> Feeding</label>
+          <label><input type="radio" name="task-category" value="Medication"> Medication</label>
+          <label><input type="radio" name="task-category" value="Appointment"> Appointment</label>
+          <label><input type="radio" name="task-category" value="Other"> Other</label>
+        </fieldset>
+        <div class="field" id="time-field">
+          <label for="task-time">Due time</label>
+          <input type="time" id="task-time" name="task-time" inputmode="numeric" aria-describedby="task-time-error">
+          <p class="field-error" id="task-time-error" role="alert" hidden>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Pick a time so this task shows up in the right place.
+          </p>
+        </div>
+        <div class="field">
+          <label for="task-notes">Notes (optional)</label>
+          <textarea id="task-notes" name="task-notes" rows="2"></textarea>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn--ghost" id="cancel-task-btn">Cancel</button>
+          <button type="submit" class="btn btn--primary" id="save-task-btn">
+            <span class="btn__label">Save task</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <div class="toast-region" id="toast-region" aria-hidden="true"></div>
+  <div id="live-region" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* ---------- live region announcer ---------- */
+      var liveRegion = document.getElementById('live-region');
+      function announce(msg) {
+        liveRegion.textContent = '';
+        window.requestAnimationFrame(function () {
+          liveRegion.textContent = msg;
+        });
+      }
+
+      /* ---------- toast (visual reinforcement only) ---------- */
+      var toastRegion = document.getElementById('toast-region');
+      function showToast(msg) {
+        var toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>';
+        toast.querySelector('span').textContent = msg;
+        toastRegion.appendChild(toast);
+        window.setTimeout(function () {
+          toast.classList.add('is-leaving');
+          window.setTimeout(function () { toast.remove(); }, prefersReducedMotion ? 0 : 120);
+        }, 3200);
+      }
+
+      /* ---------- notifications popover fallback ---------- */
+      var notifButton = document.getElementById('notif-button');
+      var notifPanel = document.getElementById('notif-panel');
+      if (!('popover' in HTMLElement.prototype)) {
+        notifButton.removeAttribute('popovertarget');
+        notifButton.setAttribute('aria-expanded', 'false');
+        notifButton.addEventListener('click', function () {
+          var open = notifPanel.classList.toggle('is-open-fallback');
+          notifButton.setAttribute('aria-expanded', String(open));
+        });
+        document.addEventListener('click', function (e) {
+          if (!notifPanel.classList.contains('is-open-fallback')) return;
+          if (notifPanel.contains(e.target) || notifButton.contains(e.target)) return;
+          notifPanel.classList.remove('is-open-fallback');
+          notifButton.setAttribute('aria-expanded', 'false');
+        });
+      }
+
+      /* ---------- section nav: smooth scroll + scroll-spy ---------- */
+      var navLinks = Array.prototype.slice.call(document.querySelectorAll('.section-nav__link'));
+      navLinks.forEach(function (link) {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          var target = document.querySelector(link.getAttribute('href'));
+          if (!target) return;
+          target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+          navLinks.forEach(function (l) { l.removeAttribute('aria-current'); });
+          link.setAttribute('aria-current', 'page');
+        });
+      });
+      if ('IntersectionObserver' in window) {
+        var sections = navLinks
+          .map(function (l) { return document.querySelector(l.getAttribute('href')); })
+          .filter(Boolean);
+        var spy = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            var link = document.querySelector('.section-nav__link[href="#' + entry.target.id + '"]');
+            if (!link) return;
+            navLinks.forEach(function (l) { l.removeAttribute('aria-current'); });
+            link.setAttribute('aria-current', 'page');
+          });
+        }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+        sections.forEach(function (s) { spy.observe(s); });
+      }
+
+      /* ---------- caregiver progress ---------- */
+      function recomputeProgress() {
+        var tally = {};
+        document.querySelectorAll('.task-row[data-assignee], .med-row[data-assignee]').forEach(function (el) {
+          var name = el.getAttribute('data-assignee');
+          if (!tally[name]) tally[name] = { done: 0, total: 0 };
+          tally[name].total++;
+          if (el.classList.contains('is-complete')) tally[name].done++;
+        });
+        Object.keys(tally).forEach(function (name) {
+          var card = document.querySelector('.caregiver-card[data-assignee="' + name + '"]');
+          if (!card) return;
+          var done = tally[name].done, total = tally[name].total;
+          var pct = total ? Math.round((done / total) * 100) : 0;
+          card.querySelector('.caregiver-card__count').textContent = done + ' of ' + total;
+          card.querySelector('.progress-fill').style.width = pct + '%';
+          card.querySelector('.progress-track').setAttribute('aria-label', name + ': ' + done + ' of ' + total + ' tasks done today');
+        });
+      }
+      recomputeProgress();
+
+      /* ---------- task checkbox toggling (delegated) ---------- */
+      document.getElementById('today-tasks-list').addEventListener('click', function (e) {
+        var checkbox = e.target.closest('.task-checkbox');
+        if (!checkbox) return;
+        var row = checkbox.closest('.task-row');
+        var nowComplete = checkbox.getAttribute('aria-checked') !== 'true';
+        var title = row.querySelector('.task-row__title').textContent.replace(/\s+/g, ' ').trim();
+        var badge = row.querySelector('.status-badge');
+
+        checkbox.setAttribute('aria-checked', String(nowComplete));
+        row.classList.toggle('is-complete', nowComplete);
+
+        if (nowComplete) {
+          row.classList.remove('is-overdue');
+          badge.textContent = 'Done';
+          badge.className = 'status-badge status-badge--success';
+        } else {
+          var original = row.getAttribute('data-status');
+          if (original === 'overdue') {
+            row.classList.add('is-overdue');
+            badge.textContent = 'Overdue by 1h 40m';
+            badge.className = 'status-badge status-badge--danger';
+          } else {
+            badge.textContent = 'Upcoming';
+            badge.className = 'status-badge status-badge--neutral';
+          }
+        }
+        checkbox.setAttribute('aria-label', 'Mark "' + title + '" as ' + (nowComplete ? 'not done' : 'done'));
+        announce('Marked "' + title + '" as ' + (nowComplete ? 'done' : 'not done') + '.');
+        recomputeProgress();
+      });
+
+      /* ---------- medication "mark given" (delegated) ---------- */
+      document.getElementById('medication-list').addEventListener('click', function (e) {
+        var actionBtn = e.target.closest('.med-row__action');
+        if (!actionBtn) return;
+        var row = actionBtn.closest('.med-row');
+        var title = row.querySelector('.med-row__title').textContent.replace(/\s+/g, ' ').trim();
+        var badge = row.querySelector('.status-badge');
+
+        row.classList.remove('is-overdue');
+        row.classList.add('is-complete');
+        badge.textContent = 'Given';
+        badge.className = 'status-badge status-badge--success';
+        actionBtn.textContent = 'Marked given';
+        actionBtn.disabled = true;
+
+        announce('Marked ' + title + ' as given.');
+        recomputeProgress();
+      });
+
+      /* ---------- add task dialog ---------- */
+      var dialog = document.getElementById('add-task-dialog');
+      var openBtn = document.getElementById('open-add-task');
+      var cancelBtn = document.getElementById('cancel-task-btn');
+      var closeX = document.getElementById('close-task-x');
+      var form = document.getElementById('add-task-form');
+      var saveBtn = document.getElementById('save-task-btn');
+      var saveLabel = saveBtn.querySelector('.btn__label');
+      var nameInput = document.getElementById('task-name');
+      var petSelect = document.getElementById('task-pet');
+      var timeInput = document.getElementById('task-time');
+      var assigneeSelect = document.getElementById('task-assignee');
+      var isSaving = false;
+      var itemCounter = document.querySelectorAll('#today-tasks-list .task-row').length;
+
+      function clearErrors() {
+        ['name-field', 'pet-field', 'time-field'].forEach(function (id) {
+          var field = document.getElementById(id);
+          field.classList.remove('has-error');
+          field.querySelector('.field-error').hidden = true;
+        });
+        [nameInput, petSelect, timeInput].forEach(function (el) { el.removeAttribute('aria-invalid'); });
+      }
+
+      function showFieldError(fieldId, input) {
+        var field = document.getElementById(fieldId);
+        field.classList.add('has-error');
+        field.querySelector('.field-error').hidden = false;
+        input.setAttribute('aria-invalid', 'true');
+      }
+
+      function validateField(fieldId, input) {
+        var isEmpty = !input.value.trim();
+        var field = document.getElementById(fieldId);
+        if (isEmpty) {
+          showFieldError(fieldId, input);
+        } else {
+          field.classList.remove('has-error');
+          field.querySelector('.field-error').hidden = true;
+          input.removeAttribute('aria-invalid');
+        }
+        return !isEmpty;
+      }
+
+      // validate on blur, not on keystroke
+      nameInput.addEventListener('blur', function () { validateField('name-field', nameInput); });
+      petSelect.addEventListener('blur', function () { validateField('pet-field', petSelect); });
+      timeInput.addEventListener('blur', function () { validateField('time-field', timeInput); });
+
+      function openDialog() {
+        form.reset();
+        clearErrors();
+        dialog.showModal();
+        window.setTimeout(function () { nameInput.focus(); }, 0);
+      }
+      function closeDialog() { dialog.close(); }
+
+      openBtn.addEventListener('click', openDialog);
+      cancelBtn.addEventListener('click', closeDialog);
+      closeX.addEventListener('click', closeDialog);
+      dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) closeDialog();
+      });
+
+      function setLoading(loading) {
+        saveBtn.disabled = loading;
+        saveBtn.setAttribute('aria-busy', String(loading));
+        if (loading) {
+          saveLabel.textContent = 'Saving task…';
+          var spinner = document.createElement('span');
+          spinner.className = 'spinner';
+          spinner.setAttribute('aria-hidden', 'true');
+          saveBtn.insertBefore(spinner, saveLabel);
+        } else {
+          var existing = saveBtn.querySelector('.spinner');
+          if (existing) existing.remove();
+        }
+      }
+
+      function formatTime(value) {
+        if (!value) return '';
+        var parts = value.split(':');
+        var h = parseInt(parts[0], 10);
+        var m = parts[1];
+        var period = h >= 12 ? 'PM' : 'AM';
+        var h12 = h % 12;
+        if (h12 === 0) h12 = 12;
+        return h12 + ':' + m + ' ' + period;
+      }
+
+      function addTaskToList(values) {
+        var list = document.getElementById('today-tasks-list');
+        var li = document.createElement('li');
+        li.className = 'task-row';
+        li.setAttribute('data-assignee', values.assignee);
+        li.setAttribute('data-status', 'upcoming');
+        li.style.setProperty('--i', itemCounter++);
+        var safeName = values.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var safePet = values.pet.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var safeAssignee = values.assignee.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        li.innerHTML =
+          '<button type="button" class="task-checkbox" role="checkbox" aria-checked="false" aria-label="Mark &quot;' + safeName + '&quot; as done">' +
+          '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '</button>' +
+          '<div class="task-row__body">' +
+          '<p class="task-row__title">' + safeName + '</p>' +
+          '<p class="task-row__meta"><span class="tnum">' + (formatTime(values.time) || 'No time set') + '</span> &middot; ' + safePet + ' &middot; ' + safeAssignee + '</p>' +
+          '</div>' +
+          '<span class="status-badge status-badge--neutral">Upcoming</span>';
+        list.appendChild(li);
+        recomputeProgress();
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (isSaving) return; // idempotent submit guard
+
+        clearErrors();
+        var nameOk = validateField('name-field', nameInput);
+        var petOk = validateField('pet-field', petSelect);
+        var timeOk = validateField('time-field', timeInput);
+
+        if (!nameOk) { nameInput.focus(); return; }
+        if (!petOk) { petSelect.focus(); return; }
+        if (!timeOk) { timeInput.focus(); return; }
+
+        var values = {
+          name: nameInput.value.trim(),
+          pet: petSelect.value,
+          assignee: assigneeSelect.value,
+          time: timeInput.value
+        };
+
+        isSaving = true;
+        setLoading(true);
+
+        window.setTimeout(function () {
+          setLoading(false);
+          isSaving = false;
+          addTaskToList(values);
+          announce('Added "' + values.name + '" to today’s tasks.');
+          showToast('Task added to today’s list');
+          closeDialog();
+        }, 800);
+      });
+    })();
+  </script>
+</body>
+</html>

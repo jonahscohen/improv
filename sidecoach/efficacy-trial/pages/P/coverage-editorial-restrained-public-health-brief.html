@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Small Study Looked at Evening Screens and Sleep | Public Health Research Explainer</title>
+<meta name="description" content="A careful explainer on a fictional sleep study: what the data showed, what it doesn't prove, and what readers can reasonably take from it.">
+<style>
+  :root {
+    --ink: #1c1b19;
+    --ink-soft: #4a4742;
+    --paper: #faf8f3;
+    --paper-raised: #f2efe6;
+    --rule: #ddd7c8;
+    --accent: #2f5d54;
+    --accent-soft: #e4ede9;
+    --caution-border: #a87a1f;
+    --caution-bg: #f7efdd;
+    --caution-ink: #4d3a10;
+    --focus: #1d4ed8;
+    --max-w: 42rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #ece7dd;
+      --ink-soft: #c7c0b3;
+      --paper: #17160f;
+      --paper-raised: #201f16;
+      --rule: #3a382c;
+      --accent: #8fc9ba;
+      --accent-soft: #1e2b26;
+      --caution-border: #d9ab52;
+      --caution-bg: #2a2211;
+      --caution-ink: #eed9ab;
+      --focus: #93b4ff;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2 {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    color: var(--ink);
+    line-height: 1.2;
+    font-weight: 600;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -999px;
+    top: auto;
+    background: var(--accent);
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    z-index: 10;
+    border-radius: 0.25rem;
+  }
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+  a:hover { text-decoration-thickness: 2px; }
+
+  :focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .masthead {
+    border-bottom: 1px solid var(--rule);
+    padding: 1.25rem 1.5rem;
+  }
+  .masthead__inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  .masthead__kicker {
+    margin: 0;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  main {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  .eyebrow {
+    margin: 0 0 0.6rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  h1.headline {
+    margin: 0 0 0.9rem;
+    font-size: clamp(1.7rem, 1.3rem + 1.6vw, 2.4rem);
+  }
+
+  .dek {
+    margin: 0 0 1rem;
+    font-size: clamp(1.05rem, 1rem + 0.3vw, 1.2rem);
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
+  .byline {
+    margin: 0 0 2rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 1.5rem;
+  }
+
+  nav.toc {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 0.4rem;
+    padding: 1rem 1.25rem;
+    margin: 0 0 2.5rem;
+  }
+  .toc__label {
+    margin: 0 0 0.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  nav.toc ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    columns: 1;
+    font-size: 0.92rem;
+  }
+  nav.toc li { margin-bottom: 0.3rem; }
+
+  article section {
+    margin-bottom: 2.75rem;
+  }
+
+  h2.section-heading {
+    font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+    margin: 0 0 1rem;
+    padding-top: 0.25rem;
+  }
+
+  p { margin: 0 0 1.1rem; }
+  p:last-child { margin-bottom: 0; }
+
+  .glance {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 0.4rem;
+    padding: 1.25rem 1.5rem;
+  }
+  .glance dt {
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin-top: 1rem;
+  }
+  .glance dt:first-child { margin-top: 0; }
+  .glance dd {
+    margin: 0.25rem 0 0;
+  }
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 1.25rem 1.5rem;
+    border-radius: 0 0.3rem 0.3rem 0;
+  }
+  .callout__label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+  }
+
+  .callout--caution {
+    border-left-color: var(--caution-border);
+    background: var(--caution-bg);
+    color: var(--caution-ink);
+  }
+  .callout--caution .callout__label { color: var(--caution-border); }
+  .callout--caution ul, .callout--caution p { color: var(--caution-ink); }
+
+  ul.plain, ol.plain {
+    padding-left: 1.25rem;
+    margin: 0;
+  }
+  ul.plain li, ol.plain li { margin-bottom: 0.6rem; }
+  ul.plain li:last-child, ol.plain li:last-child { margin-bottom: 0; }
+
+  blockquote.quote {
+    margin: 0 0 1.5rem;
+    padding: 0 0 0 1.1rem;
+    border-left: 3px solid var(--rule);
+  }
+  blockquote.quote p {
+    font-style: italic;
+    font-size: 1.02rem;
+  }
+  blockquote.quote cite {
+    display: block;
+    margin-top: 0.5rem;
+    font-style: normal;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+
+  .sources {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .sources li {
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .sources li:last-child { border-bottom: none; }
+  .sources .source-title {
+    font-weight: 600;
+    display: block;
+  }
+  .sources .source-note {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin-top: 0.2rem;
+  }
+
+  footer.colophon {
+    border-top: 1px solid var(--rule);
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+  footer.colophon p { margin: 0 0 0.75rem; }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (min-width: 600px) {
+    main { padding-top: 3.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <p class="masthead__kicker">Public Health Research Explainer</p>
+  </div>
+</header>
+
+<main id="main-content">
+  <article>
+    <header class="article-header">
+      <p class="eyebrow">Sleep &amp; Behavior · Research Explainer</p>
+      <h1 class="headline">A Small Study Looked at Evening Screens and Sleep. Here's What It Actually Shows.</h1>
+      <p class="dek">Researchers found a modest link between putting screens away before bed and better self-reported sleep. The finding is real, but it is smaller, and more limited, than a headline alone might suggest.</p>
+      <p class="byline">Health &amp; Science Desk · Illustrative explainer, published for demonstration purposes · About 6 minutes</p>
+    </header>
+
+    <nav class="toc" aria-label="Article sections">
+      <p class="toc__label">In this article</p>
+      <ul>
+        <li><a href="#glance">At a glance</a></li>
+        <li><a href="#context">Study context</a></li>
+        <li><a href="#findings">Key findings</a></li>
+        <li><a href="#limits">What this study does not prove</a></li>
+        <li><a href="#commentary">Expert commentary</a></li>
+        <li><a href="#takeaways">Practical takeaways</a></li>
+        <li><a href="#sources">Sources &amp; further reading</a></li>
+      </ul>
+    </nav>
+
+    <section id="glance" aria-labelledby="glance-heading">
+      <h2 id="glance-heading" class="section-heading">At a glance</h2>
+      <dl class="glance">
+        <dt>What happened</dt>
+        <dd>A single research group tracked evening screen habits and sleep quality in 214 adult volunteers over six weeks.</dd>
+        <dt>What they found</dt>
+        <dd>People who stopped using screens at least an hour before bed reported modestly higher sleep-quality scores than those who used screens right up until lights-out.</dd>
+        <dt>What it doesn't show</dt>
+        <dd>Whether cutting screen time caused the difference, or whether the pattern would hold for people outside this particular study.</dd>
+      </dl>
+    </section>
+
+    <section id="context" aria-labelledby="context-heading">
+      <h2 id="context-heading" class="section-heading">Study context</h2>
+      <p>The research comes from the Larchmere Health Institute, where a team of behavioral scientists recruited 214 adults from a single metropolitan area for a six-week observational study. Participants kept nightly logs of their screen use and completed a standard sleep-quality questionnaire each morning.</p>
+      <p>It's worth naming a few plain terms up front. The study is <strong>observational</strong>, meaning researchers watched what people already did rather than assigning different behaviors to different groups. And it's currently a <strong>preprint</strong>, meaning a version of the study shared publicly before other independent scientists have formally reviewed it. Both of those facts matter for how much weight the finding can carry, and this article comes back to them below.</p>
+    </section>
+
+    <section id="findings" aria-labelledby="findings-heading">
+      <h2 id="findings-heading" class="section-heading">Key findings</h2>
+      <div class="callout">
+        <span class="callout__label">What the data showed</span>
+        <p>Participants who reported turning off screens at least 60 minutes before bed scored, on average, about 9 points higher on a 0 to 100 sleep-quality scale than participants who used screens up until they tried to sleep. The difference was consistent enough across the six weeks that the researchers don't think it was random chance, though the size of the effect was modest, not the dramatic swing some coverage of sleep research implies.</p>
+        <p>The pattern showed up across the adult age ranges represented in the study, though the sample leaned toward people between 25 and 45, so it says less about people outside that range.</p>
+      </div>
+    </section>
+
+    <section id="limits" aria-labelledby="limits-heading">
+      <h2 id="limits-heading" class="section-heading">What this study does not prove</h2>
+      <div class="callout callout--caution">
+        <span class="callout__label">What we still don't know</span>
+        <ul class="plain">
+          <li><strong>Correlation, not proven cause.</strong> People who already sleep well might simply find it easier to put screens down. The study can't rule this out.</li>
+          <li><strong>A small, narrow sample.</strong> 214 adults from one metro area doesn't tell us much about teenagers, older adults, shift workers, or people in other regions or circumstances.</li>
+          <li><strong>Everything was self-reported.</strong> Both screen use and sleep quality came from participants' own logs, not from objective sensors or lab measurement.</li>
+          <li><strong>No test of how much is enough.</strong> The study compared roughly one hour of screen-free time to less than that. It did not test whether 30 minutes, 90 minutes, or some other cutoff would work better, worse, or the same.</li>
+          <li><strong>Not yet independently reviewed.</strong> As a preprint, the findings haven't been through the scrutiny that peer review provides. That process sometimes changes how a result is understood, or surfaces problems that revise it.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="commentary" aria-labelledby="commentary-heading">
+      <h2 id="commentary-heading" class="section-heading">Expert commentary</h2>
+      <blockquote class="quote">
+        <p>"The effect here is real but modest, and modest is an important word. This isn't evidence that screens are ruining anyone's sleep. It's evidence that a specific, low-cost habit change was associated with a small improvement in one group of people, over six weeks."</p>
+        <cite>Dr. Amara Voss, sleep researcher, not involved in this study</cite>
+      </blockquote>
+      <blockquote class="quote">
+        <p>"In clinic, I tell patients that cutting evening screen time is low-risk and worth trying if sleep is already a struggle. But I'm careful not to oversell it. Sleep problems usually have more than one cause, and a single habit change is rarely the whole answer."</p>
+        <cite>Dr. Elias Thorne, primary care physician</cite>
+      </blockquote>
+      <blockquote class="quote">
+        <p>"We designed this as a first look, not a final answer. The next step we'd want to see is a randomized trial, where screen habits are assigned rather than just observed. That's the design that could actually tell us whether the screens themselves are doing anything."</p>
+        <cite>Dr. Renata Kessler, lead author, Larchmere Health Institute</cite>
+      </blockquote>
+    </section>
+
+    <section id="takeaways" aria-labelledby="takeaways-heading">
+      <h2 id="takeaways-heading" class="section-heading">Practical takeaways</h2>
+      <ol class="plain">
+        <li>If you're already looking to improve your sleep, putting screens away roughly an hour before bed is a low-cost change worth trying, not a guaranteed fix.</li>
+        <li>Give it a couple of weeks and pay attention to a pattern, rather than judging the idea after a single night.</li>
+        <li>Treat "an hour" as a reasonable starting point, not a proven ideal number. This study didn't compare it against other cutoffs.</li>
+        <li>Persistent or serious sleep problems are worth raising with a clinician. This study, and this article, are not a substitute for that conversation.</li>
+      </ol>
+    </section>
+
+    <section id="sources" aria-labelledby="sources-heading">
+      <h2 id="sources-heading" class="section-heading">Sources &amp; further reading</h2>
+      <ul class="sources">
+        <li>
+          <span class="source-title">Preprint summary, Larchmere Health Institute research archive</span>
+          <span class="source-note">Full methods and data tables. Not yet peer-reviewed. Placeholder reference, no live link in this preview.</span>
+        </li>
+        <li>
+          <span class="source-title">Independent methodology review</span>
+          <span class="source-note">A general-audience explainer on how observational sleep studies are designed and where they tend to fall short. Placeholder reference.</span>
+        </li>
+        <li>
+          <span class="source-title">Related prior research, roundup</span>
+          <span class="source-note">A short summary of earlier small studies on evening light and screen exposure, for comparison. Placeholder reference.</span>
+        </li>
+      </ul>
+    </section>
+
+    <footer class="colophon">
+      <p>This is an illustrative explainer produced to demonstrate careful, restrained science communication. The study, institute, and experts described above are fictional and do not represent real research, institutions, or people.</p>
+      <p>Corrections and sourcing questions: this preview page has no live submission form.</p>
+    </footer>
+  </article>
+</main>
+
+</body>
+</html>

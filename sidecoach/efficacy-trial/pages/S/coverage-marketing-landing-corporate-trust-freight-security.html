@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CargoProof: Freight Security Compliance Platform</title>
+<meta name="description" content="CargoProof captures chain-of-custody, carrier credentials, and incident records automatically, so freight security audits are answered with evidence instead of paperwork.">
+<style>
+  /* ============ Design Tokens ============ */
+  :root {
+    color-scheme: light;
+    --hue-brand: 232;
+
+    --color-bg: oklch(0.985 0.006 var(--hue-brand));
+    --color-surface: oklch(0.965 0.008 var(--hue-brand));
+    --color-surface-raised: oklch(0.997 0.004 var(--hue-brand));
+    --color-surface-sunken: oklch(0.93 0.01 var(--hue-brand));
+    --color-border: oklch(0.85 0.014 var(--hue-brand));
+    --color-border-strong: oklch(0.72 0.02 var(--hue-brand));
+    --color-text: oklch(0.24 0.02 var(--hue-brand));
+    --color-text-muted: oklch(0.44 0.018 var(--hue-brand));
+    --color-text-on-brand: oklch(0.99 0.004 var(--hue-brand));
+    --color-text-on-brand-muted: oklch(0.82 0.02 var(--hue-brand));
+
+    --color-brand: oklch(0.42 0.13 var(--hue-brand));
+    --color-brand-strong: oklch(0.28 0.09 var(--hue-brand));
+    --color-brand-weak: oklch(0.93 0.03 var(--hue-brand));
+    --color-accent: oklch(0.68 0.15 50);
+
+    --color-success: oklch(0.5 0.12 150);
+    --color-success-weak: oklch(0.94 0.05 150);
+    --color-error: oklch(0.5 0.19 25);
+    --color-error-weak: oklch(0.95 0.045 25);
+    --color-warning: oklch(0.72 0.13 85);
+    --color-warning-weak: oklch(0.95 0.05 88);
+
+    --font-heading: 'Cambria', 'Iowan Old Style', Baskerville, serif;
+    --font-body: 'Optima', 'Avenir Next', Avenir, 'Gill Sans', sans-serif;
+
+    --text-body: 1rem;
+    --text-lede: 1.25rem;
+    --text-h4: clamp(1.5625rem, 1.47rem + 0.4vw, 1.75rem);
+    --text-h3: clamp(1.953rem, 1.75rem + 0.9vw, 2.25rem);
+    --text-h2: clamp(2.441rem, 2.05rem + 1.7vw, 3rem);
+    --text-h1: clamp(3.052rem, 2.3rem + 3.3vw, 4.5rem);
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-24: 6rem;
+
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --duration-feedback: 100ms;
+    --duration-state: 200ms;
+    --duration-entrance: 500ms;
+    --duration-exit: 200ms;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.08);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.10);
+    --shadow-lg: 0 24px 56px rgba(0,0,0,0.16);
+
+    --container-max: 1240px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --color-bg: oklch(0.2 0.014 var(--hue-brand));
+      --color-surface: oklch(0.25 0.016 var(--hue-brand));
+      --color-surface-raised: oklch(0.29 0.018 var(--hue-brand));
+      --color-surface-sunken: oklch(0.16 0.012 var(--hue-brand));
+      --color-border: oklch(0.37 0.02 var(--hue-brand));
+      --color-border-strong: oklch(0.47 0.024 var(--hue-brand));
+      --color-text: oklch(0.94 0.01 var(--hue-brand));
+      --color-text-muted: oklch(0.73 0.016 var(--hue-brand));
+      --color-brand: oklch(0.74 0.1 var(--hue-brand));
+      --color-brand-strong: oklch(0.16 0.05 var(--hue-brand));
+      --color-brand-weak: oklch(0.3 0.05 var(--hue-brand));
+      --color-text-on-brand: oklch(0.97 0.006 var(--hue-brand));
+      --color-accent: oklch(0.76 0.13 50);
+      --color-success-weak: oklch(0.3 0.06 150);
+      --color-error-weak: oklch(0.33 0.08 25);
+      --color-warning-weak: oklch(0.33 0.07 88);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.45);
+      --shadow-lg: 0 24px 56px rgba(0,0,0,0.55);
+    }
+  }
+
+  /* ============ Reset ============ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  img, svg { max-width: 100%; display: block; }
+  ul, ol { margin: 0; padding: 0; list-style: none; }
+  p { margin: 0; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 0;
+    text-wrap: balance;
+  }
+  main { display: block; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skip-link {
+    position: fixed;
+    top: var(--space-2);
+    left: var(--space-2);
+    transform: translateY(-150%);
+    background: var(--color-brand-strong);
+    color: var(--color-text-on-brand);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    z-index: 200;
+    transition: transform var(--duration-state) var(--ease-out);
+  }
+  .skip-link:focus {
+    transform: translateY(0);
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+  }
+  @media (min-width: 768px) {
+    .container { padding-inline: var(--space-8); }
+  }
+
+  section { padding-block: var(--space-16); }
+  @media (min-width: 1024px) { section { padding-block: var(--space-24); } }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-body);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+    margin-bottom: var(--space-4);
+  }
+  .eyebrow::before {
+    content: "";
+    width: 1.5rem;
+    height: 2px;
+    background: var(--color-accent);
+    flex-shrink: 0;
+  }
+
+  .section-head {
+    max-width: 46rem;
+    margin-bottom: var(--space-12);
+  }
+  .section-head h2 { font-size: var(--text-h2); margin-bottom: var(--space-4); }
+  .section-head p { font-size: var(--text-lede); color: var(--color-text-muted); max-width: 60ch; }
+
+  .lede { font-size: var(--text-lede); color: var(--color-text-muted); max-width: 60ch; }
+  .measure { max-width: 68ch; }
+
+  /* ============ Buttons ============ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 3rem;
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--duration-state) var(--ease-out),
+                border-color var(--duration-state) var(--ease-out),
+                color var(--duration-state) var(--ease-out),
+                box-shadow var(--duration-state) var(--ease-out),
+                transform var(--duration-feedback) var(--ease-out);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn[disabled], .btn[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-primary {
+    background: var(--color-brand);
+    color: var(--color-text-on-brand);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary:hover:not([disabled]) { background: var(--color-brand-strong); box-shadow: var(--shadow-md); }
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+  }
+  .btn-secondary:hover:not([disabled]) { background: var(--color-surface); border-color: var(--color-brand); }
+  .btn-on-dark {
+    background: var(--color-text-on-brand);
+    color: var(--color-brand-strong);
+  }
+  .btn-on-dark:hover:not([disabled]) { background: var(--color-warning-weak); }
+  .btn-block { width: 100%; }
+
+  /* ============ Header ============ */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: color-mix(in oklch, var(--color-bg) 92%, transparent);
+    backdrop-filter: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-block: var(--space-4);
+  }
+  .logo {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.375rem;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    padding: var(--space-2);
+    margin-inline: calc(var(--space-2) * -1);
+    border-radius: var(--radius-sm);
+  }
+  .logo-mark { color: var(--color-brand); }
+
+  .primary-nav { display: none; }
+  .primary-nav ul { display: flex; align-items: center; gap: var(--space-8); }
+  .primary-nav a {
+    text-decoration: none;
+    font-weight: 600;
+    padding: var(--space-2) var(--space-1);
+    border-bottom: 2px solid transparent;
+    transition: border-color var(--duration-state) var(--ease-out), color var(--duration-state) var(--ease-out);
+  }
+  .primary-nav a:hover { border-color: var(--color-accent); color: var(--color-brand-strong); }
+
+  .header-actions { display: flex; align-items: center; gap: var(--space-4); }
+  .header-actions .btn-primary { display: none; }
+
+  .nav-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .nav-toggle .bar {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: var(--color-text);
+    transition: transform var(--duration-state) var(--ease-in-out),
+                opacity var(--duration-state) var(--ease-in-out);
+  }
+  .nav-toggle[aria-expanded="true"] .bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .nav-toggle[aria-expanded="true"] .bar:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded="true"] .bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .mobile-nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 24, 34, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-state) var(--ease-out);
+    z-index: 150;
+  }
+  .mobile-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(85vw, 22rem);
+    background: var(--color-surface-raised);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    transition: transform var(--duration-state) var(--ease-drawer);
+    z-index: 160;
+    padding: var(--space-8) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+  .mobile-nav.is-open { transform: translateX(0); }
+  .mobile-nav-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .mobile-nav ul { display: flex; flex-direction: column; gap: var(--space-2); }
+  .mobile-nav a {
+    display: block;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: var(--text-lede);
+    padding: var(--space-3) var(--space-2);
+    border-radius: var(--radius-sm);
+    min-height: 44px;
+  }
+  .mobile-nav a:hover { background: var(--color-surface); }
+  .mobile-nav-close { align-self: flex-end; }
+
+  @media (min-width: 1024px) {
+    .primary-nav { display: block; }
+    .header-actions .btn-primary { display: inline-flex; }
+    .nav-toggle, .mobile-nav, .mobile-nav-backdrop { display: none; }
+  }
+
+  /* ============ Hero ============ */
+  .hero { padding-block: var(--space-16); }
+  @media (min-width: 1024px) { .hero { padding-block: var(--space-24); } }
+  .hero .container {
+    display: grid;
+    gap: var(--space-12);
+    align-items: center;
+  }
+  @media (min-width: 1024px) {
+    .hero .container { grid-template-columns: 1.1fr 0.9fr; gap: var(--space-16); }
+  }
+  .hero h1 { font-size: var(--text-h1); margin-bottom: var(--space-6); }
+  .hero .lede { margin-bottom: var(--space-8); }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+
+  .hero-panel {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-6);
+    container-type: inline-size;
+    container-name: panel;
+  }
+  .hero-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .hero-panel-head h2 { font-size: var(--text-body); font-family: var(--font-body); font-weight: 700; }
+  .hero-panel-head span { font-size: 0.9375rem; color: var(--color-text-muted); }
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+  .status-row + .status-row { border-top: 1px solid var(--color-border); }
+  .status-row-label { display: flex; align-items: center; gap: var(--space-3); font-weight: 600; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.ok { background: var(--color-success); }
+  .status-dot.warn { background: var(--color-warning); }
+  .status-value { font-size: 0.9375rem; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  @container panel (max-width: 360px) {
+    .status-row-label { font-size: 0.9375rem; }
+    .hero-panel { padding: var(--space-4); }
+  }
+
+  /* ============ Problem ============ */
+  .problem-grid {
+    display: grid;
+    gap: var(--space-8);
+  }
+  @media (min-width: 768px) {
+    .problem-grid { grid-template-columns: 1fr 1fr; gap: var(--space-16); align-items: start; }
+  }
+  .problem-list { display: flex; flex-direction: column; gap: var(--space-6); }
+  .problem-item { display: flex; gap: var(--space-4); }
+  .problem-item-index {
+    font-family: var(--font-heading);
+    font-size: var(--text-h4);
+    color: var(--color-border-strong);
+    line-height: 1;
+    flex-shrink: 0;
+    width: 2.5ch;
+  }
+  .problem-item p { color: var(--color-text-muted); }
+  .problem-item strong { color: var(--color-text); display: block; margin-bottom: var(--space-1); }
+
+  /* ============ Grids / Cards ============ */
+  .grid-container { container-type: inline-size; }
+  .card-grid {
+    display: grid;
+    gap: var(--space-6);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) { .card-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1024px) { .card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); } }
+
+  .card {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    transition: border-color var(--duration-state) var(--ease-out), box-shadow var(--duration-state) var(--ease-out), transform var(--duration-state) var(--ease-out);
+  }
+  .card:hover { border-color: var(--color-brand); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .card-index {
+    font-family: var(--font-heading);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--color-brand);
+    letter-spacing: 0.04em;
+  }
+  .card h3 { font-size: var(--text-h4); }
+  .card p { color: var(--color-text-muted); }
+
+  @container (max-width: 320px) {
+    .card { padding: var(--space-4); }
+    .card h3 { font-size: 1.25rem; }
+  }
+
+  /* reveal-on-scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity var(--duration-entrance) var(--ease-out),
+                transform var(--duration-entrance) var(--ease-out);
+    transition-delay: calc(var(--reveal-i, 0) * 60ms);
+  }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ============ Tabs (Benefits) ============ */
+  .tablist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--space-8);
+  }
+  .tab {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: var(--space-3) var(--space-4);
+    min-height: 44px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color var(--duration-state) var(--ease-out), border-color var(--duration-state) var(--ease-out);
+  }
+  .tab:hover { color: var(--color-text); }
+  .tab[aria-selected="true"] { color: var(--color-brand-strong); border-color: var(--color-accent); }
+  .tabpanel { display: none; }
+  .tabpanel[data-active="true"] { display: block; animation: fade-in var(--duration-state) var(--ease-out); }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .benefit-panel { display: grid; gap: var(--space-8); }
+  @media (min-width: 768px) { .benefit-panel { grid-template-columns: 1fr 1fr; gap: var(--space-16); align-items: start; } }
+  .benefit-list { display: flex; flex-direction: column; gap: var(--space-4); }
+  .benefit-list li { display: flex; gap: var(--space-3); padding-block: var(--space-2); }
+  .benefit-list li::before {
+    content: "";
+    width: 8px; height: 8px;
+    margin-top: 0.55em;
+    background: var(--color-accent);
+    flex-shrink: 0;
+  }
+
+  /* ============ Integrations ============ */
+  .integration-grid {
+    display: grid;
+    gap: var(--space-4);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) { .integration-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1024px) { .integration-grid { grid-template-columns: repeat(3, 1fr); } }
+  .integration-item {
+    padding: var(--space-6);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+  .integration-item h3 { font-size: 1.125rem; margin-bottom: var(--space-2); }
+  .integration-item p { color: var(--color-text-muted); font-size: 0.9375rem; }
+
+  /* ============ Security ============ */
+  .security-section { background: var(--color-surface); }
+  .security-grid {
+    display: grid;
+    gap: var(--space-6);
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) { .security-grid { grid-template-columns: 1fr 1fr; } }
+  .security-item { display: flex; gap: var(--space-4); }
+  .security-item-mark {
+    flex-shrink: 0;
+    width: 2.75rem; height: 2.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-brand-weak);
+    color: var(--color-brand-strong);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-heading);
+    font-weight: 700;
+  }
+  .security-item h3 { font-size: 1.125rem; margin-bottom: var(--space-1); }
+  .security-item p { color: var(--color-text-muted); }
+
+  /* ============ Proof ============ */
+  .proof-card {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  .proof-card blockquote { margin: 0; font-size: var(--text-lede); font-family: var(--font-heading); font-weight: 500; }
+  .proof-metric {
+    font-family: var(--font-heading);
+    font-size: var(--text-h3);
+    color: var(--color-brand);
+    font-variant-numeric: tabular-nums;
+  }
+  .proof-metric-label { font-size: 0.875rem; color: var(--color-text-muted); }
+  .proof-card footer { border-top: 1px solid var(--color-border); padding-top: var(--space-4); }
+  .proof-card footer .name { font-weight: 700; display: block; }
+  .proof-card footer .role { color: var(--color-text-muted); font-size: 0.9375rem; }
+
+  /* ============ Demo / CTA band ============ */
+  .demo-section {
+    background: var(--color-brand-strong);
+    color: var(--color-text-on-brand);
+    -webkit-font-smoothing: antialiased;
+  }
+  .demo-section .eyebrow { color: var(--color-accent); }
+  .demo-section .eyebrow::before { background: var(--color-accent); }
+  .demo-section h2 {
+    color: var(--color-text-on-brand);
+    line-height: 1.22;
+    letter-spacing: 0.01em;
+  }
+  .demo-section .lede {
+    color: var(--color-text-on-brand-muted);
+    line-height: 1.68;
+  }
+  .demo-layout {
+    display: grid;
+    gap: var(--space-12);
+  }
+  @media (min-width: 1024px) {
+    .demo-layout { grid-template-columns: 0.9fr 1.1fr; gap: var(--space-16); align-items: start; }
+  }
+  .demo-copy .lede { max-width: 44ch; margin-bottom: var(--space-8); }
+  .demo-copy ul { display: flex; flex-direction: column; gap: var(--space-3); }
+  .demo-copy li { display: flex; gap: var(--space-3); color: var(--color-text-on-brand-muted); }
+  .demo-copy li::before { content: ""; width: 7px; height: 7px; margin-top: 0.6em; background: var(--color-accent); flex-shrink: 0; }
+
+  .demo-card {
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-8);
+  }
+  .demo-card h3 { font-size: var(--text-h4); margin-bottom: var(--space-6); }
+
+  .field { margin-bottom: var(--space-6); }
+  .field label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: var(--space-2);
+    font-size: 0.9375rem;
+  }
+  .field .optional-tag { font-weight: 400; color: var(--color-text-muted); }
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 3rem;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    transition: border-color var(--duration-state) var(--ease-out), box-shadow var(--duration-state) var(--ease-out);
+  }
+  .field textarea { min-height: 6rem; resize: vertical; }
+  .field input:hover, .field select:hover, .field textarea:hover { border-color: var(--color-brand); }
+  .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 1px;
+    border-color: var(--color-brand);
+  }
+  .field input[aria-invalid="true"], .field select[aria-invalid="true"], .field textarea[aria-invalid="true"] {
+    border-color: var(--color-error);
+  }
+  .field-error {
+    display: none;
+    color: var(--color-error);
+    font-size: 0.875rem;
+    margin-top: var(--space-2);
+    gap: var(--space-1);
+  }
+  .field-error.is-visible { display: flex; }
+  .field-row { display: grid; gap: var(--space-4); }
+  @media (min-width: 480px) { .field-row.two-up { grid-template-columns: 1fr 1fr; } }
+
+  .form-success {
+    display: none;
+    background: var(--color-success-weak);
+    border: 1px solid var(--color-success);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    gap: var(--space-2);
+  }
+  .form-success.is-visible { display: flex; flex-direction: column; }
+  .form-success h4 { font-size: 1.125rem; color: var(--color-text); }
+  .form-success p { color: var(--color-text-muted); }
+  .demo-card form.is-submitted { display: none; }
+
+  .btn[data-state="loading"] .btn-label-default { display: none; }
+  .btn[data-state="loading"] .btn-label-loading { display: inline-flex; align-items: center; gap: var(--space-2); }
+  .btn-label-loading { display: none; }
+  .spinner {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: currentColor;
+    animation: spin 700ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; }
+  }
+
+  /* ============ Footer ============ */
+  .site-footer {
+    background: var(--color-surface-sunken);
+    border-top: 1px solid var(--color-border);
+    padding-block: var(--space-12);
+  }
+  .footer-grid {
+    display: grid;
+    gap: var(--space-8);
+  }
+  @media (min-width: 768px) {
+    .footer-grid { grid-template-columns: 1.4fr 1fr 1fr; gap: var(--space-16); }
+  }
+  .footer-brand .logo { display: inline-block; margin-bottom: var(--space-3); }
+  .footer-brand p { color: var(--color-text-muted); max-width: 36ch; }
+  .footer-col-title {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-4);
+  }
+  .footer-col ul { display: flex; flex-direction: column; gap: var(--space-3); }
+  .footer-col a { text-decoration: none; }
+  .footer-col a:hover { color: var(--color-brand); }
+  .footer-bottom {
+    margin-top: var(--space-12);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-4);
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+  }
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container nav-inner">
+      <a class="logo" href="#top">Cargo<span class="logo-mark">Proof</span></a>
+
+      <nav class="primary-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#capabilities">Capabilities</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#customers">Customers</a></li>
+          <li><a href="#integrations">Integrations</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="btn btn-primary" href="#demo">Request a demo</a>
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="mobile-nav" aria-label="Open menu">
+          <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+  <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile" aria-hidden="true">
+    <button type="button" class="btn btn-secondary mobile-nav-close" id="mobile-nav-close">Close menu</button>
+    <ul>
+      <li><a href="#capabilities">Capabilities</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#customers">Customers</a></li>
+      <li><a href="#integrations">Integrations</a></li>
+    </ul>
+    <a class="btn btn-primary btn-block" href="#demo">Request a demo</a>
+  </nav>
+
+  <main id="main-content" tabindex="-1">
+
+    <section class="hero" id="top">
+      <div class="container">
+        <div>
+          <p class="eyebrow">Freight security compliance</p>
+          <h1>Prove your freight is secure before the auditor asks.</h1>
+          <p class="lede">CargoProof captures chain-of-custody, carrier credentials, and incident records automatically, so the compliance file is already built when the audit request lands.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#demo">Request a demo</a>
+            <a class="btn btn-secondary" href="#capabilities">See what CargoProof tracks</a>
+          </div>
+        </div>
+
+        <div class="hero-panel" aria-label="Sample audit readiness panel">
+          <div class="hero-panel-head">
+            <h2>Audit readiness</h2>
+            <span>Fleet-wide</span>
+          </div>
+          <div class="status-row">
+            <span class="status-row-label"><span class="status-dot ok" aria-hidden="true"></span>Chain-of-custody</span>
+            <span class="status-value">Complete</span>
+          </div>
+          <div class="status-row">
+            <span class="status-row-label"><span class="status-dot ok" aria-hidden="true"></span>Carrier insurance</span>
+            <span class="status-value">Verified</span>
+          </div>
+          <div class="status-row">
+            <span class="status-row-label"><span class="status-dot warn" aria-hidden="true"></span>Driver credentials</span>
+            <span class="status-value">2 expiring</span>
+          </div>
+          <div class="status-row">
+            <span class="status-row-label"><span class="status-dot ok" aria-hidden="true"></span>Incident log</span>
+            <span class="status-value">Up to date</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="problem-heading">
+      <div class="container problem-grid">
+        <div>
+          <p class="eyebrow">The problem</p>
+          <h2 id="problem-heading">Audit risk hides in paperwork, not in your operation.</h2>
+          <p class="lede" style="margin-top: var(--space-4);">Most carriers run a secure operation and still fail an audit. The gap is rarely the work itself. It is where the proof of that work lives, and whether anyone can produce it on request.</p>
+        </div>
+        <div class="problem-list">
+          <div class="problem-item reveal" style="--reveal-i: 0;">
+            <span class="problem-item-index" aria-hidden="true">01</span>
+            <div>
+              <strong>Chain-of-custody is split across three systems.</strong>
+              <p>Pickup and delivery confirmations live in drivers' phones, dispatch email threads, and paper logs at the dock, so no single record tells the full story.</p>
+            </div>
+          </div>
+          <div class="problem-item reveal" style="--reveal-i: 1;">
+            <span class="problem-item-index" aria-hidden="true">02</span>
+            <div>
+              <strong>Carrier insurance is checked once, then trusted for years.</strong>
+              <p>Coverage lapses between onboarding reviews go unnoticed until a claim or an audit surfaces them.</p>
+            </div>
+          </div>
+          <div class="problem-item reveal" style="--reveal-i: 2;">
+            <span class="problem-item-index" aria-hidden="true">03</span>
+            <div>
+              <strong>Incidents get written up after memory has faded.</strong>
+              <p>A theft or damage event reported two weeks late reads as inconsistent, even when the underlying facts are accurate.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="capabilities" aria-labelledby="capabilities-heading">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Core capabilities</p>
+          <h2 id="capabilities-heading">What CargoProof tracks, from pickup to delivery.</h2>
+          <p>Six systems that would otherwise live in six different places, tied to the same load record.</p>
+        </div>
+        <div class="grid-container">
+          <div class="card-grid cols-3">
+            <article class="card reveal" style="--reveal-i: 0;">
+              <span class="card-index">01</span>
+              <h3>Chain-of-custody capture</h3>
+              <p>Pickup, transfer, and delivery events are logged automatically from driver check-ins and dock scans, timestamped as they happen.</p>
+            </article>
+            <article class="card reveal" style="--reveal-i: 1;">
+              <span class="card-index">02</span>
+              <h3>Carrier vetting</h3>
+              <p>Insurance status, operating authority, and safety history are monitored continuously for every carrier in your network, not just at onboarding.</p>
+            </article>
+            <article class="card reveal" style="--reveal-i: 2;">
+              <span class="card-index">03</span>
+              <h3>Audit-ready reporting</h3>
+              <p>Export the exact document set an auditor requests, indexed by load, lane, or date range, in one action.</p>
+            </article>
+            <article class="card reveal" style="--reveal-i: 3;">
+              <span class="card-index">04</span>
+              <h3>Incident and exception tracking</h3>
+              <p>Theft, delay, and damage events are captured with time-stamped detail at the moment they occur, not reconstructed afterward.</p>
+            </article>
+            <article class="card reveal" style="--reveal-i: 4;">
+              <span class="card-index">05</span>
+              <h3>Regulatory change monitoring</h3>
+              <p>Policy and requirement updates are routed directly to the team members responsible for acting on them.</p>
+            </article>
+            <article class="card reveal" style="--reveal-i: 5;">
+              <span class="card-index">06</span>
+              <h3>Credential tracking</h3>
+              <p>Driver certifications, vehicle inspections, and facility access credentials are tracked to their expiration date, with advance alerts.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="benefits-heading" style="background: var(--color-surface);">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Who it helps</p>
+          <h2 id="benefits-heading">Built for the people the audit lands on.</h2>
+        </div>
+
+        <div class="tablist" role="tablist" aria-label="Benefits by role">
+          <button class="tab" role="tab" id="tab-compliance" aria-controls="panel-compliance" aria-selected="true" tabindex="0">Compliance lead</button>
+          <button class="tab" role="tab" id="tab-ops" aria-controls="panel-ops" aria-selected="false" tabindex="-1">Operations manager</button>
+          <button class="tab" role="tab" id="tab-exec" aria-controls="panel-exec" aria-selected="false" tabindex="-1">Executive</button>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-compliance" aria-labelledby="tab-compliance" data-active="true">
+          <div class="benefit-panel">
+            <div>
+              <h3>Walk into an audit with the file already built.</h3>
+              <p class="lede">Stop assembling documentation the week an audit letter arrives.</p>
+            </div>
+            <ul class="benefit-list">
+              <li>Pull a complete, dated record set for any load or lane in minutes instead of days.</li>
+              <li>Catch missing carrier documentation before it becomes an audit finding.</li>
+              <li>Show a consistent chain-of-custody trail without reconciling three separate systems.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-ops" aria-labelledby="tab-ops" data-active="false" hidden>
+          <div class="benefit-panel">
+            <div>
+              <h3>See exceptions before they become claims.</h3>
+              <p class="lede">Get visibility into in-transit issues while there is still time to act.</p>
+            </div>
+            <ul class="benefit-list">
+              <li>Get alerted to a carrier insurance lapse before the next load is booked with them.</li>
+              <li>Track incident resolution status across dispatch, without a separate spreadsheet.</li>
+              <li>Compare carrier performance and credential standing when assigning loads.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-exec" aria-labelledby="tab-exec" data-active="false" hidden>
+          <div class="benefit-panel">
+            <div>
+              <h3>Quantify audit risk the way you quantify freight cost.</h3>
+              <p class="lede">Bring a real number to the board conversation about exposure.</p>
+            </div>
+            <ul class="benefit-list">
+              <li>Review fleet-wide compliance standing in a single report, not a status meeting.</li>
+              <li>Understand where exposure is concentrated, by carrier, lane, or facility.</li>
+              <li>Justify the cost of compliance operations against a measurable reduction in audit findings.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="integrations" aria-labelledby="integrations-heading">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Integrations</p>
+          <h2 id="integrations-heading">Fits into the systems you already run.</h2>
+          <p>CargoProof reads from and writes to the tools your dispatch and compliance teams use today.</p>
+        </div>
+        <div class="integration-grid">
+          <div class="integration-item reveal" style="--reveal-i: 0;">
+            <h3>Transportation management systems</h3>
+            <p>Load and lane data sync both directions, so records stay attached to the shipment they describe.</p>
+          </div>
+          <div class="integration-item reveal" style="--reveal-i: 1;">
+            <h3>ELD and telematics providers</h3>
+            <p>Location and hours-of-service data feed directly into the chain-of-custody timeline.</p>
+          </div>
+          <div class="integration-item reveal" style="--reveal-i: 2;">
+            <h3>Carrier onboarding networks</h3>
+            <p>New carrier records import with their existing documentation, ready for continuous monitoring.</p>
+          </div>
+          <div class="integration-item reveal" style="--reveal-i: 3;">
+            <h3>Insurance and claims platforms</h3>
+            <p>Coverage status updates flow in automatically, and incident records export in claims-ready form.</p>
+          </div>
+          <div class="integration-item reveal" style="--reveal-i: 4;">
+            <h3>Customs and broker systems</h3>
+            <p>Cross-border documentation attaches to the same load record as domestic chain-of-custody data.</p>
+          </div>
+          <div class="integration-item reveal" style="--reveal-i: 5;">
+            <h3>Data warehouse and BI export</h3>
+            <p>Scheduled exports and a documented API keep your own reporting layer current.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="security" class="security-section" aria-labelledby="security-heading">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Security and data handling</p>
+          <h2 id="security-heading">Compliance data is sensitive. It is treated that way.</h2>
+          <p>The same records that protect you in an audit deserve their own protection.</p>
+        </div>
+        <div class="security-grid">
+          <div class="security-item reveal" style="--reveal-i: 0;">
+            <span class="security-item-mark" aria-hidden="true">1</span>
+            <div>
+              <h3>Encrypted in transit and at rest</h3>
+              <p>Every record, document, and message is encrypted end to end, both moving between systems and while stored.</p>
+            </div>
+          </div>
+          <div class="security-item reveal" style="--reveal-i: 1;">
+            <span class="security-item-mark" aria-hidden="true">2</span>
+            <div>
+              <h3>Role-based access control</h3>
+              <p>Access is scoped by role and least-privilege by default, so users see only the loads and carriers relevant to their work.</p>
+            </div>
+          </div>
+          <div class="security-item reveal" style="--reveal-i: 2;">
+            <span class="security-item-mark" aria-hidden="true">3</span>
+            <div>
+              <h3>Immutable audit trail</h3>
+              <p>Every change to a compliance record is logged with who made it and when, and the log itself cannot be edited.</p>
+            </div>
+          </div>
+          <div class="security-item reveal" style="--reveal-i: 3;">
+            <span class="security-item-mark" aria-hidden="true">4</span>
+            <div>
+              <h3>Configurable data residency</h3>
+              <p>Storage location is set per contract to match your regulatory and customer requirements.</p>
+            </div>
+          </div>
+          <div class="security-item reveal" style="--reveal-i: 4;">
+            <span class="security-item-mark" aria-hidden="true">5</span>
+            <div>
+              <h3>Defined retention and deletion</h3>
+              <p>Retention periods are set explicitly per record type, with deletion schedules you control.</p>
+            </div>
+          </div>
+          <div class="security-item reveal" style="--reveal-i: 5;">
+            <span class="security-item-mark" aria-hidden="true">6</span>
+            <div>
+              <h3>Access reviewed on a fixed cadence</h3>
+              <p>Account access is reviewed on a schedule set in your contract, not left open indefinitely after a role change.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="customers" aria-labelledby="customers-heading">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Customer proof points</p>
+          <h2 id="customers-heading">Freight teams already running on CargoProof.</h2>
+          <p>Illustrative results from operators who moved chain-of-custody and carrier vetting into a single system.</p>
+        </div>
+        <div class="card-grid cols-3">
+          <div class="proof-card reveal" style="--reveal-i: 0;">
+            <blockquote>&ldquo;Our last three audits closed without a single documentation finding.&rdquo;</blockquote>
+            <div>
+              <span class="proof-metric">61%</span>
+              <p class="proof-metric-label">reduction in audit preparation hours</p>
+            </div>
+            <footer>
+              <span class="name">Meridian Freight Lines</span>
+              <span class="role">VP of Compliance</span>
+            </footer>
+          </div>
+          <div class="proof-card reveal" style="--reveal-i: 1;">
+            <blockquote>&ldquo;We catch a carrier insurance lapse before that carrier is ever booked on a load.&rdquo;</blockquote>
+            <div>
+              <span class="proof-metric">3.2x</span>
+              <p class="proof-metric-label">faster carrier vetting turnaround</p>
+            </div>
+            <footer>
+              <span class="name">Northgate Intermodal</span>
+              <span class="role">Director of Safety</span>
+            </footer>
+          </div>
+          <div class="proof-card reveal" style="--reveal-i: 2;">
+            <blockquote>&ldquo;Exceptions used to surface as claims. Now we see them the day they happen.&rdquo;</blockquote>
+            <div>
+              <span class="proof-metric">40%</span>
+              <p class="proof-metric-label">fewer unresolved cargo claims</p>
+            </div>
+            <footer>
+              <span class="name">Vantage Logistics Group</span>
+              <span class="role">Chief Operating Officer</span>
+            </footer>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="demo" class="demo-section" aria-labelledby="demo-heading">
+      <div class="container demo-layout">
+        <div class="demo-copy">
+          <p class="eyebrow">Request a demo</p>
+          <h2 id="demo-heading" style="font-size: var(--text-h2); margin-bottom: var(--space-4);">See CargoProof against your own lanes and carriers.</h2>
+          <p class="lede">A compliance specialist will walk through chain-of-custody capture, carrier vetting, and audit-ready reporting using an example built around your fleet size.</p>
+          <ul>
+            <li>30-minute session, scheduled around your team.</li>
+            <li>No commitment required to see the platform.</li>
+            <li>Response within one business day.</li>
+          </ul>
+        </div>
+
+        <div class="demo-card">
+          <h3>Tell us where to send it</h3>
+          <form id="demo-form" novalidate>
+            <div class="field">
+              <label for="field-name">Full name</label>
+              <input type="text" id="field-name" name="name" autocomplete="name" spellcheck="false" required aria-describedby="error-name">
+              <p class="field-error" id="error-name" role="alert">Enter your full name.</p>
+            </div>
+
+            <div class="field">
+              <label for="field-email">Work email</label>
+              <input type="email" id="field-email" name="email" autocomplete="email" spellcheck="false" placeholder="you@company.com" required aria-describedby="error-email">
+              <p class="field-error" id="error-email" role="alert">Enter a valid work email address.</p>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="field-company">Company name</label>
+                <input type="text" id="field-company" name="company" autocomplete="organization" spellcheck="false" required aria-describedby="error-company">
+                <p class="field-error" id="error-company" role="alert">Enter your company name.</p>
+              </div>
+
+              <div class="field">
+                <label for="field-fleet">Fleet size</label>
+                <select id="field-fleet" name="fleet-size" required aria-describedby="error-fleet">
+                  <option value="" disabled selected>Select fleet size</option>
+                  <option value="1-50">1 to 50 vehicles</option>
+                  <option value="51-200">51 to 200 vehicles</option>
+                  <option value="201-500">201 to 500 vehicles</option>
+                  <option value="500+">500+ vehicles</option>
+                </select>
+                <p class="field-error" id="error-fleet" role="alert">Select a fleet size.</p>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="field-notes">What should we know before the call? <span class="optional-tag">(optional)</span></label>
+              <textarea id="field-notes" name="notes" rows="3"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="demo-submit">
+              <span class="btn-label-default">Request a demo</span>
+              <span class="btn-label-loading"><span class="spinner" aria-hidden="true"></span>Submitting request&hellip;</span>
+            </button>
+          </form>
+
+          <div class="form-success" id="form-success" role="status" aria-live="polite" tabindex="-1">
+            <h4>Request received.</h4>
+            <p>A CargoProof compliance specialist will reach out within one business day to schedule your session.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="logo" href="#top">Cargo<span class="logo-mark">Proof</span></a>
+          <p>Chain-of-custody, carrier vetting, and audit-ready reporting for freight security compliance teams.</p>
+        </div>
+        <nav class="footer-col" aria-label="Platform">
+          <p class="footer-col-title">Platform</p>
+          <ul>
+            <li><a href="#capabilities">Capabilities</a></li>
+            <li><a href="#integrations">Integrations</a></li>
+            <li><a href="#security">Security</a></li>
+          </ul>
+        </nav>
+        <nav class="footer-col" aria-label="Company">
+          <p class="footer-col-title">Company</p>
+          <ul>
+            <li><a href="#customers">Customers</a></li>
+            <li><a href="#demo">Request a demo</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 CargoProof. All rights reserved.</span>
+        <span>Built for freight security and compliance teams.</span>
+      </div>
+    </div>
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Mobile navigation ---------- */
+  var navToggle = document.getElementById("nav-toggle");
+  var mobileNav = document.getElementById("mobile-nav");
+  var mobileNavBackdrop = document.getElementById("mobile-nav-backdrop");
+  var mobileNavClose = document.getElementById("mobile-nav-close");
+  var mainContent = document.getElementById("main-content");
+  var siteHeader = document.querySelector(".site-header");
+
+  function openMobileNav() {
+    mobileNav.classList.add("is-open");
+    mobileNavBackdrop.classList.add("is-open");
+    mobileNav.setAttribute("aria-hidden", "false");
+    navToggle.setAttribute("aria-expanded", "true");
+    navToggle.setAttribute("aria-label", "Close menu");
+    mainContent.setAttribute("inert", "");
+    siteHeader.setAttribute("inert", "");
+    mobileNavClose.focus();
+    document.addEventListener("keydown", onKeydown);
+  }
+
+  function closeMobileNav() {
+    mobileNav.classList.remove("is-open");
+    mobileNavBackdrop.classList.remove("is-open");
+    mobileNav.setAttribute("aria-hidden", "true");
+    navToggle.setAttribute("aria-expanded", "false");
+    navToggle.setAttribute("aria-label", "Open menu");
+    mainContent.removeAttribute("inert");
+    siteHeader.removeAttribute("inert");
+    navToggle.focus();
+    document.removeEventListener("keydown", onKeydown);
+  }
+
+  function onKeydown(event) {
+    if (event.key === "Escape") {
+      closeMobileNav();
+    }
+  }
+
+  navToggle.addEventListener("click", function () {
+    var isOpen = navToggle.getAttribute("aria-expanded") === "true";
+    if (isOpen) { closeMobileNav(); } else { openMobileNav(); }
+  });
+  mobileNavClose.addEventListener("click", closeMobileNav);
+  mobileNavBackdrop.addEventListener("click", closeMobileNav);
+  mobileNav.querySelectorAll("a").forEach(function (link) {
+    link.addEventListener("click", closeMobileNav);
+  });
+
+  /* ---------- Tabs (benefits by role) ---------- */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  function activateTab(tab) {
+    tabs.forEach(function (t) {
+      var selected = t === tab;
+      t.setAttribute("aria-selected", selected ? "true" : "false");
+      t.setAttribute("tabindex", selected ? "0" : "-1");
+      var panel = document.getElementById(t.getAttribute("aria-controls"));
+      panel.hidden = !selected;
+      panel.setAttribute("data-active", selected ? "true" : "false");
+    });
+    tab.focus();
+  }
+  tabs.forEach(function (tab, index) {
+    tab.addEventListener("click", function () { activateTab(tab); });
+    tab.addEventListener("keydown", function (event) {
+      var newIndex = null;
+      if (event.key === "ArrowRight") { newIndex = (index + 1) % tabs.length; }
+      if (event.key === "ArrowLeft") { newIndex = (index - 1 + tabs.length) % tabs.length; }
+      if (event.key === "Home") { newIndex = 0; }
+      if (event.key === "End") { newIndex = tabs.length - 1; }
+      if (newIndex !== null) {
+        event.preventDefault();
+        activateTab(tabs[newIndex]);
+      }
+    });
+  });
+
+  /* ---------- Scroll reveal ---------- */
+  var revealEls = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
+  if ("IntersectionObserver" in window && revealEls.length) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
+    revealEls.forEach(function (el) { observer.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add("is-visible"); });
+  }
+
+  /* ---------- Demo request form ---------- */
+  var form = document.getElementById("demo-form");
+  var submitBtn = document.getElementById("demo-submit");
+  var successBox = document.getElementById("form-success");
+  var submitting = false;
+
+  var requiredFields = [
+    { input: document.getElementById("field-name"), error: document.getElementById("error-name") },
+    { input: document.getElementById("field-email"), error: document.getElementById("error-email") },
+    { input: document.getElementById("field-company"), error: document.getElementById("error-company") },
+    { input: document.getElementById("field-fleet"), error: document.getElementById("error-fleet") }
+  ];
+
+  function fieldIsValid(field) {
+    return field.input.checkValidity();
+  }
+
+  function showError(field) {
+    field.input.setAttribute("aria-invalid", "true");
+    field.error.classList.add("is-visible");
+  }
+
+  function clearError(field) {
+    field.input.removeAttribute("aria-invalid");
+    field.error.classList.remove("is-visible");
+  }
+
+  function validateField(field) {
+    if (fieldIsValid(field)) {
+      clearError(field);
+      return true;
+    }
+    showError(field);
+    return false;
+  }
+
+  requiredFields.forEach(function (field) {
+    field.input.addEventListener("blur", function () { validateField(field); });
+  });
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    if (submitting) { return; }
+
+    var firstInvalid = null;
+    var allValid = true;
+    requiredFields.forEach(function (field) {
+      var valid = validateField(field);
+      if (!valid) {
+        allValid = false;
+        if (!firstInvalid) { firstInvalid = field.input; }
+      }
+    });
+
+    if (!allValid) {
+      firstInvalid.focus();
+      return;
+    }
+
+    submitting = true;
+    submitBtn.setAttribute("data-state", "loading");
+    submitBtn.setAttribute("aria-busy", "true");
+    submitBtn.disabled = true;
+
+    window.setTimeout(function () {
+      form.classList.add("is-submitted");
+      successBox.classList.add("is-visible");
+      successBox.focus();
+      submitBtn.removeAttribute("data-state");
+      submitBtn.removeAttribute("aria-busy");
+    }, 450);
+  });
+})();
+</script>
+</body>
+</html>

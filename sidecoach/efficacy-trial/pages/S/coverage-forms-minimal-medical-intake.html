@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>New Patient Intake Form</title>
+<style>
+  /* ===================================================================
+     TOKENS
+     =================================================================== */
+  :root {
+    color-scheme: light dark;
+
+    /* Color - OKLCH, hue 230 (calm blue), neutrals tinted toward hue */
+    --color-bg: oklch(97.3% 0.006 230);
+    --color-surface: oklch(99.2% 0.004 230);
+    --color-border: oklch(85% 0.014 230);
+    --color-border-strong: oklch(70% 0.02 230);
+    --color-text: oklch(24% 0.016 230);
+    --color-text-muted: oklch(46% 0.024 230);
+    --color-accent: oklch(52% 0.14 230);
+    --color-accent-hover: oklch(45% 0.15 230);
+    --color-accent-active: oklch(40% 0.15 230);
+    --color-accent-contrast: oklch(99% 0.006 230);
+    --color-accent-wash: oklch(94% 0.02 230);
+    --color-success: oklch(46% 0.12 152);
+    --color-success-bg: oklch(95% 0.035 152);
+    --color-success-border: oklch(80% 0.07 152);
+    --color-error: oklch(46% 0.17 27);
+    --color-error-bg: oklch(95.5% 0.03 27);
+    --color-error-border: oklch(80% 0.09 27);
+    --color-focus-ring: oklch(52% 0.17 230);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.08);
+
+    /* Typography - Baskerville headings / Avenir body, deliberate pairing */
+    --font-heading: Baskerville, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --font-body: Avenir, Optima, "Segoe UI", system-ui, sans-serif;
+
+    --text-hint: 0.875rem;
+    --text-body: 1rem;
+    --text-lead: 1.125rem;
+    --text-h3: 1.375rem;
+    --text-h2: clamp(1.75rem, 1.55rem + 1vw, 2.25rem);
+    --text-h1: clamp(2.25rem, 1.85rem + 2.5vw, 3.25rem);
+
+    /* Spacing - 4pt grid */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-24: 6rem;
+
+    /* Radius - concentric (control 8-10px + padding = container 16px) */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    /* Motion - prescribed named easings only */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --duration-feedback: 130ms;
+    --duration-state: 220ms;
+    --duration-entrance: 620ms;
+    --duration-exit: 100ms;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: oklch(19% 0.012 230);
+      --color-surface: oklch(23.5% 0.014 230);
+      --color-border: oklch(36% 0.02 230);
+      --color-border-strong: oklch(48% 0.022 230);
+      --color-text: oklch(93% 0.01 230);
+      --color-text-muted: oklch(73% 0.016 230);
+      --color-accent: oklch(74% 0.12 230);
+      --color-accent-hover: oklch(80% 0.11 230);
+      --color-accent-active: oklch(66% 0.13 230);
+      --color-accent-contrast: oklch(14% 0.02 230);
+      --color-accent-wash: oklch(30% 0.03 230);
+      --color-success: oklch(80% 0.1 152);
+      --color-success-bg: oklch(27% 0.045 152);
+      --color-success-border: oklch(45% 0.09 152);
+      --color-error: oklch(80% 0.13 27);
+      --color-error-bg: oklch(28% 0.045 27);
+      --color-error-border: oklch(48% 0.11 27);
+      --color-focus-ring: oklch(78% 0.14 230);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  /* ===================================================================
+     RESET / BASE
+     =================================================================== */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding-inline: max(var(--space-4), env(safe-area-inset-left));
+    padding-block: var(--space-8) var(--space-24);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body { line-height: 1.68; letter-spacing: 0.012em; }
+  }
+
+  h1, h2, h3, legend {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--color-text);
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    h1, h2, h3, legend { font-weight: 600; }
+  }
+
+  h1 { font-size: var(--text-h1); line-height: 1.12; }
+  h2 { font-size: var(--text-h2); line-height: 1.18; }
+  h3, legend { font-size: var(--text-h3); line-height: 1.25; }
+
+  p { margin: 0; }
+  ul { margin: 0; padding: 0; list-style: none; }
+
+  a { color: var(--color-accent); }
+
+  input, select, textarea, button { font-family: inherit; font-size: inherit; color: inherit; }
+
+  :focus-visible {
+    outline: 2.5px solid var(--color-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: var(--space-2);
+    background: var(--color-surface);
+    color: var(--color-accent);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-strong);
+    z-index: 10;
+  }
+  .skip-link:focus { left: var(--space-2); }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* ===================================================================
+     LAYOUT
+     =================================================================== */
+  .page {
+    max-width: 42rem;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: var(--text-hint);
+    font-weight: 600;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .intro {
+    font-size: var(--text-lead);
+    color: var(--color-text-muted);
+    max-width: 62ch;
+  }
+
+  /* ===================================================================
+     ERROR SUMMARY
+     =================================================================== */
+  .error-summary {
+    border: 1px solid var(--color-error-border);
+    background: var(--color-error-bg);
+    color: var(--color-error);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity var(--duration-feedback) var(--ease-out),
+                transform var(--duration-feedback) var(--ease-out);
+  }
+  .error-summary.is-visible { opacity: 1; transform: translateY(0); }
+  .error-summary__title { font-weight: 700; }
+  .error-summary__list { display: flex; flex-direction: column; gap: var(--space-1); }
+  .error-summary__list a { color: var(--color-error); text-decoration: underline; }
+
+  /* ===================================================================
+     FORM SECTIONS
+     =================================================================== */
+  form, .review-phase, .success-phase { display: flex; flex-direction: column; gap: var(--space-12); }
+
+  .form-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-border);
+  }
+  .form-section:first-of-type { padding-top: 0; border-top: none; }
+
+  .form-section__intro { color: var(--color-text-muted); font-size: var(--text-hint); max-width: 68ch; }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4) var(--space-4);
+  }
+
+  @media (min-width: 48rem) {
+    .field-grid--pair { grid-template-columns: 1fr 1fr; }
+    .field-grid--trio { grid-template-columns: 1.4fr 1fr 1fr; }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .field label,
+  .field legend.field-label {
+    font-weight: 600;
+    font-size: var(--text-hint);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .required-flag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-accent);
+    background: var(--color-accent-wash);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  .optional-flag { font-weight: 400; color: var(--color-text-muted); text-transform: none; letter-spacing: 0; }
+
+  .field-hint { font-size: var(--text-hint); color: var(--color-text-muted); }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"] {
+    appearance: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    min-height: 44px;
+    color: var(--color-text);
+    transition: border-color var(--duration-feedback) var(--ease-out),
+                box-shadow var(--duration-feedback) var(--ease-out);
+  }
+
+  input[type="text"]:hover,
+  input[type="email"]:hover,
+  input[type="tel"]:hover,
+  input[type="date"]:hover {
+    border-color: var(--color-accent);
+  }
+
+  input[type="text"]:focus-visible,
+  input[type="email"]:focus-visible,
+  input[type="tel"]:focus-visible,
+  input[type="date"]:focus-visible {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 4px oklch(52% 0.14 230 / 16%);
+  }
+
+  input:disabled { opacity: 0.5; cursor: not-allowed; background: var(--color-bg); }
+
+  .field[data-invalid="true"] input {
+    border-color: var(--color-error-border);
+    background: var(--color-error-bg);
+  }
+
+  .field-error {
+    font-size: var(--text-hint);
+    color: var(--color-error);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-1);
+    min-height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity var(--duration-feedback) var(--ease-out),
+                transform var(--duration-feedback) var(--ease-out);
+  }
+  .field-error:not(:empty) { opacity: 1; transform: translateY(0); }
+
+  /* Choice rows (checkbox / radio) with 44px+ hit areas */
+  .choice-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    cursor: pointer;
+  }
+  .choice-row input[type="checkbox"],
+  .choice-row input[type="radio"] {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    margin-top: 2px;
+    accent-color: var(--color-accent);
+  }
+  .choice-row input:disabled + span { opacity: 0.5; }
+  .choice-row:has(input:focus-visible) { outline: 2.5px solid var(--color-focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+  .choice-row:active { transform: scale(0.996); }
+
+  .choice-list { display: flex; flex-direction: column; }
+
+  fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .conditional-panel {
+    padding-inline-start: var(--space-6);
+    border-inline-start: 2px solid var(--color-border);
+    margin-inline-start: var(--space-2);
+  }
+
+  details.consent-detail {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+  }
+  details.consent-detail summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--text-hint);
+  }
+  details.consent-detail[open] summary { margin-bottom: var(--space-2); }
+  details.consent-detail p { font-size: var(--text-hint); color: var(--color-text-muted); }
+
+  /* Repeatable rows (medications / allergies) - container query driven */
+  .repeatable-row {
+    container-type: inline-size;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .repeatable-row__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .row-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  @container (min-width: 26rem) {
+    .row-grid--med { grid-template-columns: 1.4fr 1fr 1fr; }
+    .row-grid--allergy { grid-template-columns: 1fr 1fr; }
+  }
+
+  .repeatable-list { display: flex; flex-direction: column; gap: var(--space-4); }
+
+  .repeatable-row.is-entering {
+    animation: rowEnter var(--duration-state) var(--ease-out) both;
+  }
+  @keyframes rowEnter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===================================================================
+     BUTTONS
+     =================================================================== */
+  .btn {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-6);
+    min-height: 44px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: background-color var(--duration-feedback) var(--ease-out),
+                border-color var(--duration-feedback) var(--ease-out),
+                transform var(--duration-feedback) var(--ease-out),
+                box-shadow var(--duration-feedback) var(--ease-out);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  .btn--primary {
+    background: var(--color-accent);
+    color: var(--color-accent-contrast);
+  }
+  .btn--primary:hover:not(:disabled) { background: var(--color-accent-hover); will-change: transform; }
+  .btn--primary:active:not(:disabled) { background: var(--color-accent-active); }
+
+  .btn--secondary {
+    background: transparent;
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+  }
+  .btn--secondary:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); }
+
+  .btn--ghost {
+    background: transparent;
+    color: var(--color-accent);
+    padding: var(--space-2) var(--space-3);
+    min-height: 40px;
+  }
+  .btn--ghost:hover:not(:disabled) { background: var(--color-accent-wash); }
+
+  .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    padding-top: var(--space-4);
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: var(--color-accent-contrast);
+    animation: spin 700ms linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===================================================================
+     PHASE PANELS
+     =================================================================== */
+  .review-phase, .success-phase { padding-top: var(--space-6); }
+
+  [data-phase] { transition: opacity var(--duration-state) var(--ease-in-out), transform var(--duration-state) var(--ease-in-out); }
+  [data-phase].is-leaving { opacity: 0; transform: translateY(6px); }
+  [data-phase].is-entering { animation: phaseEnter var(--duration-state) var(--ease-out) both; }
+  @keyframes phaseEnter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .review-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-block: var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+  .review-group:first-child { border-top: none; padding-top: 0; }
+  .review-group__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+  .review-group dl { display: grid; grid-template-columns: minmax(0, 12rem) 1fr; gap: var(--space-2) var(--space-4); margin: 0; }
+  .review-group dt { color: var(--color-text-muted); font-size: var(--text-hint); }
+  .review-group dd { margin: 0; font-size: var(--text-hint); }
+  .review-group__empty { font-size: var(--text-hint); color: var(--color-text-muted); font-style: italic; }
+
+  .success-phase {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    animation: phaseEnter var(--duration-entrance) var(--ease-out) both;
+  }
+  .success-mark {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .success-mark::after {
+    content: "";
+    width: 12px;
+    height: 20px;
+    border-right: 3px solid var(--color-success);
+    border-bottom: 3px solid var(--color-success);
+    transform: rotate(45deg) translate(-2px, -3px);
+  }
+
+  /* ===================================================================
+     REDUCED MOTION
+     =================================================================== */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+    .btn:active { transform: none; }
+    .repeatable-row.is-entering,
+    [data-phase].is-entering,
+    .success-phase { animation: none; opacity: 1; transform: none; }
+  }
+
+  /* ===================================================================
+     RESPONSIVE
+     =================================================================== */
+  @media (max-width: 29.99rem) {
+    .form-actions { flex-direction: column; align-items: stretch; }
+    .form-actions .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#intakeForm">Skip to form</a>
+
+<div class="page">
+  <header class="page-header">
+    <p class="eyebrow" id="stepLabel">Step 1 of 2 &middot; Your information</p>
+    <h1>New Patient Intake Form</h1>
+    <p class="intro">Please complete the sections below before your visit. Fields marked <span class="required-flag">Required</span> must be filled in; everything else is optional. You can review everything before it's sent.</p>
+  </header>
+
+  <div id="errorSummary" class="error-summary" role="alert" tabindex="-1" hidden>
+    <p class="error-summary__title">Please fix the following before continuing:</p>
+    <ul class="error-summary__list" id="errorSummaryList"></ul>
+  </div>
+
+  <form id="intakeForm" novalidate data-phase="form">
+
+    <section class="form-section" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Patient contact details</h2>
+      <p class="form-section__intro">This is how we'll reach you about your appointment.</p>
+
+      <div class="field-grid field-grid--pair">
+        <div class="field" data-field="firstName">
+          <label for="firstName">First name <span class="required-flag">Required</span></label>
+          <input type="text" id="firstName" name="firstName" autocomplete="given-name" spellcheck="false" required aria-describedby="firstName-error">
+          <p class="field-error" id="firstName-error" aria-live="polite"></p>
+        </div>
+        <div class="field" data-field="lastName">
+          <label for="lastName">Last name <span class="required-flag">Required</span></label>
+          <input type="text" id="lastName" name="lastName" autocomplete="family-name" spellcheck="false" required aria-describedby="lastName-error">
+          <p class="field-error" id="lastName-error" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="field-grid field-grid--pair">
+        <div class="field" data-field="dob">
+          <label for="dob">Date of birth <span class="required-flag">Required</span></label>
+          <input type="date" id="dob" name="dob" autocomplete="bday" required aria-describedby="dob-error">
+          <p class="field-error" id="dob-error" aria-live="polite"></p>
+        </div>
+        <div class="field" data-field="phone">
+          <label for="phone">Phone number <span class="required-flag">Required</span></label>
+          <input type="tel" id="phone" name="phone" inputmode="tel" autocomplete="tel" spellcheck="false" required aria-describedby="phone-error phone-hint">
+          <p class="field-hint" id="phone-hint">We'll only call about your appointment.</p>
+          <p class="field-error" id="phone-error" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="field" data-field="email">
+        <label for="email">Email address <span class="required-flag">Required</span></label>
+        <input type="email" id="email" name="email" inputmode="email" autocomplete="email" spellcheck="false" required aria-describedby="email-error">
+        <p class="field-error" id="email-error" aria-live="polite"></p>
+      </div>
+
+      <fieldset data-field="preferredContact">
+        <legend class="field-label">Preferred contact method <span class="required-flag">Required</span></legend>
+        <div class="choice-list">
+          <label class="choice-row"><input type="radio" name="preferredContact" value="phone" required><span>Phone call</span></label>
+          <label class="choice-row"><input type="radio" name="preferredContact" value="text"><span>Text message</span></label>
+          <label class="choice-row"><input type="radio" name="preferredContact" value="email"><span>Email</span></label>
+        </div>
+        <p class="field-error" id="preferredContact-error" aria-live="polite"></p>
+      </fieldset>
+
+      <div class="field" data-field="address1">
+        <label for="address1">Street address <span class="required-flag">Required</span></label>
+        <input type="text" id="address1" name="address1" autocomplete="address-line1" spellcheck="false" required aria-describedby="address1-error">
+        <p class="field-error" id="address1-error" aria-live="polite"></p>
+      </div>
+
+      <div class="field">
+        <label for="address2">Apartment, suite, etc. <span class="optional-flag">(optional)</span></label>
+        <input type="text" id="address2" name="address2" autocomplete="address-line2" spellcheck="false">
+      </div>
+
+      <div class="field-grid field-grid--trio">
+        <div class="field" data-field="city">
+          <label for="city">City <span class="required-flag">Required</span></label>
+          <input type="text" id="city" name="city" autocomplete="address-level2" spellcheck="false" required aria-describedby="city-error">
+          <p class="field-error" id="city-error" aria-live="polite"></p>
+        </div>
+        <div class="field" data-field="region">
+          <label for="region">State / region <span class="required-flag">Required</span></label>
+          <input type="text" id="region" name="region" autocomplete="address-level1" spellcheck="false" required aria-describedby="region-error">
+          <p class="field-error" id="region-error" aria-live="polite"></p>
+        </div>
+        <div class="field" data-field="postalCode">
+          <label for="postalCode">Postal code <span class="required-flag">Required</span></label>
+          <input type="text" id="postalCode" name="postalCode" inputmode="text" autocomplete="postal-code" spellcheck="false" required aria-describedby="postalCode-error">
+          <p class="field-error" id="postalCode-error" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" aria-labelledby="insurance-heading">
+      <h2 id="insurance-heading">Insurance information</h2>
+      <p class="form-section__intro">We use this to verify your coverage before your visit, so there are no surprises at check-in.</p>
+
+      <div class="field" data-field="insuranceProvider">
+        <label for="insuranceProvider">Insurance provider <span class="required-flag">Required</span></label>
+        <input type="text" id="insuranceProvider" name="insuranceProvider" spellcheck="false" required aria-describedby="insuranceProvider-error">
+        <p class="field-error" id="insuranceProvider-error" aria-live="polite"></p>
+      </div>
+
+      <div class="field-grid field-grid--pair">
+        <div class="field" data-field="memberId">
+          <label for="memberId">Member ID <span class="required-flag">Required</span></label>
+          <input type="text" id="memberId" name="memberId" autocomplete="off" spellcheck="false" required aria-describedby="memberId-error">
+          <p class="field-error" id="memberId-error" aria-live="polite"></p>
+        </div>
+        <div class="field">
+          <label for="groupNumber">Group number <span class="optional-flag">(optional)</span></label>
+          <input type="text" id="groupNumber" name="groupNumber" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+
+      <label class="choice-row">
+        <input type="checkbox" id="differentPolicyholder" name="differentPolicyholder">
+        <span>The policyholder is someone other than me</span>
+      </label>
+
+      <div class="conditional-panel" id="policyholderPanel" hidden>
+        <div class="field-grid field-grid--pair">
+          <div class="field" data-field="policyholderName">
+            <label for="policyholderName">Policyholder's full name <span class="required-flag">Required</span></label>
+            <input type="text" id="policyholderName" name="policyholderName" autocomplete="off" spellcheck="false" aria-describedby="policyholderName-error">
+            <p class="field-error" id="policyholderName-error" aria-live="polite"></p>
+          </div>
+          <div class="field" data-field="policyholderRelationship">
+            <label for="policyholderRelationship">Relationship to you <span class="required-flag">Required</span></label>
+            <input type="text" id="policyholderRelationship" name="policyholderRelationship" autocomplete="off" spellcheck="false" aria-describedby="policyholderRelationship-error">
+            <p class="field-error" id="policyholderRelationship-error" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" aria-labelledby="emergency-heading">
+      <h2 id="emergency-heading">Emergency contact</h2>
+      <p class="form-section__intro">We'll only contact this person if we're unable to reach you directly.</p>
+
+      <div class="field-grid field-grid--pair">
+        <div class="field" data-field="emergencyName">
+          <label for="emergencyName">Full name <span class="required-flag">Required</span></label>
+          <input type="text" id="emergencyName" name="emergencyName" autocomplete="off" spellcheck="false" required aria-describedby="emergencyName-error">
+          <p class="field-error" id="emergencyName-error" aria-live="polite"></p>
+        </div>
+        <div class="field" data-field="emergencyRelationship">
+          <label for="emergencyRelationship">Relationship to you <span class="required-flag">Required</span></label>
+          <input type="text" id="emergencyRelationship" name="emergencyRelationship" autocomplete="off" spellcheck="false" required aria-describedby="emergencyRelationship-error">
+          <p class="field-error" id="emergencyRelationship-error" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="field" data-field="emergencyPhone">
+        <label for="emergencyPhone">Phone number <span class="required-flag">Required</span></label>
+        <input type="tel" id="emergencyPhone" name="emergencyPhone" inputmode="tel" autocomplete="off" spellcheck="false" required aria-describedby="emergencyPhone-error">
+        <p class="field-error" id="emergencyPhone-error" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="form-section" aria-labelledby="medications-heading">
+      <h2 id="medications-heading">Current medications</h2>
+      <p class="form-section__intro">List anything you take regularly, including over-the-counter medications and supplements. Skip this if it doesn't apply to you.</p>
+
+      <label class="choice-row">
+        <input type="checkbox" id="noMedications" name="noMedications">
+        <span>I'm not currently taking any medications</span>
+      </label>
+
+      <div id="medicationsWrap">
+        <div class="repeatable-list" id="medicationsList"></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn--ghost" id="addMedication">+ Add another medication</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" aria-labelledby="allergies-heading">
+      <h2 id="allergies-heading">Allergies</h2>
+      <p class="form-section__intro">Include medications, foods, or anything else you react to. Skip this if none apply.</p>
+
+      <label class="choice-row">
+        <input type="checkbox" id="noAllergies" name="noAllergies">
+        <span>I have no known allergies</span>
+      </label>
+
+      <div id="allergiesWrap">
+        <div class="repeatable-list" id="allergiesList"></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn--ghost" id="addAllergy">+ Add another allergy</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" aria-labelledby="history-heading">
+      <h2 id="history-heading">Medical history checklist</h2>
+      <p class="form-section__intro">This helps your provider prepare for your visit. Answer only what you're comfortable sharing.</p>
+
+      <fieldset>
+        <legend class="visually-hidden">Conditions that apply to you</legend>
+        <div class="choice-list" id="historyList">
+          <label class="choice-row"><input type="checkbox" name="condition" value="diabetes"><span>Diabetes</span></label>
+          <label class="choice-row"><input type="checkbox" name="condition" value="hypertension"><span>High blood pressure</span></label>
+          <label class="choice-row"><input type="checkbox" name="condition" value="heartDisease"><span>Heart disease</span></label>
+          <label class="choice-row"><input type="checkbox" name="condition" value="asthma"><span>Asthma or lung disease</span></label>
+          <label class="choice-row"><input type="checkbox" name="condition" value="cancer"><span>Cancer, past or present</span></label>
+          <label class="choice-row"><input type="checkbox" name="condition" value="thyroid"><span>Thyroid disorder</span></label>
+          <label class="choice-row"><input type="checkbox" name="condition" value="mentalHealth"><span>Depression or anxiety</span></label>
+          <label class="choice-row"><input type="checkbox" id="conditionOther" name="condition" value="other"><span>Other condition not listed</span></label>
+          <label class="choice-row"><input type="checkbox" id="conditionNone" name="condition" value="none"><span>None of the above</span></label>
+        </div>
+      </fieldset>
+
+      <div class="conditional-panel" id="otherConditionPanel" hidden>
+        <div class="field" data-field="otherConditionDetail">
+          <label for="otherConditionDetail">Please describe <span class="required-flag">Required</span></label>
+          <input type="text" id="otherConditionDetail" name="otherConditionDetail" spellcheck="false" aria-describedby="otherConditionDetail-error">
+          <p class="field-error" id="otherConditionDetail-error" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section" aria-labelledby="consent-heading">
+      <h2 id="consent-heading">Consent acknowledgement</h2>
+      <p class="form-section__intro">Please read and confirm before submitting your intake form.</p>
+
+      <details class="consent-detail">
+        <summary>What you're agreeing to</summary>
+        <p>You authorize this office to use the information above to schedule and prepare for your visit, verify insurance coverage, and contact your emergency contact only if needed. Your information is kept confidential and used solely for your care.</p>
+      </details>
+
+      <div class="field" data-field="consentAcknowledge">
+        <label class="choice-row">
+          <input type="checkbox" id="consentAcknowledge" name="consentAcknowledge" required aria-describedby="consentAcknowledge-error">
+          <span>I have read the above and consent to treatment and the use of my information as described. <span class="required-flag">Required</span></span>
+        </label>
+        <p class="field-error" id="consentAcknowledge-error" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary" id="reviewButton">Review your answers</button>
+    </div>
+  </form>
+
+  <section id="reviewPhase" class="review-phase" data-phase="review" hidden aria-labelledby="review-heading">
+    <h2 id="review-heading">Review your information</h2>
+    <p class="intro">Check everything below carefully. You can go back and edit any section before submitting.</p>
+    <div id="reviewContent"></div>
+    <div class="form-actions">
+      <button type="button" class="btn btn--secondary" id="editButton">Edit answers</button>
+      <button type="button" class="btn btn--primary" id="submitButton">
+        <span id="submitButtonLabel">Submit intake form</span>
+      </button>
+    </div>
+  </section>
+
+  <section id="successPhase" class="success-phase" data-phase="success" hidden aria-labelledby="success-heading">
+    <div class="success-mark" aria-hidden="true"></div>
+    <h2 id="success-heading" tabindex="-1">Thank you. Your intake form has been received.</h2>
+    <p>Our office will review your information before your appointment. If anything needs clarifying, we'll reach out using your preferred contact method.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var form = document.getElementById("intakeForm");
+  var reviewPhase = document.getElementById("reviewPhase");
+  var successPhase = document.getElementById("successPhase");
+  var stepLabel = document.getElementById("stepLabel");
+  var errorSummary = document.getElementById("errorSummary");
+  var errorSummaryList = document.getElementById("errorSummaryList");
+
+  /* ---------------------------------------------------------------
+     Field descriptors + validators
+     --------------------------------------------------------------- */
+  function el(id) { return document.getElementById(id); }
+
+  function nonEmpty(elm) { return elm.value.trim().length > 0; }
+
+  function validEmail(elm) {
+    if (!nonEmpty(elm)) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(elm.value.trim());
+  }
+
+  function validPhone(elm) {
+    if (!nonEmpty(elm)) return false;
+    var digits = elm.value.replace(/\D/g, "");
+    return digits.length >= 7;
+  }
+
+  function validDob(elm) {
+    if (!nonEmpty(elm)) return false;
+    var d = new Date(elm.value);
+    if (isNaN(d.getTime())) return false;
+    return d.getTime() <= Date.now();
+  }
+
+  function radioChecked(name) {
+    return !!document.querySelector('input[name="' + name + '"]:checked');
+  }
+
+  var fieldDescriptors = [
+    { id: "firstName", test: function () { return nonEmpty(el("firstName")); }, message: "Enter your first name so we can identify your records." },
+    { id: "lastName", test: function () { return nonEmpty(el("lastName")); }, message: "Enter your last name so we can identify your records." },
+    { id: "dob", test: function () { return validDob(el("dob")); }, message: "Enter your date of birth using a date that has already passed." },
+    { id: "phone", test: function () { return validPhone(el("phone")); }, message: "Enter a phone number with at least 7 digits so our office can reach you." },
+    { id: "email", test: function () { return validEmail(el("email")); }, message: "Enter an email address in the format name@example.com." },
+    { id: "preferredContact", test: function () { return radioChecked("preferredContact"); }, message: "Choose how you'd like us to contact you.", groupLabel: "Preferred contact method" },
+    { id: "address1", test: function () { return nonEmpty(el("address1")); }, message: "Enter your street address." },
+    { id: "city", test: function () { return nonEmpty(el("city")); }, message: "Enter your city." },
+    { id: "region", test: function () { return nonEmpty(el("region")); }, message: "Enter your state or region." },
+    { id: "postalCode", test: function () { return nonEmpty(el("postalCode")); }, message: "Enter your postal code." },
+    { id: "insuranceProvider", test: function () { return nonEmpty(el("insuranceProvider")); }, message: "Enter your insurance provider's name." },
+    { id: "memberId", test: function () { return nonEmpty(el("memberId")); }, message: "Enter your insurance member ID." },
+    {
+      id: "policyholderName",
+      test: function () { return !el("differentPolicyholder").checked || nonEmpty(el("policyholderName")); },
+      message: "Enter the policyholder's full name.",
+      active: function () { return el("differentPolicyholder").checked; }
+    },
+    {
+      id: "policyholderRelationship",
+      test: function () { return !el("differentPolicyholder").checked || nonEmpty(el("policyholderRelationship")); },
+      message: "Enter your relationship to the policyholder.",
+      active: function () { return el("differentPolicyholder").checked; }
+    },
+    { id: "emergencyName", test: function () { return nonEmpty(el("emergencyName")); }, message: "Enter your emergency contact's full name." },
+    { id: "emergencyRelationship", test: function () { return nonEmpty(el("emergencyRelationship")); }, message: "Enter your relationship to your emergency contact." },
+    { id: "emergencyPhone", test: function () { return validPhone(el("emergencyPhone")); }, message: "Enter a phone number with at least 7 digits for your emergency contact." },
+    {
+      id: "otherConditionDetail",
+      test: function () { return !el("conditionOther").checked || nonEmpty(el("otherConditionDetail")); },
+      message: "Describe the condition, or uncheck “Other condition not listed.”",
+      active: function () { return el("conditionOther").checked; }
+    },
+    { id: "consentAcknowledge", test: function () { return el("consentAcknowledge").checked; }, message: "Check the box to confirm your consent before submitting.", isCheckbox: true }
+  ];
+
+  function fieldWrap(id) { return document.querySelector('[data-field="' + id + '"]'); }
+  function errorNode(id) { return document.getElementById(id + "-error"); }
+
+  function clearFieldError(descriptor) {
+    var wrap = fieldWrap(descriptor.id);
+    var node = errorNode(descriptor.id);
+    if (wrap) wrap.removeAttribute("data-invalid");
+    if (node) node.textContent = "";
+    var input = el(descriptor.id);
+    if (input && input.type !== "checkbox" && input.type !== "radio") input.removeAttribute("aria-invalid");
+  }
+
+  function showFieldError(descriptor) {
+    var wrap = fieldWrap(descriptor.id);
+    var node = errorNode(descriptor.id);
+    if (wrap) wrap.setAttribute("data-invalid", "true");
+    if (node) node.textContent = descriptor.message;
+    var input = el(descriptor.id);
+    if (input) input.setAttribute("aria-invalid", "true");
+  }
+
+  function isActive(descriptor) { return descriptor.active ? descriptor.active() : true; }
+
+  function validateOne(descriptor) {
+    if (!isActive(descriptor)) { clearFieldError(descriptor); return true; }
+    var ok = descriptor.test();
+    if (ok) { clearFieldError(descriptor); } else { showFieldError(descriptor); }
+    return ok;
+  }
+
+  function validateAll() {
+    var errors = [];
+    fieldDescriptors.forEach(function (d) { if (!validateOne(d)) errors.push(d); });
+    return errors;
+  }
+
+  /* Blur validation (not keystroke) */
+  fieldDescriptors.forEach(function (d) {
+    var input = el(d.id);
+    if (!input || d.id === "preferredContact") return;
+    input.addEventListener("blur", function () { validateOne(d); });
+  });
+  document.querySelectorAll('input[name="preferredContact"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      validateOne(fieldDescriptors.filter(function (d) { return d.id === "preferredContact"; })[0]);
+    });
+  });
+
+  function labelTextFor(id) {
+    var label = document.querySelector('label[for="' + id + '"]');
+    if (label) return label.textContent.replace("Required", "").trim();
+    return id;
+  }
+
+  function focusField(id) {
+    var input = el(id);
+    if (!input) return;
+    input.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "center" });
+    input.focus({ preventScroll: true });
+  }
+
+  function renderErrorSummary(errors) {
+    errorSummaryList.innerHTML = "";
+    if (!errors.length) {
+      errorSummary.hidden = true;
+      errorSummary.classList.remove("is-visible");
+      return;
+    }
+    errors.forEach(function (d) {
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = "#" + d.id;
+      a.textContent = (d.groupLabel || labelTextFor(d.id)) + ": " + d.message;
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        if (d.id === "preferredContact") {
+          var radio = document.querySelector('input[name="preferredContact"]');
+          radio.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "center" });
+          radio.focus();
+        } else {
+          focusField(d.id);
+        }
+      });
+      li.appendChild(a);
+      errorSummaryList.appendChild(li);
+    });
+    errorSummary.hidden = false;
+    requestAnimationFrame(function () { errorSummary.classList.add("is-visible"); });
+    errorSummary.focus();
+  }
+
+  /* ---------------------------------------------------------------
+     Medications (repeatable)
+     --------------------------------------------------------------- */
+  var medicationsList = document.getElementById("medicationsList");
+  var medCount = 0;
+
+  function addMedicationRow() {
+    medCount += 1;
+    var n = medCount;
+    var row = document.createElement("fieldset");
+    row.className = "repeatable-row is-entering";
+    row.innerHTML =
+      '<div class="repeatable-row__header">' +
+        '<legend class="field-label">Medication ' + n + '</legend>' +
+        '<button type="button" class="btn btn--ghost" data-remove-med>Remove</button>' +
+      '</div>' +
+      '<div class="row-grid row-grid--med">' +
+        '<div class="field"><label for="medName' + n + '">Medication name</label>' +
+          '<input type="text" id="medName' + n + '" name="medName' + n + '" spellcheck="false"></div>' +
+        '<div class="field"><label for="medDose' + n + '">Dosage</label>' +
+          '<input type="text" id="medDose' + n + '" name="medDose' + n + '" spellcheck="false"></div>' +
+        '<div class="field"><label for="medFreq' + n + '">Frequency</label>' +
+          '<input type="text" id="medFreq' + n + '" name="medFreq' + n + '" spellcheck="false"></div>' +
+      '</div>';
+    medicationsList.appendChild(row);
+    row.querySelector('[data-remove-med]').addEventListener("click", function () {
+      row.remove();
+      document.getElementById("addMedication").focus();
+    });
+    if (!prefersReducedMotion) {
+      row.addEventListener("animationend", function () { row.classList.remove("is-entering"); }, { once: true });
+    } else {
+      row.classList.remove("is-entering");
+    }
+  }
+
+  document.getElementById("addMedication").addEventListener("click", function () {
+    addMedicationRow();
+    var rows = medicationsList.querySelectorAll(".repeatable-row");
+    rows[rows.length - 1].querySelector("input").focus();
+  });
+  addMedicationRow();
+
+  var noMedications = document.getElementById("noMedications");
+  var medicationsWrap = document.getElementById("medicationsWrap");
+  noMedications.addEventListener("change", function () {
+    var disabled = noMedications.checked;
+    medicationsWrap.hidden = disabled;
+    medicationsWrap.querySelectorAll("input, button").forEach(function (n) { n.disabled = disabled; });
+  });
+
+  /* ---------------------------------------------------------------
+     Allergies (repeatable)
+     --------------------------------------------------------------- */
+  var allergiesList = document.getElementById("allergiesList");
+  var allergyCount = 0;
+
+  function addAllergyRow() {
+    allergyCount += 1;
+    var n = allergyCount;
+    var row = document.createElement("fieldset");
+    row.className = "repeatable-row is-entering";
+    row.innerHTML =
+      '<div class="repeatable-row__header">' +
+        '<legend class="field-label">Allergy ' + n + '</legend>' +
+        '<button type="button" class="btn btn--ghost" data-remove-allergy>Remove</button>' +
+      '</div>' +
+      '<div class="row-grid row-grid--allergy">' +
+        '<div class="field"><label for="allergyName' + n + '">Allergen</label>' +
+          '<input type="text" id="allergyName' + n + '" name="allergyName' + n + '" spellcheck="false"></div>' +
+        '<div class="field"><label for="allergyReaction' + n + '">Reaction</label>' +
+          '<input type="text" id="allergyReaction' + n + '" name="allergyReaction' + n + '" spellcheck="false"></div>' +
+      '</div>';
+    allergiesList.appendChild(row);
+    row.querySelector('[data-remove-allergy]').addEventListener("click", function () {
+      row.remove();
+      document.getElementById("addAllergy").focus();
+    });
+    if (!prefersReducedMotion) {
+      row.addEventListener("animationend", function () { row.classList.remove("is-entering"); }, { once: true });
+    } else {
+      row.classList.remove("is-entering");
+    }
+  }
+
+  document.getElementById("addAllergy").addEventListener("click", function () {
+    addAllergyRow();
+    var rows = allergiesList.querySelectorAll(".repeatable-row");
+    rows[rows.length - 1].querySelector("input").focus();
+  });
+  addAllergyRow();
+
+  var noAllergies = document.getElementById("noAllergies");
+  var allergiesWrap = document.getElementById("allergiesWrap");
+  noAllergies.addEventListener("change", function () {
+    var disabled = noAllergies.checked;
+    allergiesWrap.hidden = disabled;
+    allergiesWrap.querySelectorAll("input, button").forEach(function (n) { n.disabled = disabled; });
+  });
+
+  /* ---------------------------------------------------------------
+     Conditional panels
+     --------------------------------------------------------------- */
+  var differentPolicyholder = document.getElementById("differentPolicyholder");
+  var policyholderPanel = document.getElementById("policyholderPanel");
+  differentPolicyholder.addEventListener("change", function () {
+    policyholderPanel.hidden = !differentPolicyholder.checked;
+    if (!differentPolicyholder.checked) {
+      clearFieldError(fieldDescriptors.filter(function (d) { return d.id === "policyholderName"; })[0]);
+      clearFieldError(fieldDescriptors.filter(function (d) { return d.id === "policyholderRelationship"; })[0]);
+    }
+  });
+
+  var conditionOther = document.getElementById("conditionOther");
+  var otherConditionPanel = document.getElementById("otherConditionPanel");
+  conditionOther.addEventListener("change", function () {
+    otherConditionPanel.hidden = !conditionOther.checked;
+    if (!conditionOther.checked) {
+      clearFieldError(fieldDescriptors.filter(function (d) { return d.id === "otherConditionDetail"; })[0]);
+    }
+  });
+
+  var conditionNone = document.getElementById("conditionNone");
+  var conditionChecks = document.querySelectorAll('input[name="condition"]');
+  conditionChecks.forEach(function (cb) {
+    cb.addEventListener("change", function () {
+      if (cb === conditionNone && cb.checked) {
+        conditionChecks.forEach(function (other) {
+          if (other !== conditionNone) { other.checked = false; other.disabled = true; }
+        });
+        otherConditionPanel.hidden = true;
+      } else if (cb === conditionNone && !cb.checked) {
+        conditionChecks.forEach(function (other) { other.disabled = false; });
+      } else if (cb.checked) {
+        conditionNone.checked = false;
+        conditionNone.disabled = false;
+      }
+    });
+  });
+
+  /* ---------------------------------------------------------------
+     Review content builder
+     --------------------------------------------------------------- */
+  function dl(pairs) {
+    var wrap = document.createElement("dl");
+    pairs.forEach(function (p) {
+      var dt = document.createElement("dt");
+      dt.textContent = p[0];
+      var dd = document.createElement("dd");
+      dd.textContent = p[1] && p[1].trim() ? p[1] : "Not provided";
+      wrap.appendChild(dt);
+      wrap.appendChild(dd);
+    });
+    return wrap;
+  }
+
+  function reviewGroup(title, editTargetId, contentEl) {
+    var group = document.createElement("div");
+    group.className = "review-group";
+    var header = document.createElement("div");
+    header.className = "review-group__header";
+    var h3 = document.createElement("h3");
+    h3.textContent = title;
+    var editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "btn btn--ghost";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", function () {
+      goToForm();
+      window.setTimeout(function () { focusField(editTargetId); }, prefersReducedMotion ? 0 : 140);
+    });
+    header.appendChild(h3);
+    header.appendChild(editBtn);
+    group.appendChild(header);
+    group.appendChild(contentEl);
+    return group;
+  }
+
+  function preferredContactLabel() {
+    var checked = document.querySelector('input[name="preferredContact"]:checked');
+    if (!checked) return "";
+    return { phone: "Phone call", text: "Text message", email: "Email" }[checked.value] || checked.value;
+  }
+
+  function buildReview() {
+    var content = document.getElementById("reviewContent");
+    content.innerHTML = "";
+
+    content.appendChild(reviewGroup("Patient contact details", "firstName", dl([
+      ["Name", el("firstName").value + " " + el("lastName").value],
+      ["Date of birth", el("dob").value],
+      ["Phone", el("phone").value],
+      ["Email", el("email").value],
+      ["Preferred contact method", preferredContactLabel()],
+      ["Address", [el("address1").value, el("address2").value, el("city").value, el("region").value, el("postalCode").value].filter(Boolean).join(", ")]
+    ])));
+
+    content.appendChild(reviewGroup("Insurance information", "insuranceProvider", dl([
+      ["Provider", el("insuranceProvider").value],
+      ["Member ID", el("memberId").value],
+      ["Group number", el("groupNumber").value],
+      ["Policyholder", differentPolicyholder.checked ? (el("policyholderName").value + " (" + el("policyholderRelationship").value + ")") : "Self"]
+    ])));
+
+    content.appendChild(reviewGroup("Emergency contact", "emergencyName", dl([
+      ["Name", el("emergencyName").value],
+      ["Relationship", el("emergencyRelationship").value],
+      ["Phone", el("emergencyPhone").value]
+    ])));
+
+    var medWrap = document.createElement("div");
+    if (noMedications.checked) {
+      var p1 = document.createElement("p");
+      p1.className = "review-group__empty";
+      p1.textContent = "Not currently taking any medications.";
+      medWrap.appendChild(p1);
+    } else {
+      var medPairs = [];
+      medicationsList.querySelectorAll(".repeatable-row").forEach(function (row, i) {
+        var inputs = row.querySelectorAll("input");
+        var name = inputs[0].value, dose = inputs[1].value, freq = inputs[2].value;
+        if (name || dose || freq) medPairs.push(["Medication " + (i + 1), [name, dose, freq].filter(Boolean).join(" — ")]);
+      });
+      if (medPairs.length) {
+        medWrap.appendChild(dl(medPairs));
+      } else {
+        var p2 = document.createElement("p");
+        p2.className = "review-group__empty";
+        p2.textContent = "No medications listed.";
+        medWrap.appendChild(p2);
+      }
+    }
+    content.appendChild(reviewGroup("Current medications", "noMedications", medWrap));
+
+    var allWrap = document.createElement("div");
+    if (noAllergies.checked) {
+      var p3 = document.createElement("p");
+      p3.className = "review-group__empty";
+      p3.textContent = "No known allergies.";
+      allWrap.appendChild(p3);
+    } else {
+      var allergyPairs = [];
+      allergiesList.querySelectorAll(".repeatable-row").forEach(function (row, i) {
+        var inputs = row.querySelectorAll("input");
+        var name = inputs[0].value, reaction = inputs[1].value;
+        if (name || reaction) allergyPairs.push(["Allergy " + (i + 1), [name, reaction].filter(Boolean).join(" — ")]);
+      });
+      if (allergyPairs.length) {
+        allWrap.appendChild(dl(allergyPairs));
+      } else {
+        var p4 = document.createElement("p");
+        p4.className = "review-group__empty";
+        p4.textContent = "No allergies listed.";
+        allWrap.appendChild(p4);
+      }
+    }
+    content.appendChild(reviewGroup("Allergies", "noAllergies", allWrap));
+
+    var historyWrap = document.createElement("div");
+    var checkedConditions = Array.prototype.slice.call(document.querySelectorAll('input[name="condition"]:checked'))
+      .map(function (cb) { return cb.parentElement.querySelector("span").textContent; });
+    if (checkedConditions.length) {
+      var ul = document.createElement("ul");
+      checkedConditions.forEach(function (label) {
+        var li = document.createElement("li");
+        li.textContent = label + (label === "Other condition not listed" && el("otherConditionDetail").value ? ": " + el("otherConditionDetail").value : "");
+        ul.appendChild(li);
+      });
+      historyWrap.appendChild(ul);
+    } else {
+      var p5 = document.createElement("p");
+      p5.className = "review-group__empty";
+      p5.textContent = "No history selected.";
+      historyWrap.appendChild(p5);
+    }
+    content.appendChild(reviewGroup("Medical history checklist", "history-heading", historyWrap));
+  }
+
+  /* ---------------------------------------------------------------
+     Phase transitions
+     --------------------------------------------------------------- */
+  function swapPhase(fromEl, toEl, onShown) {
+    function show() {
+      fromEl.hidden = true;
+      fromEl.classList.remove("is-leaving");
+      toEl.hidden = false;
+      toEl.classList.add("is-entering");
+      if (onShown) onShown();
+      if (!prefersReducedMotion) {
+        toEl.addEventListener("animationend", function () { toEl.classList.remove("is-entering"); }, { once: true });
+      } else {
+        toEl.classList.remove("is-entering");
+      }
+    }
+    if (prefersReducedMotion) { show(); return; }
+    fromEl.classList.add("is-leaving");
+    window.setTimeout(show, 130);
+  }
+
+  function goToReview() {
+    buildReview();
+    swapPhase(form, reviewPhase, function () {
+      stepLabel.textContent = "Step 2 of 2 · Review & submit";
+      var heading = reviewPhase.querySelector("h2");
+      heading.setAttribute("tabindex", "-1");
+      heading.focus();
+    });
+  }
+
+  function goToForm() {
+    swapPhase(reviewPhase, form, function () {
+      stepLabel.textContent = "Step 1 of 2 · Your information";
+    });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var errors = validateAll();
+    renderErrorSummary(errors);
+    if (errors.length) {
+      if (errors[0].id === "preferredContact") {
+        var radio = document.querySelector('input[name="preferredContact"]');
+        radio.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "center" });
+        radio.focus();
+      } else {
+        focusField(errors[0].id);
+      }
+      return;
+    }
+    errorSummary.hidden = true;
+    errorSummary.classList.remove("is-visible");
+    goToReview();
+  });
+
+  document.getElementById("editButton").addEventListener("click", goToForm);
+
+  var isSubmitting = false;
+  document.getElementById("submitButton").addEventListener("click", function () {
+    if (isSubmitting) return;
+    isSubmitting = true;
+    var btn = this;
+    var label = document.getElementById("submitButtonLabel");
+    btn.disabled = true;
+    btn.setAttribute("aria-busy", "true");
+    var spinner = document.createElement("span");
+    spinner.className = "spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    btn.insertBefore(spinner, label);
+    label.textContent = "Submitting…";
+
+    window.setTimeout(function () {
+      swapPhase(reviewPhase, successPhase, function () {
+        stepLabel.hidden = true;
+        successPhase.querySelector("h2").focus();
+      });
+    }, prefersReducedMotion ? 0 : 500);
+  });
+})();
+</script>
+</body>
+</html>

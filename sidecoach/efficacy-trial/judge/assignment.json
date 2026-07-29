@@ -1,0 +1,215 @@
+{
+  "seed": 20260728,
+  "drawnAt": "2026-07-28T23:18:51.687Z",
+  "n": 17,
+  "contrasts": [
+    "S-vs-P",
+    "P-vs-C"
+  ],
+  "rows": [
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-flex-warm-human-community-clinic",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-forms-minimal-medical-intake",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "A": "S",
+      "B": "P"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-product-minimal-utility-password-manager",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "S-vs-P",
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "A": "P",
+      "B": "S"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "A": "P",
+      "B": "C"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "A": "P",
+      "B": "C"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "A": "P",
+      "B": "C"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "A": "P",
+      "B": "C"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-flex-warm-human-community-clinic",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-forms-minimal-medical-intake",
+      "A": "P",
+      "B": "C"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "A": "P",
+      "B": "C"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "A": "C",
+      "B": "P"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-product-minimal-utility-password-manager",
+      "A": "P",
+      "B": "C"
+    },
+    {
+      "contrast": "P-vs-C",
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "A": "C",
+      "B": "P"
+    }
+  ]
+}

@@ -1,0 +1,660 @@
+{
+  "collectedAt": "2026-07-28T23:28:15.984Z",
+  "cells": [
+    {
+      "id": "coverage-app-ui-corporate-dense-it-operations",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 56668,
+          "sha256": "82a6c782877e70d16558fdad4632f54fa03ccb1413db0e6d1ebe3ccdc521dbc9",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 42703,
+          "sha256": "53119da5c4c8fd54f321f828beff9be6d1e39c8d1ab0ba62d014e50756baa7b6",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 65839,
+          "sha256": "fddba4cdb7a4853cca4a68a82469921ab529f094549fd840fc30cc956b10b333",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 7,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-app-ui-minimal-utility-personal-budget",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 39358,
+          "sha256": "06664b1b0179c4a11eeeaa99f3ca2f56d7b4ac49d691f1014ab2122c14df4c1e",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 28726,
+          "sha256": "d4b8f4d5d07e0e14d1f44440e844052fda837d4d3e1148f3f74c1ba6631cbb67",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 54570,
+          "sha256": "9ff1f005c7f1bdea8149fc432089bce98b99612ac9ee4046d8e9f9fd986ff2c3",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-app-ui-playful-pet-care-planner",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 29214,
+          "sha256": "cb8e8f5f08a35d92149502d411e6000e6f177a364a6f3c90063da863033a2a85",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 43744,
+          "sha256": "6a1f22190c774a2d0d8c5175f825fcccd404b555b12ebcd717df7101207d01b1",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 63238,
+          "sha256": "9d8b734a8094b9916e90c80a7690f030fa5b9c4e58fb1bb6b2e415037d343423",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 1,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-editorial-classic-editorial-heritage-bakery",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 23250,
+          "sha256": "df27f026a15df301c1a0633606d1c42ca4638c09fb660ad4e4c36b67f83b8987",
+          "remote": [],
+          "leaked": [],
+          "emoji": 1,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 22246,
+          "sha256": "f3911623020106a3c1ca9a221c76840681ebe3ace439e623dfc5120fddae6034",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 30608,
+          "sha256": "b06c6ca318b7d4df7105fa9737794196cdbddcda08426e7dc4d1eb00ea1d16df",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-editorial-expressive-music-scene-report",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 19950,
+          "sha256": "78b8f59465ce98cb6ae091fa2a393ff77c20d0d1fe27637a932ead2835d495fc",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 28181,
+          "sha256": "ad9fc3d5df7447fdd444896fbb17f12626576bc76d5967efd24910d870eb609a",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 34934,
+          "sha256": "b8dfec34fe6b4e8a5cf2215538593cb6d41f1d2b124984bf1164eab59faa1055",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-editorial-restrained-public-health-brief",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 17403,
+          "sha256": "c4865cc9accef2078e36ddba3786910cdd13b1c9a914f22e82714b27ff767bd5",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 15382,
+          "sha256": "07c952eb63397141bf0cac919392f2f0125808e0c65b80b314834ffff72adb96",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 16221,
+          "sha256": "7faec6840eb3c95fd6ff3bbb67f3c2d7e2cd6a334b213367e6a44e5abf9e2fcd",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-flex-high-energy-youth-campus-event",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 35494,
+          "sha256": "71ab65cc7870e0369f70d0f504fe0bd5affdffc86d882b8de70ac782e71c36a9",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 35774,
+          "sha256": "1b08242bad61591df4aa303460850369013cf45c9ff4244484b1c66e0eab706f",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 34836,
+          "sha256": "16954952900191c34f9d7c301f9ed22336b7d342c27c83b0e724f2ef088b64ef",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-flex-premium-luxury-private-travel",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 40198,
+          "sha256": "955b8400c2a0735c760a2744e86bb0cf28fa5481673532b9ec5f0967826f046a",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 28753,
+          "sha256": "374e4e2b83977cf4232b5305d70e9cdc36b7b11a9c3b304414090efdf74a2b6e",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 40585,
+          "sha256": "617b09a7531ae392706714121128a72c920cd3a50c0b430eaa41acb1b7f85c0e",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-flex-warm-human-community-clinic",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 24154,
+          "sha256": "b5473fa7f974247670ca486d8f27e52d655fa89fc778b84f39b63c7acb5d69d6",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 16837,
+          "sha256": "cab6b936c37a1253d95123e9e1461c237241db31ba5d16741dc831b15fbce2c9",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 23091,
+          "sha256": "cfd7e70a0de6b3986f7b22090172fd333223a3f5dcd904989d18094a6fbcc369",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-forms-minimal-medical-intake",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 43426,
+          "sha256": "44a101bcaffb07115c11d8e4504e1d7ea377fac836fb51d8aeecb32db3194f65",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 27567,
+          "sha256": "75813564cd3f317edca5f06da0da6eb83a324370055fe2ceeaa8b55ae3054f83",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 56624,
+          "sha256": "4e5c00b8ede11e6ca7e2944f71bfbe01cc217df7151d6903c20bfb82d85d9c0f",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 2,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 75275,
+          "sha256": "ffe8790aad8ffe69985a7ac9a1f20bbb702104185b0f2c0459ed3af47ddefbeb",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 56836,
+          "sha256": "f2b92631a232ad6a738d73f8cd519299e2035ffd0b093dd99fe098692a09f738",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": true
+        },
+        "S": {
+          "ok": true,
+          "bytes": 65863,
+          "sha256": "24647bb5614f66ba0be72bc18238addf2fe4416bae6075952b923113b61149ed",
+          "remote": [],
+          "leaked": [],
+          "emoji": 1,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-marketing-landing-corporate-trust-freight-security",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 42105,
+          "sha256": "d78fc95d0fc963ad469ce4d07fb22fa2f23a82753eeb576acfa2ab3e653b9bf8",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 44373,
+          "sha256": "81d28cf53ffe3c4491a6f432114e19ea6d01714370f44de27b9c3b858a7e0801",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 53929,
+          "sha256": "38c6e007c2928a9bb29d10b5e013efd0f09d63e399631a9e77ad598ec5faaed6",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-marketing-landing-expressive-branded-bike-share",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 32206,
+          "sha256": "193aa195d65415906fc7dd8470b4fe40f7be8269bdac35ccb2dcf5e2cee4a07c",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 34015,
+          "sha256": "7572c805d645b32ed9beb56fc352b9b115828dc884a3779e09eaba580c434922",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 35526,
+          "sha256": "eae8895f55eddcd5e74dcff6a657570647c09537bce3c73c052a32153dad8177",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-marketing-landing-minimal-language-app",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 38752,
+          "sha256": "7b30ed27bd8b37b9e5596c5fc365522737025c00d6df15dca8a65691c3dca05c",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 24237,
+          "sha256": "902b32fe8f6dbabbf0acccabcd9dc4b61ba62bbe7caa65ace3be507924e7d79a",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 37046,
+          "sha256": "a92a7b16d3af6d89423153ef9cbdb3d89b97aeeeb781ff7a864a75f9d1280097",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 5,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-product-data-dense-climate-risk-dashboard",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 35888,
+          "sha256": "e8c36a12166eedf677c23db26519b143de14aab2b5913af1f2c4b222cc13ddb9",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 40862,
+          "sha256": "d28efbba5d7837d84ab425314f15e575caa9a564299590a206ac37bf814b3d75",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 62966,
+          "sha256": "7bc781bfd391e8ae4607e9a101f03e4ed8619b15cadd76035116b107a3184755",
+          "remote": [],
+          "leaked": [],
+          "emoji": 1,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-product-minimal-utility-password-manager",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 32195,
+          "sha256": "162e734384684936b26a510d3b97c64f3bc0cc4abff87ade53b1a808276f9322",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 24926,
+          "sha256": "f92617a4f6fcaff31e6359f59407c5e5a49fae63fd54f996e0620d60d78b5088",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 52840,
+          "sha256": "855218341e8ad251d756de626ea6c7cd08b804aaf2eaf2dc3ebe47bee87968a1",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    },
+    {
+      "id": "coverage-product-playful-kids-cooking-kit",
+      "arms": {
+        "C": {
+          "ok": true,
+          "bytes": 42464,
+          "sha256": "3e76113ebb172b0ba7f9c45470d59eb415b12ac22f3f5506f9ca421d48202872",
+          "remote": [],
+          "leaked": [],
+          "emoji": 1,
+          "emdash": 8,
+          "wrapperless": false
+        },
+        "P": {
+          "ok": true,
+          "bytes": 38644,
+          "sha256": "bca032b95af1317aff10f9b69470cfbf8d8ff9a6fcca7fe188fc60ecece72eb1",
+          "remote": [],
+          "leaked": [],
+          "emoji": 44,
+          "emdash": 0,
+          "wrapperless": false
+        },
+        "S": {
+          "ok": true,
+          "bytes": 46764,
+          "sha256": "d4b9e9df7744ff3e0544b7ae7d00c36b29307822747f7475fa8d4c0673720afb",
+          "remote": [],
+          "leaked": [],
+          "emoji": 0,
+          "emdash": 0,
+          "wrapperless": false
+        }
+      },
+      "complete": true
+    }
+  ],
+  "dropped": [],
+  "leaks": [],
+  "notSelfContained": [],
+  "wrapperless": [
+    {
+      "id": "coverage-forms-multi-step-corporate-vendor-onboarding",
+      "arm": "P"
+    }
+  ],
+  "contentGuardDiagnostic": {
+    "C": {
+      "pagesWithEmoji": 2,
+      "pagesWithEmdash": 1
+    },
+    "P": {
+      "pagesWithEmoji": 1,
+      "pagesWithEmdash": 0
+    },
+    "S": {
+      "pagesWithEmoji": 2,
+      "pagesWithEmdash": 4
+    }
+  },
+  "completeTriples": [
+    "coverage-app-ui-corporate-dense-it-operations",
+    "coverage-app-ui-minimal-utility-personal-budget",
+    "coverage-app-ui-playful-pet-care-planner",
+    "coverage-editorial-classic-editorial-heritage-bakery",
+    "coverage-editorial-expressive-music-scene-report",
+    "coverage-editorial-restrained-public-health-brief",
+    "coverage-flex-high-energy-youth-campus-event",
+    "coverage-flex-premium-luxury-private-travel",
+    "coverage-flex-warm-human-community-clinic",
+    "coverage-forms-minimal-medical-intake",
+    "coverage-forms-multi-step-corporate-vendor-onboarding",
+    "coverage-marketing-landing-corporate-trust-freight-security",
+    "coverage-marketing-landing-expressive-branded-bike-share",
+    "coverage-marketing-landing-minimal-language-app",
+    "coverage-product-data-dense-climate-risk-dashboard",
+    "coverage-product-minimal-utility-password-manager",
+    "coverage-product-playful-kids-cooking-kit"
+  ],
+  "realisedN": 17
+}

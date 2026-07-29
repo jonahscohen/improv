@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiteSignal Risk - Climate Risk Analytics Product Overview</title>
+<meta name="description" content="SiteSignal Risk: dataset coverage, risk categories, reporting outputs, refresh cadence, and role-based access for climate risk analytics across real estate portfolios.">
+<style>
+  /* ============ RESET ============ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body, h1, h2, h3, h4, p, dl, dd, dt, figure, ul, ol, li, table, th, td { margin: 0; padding: 0; }
+  ul, ol { list-style: none; }
+  table { border-collapse: collapse; border-spacing: 0; width: 100%; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: inherit; }
+  dialog { color: inherit; }
+
+  /* ============ TOKENS (light) ============ */
+  :root {
+    color-scheme: light;
+    --hue: 218;
+
+    /* 4pt spacing grid */
+    --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+    --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px; --space-24: 96px;
+
+    /* concentric radius: control 8px + 4px pad = card 12px */
+    --radius-control: 8px;
+    --radius-card: 12px;
+    --radius-lg: 20px;
+
+    /* typography - Cambria (serif heading) over Avenir (sans body), safe cross-classification pair */
+    --font-heading: Cambria, "Iowan Old Style", "Palatino Linotype", serif;
+    --font-body: Avenir, "Avenir Next", Optima, "Century Gothic", sans-serif;
+    --text-micro: 0.75rem;   /* 12px - badges, table headers */
+    --text-small: 0.875rem;  /* 14px - meta, captions */
+    --text-body: 1rem;       /* 16px - fixed measure */
+    --text-lead: 1.125rem;   /* 18px */
+    --text-h4: 1.3125rem;    /* 21px, 1.31x body */
+    --text-h3: 1.6875rem;    /* 27px, 1.29x h4 */
+    --text-h2: clamp(2.1875rem, 1.85rem + 1.4vw, 2.875rem);  /* 35px -> 46px, ratio 1.30x vs h3 */
+    --text-h1: clamp(2.75rem, 2.15rem + 2.5vw, 3.625rem);    /* 44px -> 58px, ratio 1.26x vs h2 */
+
+    /* motion - prescribed named easings only */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-feedback: 120ms;
+    --dur-state: 220ms;
+    --dur-entrance: 620ms;
+    --dur-modal-in: 260ms;
+    --dur-modal-out: 195ms;
+
+    /* neutrals - tinted toward brand hue, no pure gray/black/white */
+    --surface-canvas: oklch(97.8% 0.006 var(--hue));
+    --surface-raised: oklch(99.3% 0.003 var(--hue));
+    --surface-sunken: oklch(94.5% 0.011 var(--hue));
+    --border-subtle: oklch(88% 0.011 var(--hue));
+    --border-strong: oklch(73% 0.017 var(--hue));
+    --text-primary: oklch(24% 0.019 var(--hue));
+    --text-secondary: oklch(43% 0.019 var(--hue));
+    --text-tertiary: oklch(56% 0.016 var(--hue));
+    --text-on-accent: oklch(98% 0.005 var(--hue));
+
+    /* accent */
+    --accent: oklch(47% 0.135 var(--hue));
+    --accent-strong: oklch(38% 0.14 var(--hue));
+    --accent-soft: oklch(92% 0.028 var(--hue));
+    --focus-ring: oklch(47% 0.15 var(--hue));
+
+    /* semantic status */
+    --success: oklch(45% 0.13 152);
+    --success-soft: oklch(93% 0.045 152);
+    --error: oklch(48% 0.185 24);
+    --error-soft: oklch(93% 0.05 24);
+
+    /* risk category hues */
+    --risk-flood: oklch(45% 0.13 245);       --risk-flood-soft: oklch(92% 0.03 245);
+    --risk-wildfire: oklch(48% 0.16 38);     --risk-wildfire-soft: oklch(92% 0.05 42);
+    --risk-heat: oklch(48% 0.18 20);         --risk-heat-soft: oklch(92% 0.05 20);
+    --risk-wind: oklch(42% 0.11 285);        --risk-wind-soft: oklch(92% 0.03 285);
+    --risk-sealevel: oklch(40% 0.1 195);      --risk-sealevel-soft: oklch(91% 0.03 195);
+    --risk-drought: oklch(48% 0.11 78);       --risk-drought-soft: oklch(92% 0.045 78);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface-canvas: oklch(18.5% 0.015 var(--hue));
+      --surface-raised: oklch(23% 0.018 var(--hue));
+      --surface-sunken: oklch(26% 0.02 var(--hue));
+      --border-subtle: oklch(33% 0.019 var(--hue));
+      --border-strong: oklch(43% 0.022 var(--hue));
+      --text-primary: oklch(93% 0.011 var(--hue));
+      --text-secondary: oklch(74% 0.015 var(--hue));
+      --text-tertiary: oklch(60% 0.015 var(--hue));
+      --text-on-accent: oklch(98% 0.005 var(--hue));
+
+      --accent: oklch(72% 0.13 var(--hue));
+      --accent-strong: oklch(80% 0.11 var(--hue));
+      --accent-soft: oklch(29% 0.05 var(--hue));
+      --focus-ring: oklch(76% 0.13 var(--hue));
+
+      --success: oklch(74% 0.14 152);
+      --success-soft: oklch(29% 0.055 152);
+      --error: oklch(74% 0.16 24);
+      --error-soft: oklch(31% 0.065 24);
+
+      --risk-flood: oklch(74% 0.11 245);      --risk-flood-soft: oklch(29% 0.05 245);
+      --risk-wildfire: oklch(76% 0.13 42);    --risk-wildfire-soft: oklch(30% 0.06 42);
+      --risk-heat: oklch(74% 0.15 22);        --risk-heat-soft: oklch(30% 0.06 22);
+      --risk-wind: oklch(72% 0.09 285);       --risk-wind-soft: oklch(28% 0.04 285);
+      --risk-sealevel: oklch(70% 0.09 195);   --risk-sealevel-soft: oklch(27% 0.04 195);
+      --risk-drought: oklch(76% 0.1 78);      --risk-drought-soft: oklch(29% 0.045 78);
+    }
+    body { letter-spacing: 0.015em; }
+    p, li, dd, td { line-height: 1.68; }
+    h1, h2, h3, h4 { font-weight: 600; }
+  }
+
+  /* ============ BASE ============ */
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    font-size: var(--text-body);
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--surface-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: 700; text-wrap: balance; color: var(--text-primary); }
+  h1 { font-size: var(--text-h1); line-height: 1.08; }
+  h2 { font-size: var(--text-h2); line-height: 1.16; }
+  h3 { font-size: var(--text-h3); line-height: 1.25; }
+  h4 { font-size: var(--text-h4); line-height: 1.3; }
+  .lead { font-size: var(--text-lead); color: var(--text-secondary); max-width: 58ch; line-height: 1.6; }
+  p { max-width: 68ch; }
+  .wrap { max-width: 1240px; margin-inline: auto; padding-inline: var(--space-6); }
+  section[id] { scroll-margin-top: 92px; }
+  strong { font-weight: 700; }
+
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; border: 0; padding: 0; margin: -1px;
+  }
+  .skip-link {
+    position: absolute; left: var(--space-4); top: -80px; z-index: 200;
+    background: var(--accent); color: var(--text-on-accent);
+    padding: var(--space-2) var(--space-4); border-radius: var(--radius-control);
+    transition: top var(--dur-state) var(--ease-out);
+  }
+  .skip-link:focus { top: var(--space-4); }
+
+  :focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-control); }
+
+  /* ============ HEADER / NAV ============ */
+  .site-header {
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in oklch, var(--surface-canvas) 90%, transparent);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .site-header__inner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding-block: var(--space-3); position: relative; }
+  .brand { display: flex; align-items: center; gap: var(--space-2); text-decoration: none; font-family: var(--font-heading); font-weight: 700; font-size: 1.125rem; }
+  .brand__mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: var(--radius-control); background: var(--accent); color: var(--text-on-accent); font-family: var(--font-body); font-size: var(--text-micro); font-weight: 700; letter-spacing: 0.02em; }
+
+  .nav-toggle {
+    display: inline-flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px;
+    width: 44px; height: 44px; background: transparent; border: 1px solid var(--border-strong);
+    border-radius: var(--radius-control); cursor: pointer;
+  }
+  .nav-toggle__bar { width: 18px; height: 2px; background: var(--text-primary); border-radius: 1px; transition: transform var(--dur-state) var(--ease-in-out), opacity var(--dur-feedback) var(--ease-out); }
+  .nav-toggle[aria-expanded="true"] .nav-toggle__bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .nav-toggle[aria-expanded="true"] .nav-toggle__bar:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded="true"] .nav-toggle__bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .nav-toggle:active { transform: scale(0.96); }
+  .nav-toggle:hover { border-color: var(--text-tertiary); }
+
+  .primary-nav { display: flex; align-items: center; gap: var(--space-6); }
+  .primary-nav ul { display: flex; gap: var(--space-6); }
+  .primary-nav a { font-size: var(--text-small); font-weight: 600; text-decoration: none; color: var(--text-secondary); padding-block: var(--space-2); border-bottom: 2px solid transparent; transition: color var(--dur-feedback) var(--ease-out), border-color var(--dur-feedback) var(--ease-out); }
+  .primary-nav a:hover { color: var(--text-primary); border-color: var(--border-strong); }
+
+  @media (max-width: 767px) {
+    .nav-toggle { display: inline-flex; }
+    .primary-nav {
+      position: absolute; top: calc(100% + 1px); left: 0; right: 0;
+      flex-direction: column; align-items: stretch; gap: var(--space-4);
+      background: var(--surface-raised); border-bottom: 1px solid var(--border-subtle);
+      padding: var(--space-6); box-shadow: 0 16px 32px rgba(0,0,0,0.12);
+      transform: translateY(-10px); opacity: 0; visibility: hidden; pointer-events: none;
+      transition: transform var(--dur-modal-in) var(--ease-drawer), opacity var(--dur-modal-in) var(--ease-drawer), visibility 0s linear var(--dur-modal-in);
+    }
+    .primary-nav.is-open { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; transition: transform var(--dur-modal-in) var(--ease-drawer), opacity var(--dur-modal-in) var(--ease-drawer), visibility 0s linear 0s; }
+    .primary-nav ul { flex-direction: column; gap: var(--space-3); }
+  }
+  @media (min-width: 768px) { .nav-toggle { display: none; } }
+
+  /* ============ BUTTONS ============ */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+    min-height: 44px; padding: var(--space-3) var(--space-6);
+    font-size: var(--text-small); font-weight: 700; font-family: var(--font-body); text-decoration: none;
+    border-radius: var(--radius-control); border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+    transition: background-color var(--dur-feedback) var(--ease-out), border-color var(--dur-feedback) var(--ease-out), transform var(--dur-feedback) var(--ease-out), color var(--dur-feedback) var(--ease-out);
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary { background: var(--accent); color: var(--text-on-accent); }
+  .btn-primary:hover { background: var(--accent-strong); }
+  .btn-ghost { background: transparent; color: var(--text-primary); border-color: var(--border-strong); }
+  .btn-ghost:hover { background: var(--surface-sunken); }
+  .btn-small { min-height: 36px; padding: var(--space-2) var(--space-4); }
+  .btn[disabled] { background: var(--surface-sunken); color: var(--text-tertiary); border-color: var(--border-subtle); cursor: not-allowed; transform: none; }
+
+  /* ============ HERO ============ */
+  .hero { padding-block: var(--space-16) var(--space-12); border-bottom: 1px solid var(--border-subtle); }
+  .hero__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-8); }
+  .eyebrow { display: block; font-size: var(--text-small); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: var(--space-3); }
+  .hero__copy h1 { margin-bottom: var(--space-4); opacity: 0; transform: translateY(10px); animation: rise var(--dur-entrance) var(--ease-out) 40ms forwards; }
+  .hero__copy .lead { margin-bottom: var(--space-6); opacity: 0; transform: translateY(10px); animation: rise var(--dur-entrance) var(--ease-out) 120ms forwards; }
+  .hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-8); opacity: 0; transform: translateY(10px); animation: rise var(--dur-entrance) var(--ease-out) 200ms forwards; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .hero__copy h1, .hero__copy .lead, .hero__actions { animation: none; opacity: 1; transform: none; } }
+
+  .stat-strip { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+  .stat-strip__item { padding: var(--space-4); background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); }
+  .stat-strip__item dt { font-size: var(--text-micro); font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--space-1); }
+  .stat-strip__item dd { font-family: var(--font-heading); font-size: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  @media (min-width: 768px) { .stat-strip { grid-template-columns: repeat(5, 1fr); } }
+
+  /* ============ SECTION COMMON ============ */
+  main section:not(.hero) { padding-block: var(--space-16); border-bottom: 1px solid var(--border-subtle); }
+  main section:last-of-type { border-bottom: none; }
+  .section-head { margin-bottom: var(--space-8); max-width: 74ch; }
+  .section-head h2 { margin-bottom: var(--space-3); }
+  .section-intro { color: var(--text-secondary); }
+  .band-tint { background: var(--surface-sunken); }
+
+  /* ============ DATA TABLES ============ */
+  .table-frame { border: 1px solid var(--border-subtle); border-radius: var(--radius-card); overflow: hidden; }
+  .data-table caption { text-align: left; padding: var(--space-3) var(--space-4); font-size: var(--text-small); color: var(--text-tertiary); background: var(--surface-raised); }
+  .data-table th, .data-table td { text-align: left; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); font-size: var(--text-small); }
+  .data-table thead th { background: var(--surface-sunken); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-size: var(--text-micro); color: var(--text-tertiary); }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr { transition: background-color var(--dur-state) var(--ease-out); }
+
+  @media (max-width: 767px) {
+    .stack-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .stack-table, .stack-table tbody, .stack-table tr, .stack-table td { display: block; width: 100%; }
+    .stack-table tr { border-bottom: 1px solid var(--border-subtle); padding-block: var(--space-3); }
+    .stack-table tr:last-child { border-bottom: none; }
+    .stack-table td { display: flex; justify-content: space-between; gap: var(--space-4); border-bottom: none; padding-block: var(--space-1); text-align: right; }
+    .stack-table td::before { content: attr(data-label); font-weight: 700; color: var(--text-tertiary); text-align: left; flex: 0 0 44%; }
+  }
+  @media (min-width: 768px) and (max-width: 1023px) { .table-frame.scroll-md { overflow-x: auto; } }
+  @media (min-width: 1024px) { .data-table thead th { position: sticky; top: 92px; } }
+
+  /* ============ QUESTIONS ============ */
+  .questions-list { display: grid; grid-template-columns: 1fr; gap: var(--space-6); }
+  .questions-list dt { font-family: var(--font-heading); font-weight: 700; font-size: 1.0625rem; margin-bottom: var(--space-2); line-height: 1.35; }
+  .questions-list dd { color: var(--text-secondary); }
+  @media (min-width: 768px) { .questions-list { grid-template-columns: repeat(2, 1fr); gap: var(--space-8); } }
+
+  /* ============ RISK CATEGORY TABS ============ */
+  .tab-list { display: flex; flex-wrap: wrap; gap: var(--space-2); border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--space-8); }
+  .tab {
+    display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: var(--space-2) var(--space-4);
+    background: transparent; border: 1px solid transparent; border-bottom: none; border-radius: var(--radius-control) var(--radius-control) 0 0;
+    font-size: var(--text-small); font-weight: 700; color: var(--text-secondary); cursor: pointer;
+    transition: color var(--dur-feedback) var(--ease-out), background-color var(--dur-feedback) var(--ease-out);
+  }
+  .tab__dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .tab:hover { color: var(--text-primary); background: var(--surface-sunken); }
+  .tab[aria-selected="true"] { color: var(--text-primary); background: var(--surface-raised); border-color: var(--border-subtle); position: relative; top: 1px; }
+  .tab:active { transform: scale(0.98); }
+
+  .tab-panel { display: grid; grid-template-columns: 1fr; gap: var(--space-6); }
+  .tab-panel[hidden] { display: none; }
+  .tab-panel.is-entering { animation: panel-in var(--dur-state) var(--ease-in-out); }
+  @keyframes panel-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .tab-panel.is-entering { animation: none; } }
+
+  .risk-facts { display: grid; grid-template-columns: 1fr; gap: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); padding: var(--space-6); }
+  .risk-facts__row { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-small); }
+  .risk-facts__row dt { font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; font-size: var(--text-micro); letter-spacing: 0.03em; }
+  @media (min-width: 640px) { .tab-panel { grid-template-columns: 1.4fr 1fr; align-items: start; } }
+  @container (max-width: 260px) { .risk-facts { padding: var(--space-4); } }
+
+  /* ============ REPORTING ============ */
+  .reporting-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
+  .reporting-item { background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); }
+  .reporting-item h3 { font-size: 1.0625rem; }
+  .reporting-item p { color: var(--text-secondary); font-size: var(--text-small); }
+  .reporting-item__format { font-size: var(--text-micro); font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+  @media (min-width: 640px) { .reporting-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1024px) { .reporting-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  /* ============ ROLES ============ */
+  .role-picker { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-6); max-width: 360px; }
+  .role-picker label { font-size: var(--text-small); font-weight: 700; }
+  .role-picker select {
+    min-height: 44px; padding: var(--space-3) var(--space-4); background: var(--surface-raised); color: var(--text-primary);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-control);
+    transition: border-color var(--dur-feedback) var(--ease-out);
+  }
+  .role-picker select:hover { border-color: var(--text-tertiary); }
+  .role-summary { padding: var(--space-4); background: var(--accent-soft); border-radius: var(--radius-card); font-size: var(--text-small); margin-bottom: var(--space-8); min-height: 44px; display: flex; align-items: center; }
+  .perm-yes { display: inline-flex; align-items: center; padding: var(--space-1) var(--space-3); border-radius: 999px; font-size: var(--text-micro); font-weight: 700; background: var(--success-soft); color: var(--success); }
+  .perm-no { display: inline-flex; align-items: center; padding: var(--space-1) var(--space-3); border-radius: 999px; font-size: var(--text-micro); font-weight: 700; background: var(--surface-sunken); color: var(--text-tertiary); border: 1px solid var(--border-subtle); }
+  .perm-scoped { display: inline-flex; align-items: center; padding: var(--space-1) var(--space-3); border-radius: 999px; font-size: var(--text-micro); font-weight: 700; background: var(--accent-soft); color: var(--accent-strong); }
+
+  .roles-table[data-active-role="analyst"] th:nth-child(2), .roles-table[data-active-role="analyst"] td:nth-child(2) { background: var(--accent-soft); }
+  .roles-table[data-active-role="asset-manager"] th:nth-child(3), .roles-table[data-active-role="asset-manager"] td:nth-child(3) { background: var(--accent-soft); }
+  .roles-table[data-active-role="sustainability"] th:nth-child(4), .roles-table[data-active-role="sustainability"] td:nth-child(4) { background: var(--accent-soft); }
+  .roles-table[data-active-role="admin"] th:nth-child(5), .roles-table[data-active-role="admin"] td:nth-child(5) { background: var(--accent-soft); }
+  .roles-table[data-active-role="api"] th:nth-child(6), .roles-table[data-active-role="api"] td:nth-child(6) { background: var(--accent-soft); }
+  .roles-table[data-active-role="viewer"] th:nth-child(7), .roles-table[data-active-role="viewer"] td:nth-child(7) { background: var(--accent-soft); }
+
+  /* ============ CTA BAND ============ */
+  .cta-band { background: var(--surface-sunken); }
+  .cta-band__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-8); align-items: center; }
+  .cta-band__list { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-small); color: var(--text-secondary); }
+  @media (min-width: 900px) { .cta-band__grid { grid-template-columns: 1.2fr 1fr; } }
+
+  /* ============ DIALOG / FORM ============ */
+  dialog.demo-dialog {
+    max-width: 460px; width: min(92vw, 460px); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+    padding: var(--space-8); background: var(--surface-raised); box-shadow: 0 24px 48px rgba(0,0,0,0.18);
+    opacity: 0; transform: translateY(16px) scale(0.98);
+  }
+  dialog.demo-dialog::backdrop { background: oklch(20% 0.02 var(--hue) / 45%); }
+  dialog.demo-dialog.is-open { animation: dialog-in var(--dur-modal-in) var(--ease-drawer) forwards; }
+  dialog.demo-dialog.is-closing { animation: dialog-out var(--dur-modal-out) var(--ease-out) forwards; }
+  @keyframes dialog-in { to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes dialog-out { to { opacity: 0; transform: translateY(10px) scale(0.98); } }
+  @media (prefers-reduced-motion: reduce) {
+    dialog.demo-dialog { opacity: 1; transform: none; }
+    dialog.demo-dialog.is-open, dialog.demo-dialog.is-closing { animation: none; }
+  }
+  .demo-dialog__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-2); }
+  .demo-dialog h2 { font-size: var(--text-h4); }
+  .demo-dialog__intro { color: var(--text-secondary); font-size: var(--text-small); margin-bottom: var(--space-6); }
+  .dialog-close {
+    flex: 0 0 auto; width: 32px; height: 32px; border-radius: var(--radius-control); border: 1px solid var(--border-strong);
+    background: transparent; cursor: pointer; font-size: var(--text-small); font-weight: 700; line-height: 1;
+    transition: background-color var(--dur-feedback) var(--ease-out), transform var(--dur-feedback) var(--ease-out);
+  }
+  .dialog-close:hover { background: var(--surface-sunken); }
+  .dialog-close:active { transform: scale(0.96); }
+
+  .field { margin-bottom: var(--space-6); }
+  .field:last-of-type { margin-bottom: 0; }
+  .field label { display: block; font-size: var(--text-small); font-weight: 700; margin-bottom: var(--space-2); }
+  .field input, .field select {
+    width: 100%; min-height: 44px; padding: var(--space-3) var(--space-4);
+    background: var(--surface-canvas); color: var(--text-primary);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-control);
+    transition: border-color var(--dur-feedback) var(--ease-out), background-color var(--dur-feedback) var(--ease-out);
+  }
+  .field input:hover, .field select:hover { border-color: var(--text-tertiary); }
+  .field input[aria-invalid="true"], .field select[aria-invalid="true"] { border-color: var(--error); background: var(--error-soft); }
+  .field-error { display: none; font-size: var(--text-micro); color: var(--error); margin-top: var(--space-2); font-weight: 700; }
+  .field-error.is-visible { display: block; }
+
+  .dialog-actions { display: flex; gap: var(--space-3); margin-top: var(--space-8); }
+  .dialog-actions .btn { flex: 1 1 0; }
+  .demo-submit[aria-busy="true"] { position: relative; color: transparent; pointer-events: none; }
+  .demo-submit__spinner {
+    display: none; position: absolute; width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid color-mix(in oklch, var(--text-on-accent) 35%, transparent); border-top-color: var(--text-on-accent);
+  }
+  .demo-submit[aria-busy="true"] .demo-submit__spinner { display: block; animation: spin 700ms linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .demo-submit[aria-busy="true"] .demo-submit__spinner { animation: none; opacity: 0.7; } }
+
+  .form-status { margin-top: var(--space-4); padding: var(--space-4); border-radius: var(--radius-card); font-size: var(--text-small); display: none; }
+  .form-status.is-visible { display: block; }
+  .form-status--success { background: var(--success-soft); color: var(--success); }
+  .form-status--error { background: var(--error-soft); color: var(--error); }
+
+  /* ============ FOOTER ============ */
+  .site-footer { padding-block: var(--space-8); }
+  .site-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); font-size: var(--text-micro); color: var(--text-tertiary); }
+
+  /* ============ REDUCED MOTION (global fallback) ============ */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="brand" href="#top">
+      <span class="brand__mark" aria-hidden="true">SR</span>
+      <span>SiteSignal Risk</span>
+    </a>
+    <button type="button" class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="primaryNav">
+      <span class="nav-toggle__bar"></span><span class="nav-toggle__bar"></span><span class="nav-toggle__bar"></span>
+      <span class="visually-hidden">Open menu</span>
+    </button>
+    <nav class="primary-nav" id="primaryNav" aria-label="Primary">
+      <ul>
+        <li><a href="#datasets">Datasets</a></li>
+        <li><a href="#questions">Portfolio questions</a></li>
+        <li><a href="#risk-categories">Risk categories</a></li>
+        <li><a href="#reporting">Reporting</a></li>
+        <li><a href="#cadence">Refresh cadence</a></li>
+        <li><a href="#roles">Roles &amp; access</a></li>
+      </ul>
+      <button type="button" class="btn btn-primary btn-small" data-open-demo>Request a demo</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <div class="wrap hero__grid">
+      <div class="hero__copy">
+        <span class="eyebrow">Climate risk analytics for real estate portfolios</span>
+        <h1 id="hero-title">Score every asset for climate risk before it shows up in a loss report or a disclosure filing.</h1>
+        <p class="lead">SiteSignal Risk unifies flood, wildfire, extreme heat, severe wind, sea-level rise, and drought exposure into one address-level model, rolled up to the fund, market, and portfolio level your team already reports against.</p>
+        <div class="hero__actions">
+          <button type="button" class="btn btn-primary" data-open-demo>Request a demo</button>
+          <a class="btn btn-ghost" href="#datasets">Browse dataset coverage</a>
+        </div>
+      </div>
+      <dl class="stat-strip" aria-label="Coverage at a glance">
+        <div class="stat-strip__item"><dt>Risk categories</dt><dd>6</dd></div>
+        <div class="stat-strip__item"><dt>Underlying datasets</dt><dd>9</dd></div>
+        <div class="stat-strip__item"><dt>Model horizon</dt><dd>To 2100</dd></div>
+        <div class="stat-strip__item"><dt>Rescoring cadence</dt><dd>Monthly</dd></div>
+        <div class="stat-strip__item"><dt>User roles</dt><dd>6</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section id="datasets" class="band-tint" aria-labelledby="datasets-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="datasets-title">Key datasets covered</h2>
+        <p class="section-intro">Nine licensed and public datasets feed the model, each mapped to a defined methodology, resolution, and geography.</p>
+      </div>
+      <div class="table-frame scroll-md">
+        <table class="data-table stack-table">
+          <caption>Datasets, methodology, resolution, and coverage underlying SiteSignal Risk</caption>
+          <thead>
+            <tr>
+              <th scope="col">Dataset</th>
+              <th scope="col">Source &amp; methodology</th>
+              <th scope="col">Native resolution</th>
+              <th scope="col">Coverage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Dataset">Riverine &amp; Pluvial Flood Model</td>
+              <td data-label="Source &amp; methodology">Licensed catastrophe model, 3 emission scenarios</td>
+              <td data-label="Native resolution">Parcel-level</td>
+              <td data-label="Coverage">US, UK, EU (expanding)</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Coastal Flood &amp; Storm Surge Model</td>
+              <td data-label="Source &amp; methodology">Licensed catastrophe model, tide and surge coupling</td>
+              <td data-label="Native resolution">10 m grid</td>
+              <td data-label="Coverage">US and global coastlines</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Wildfire Hazard &amp; Fuel Load Index</td>
+              <td data-label="Source &amp; methodology">Satellite fuel-moisture data plus ignition history</td>
+              <td data-label="Native resolution">30 m grid</td>
+              <td data-label="Coverage">Western US, Southern Europe, Australia</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Extreme Heat &amp; Heat-Index Projection</td>
+              <td data-label="Source &amp; methodology">Downscaled CMIP6 climate reanalysis</td>
+              <td data-label="Native resolution">4 km grid</td>
+              <td data-label="Coverage">Global, metro overlay for 150 largest markets</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Tropical Cyclone &amp; Wind Model</td>
+              <td data-label="Source &amp; methodology">Licensed catastrophe model, wind-speed return periods</td>
+              <td data-label="Native resolution">Parcel-level</td>
+              <td data-label="Coverage">Atlantic &amp; Gulf basins, APAC</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Sea-Level Rise &amp; Inundation Scenarios</td>
+              <td data-label="Source &amp; methodology">IPCC AR6-aligned tide-gauge and satellite altimetry</td>
+              <td data-label="Native resolution">90 m grid</td>
+              <td data-label="Coverage">Global coastal</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Drought &amp; Water-Stress Index</td>
+              <td data-label="Source &amp; methodology">Public hydrological model, watershed baseline</td>
+              <td data-label="Native resolution">Watershed-level</td>
+              <td data-label="Coverage">Global, US and EU emphasis</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Historical Event Log</td>
+              <td data-label="Source &amp; methodology">Aggregated public disaster declarations</td>
+              <td data-label="Native resolution">Address-level</td>
+              <td data-label="Coverage">United States</td>
+            </tr>
+            <tr>
+              <td data-label="Dataset">Client Portfolio &amp; Asset Attributes</td>
+              <td data-label="Source &amp; methodology">Client upload or API</td>
+              <td data-label="Native resolution">Address / parcel</td>
+              <td data-label="Coverage">Client-defined</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="questions" aria-labelledby="questions-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="questions-title">Example portfolio questions the product answers</h2>
+        <p class="section-intro">These are the questions analysts bring to SiteSignal Risk during quarterly reviews and acquisition diligence.</p>
+      </div>
+      <dl class="questions-list">
+        <div>
+          <dt>Which assets cross our underwriting flood threshold under the 2050 scenario, and how has that changed since acquisition?</dt>
+          <dd>Ranked by fluvial, pluvial, and coastal exposure at the parcel level, compared against the position at acquisition.</dd>
+        </div>
+        <div>
+          <dt>How much of the industrial portfolio sits inside a high wildfire-hazard zone, weighted by net operating income?</dt>
+          <dd>NOI-weighted rollups by fund, region, or asset type.</dd>
+        </div>
+        <div>
+          <dt>Which three markets show the steepest rise in heat-index days over the next fifteen years?</dt>
+          <dd>Decadal heat-day frequency trends compared across held and target markets.</dd>
+        </div>
+        <div>
+          <dt>What share of the coastal book is exposed to inundation under the 2100 sea-level scenario, before and after planned retrofits?</dt>
+          <dd>Side-by-side scenario comparison at the asset and portfolio level.</dd>
+        </div>
+        <div>
+          <dt>How does current wind exposure compare to the position we held at last year's disclosure cycle?</dt>
+          <dd>Year-over-year exposure delta, aligned to your prior TCFD or ISSB filing.</dd>
+        </div>
+        <div>
+          <dt>Which five assets should move to the top of the resilience-retrofit list this quarter?</dt>
+          <dd>A prioritized list scored against aggregate exposure and estimated remediation cost.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section id="risk-categories" class="band-tint" aria-labelledby="risk-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="risk-title">Risk categories</h2>
+        <p class="section-intro">Six categories, each backed by a named dataset, a defined model horizon, and a primary use case. Select a category to see its detail.</p>
+      </div>
+
+      <div class="tab-list" role="tablist" aria-label="Risk categories">
+        <button class="tab" role="tab" id="tab-flood" aria-selected="true" aria-controls="panel-flood" tabindex="0"><span class="tab__dot" style="background: var(--risk-flood)" aria-hidden="true"></span>Flood</button>
+        <button class="tab" role="tab" id="tab-wildfire" aria-selected="false" aria-controls="panel-wildfire" tabindex="-1"><span class="tab__dot" style="background: var(--risk-wildfire)" aria-hidden="true"></span>Wildfire</button>
+        <button class="tab" role="tab" id="tab-heat" aria-selected="false" aria-controls="panel-heat" tabindex="-1"><span class="tab__dot" style="background: var(--risk-heat)" aria-hidden="true"></span>Extreme heat</button>
+        <button class="tab" role="tab" id="tab-wind" aria-selected="false" aria-controls="panel-wind" tabindex="-1"><span class="tab__dot" style="background: var(--risk-wind)" aria-hidden="true"></span>Severe wind</button>
+        <button class="tab" role="tab" id="tab-sealevel" aria-selected="false" aria-controls="panel-sealevel" tabindex="-1"><span class="tab__dot" style="background: var(--risk-sealevel)" aria-hidden="true"></span>Sea-level rise</button>
+        <button class="tab" role="tab" id="tab-drought" aria-selected="false" aria-controls="panel-drought" tabindex="-1"><span class="tab__dot" style="background: var(--risk-drought)" aria-hidden="true"></span>Drought &amp; water stress</button>
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-flood" aria-labelledby="tab-flood" tabindex="0">
+        <p>Riverine, pluvial, and coastal surge exposure scored to the parcel, modeled against current conditions plus 2050 and 2100 scenarios.</p>
+        <dl class="risk-facts">
+          <div class="risk-facts__row"><dt>Primary dataset</dt><dd>Riverine &amp; Pluvial Flood Model, Coastal Flood &amp; Storm Surge Model</dd></div>
+          <div class="risk-facts__row"><dt>Model horizon</dt><dd>Current, 2050, 2100</dd></div>
+          <div class="risk-facts__row"><dt>Typical use case</dt><dd>Underwriting review, acquisition diligence</dd></div>
+        </dl>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-wildfire" aria-labelledby="tab-wildfire" tabindex="0" hidden>
+        <p>Fuel load, ignition likelihood, and defensible-space context combined into a single hazard score, refreshed ahead of each fire season.</p>
+        <dl class="risk-facts">
+          <div class="risk-facts__row"><dt>Primary dataset</dt><dd>Wildfire Hazard &amp; Fuel Load Index</dd></div>
+          <div class="risk-facts__row"><dt>Model horizon</dt><dd>Current, 10-year trend</dd></div>
+          <div class="risk-facts__row"><dt>Typical use case</dt><dd>Insurance renewal prep, capex prioritization</dd></div>
+        </dl>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-heat" aria-labelledby="tab-heat" tabindex="0" hidden>
+        <p>Heat-index frequency and severity projected across the hold period, with a metro-level overlay for urban heat-island effects.</p>
+        <dl class="risk-facts">
+          <div class="risk-facts__row"><dt>Primary dataset</dt><dd>Extreme Heat &amp; Heat-Index Projection</dd></div>
+          <div class="risk-facts__row"><dt>Model horizon</dt><dd>Current, 2040</dd></div>
+          <div class="risk-facts__row"><dt>Typical use case</dt><dd>HVAC capex planning, tenant-comfort risk</dd></div>
+        </dl>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-wind" aria-labelledby="tab-wind" tabindex="0" hidden>
+        <p>Wind-speed return periods and storm-track probability for hurricane and straight-line wind exposure.</p>
+        <dl class="risk-facts">
+          <div class="risk-facts__row"><dt>Primary dataset</dt><dd>Tropical Cyclone &amp; Wind Model</dd></div>
+          <div class="risk-facts__row"><dt>Model horizon</dt><dd>Current, annual update</dd></div>
+          <div class="risk-facts__row"><dt>Typical use case</dt><dd>Insurance placement, post-storm loss triage</dd></div>
+        </dl>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-sealevel" aria-labelledby="tab-sealevel" tabindex="0" hidden>
+        <p>Coastal inundation scenarios aligned to IPCC AR6, tracking exposure from today through the end of the century.</p>
+        <dl class="risk-facts">
+          <div class="risk-facts__row"><dt>Primary dataset</dt><dd>Sea-Level Rise &amp; Inundation Scenarios</dd></div>
+          <div class="risk-facts__row"><dt>Model horizon</dt><dd>Current, 2050, 2100</dd></div>
+          <div class="risk-facts__row"><dt>Typical use case</dt><dd>Long-hold underwriting, disclosure reporting</dd></div>
+        </dl>
+      </div>
+      <div class="tab-panel" role="tabpanel" id="panel-drought" aria-labelledby="tab-drought" tabindex="0" hidden>
+        <p>Watershed-level baseline water stress and drought frequency, relevant to irrigation-dependent and water-intensive assets.</p>
+        <dl class="risk-facts">
+          <div class="risk-facts__row"><dt>Primary dataset</dt><dd>Drought &amp; Water-Stress Index</dd></div>
+          <div class="risk-facts__row"><dt>Model horizon</dt><dd>Current, seasonal</dd></div>
+          <div class="risk-facts__row"><dt>Typical use case</dt><dd>Agricultural and industrial asset screening</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="reporting" aria-labelledby="reporting-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="reporting-title">Reporting outputs</h2>
+        <p class="section-intro">Every dataset and risk category above rolls up into one of six output formats.</p>
+      </div>
+      <div class="reporting-grid">
+        <article class="reporting-item">
+          <span class="reporting-item__format">PDF, Slide export</span>
+          <h3>Portfolio Risk Summary</h3>
+          <p>Ranks every asset across all six risk categories, rolled up by fund and business unit.</p>
+        </article>
+        <article class="reporting-item">
+          <span class="reporting-item__format">PDF, CSV</span>
+          <h3>Asset-Level Risk Report</h3>
+          <p>Per-property detail with hazard maps, model scores, and a historical event log.</p>
+        </article>
+        <article class="reporting-item">
+          <span class="reporting-item__format">CSV, API</span>
+          <h3>Scenario Stress Test</h3>
+          <p>Compares exposure across acquisition, hold, and exit horizons under multiple emission scenarios.</p>
+        </article>
+        <article class="reporting-item">
+          <span class="reporting-item__format">Structured export</span>
+          <h3>Regulatory Disclosure Export</h3>
+          <p>Physical-risk tables structured to align with TCFD and ISSB disclosure formats.</p>
+        </article>
+        <article class="reporting-item">
+          <span class="reporting-item__format">JSON</span>
+          <h3>API Data Feed</h3>
+          <p>Programmatic score retrieval for internal BI tools and underwriting systems.</p>
+        </article>
+        <article class="reporting-item">
+          <span class="reporting-item__format">Saved views</span>
+          <h3>Custom Dashboard Views</h3>
+          <p>Saved filters and thresholds, shared by fund, region, or business unit.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="cadence" class="band-tint" aria-labelledby="cadence-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="cadence-title">Data refresh cadence</h2>
+        <p class="section-intro">Model refresh frequency by category, plus event-driven overlays that run outside the standard cycle.</p>
+      </div>
+      <div class="table-frame scroll-md">
+        <table class="data-table stack-table">
+          <caption>Refresh cadence for each risk category and for client portfolio data</caption>
+          <thead>
+            <tr>
+              <th scope="col">Category</th>
+              <th scope="col">Model refresh</th>
+              <th scope="col">Event overlay</th>
+              <th scope="col">Portfolio rescoring</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-label="Category">Flood</td>
+              <td data-label="Model refresh">Annual</td>
+              <td data-label="Event overlay">Daily, during storm and river-gauge events</td>
+              <td data-label="Portfolio rescoring">Monthly</td>
+            </tr>
+            <tr>
+              <td data-label="Category">Wildfire</td>
+              <td data-label="Model refresh">Annual</td>
+              <td data-label="Event overlay">Weekly through fire season</td>
+              <td data-label="Portfolio rescoring">Monthly</td>
+            </tr>
+            <tr>
+              <td data-label="Category">Extreme heat</td>
+              <td data-label="Model refresh">Annual</td>
+              <td data-label="Event overlay">Not applicable</td>
+              <td data-label="Portfolio rescoring">Monthly</td>
+            </tr>
+            <tr>
+              <td data-label="Category">Severe wind</td>
+              <td data-label="Model refresh">Annual</td>
+              <td data-label="Event overlay">Daily, during named-storm season</td>
+              <td data-label="Portfolio rescoring">Monthly</td>
+            </tr>
+            <tr>
+              <td data-label="Category">Sea-level rise</td>
+              <td data-label="Model refresh">Annual</td>
+              <td data-label="Event overlay">Not applicable</td>
+              <td data-label="Portfolio rescoring">Quarterly</td>
+            </tr>
+            <tr>
+              <td data-label="Category">Drought &amp; water stress</td>
+              <td data-label="Model refresh">Quarterly</td>
+              <td data-label="Event overlay">Not applicable</td>
+              <td data-label="Portfolio rescoring">Quarterly</td>
+            </tr>
+            <tr>
+              <td data-label="Category">Client portfolio data</td>
+              <td data-label="Model refresh">Continuous, on upload or API</td>
+              <td data-label="Event overlay">Not applicable</td>
+              <td data-label="Portfolio rescoring">Recalculated on change</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="roles" aria-labelledby="roles-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="roles-title">User roles and permissions</h2>
+        <p class="section-intro">Six roles cover most portfolio teams. Choose a role to see exactly what it can and cannot do.</p>
+      </div>
+
+      <div class="role-picker">
+        <label for="roleSelect">View permissions for role</label>
+        <select id="roleSelect">
+          <option value="analyst" selected>Portfolio Analyst</option>
+          <option value="asset-manager">Asset Manager</option>
+          <option value="sustainability">Sustainability Lead</option>
+          <option value="admin">Procurement / Admin</option>
+          <option value="api">API Integration</option>
+          <option value="viewer">Read-only Viewer</option>
+        </select>
+      </div>
+      <p class="role-summary" id="roleSummary" aria-live="polite">Portfolio Analysts can view asset scores and export reports. They cannot adjust hazard thresholds, manage users, or access the API; they can view but not edit portfolio data.</p>
+
+      <div class="table-frame scroll-md">
+        <table class="data-table roles-table" data-active-role="analyst" id="rolesTable">
+          <caption>Permission matrix across six user roles</caption>
+          <thead>
+            <tr>
+              <th scope="col">Permission</th>
+              <th scope="col">Portfolio Analyst</th>
+              <th scope="col">Asset Manager</th>
+              <th scope="col">Sustainability Lead</th>
+              <th scope="col">Procurement / Admin</th>
+              <th scope="col">API Integration</th>
+              <th scope="col">Read-only Viewer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>View asset scores</td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-scoped">Via API</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+            </tr>
+            <tr>
+              <td>Export reports</td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-scoped">Via API</span></td>
+              <td><span class="perm-no">No</span></td>
+            </tr>
+            <tr>
+              <td>Adjust hazard thresholds</td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-scoped">Business unit</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-no">No</span></td>
+            </tr>
+            <tr>
+              <td>Manage users &amp; roles</td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-no">No</span></td>
+            </tr>
+            <tr>
+              <td>API key access</td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-no">No</span></td>
+            </tr>
+            <tr>
+              <td>Edit portfolio data</td>
+              <td><span class="perm-scoped">View only</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-no">No</span></td>
+              <td><span class="perm-yes">Yes</span></td>
+              <td><span class="perm-scoped">Via API</span></td>
+              <td><span class="perm-no">No</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-band" aria-labelledby="cta-title">
+    <div class="wrap cta-band__grid">
+      <div>
+        <h2 id="cta-title">Bring a sample of your portfolio to a working session</h2>
+        <p class="lead">Whether you are evaluating coverage for a single fund or scoping a full procurement cycle, a specialist will walk your team through live scoring against your own asset list.</p>
+      </div>
+      <div>
+        <ul class="cta-band__list">
+          <li>30-minute session, scheduled within one business day</li>
+          <li>Sample scorecard generated against a portfolio sample you provide</li>
+          <li>No cost or commitment to evaluate coverage</li>
+        </ul>
+        <div style="margin-top: var(--space-6);">
+          <button type="button" class="btn btn-primary" data-open-demo>Request a demo</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>SiteSignal Risk - Climate Risk Analytics Product Overview</span>
+    <span>Coverage, cadence, and figures shown are illustrative of platform methodology, not a live data connection.</span>
+  </div>
+</footer>
+
+<dialog class="demo-dialog" id="demoDialog" aria-labelledby="demoDialogTitle">
+  <div class="demo-dialog__head">
+    <h2 id="demoDialogTitle">Request a demo</h2>
+    <button type="button" class="dialog-close" data-close-demo aria-label="Close dialog">✕</button>
+  </div>
+  <p class="demo-dialog__intro">Tell us about your portfolio and a specialist will follow up within one business day.</p>
+  <form id="demoForm" novalidate>
+    <div class="field">
+      <label for="fieldName">Full name</label>
+      <input type="text" id="fieldName" name="name" autocomplete="name" autofocus required>
+      <p class="field-error" id="fieldNameError" role="alert"></p>
+    </div>
+    <div class="field">
+      <label for="fieldEmail">Work email</label>
+      <input type="email" id="fieldEmail" name="email" autocomplete="email" spellcheck="false" required>
+      <p class="field-error" id="fieldEmailError" role="alert"></p>
+    </div>
+    <div class="field">
+      <label for="fieldCompany">Company</label>
+      <input type="text" id="fieldCompany" name="company" autocomplete="organization" required>
+      <p class="field-error" id="fieldCompanyError" role="alert"></p>
+    </div>
+    <div class="field">
+      <label for="fieldSize">Portfolio size</label>
+      <select id="fieldSize" name="size" required>
+        <option value="">Select a range</option>
+        <option value="under-100">Under 100 properties</option>
+        <option value="100-1000">100 to 1,000 properties</option>
+        <option value="1000-10000">1,001 to 10,000 properties</option>
+        <option value="10000-plus">10,000+ properties</option>
+      </select>
+      <p class="field-error" id="fieldSizeError" role="alert"></p>
+    </div>
+    <div class="field">
+      <label for="fieldRole">Your role</label>
+      <select id="fieldRole" name="role" required>
+        <option value="">Select a role</option>
+        <option value="analyst">Portfolio Analyst</option>
+        <option value="asset-manager">Asset Manager</option>
+        <option value="sustainability">Sustainability Lead</option>
+        <option value="procurement">Procurement / IT</option>
+        <option value="other">Other</option>
+      </select>
+      <p class="field-error" id="fieldRoleError" role="alert"></p>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-ghost" data-close-demo>Cancel</button>
+      <button type="submit" class="btn btn-primary demo-submit" id="demoSubmit">
+        <span class="demo-submit__label">Request a demo</span>
+        <span class="demo-submit__spinner" aria-hidden="true"></span>
+      </button>
+    </div>
+    <div class="form-status" id="formStatus" role="status" aria-live="polite"></div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Mobile nav disclosure ---------- */
+  var navToggle = document.getElementById("navToggle");
+  var nav = document.getElementById("primaryNav");
+
+  function closeNav() {
+    nav.classList.remove("is-open");
+    navToggle.setAttribute("aria-expanded", "false");
+  }
+  function openNav() {
+    nav.classList.add("is-open");
+    navToggle.setAttribute("aria-expanded", "true");
+  }
+  navToggle.addEventListener("click", function () {
+    var expanded = navToggle.getAttribute("aria-expanded") === "true";
+    if (expanded) { closeNav(); } else { openNav(); }
+  });
+  document.addEventListener("click", function (e) {
+    if (nav.classList.contains("is-open") && !nav.contains(e.target) && e.target !== navToggle && !navToggle.contains(e.target)) {
+      closeNav();
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && nav.classList.contains("is-open")) {
+      closeNav();
+      navToggle.focus();
+    }
+  });
+  var navLinks = nav.querySelectorAll("a");
+  for (var n = 0; n < navLinks.length; n++) {
+    navLinks[n].addEventListener("click", closeNav);
+  }
+
+  /* ---------- Risk category tabs (WAI-ARIA APG, automatic activation) ---------- */
+  var tabList = document.querySelector('[role="tablist"]');
+  var tabs = Array.prototype.slice.call(tabList.querySelectorAll('[role="tab"]'));
+
+  function selectTab(tab) {
+    tabs.forEach(function (t) {
+      var selected = t === tab;
+      t.setAttribute("aria-selected", selected ? "true" : "false");
+      t.setAttribute("tabindex", selected ? "0" : "-1");
+      var panel = document.getElementById(t.getAttribute("aria-controls"));
+      if (selected) {
+        panel.hidden = false;
+        panel.classList.remove("is-entering");
+        void panel.offsetWidth;
+        panel.classList.add("is-entering");
+      } else {
+        panel.hidden = true;
+      }
+    });
+  }
+
+  tabs.forEach(function (tab, index) {
+    tab.addEventListener("click", function () { selectTab(tab); });
+    tab.addEventListener("keydown", function (e) {
+      var newIndex = null;
+      if (e.key === "ArrowRight") { newIndex = (index + 1) % tabs.length; }
+      else if (e.key === "ArrowLeft") { newIndex = (index - 1 + tabs.length) % tabs.length; }
+      else if (e.key === "Home") { newIndex = 0; }
+      else if (e.key === "End") { newIndex = tabs.length - 1; }
+      if (newIndex !== null) {
+        e.preventDefault();
+        tabs[newIndex].focus();
+        selectTab(tabs[newIndex]);
+      }
+    });
+  });
+
+  /* ---------- Roles: role picker drives table highlight + summary ---------- */
+  var roleSelect = document.getElementById("roleSelect");
+  var rolesTable = document.getElementById("rolesTable");
+  var roleSummary = document.getElementById("roleSummary");
+
+  var roleCopy = {
+    "analyst": "Portfolio Analysts can view asset scores and export reports. They cannot adjust hazard thresholds, manage users, or access the API; they can view but not edit portfolio data.",
+    "asset-manager": "Asset Managers can view scores, export reports, edit portfolio data, and adjust hazard thresholds within their own business unit. They cannot manage users or access the API.",
+    "sustainability": "Sustainability Leads can view scores and export reports for disclosure work. They cannot adjust hazard thresholds, manage users, edit portfolio data, or access the API.",
+    "admin": "Procurement and Admin users have full access: view scores, export reports, adjust hazard thresholds, manage users and roles, and access the API.",
+    "api": "API Integration accounts can retrieve scores, exports, and portfolio data programmatically, and hold an API key. They cannot adjust hazard thresholds or manage users through the interface.",
+    "viewer": "Read-only Viewers can view asset scores only. They cannot export reports, adjust hazard thresholds, manage users, access the API, or edit portfolio data."
+  };
+
+  roleSelect.addEventListener("change", function () {
+    rolesTable.setAttribute("data-active-role", roleSelect.value);
+    roleSummary.textContent = roleCopy[roleSelect.value] || "";
+  });
+
+  /* ---------- Demo request dialog ---------- */
+  var dialog = document.getElementById("demoDialog");
+  var openTriggers = document.querySelectorAll("[data-open-demo]");
+  var closeTriggers = document.querySelectorAll("[data-close-demo]");
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function openDialog() {
+    dialog.showModal();
+    dialog.classList.add("is-open");
+  }
+  function closeDialog() {
+    if (reduceMotion) {
+      dialog.classList.remove("is-open");
+      dialog.close();
+      return;
+    }
+    dialog.classList.add("is-closing");
+    dialog.addEventListener("animationend", function handler() {
+      dialog.classList.remove("is-open", "is-closing");
+      dialog.close();
+      dialog.removeEventListener("animationend", handler);
+    }, { once: true });
+  }
+  for (var o = 0; o < openTriggers.length; o++) { openTriggers[o].addEventListener("click", openDialog); }
+  for (var c = 0; c < closeTriggers.length; c++) { closeTriggers[c].addEventListener("click", closeDialog); }
+  dialog.addEventListener("cancel", function (e) { e.preventDefault(); closeDialog(); });
+  dialog.addEventListener("click", function (e) {
+    var rect = dialog.getBoundingClientRect();
+    var inDialog = e.clientY >= rect.top && e.clientY <= rect.bottom && e.clientX >= rect.left && e.clientX <= rect.right;
+    if (!inDialog) { closeDialog(); }
+  });
+
+  /* ---------- Demo form: blur validation, focus-first-error, idempotent submit ---------- */
+  var form = document.getElementById("demoForm");
+  var fields = {
+    name: { el: document.getElementById("fieldName"), err: document.getElementById("fieldNameError") },
+    email: { el: document.getElementById("fieldEmail"), err: document.getElementById("fieldEmailError") },
+    company: { el: document.getElementById("fieldCompany"), err: document.getElementById("fieldCompanyError") },
+    size: { el: document.getElementById("fieldSize"), err: document.getElementById("fieldSizeError") },
+    role: { el: document.getElementById("fieldRole"), err: document.getElementById("fieldRoleError") }
+  };
+  var submitBtn = document.getElementById("demoSubmit");
+  var status = document.getElementById("formStatus");
+  var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function setError(key, message) {
+    var field = fields[key];
+    if (message) {
+      field.el.setAttribute("aria-invalid", "true");
+      field.err.textContent = message;
+      field.err.classList.add("is-visible");
+    } else {
+      field.el.removeAttribute("aria-invalid");
+      field.err.textContent = "";
+      field.err.classList.remove("is-visible");
+    }
+  }
+
+  function validate(key) {
+    var value = fields[key].el.value.trim();
+    if (key === "email") {
+      if (!value) { setError(key, "Enter your work email."); return false; }
+      if (!emailPattern.test(value)) { setError(key, "Enter a valid email, like name@company.com."); return false; }
+    } else if (key === "size") {
+      if (!value) { setError(key, "Select a portfolio size."); return false; }
+    } else if (key === "role") {
+      if (!value) { setError(key, "Select your role."); return false; }
+    } else {
+      if (!value) { setError(key, key === "name" ? "Enter your full name." : "Enter your company name."); return false; }
+    }
+    setError(key, "");
+    return true;
+  }
+
+  Object.keys(fields).forEach(function (key) {
+    fields[key].el.addEventListener("blur", function () { validate(key); });
+  });
+
+  function resetForm() {
+    form.reset();
+    Object.keys(fields).forEach(function (key) { setError(key, ""); });
+    status.classList.remove("is-visible", "form-status--success", "form-status--error");
+    status.textContent = "";
+    submitBtn.removeAttribute("aria-busy");
+    submitBtn.removeAttribute("disabled");
+  }
+  dialog.addEventListener("close", resetForm);
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var order = ["name", "email", "company", "size", "role"];
+    var firstInvalid = null;
+    var allValid = true;
+    order.forEach(function (key) {
+      var ok = validate(key);
+      if (!ok) {
+        allValid = false;
+        if (!firstInvalid) { firstInvalid = fields[key].el; }
+      }
+    });
+
+    status.classList.remove("is-visible", "form-status--success", "form-status--error");
+    status.textContent = "";
+
+    if (!allValid) {
+      firstInvalid.focus();
+      status.textContent = "Fix the highlighted fields before sending your request.";
+      status.classList.add("is-visible", "form-status--error");
+      return;
+    }
+
+    submitBtn.setAttribute("aria-busy", "true");
+    submitBtn.setAttribute("disabled", "disabled");
+
+    window.setTimeout(function () {
+      submitBtn.removeAttribute("aria-busy");
+      submitBtn.removeAttribute("disabled");
+      status.textContent = "Request received. A SiteSignal Risk specialist will follow up within one business day.";
+      status.classList.add("is-visible", "form-status--success");
+    }, 900);
+  });
+})();
+</script>
+</body>
+</html>

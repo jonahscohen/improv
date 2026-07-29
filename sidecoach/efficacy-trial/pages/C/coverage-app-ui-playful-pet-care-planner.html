@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PawPlan &ndash; Pet Care Planner</title>
+<style>
+  :root{
+    --cream:#fff8ef;
+    --card:#ffffff;
+    --ink:#2c2a33;
+    --ink-soft:#6b6774;
+    --coral:#ff6f59;
+    --coral-dark:#e2523d;
+    --teal:#1fb6a4;
+    --teal-dark:#138373;
+    --amber:#ffb238;
+    --amber-dark:#9a6300;
+    --red:#e15353;
+    --red-bg:#fdeaea;
+    --lav:#7c6cf0;
+    --line:#efe6d8;
+    --radius-lg:22px;
+    --radius-md:16px;
+    --radius-sm:10px;
+    --shadow-card:0 10px 24px -14px rgba(60,40,20,0.28);
+    --shadow-pop:0 20px 45px -18px rgba(30,20,10,0.45);
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    background:var(--cream);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  body{
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+    padding-bottom:96px;
+  }
+
+  .app{
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    background:var(--cream);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .skip-link{
+    position:absolute;
+    left:-999px;
+    top:0;
+    background:var(--ink);
+    color:#fff;
+    padding:10px 16px;
+    border-radius:0 0 10px 0;
+    z-index:200;
+    text-decoration:none;
+    font-weight:600;
+  }
+  .skip-link:focus{ left:0; }
+
+  .visually-hidden{
+    position:absolute !important;
+    width:1px;height:1px;
+    padding:0;margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+
+  /* ---------- Header ---------- */
+  .app-header{
+    background:linear-gradient(135deg,var(--coral) 0%, #ff9364 60%, var(--amber) 130%);
+    color:#fff;
+    padding:28px 20px 34px;
+    border-radius:0 0 32px 32px;
+    box-shadow:var(--shadow-card);
+  }
+  .header-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .eyebrow{
+    margin:0 0 4px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:.02em;
+    opacity:.92;
+  }
+  .app-header h1{
+    margin:0;
+    font-size:30px;
+    line-height:1.1;
+    letter-spacing:-0.02em;
+  }
+  .avatar-btn{
+    flex:0 0 auto;
+    width:46px;
+    height:46px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,0.85);
+    background:rgba(255,255,255,0.18);
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .avatar-btn:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{
+    outline:3px solid #2b2a33;
+    outline-offset:2px;
+  }
+  .header-sub{
+    margin:16px 0 0;
+    font-size:14px;
+    font-weight:500;
+    background:rgba(255,255,255,0.2);
+    display:inline-block;
+    padding:8px 14px;
+    border-radius:999px;
+  }
+
+  main{
+    flex:1;
+    padding:22px 18px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:30px;
+  }
+
+  section > h2{
+    font-size:19px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .section-heading-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .pets-section h2{ margin-bottom:14px; }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:12.5px;
+    font-weight:700;
+    padding:6px 12px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .pill-count{ background:#eaf7f2; color:var(--teal-dark); }
+
+  /* ---------- Pets ---------- */
+  .pet-scroll{
+    list-style:none;
+    margin:0;
+    padding:2px 2px 10px;
+    display:flex;
+    gap:14px;
+    overflow-x:auto;
+    scroll-snap-type:x proximity;
+  }
+  .pet-card{
+    scroll-snap-align:start;
+    flex:0 0 auto;
+    width:150px;
+    background:var(--card);
+    border-radius:var(--radius-lg);
+    padding:16px 14px;
+    box-shadow:var(--shadow-card);
+    text-align:center;
+  }
+  .pet-avatar{
+    width:56px;height:56px;
+    margin:0 auto 10px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    font-weight:800;
+    color:#fff;
+  }
+  .pet-card h3{
+    margin:0 0 2px;
+    font-size:15.5px;
+  }
+  .pet-meta{
+    margin:0 0 10px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .pet-status{
+    display:inline-block;
+    font-size:11.5px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  .status-good{ background:#eaf7f2; color:var(--teal-dark); }
+  .status-attention{ background:var(--red-bg); color:var(--red); }
+
+  /* ---------- Task list ---------- */
+  .task-list, .med-list, .appt-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .task-item{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    background:var(--card);
+    border-radius:var(--radius-md);
+    padding:14px;
+    box-shadow:var(--shadow-card);
+    border-left:5px solid var(--teal);
+  }
+  .task-item.is-overdue{ border-left-color:var(--red); background:var(--red-bg); }
+  .task-item.is-complete{ border-left-color:#d8d3c4; opacity:.72; }
+
+  .check-toggle{
+    flex:0 0 auto;
+    margin-top:2px;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    border:2px solid var(--teal);
+    background:#fff;
+    cursor:pointer;
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  .check-toggle::after{
+    content:"";
+    width:10px;height:6px;
+    border-left:3px solid #fff;
+    border-bottom:3px solid #fff;
+    transform:rotate(-45deg) translateY(-1px);
+    opacity:0;
+  }
+  .task-item.is-complete .check-toggle{
+    background:var(--teal);
+  }
+  .task-item.is-complete .check-toggle::after{ opacity:1; }
+  .task-item.is-overdue .check-toggle{ border-color:var(--red); }
+
+  .task-body{ flex:1; min-width:0; }
+  .task-top-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .task-title{
+    margin:0;
+    font-size:15px;
+    font-weight:700;
+  }
+  .task-item.is-complete .task-title{ text-decoration:line-through; color:var(--ink-soft); }
+  .task-meta{
+    margin:4px 0 0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .badge{
+    font-size:11px;
+    font-weight:800;
+    padding:3px 9px;
+    border-radius:999px;
+    letter-spacing:.02em;
+  }
+  .badge-overdue{ background:var(--red); color:#fff; }
+  .badge-done{ background:#e2f4ee; color:var(--teal-dark); }
+  .caregiver-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .caregiver-dot{
+    width:18px;height:18px;
+    border-radius:50%;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9.5px;
+    font-weight:800;
+    color:#fff;
+  }
+
+  /* ---------- Medication ---------- */
+  .med-item{
+    background:var(--card);
+    border-radius:var(--radius-md);
+    padding:14px;
+    box-shadow:var(--shadow-card);
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    border-left:5px solid var(--lav);
+  }
+  .med-item.is-urgent{ border-left-color:var(--red); background:var(--red-bg); }
+  .med-icon{
+    flex:0 0 auto;
+    width:38px;height:38px;
+    border-radius:12px;
+    background:#f1eefe;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:800;
+    color:var(--lav);
+  }
+  .med-item.is-urgent .med-icon{ background:#fbdcdc; color:var(--red); }
+  .med-title{ margin:0; font-size:15px; font-weight:700; }
+  .med-meta{ margin:4px 0 0; font-size:12.5px; color:var(--ink-soft); }
+
+  /* ---------- Appointments ---------- */
+  .appt-item{
+    display:flex;
+    gap:12px;
+    background:var(--card);
+    border-radius:var(--radius-md);
+    padding:14px;
+    box-shadow:var(--shadow-card);
+    align-items:center;
+  }
+  .appt-date{
+    flex:0 0 auto;
+    width:52px;
+    text-align:center;
+    background:var(--amber);
+    color:#4a3200;
+    border-radius:12px;
+    padding:8px 4px;
+  }
+  .appt-date .mon{ display:block; font-size:11px; font-weight:800; text-transform:uppercase; }
+  .appt-date .day{ display:block; font-size:19px; font-weight:800; line-height:1; margin-top:2px; }
+  .appt-title{ margin:0; font-size:15px; font-weight:700; }
+  .appt-meta{ margin:4px 0 0; font-size:12.5px; color:var(--ink-soft); }
+
+  /* ---------- Caregivers ---------- */
+  .caregiver-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:12px;
+  }
+  .caregiver-card{
+    background:var(--card);
+    border-radius:var(--radius-md);
+    padding:14px;
+    box-shadow:var(--shadow-card);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .caregiver-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .caregiver-avatar{
+    width:38px;height:38px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    font-weight:800;
+    font-size:13px;
+  }
+  .caregiver-card h3{ margin:0; font-size:14.5px; }
+  .caregiver-card p{ margin:0; font-size:12px; color:var(--ink-soft); }
+  .progress-track{
+    height:8px;
+    border-radius:999px;
+    background:var(--line);
+    overflow:hidden;
+  }
+  .progress-fill{ height:100%; background:var(--teal); border-radius:999px; }
+
+  /* ---------- FAB ---------- */
+  .fab{
+    position:fixed;
+    right:22px;
+    bottom:88px;
+    width:58px;
+    height:58px;
+    border-radius:50%;
+    background:var(--coral);
+    color:#fff;
+    border:none;
+    box-shadow:var(--shadow-pop);
+    font-size:28px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:60;
+  }
+  .fab:hover{ background:var(--coral-dark); }
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav{
+    position:fixed;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:0;
+    width:100%;
+    max-width:460px;
+    background:#fff;
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:space-around;
+    padding:10px 6px calc(10px + env(safe-area-inset-bottom));
+    z-index:55;
+  }
+  .bottom-nav a{
+    color:var(--ink-soft);
+    text-decoration:none;
+    font-size:12px;
+    font-weight:700;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:8px 14px;
+    border-radius:10px;
+  }
+  .bottom-nav a .nav-dot{
+    width:6px;height:6px;
+    border-radius:50%;
+    background:var(--coral);
+    opacity:0;
+  }
+  .bottom-nav a:hover, .bottom-nav a:focus-visible{ color:var(--coral); }
+
+  /* ---------- Modal ---------- */
+  .modal-scrim{
+    position:fixed;
+    inset:0;
+    background:rgba(30,22,15,0.45);
+    z-index:100;
+  }
+  .modal{
+    position:fixed;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:100%;
+    max-width:460px;
+    background:#fff;
+    border-radius:26px 26px 0 0;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+    z-index:101;
+    box-shadow:var(--shadow-pop);
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  .modal h2{ margin:0 0 16px; font-size:19px; }
+  .modal label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin-bottom:14px;
+  }
+  .modal input, .modal select{
+    display:block;
+    width:100%;
+    margin-top:6px;
+    padding:11px 12px;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    font-size:15px;
+    font-family:inherit;
+    color:var(--ink);
+    background:#fffdf9;
+  }
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    margin-top:6px;
+  }
+  .btn{
+    flex:1;
+    padding:13px;
+    border-radius:14px;
+    border:none;
+    font-weight:800;
+    font-size:14.5px;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--coral); color:#fff; }
+  .btn-primary:hover{ background:var(--coral-dark); }
+  .btn-secondary{ background:var(--cream); color:var(--ink); border:1.5px solid var(--line); }
+
+  [hidden]{ display:none !important; }
+
+  @media (max-width:360px){
+    .app-header h1{ font-size:26px; }
+    .caregiver-grid{ grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<div class="app">
+
+  <header class="app-header">
+    <div class="header-top">
+      <div>
+        <p class="eyebrow">Good afternoon, Rivera Household</p>
+        <h1>PawPlan</h1>
+      </div>
+      <button class="avatar-btn" type="button" aria-label="Open household profile">RH</button>
+    </div>
+    <span class="header-sub" id="summaryLine">3 pets &middot; 1 overdue task needs attention today</span>
+  </header>
+
+  <main id="main">
+
+    <section class="pets-section" aria-labelledby="pets-heading">
+      <h2 id="pets-heading">Your Pets</h2>
+      <ul class="pet-scroll" role="list">
+        <li class="pet-card">
+          <div class="pet-avatar" style="background:var(--coral);" aria-hidden="true">B</div>
+          <h3>Biscuit</h3>
+          <p class="pet-meta">Golden Retriever &middot; 4 yrs</p>
+          <span class="pet-status status-good">On track</span>
+        </li>
+        <li class="pet-card">
+          <div class="pet-avatar" style="background:var(--lav);" aria-hidden="true">M</div>
+          <h3>Mochi</h3>
+          <p class="pet-meta">Tabby Cat &middot; 2 yrs</p>
+          <span class="pet-status status-attention">Needs attention</span>
+        </li>
+        <li class="pet-card">
+          <div class="pet-avatar" style="background:var(--amber-dark);" aria-hidden="true">N</div>
+          <h3>Nacho</h3>
+          <p class="pet-meta">Guinea Pig &middot; 1 yr</p>
+          <span class="pet-status status-good">On track</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="tasks-section" id="tasks" aria-labelledby="tasks-heading">
+      <div class="section-heading-row">
+        <h2 id="tasks-heading">Today&rsquo;s Care Tasks</h2>
+        <span class="pill pill-count" id="taskCountPill">2 of 5 done</span>
+      </div>
+      <ul class="task-list" id="taskList">
+
+        <li class="task-item is-complete" data-state="complete">
+          <button type="button" class="check-toggle" aria-pressed="true" aria-label="Mark Morning walk as not done"></button>
+          <div class="task-body">
+            <div class="task-top-row">
+              <p class="task-title">Morning walk</p>
+              <span class="badge badge-done">Done</span>
+            </div>
+            <p class="task-meta">
+              <span>Biscuit</span>
+              <span>&middot; 7:30 AM</span>
+              <span class="caregiver-chip"><span class="caregiver-dot" style="background:#ff6f59;">J</span> Jordan</span>
+            </p>
+          </div>
+        </li>
+
+        <li class="task-item is-complete" data-state="complete">
+          <button type="button" class="check-toggle" aria-pressed="true" aria-label="Mark Breakfast feeding as not done"></button>
+          <div class="task-body">
+            <div class="task-top-row">
+              <p class="task-title">Breakfast feeding</p>
+              <span class="badge badge-done">Done</span>
+            </div>
+            <p class="task-meta">
+              <span>Mochi</span>
+              <span>&middot; 8:00 AM</span>
+              <span class="caregiver-chip"><span class="caregiver-dot" style="background:#1fb6a4;">S</span> Sam</span>
+            </p>
+          </div>
+        </li>
+
+        <li class="task-item is-overdue" data-state="overdue">
+          <button type="button" class="check-toggle" aria-pressed="false" aria-label="Mark Litter box clean as done"></button>
+          <div class="task-body">
+            <div class="task-top-row">
+              <p class="task-title">Litter box clean</p>
+              <span class="badge badge-overdue">Overdue</span>
+            </div>
+            <p class="task-meta">
+              <span>Mochi</span>
+              <span>&middot; was due 12:00 PM</span>
+              <span class="caregiver-chip"><span class="caregiver-dot" style="background:#ffb238;">A</span> Ali</span>
+            </p>
+          </div>
+        </li>
+
+        <li class="task-item" data-state="upcoming">
+          <button type="button" class="check-toggle" aria-pressed="false" aria-label="Mark Evening walk as done"></button>
+          <div class="task-body">
+            <div class="task-top-row">
+              <p class="task-title">Evening walk</p>
+            </div>
+            <p class="task-meta">
+              <span>Biscuit</span>
+              <span>&middot; 6:00 PM</span>
+              <span class="caregiver-chip"><span class="caregiver-dot" style="background:#ff6f59;">J</span> Jordan</span>
+            </p>
+          </div>
+        </li>
+
+        <li class="task-item" data-state="upcoming">
+          <button type="button" class="check-toggle" aria-pressed="false" aria-label="Mark Habitat clean for Nacho as done"></button>
+          <div class="task-body">
+            <div class="task-top-row">
+              <p class="task-title">Habitat clean</p>
+            </div>
+            <p class="task-meta">
+              <span>Nacho</span>
+              <span>&middot; 5:00 PM</span>
+              <span class="caregiver-chip"><span class="caregiver-dot" style="background:#7c6cf0;">M</span> Mira</span>
+            </p>
+          </div>
+        </li>
+
+      </ul>
+    </section>
+
+    <section class="meds-section" id="meds" aria-labelledby="meds-heading">
+      <div class="section-heading-row">
+        <h2 id="meds-heading">Medication Reminders</h2>
+      </div>
+      <ul class="med-list">
+        <li class="med-item">
+          <div class="med-icon" aria-hidden="true">Rx</div>
+          <div>
+            <p class="med-title">Joint supplement</p>
+            <p class="med-meta">Biscuit &middot; 1 chewable &middot; given at 8:00 AM</p>
+          </div>
+        </li>
+        <li class="med-item is-urgent">
+          <div class="med-icon" aria-hidden="true">!</div>
+          <div>
+            <p class="med-title">Flea &amp; tick prevention</p>
+            <p class="med-meta">Mochi &middot; monthly dose &middot; <strong>due today</strong></p>
+          </div>
+        </li>
+        <li class="med-item">
+          <div class="med-icon" aria-hidden="true">Rx</div>
+          <div>
+            <p class="med-title">Vitamin C drops</p>
+            <p class="med-meta">Nacho &middot; twice daily &middot; next at 6:00 PM</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="appt-section" id="calendar" aria-labelledby="appt-heading">
+      <div class="section-heading-row">
+        <h2 id="appt-heading">Upcoming Appointments</h2>
+      </div>
+      <ul class="appt-list">
+        <li class="appt-item">
+          <div class="appt-date" aria-hidden="true"><span class="mon">Aug</span><span class="day">03</span></div>
+          <div>
+            <p class="appt-title">Annual checkup &mdash; Biscuit</p>
+            <p class="appt-meta">Dr. Patel &middot; Maple Vet Clinic &middot; 10:00 AM</p>
+          </div>
+        </li>
+        <li class="appt-item">
+          <div class="appt-date" aria-hidden="true"><span class="mon">Aug</span><span class="day">12</span></div>
+          <div>
+            <p class="appt-title">Dental cleaning &mdash; Mochi</p>
+            <p class="appt-meta">Dr. Nguyen &middot; Riverside Animal Hospital &middot; 2:00 PM</p>
+          </div>
+        </li>
+        <li class="appt-item">
+          <div class="appt-date" aria-hidden="true"><span class="mon">Aug</span><span class="day">20</span></div>
+          <div>
+            <p class="appt-title">Wellness exam &mdash; Nacho</p>
+            <p class="appt-meta">Dr. Patel &middot; Maple Vet Clinic &middot; 11:30 AM</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section class="caregivers-section" id="family" aria-labelledby="care-heading">
+      <div class="section-heading-row">
+        <h2 id="care-heading">Shared Caregivers</h2>
+      </div>
+      <div class="caregiver-grid">
+        <div class="caregiver-card">
+          <div class="caregiver-head">
+            <span class="caregiver-avatar" style="background:#ff6f59;" aria-hidden="true">J</span>
+            <div>
+              <h3>Jordan</h3>
+              <p>2 tasks today</p>
+            </div>
+          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:50%;"></div></div>
+        </div>
+        <div class="caregiver-card">
+          <div class="caregiver-head">
+            <span class="caregiver-avatar" style="background:#1fb6a4;" aria-hidden="true">S</span>
+            <div>
+              <h3>Sam</h3>
+              <p>1 task today</p>
+            </div>
+          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:100%;"></div></div>
+        </div>
+        <div class="caregiver-card">
+          <div class="caregiver-head">
+            <span class="caregiver-avatar" style="background:#ffb238;" aria-hidden="true">A</span>
+            <div>
+              <h3>Ali</h3>
+              <p>1 task today</p>
+            </div>
+          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:0%;"></div></div>
+        </div>
+        <div class="caregiver-card">
+          <div class="caregiver-head">
+            <span class="caregiver-avatar" style="background:#7c6cf0;" aria-hidden="true">M</span>
+            <div>
+              <h3>Mira</h3>
+              <p>1 task today</p>
+            </div>
+          </div>
+          <div class="progress-track"><div class="progress-fill" style="width:0%;"></div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <button class="fab" id="addTaskBtn" type="button" aria-haspopup="dialog" aria-controls="addTaskModal">
+    <span aria-hidden="true">+</span>
+    <span class="visually-hidden">Add a care task</span>
+  </button>
+
+  <nav class="bottom-nav" aria-label="Primary">
+    <a href="#main">Home</a>
+    <a href="#tasks">Tasks</a>
+    <a href="#calendar">Calendar</a>
+    <a href="#family">Family</a>
+  </nav>
+
+  <div class="modal-scrim" id="modalScrim" hidden></div>
+  <div class="modal" id="addTaskModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+    <form id="addTaskForm">
+      <h2 id="modalTitle">Add a Care Task</h2>
+
+      <label for="taskName">Task name
+        <input type="text" id="taskName" name="taskName" placeholder="e.g. Fill water bowl" required>
+      </label>
+
+      <label for="taskPet">Pet
+        <select id="taskPet" name="taskPet">
+          <option value="Biscuit">Biscuit</option>
+          <option value="Mochi">Mochi</option>
+          <option value="Nacho">Nacho</option>
+        </select>
+      </label>
+
+      <label for="taskAssignee">Assign to
+        <select id="taskAssignee" name="taskAssignee">
+          <option value="Jordan" data-color="#ff6f59">Jordan</option>
+          <option value="Sam" data-color="#1fb6a4">Sam</option>
+          <option value="Ali" data-color="#ffb238">Ali</option>
+          <option value="Mira" data-color="#7c6cf0">Mira</option>
+        </select>
+      </label>
+
+      <label for="taskTime">Time
+        <input type="time" id="taskTime" name="taskTime" value="17:00">
+      </label>
+
+      <label for="taskCategory">Category
+        <select id="taskCategory" name="taskCategory">
+          <option value="Feeding">Feeding</option>
+          <option value="Walk">Walk</option>
+          <option value="Medication">Medication</option>
+          <option value="Grooming">Grooming</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="cancelAdd">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Task</button>
+      </div>
+    </form>
+  </div>
+
+  <div aria-live="polite" class="visually-hidden" id="liveRegion"></div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var taskList = document.getElementById('taskList');
+  var taskCountPill = document.getElementById('taskCountPill');
+  var summaryLine = document.getElementById('summaryLine');
+  var liveRegion = document.getElementById('liveRegion');
+
+  function pluralize(n, word){ return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  function updateCounts(){
+    var items = taskList.querySelectorAll('.task-item');
+    var total = items.length;
+    var done = taskList.querySelectorAll('.task-item.is-complete').length;
+    var overdue = taskList.querySelectorAll('.task-item.is-overdue').length;
+    taskCountPill.textContent = done + ' of ' + total + ' done';
+    var attentionText = overdue > 0
+      ? pluralize(overdue, 'overdue task') + ' need attention today'
+      : 'All caught up for today';
+    summaryLine.textContent = '3 pets · ' + attentionText;
+  }
+
+  function toggleTask(item, toggleBtn){
+    var wasComplete = item.classList.contains('is-complete');
+    var titleEl = item.querySelector('.task-title');
+    var title = titleEl ? titleEl.textContent : 'Task';
+
+    if (wasComplete) {
+      item.classList.remove('is-complete');
+      item.dataset.state = 'upcoming';
+      toggleBtn.setAttribute('aria-pressed', 'false');
+      toggleBtn.setAttribute('aria-label', 'Mark ' + title + ' as done');
+      var doneBadge = item.querySelector('.badge-done');
+      if (doneBadge) doneBadge.remove();
+      liveRegion.textContent = title + ' marked as not done';
+    } else {
+      item.classList.remove('is-overdue');
+      item.classList.add('is-complete');
+      item.dataset.state = 'complete';
+      toggleBtn.setAttribute('aria-pressed', 'true');
+      toggleBtn.setAttribute('aria-label', 'Mark ' + title + ' as not done');
+      var overdueBadge = item.querySelector('.badge-overdue');
+      if (overdueBadge) overdueBadge.remove();
+      var topRow = item.querySelector('.task-top-row');
+      if (topRow && !topRow.querySelector('.badge-done')) {
+        var span = document.createElement('span');
+        span.className = 'badge badge-done';
+        span.textContent = 'Done';
+        topRow.appendChild(span);
+      }
+      liveRegion.textContent = title + ' marked as done';
+    }
+    updateCounts();
+  }
+
+  taskList.addEventListener('click', function(e){
+    var btn = e.target.closest('.check-toggle');
+    if (!btn) return;
+    var item = btn.closest('.task-item');
+    if (item) toggleTask(item, btn);
+  });
+
+  /* ---------- Add Task modal ---------- */
+  var addBtn = document.getElementById('addTaskBtn');
+  var modal = document.getElementById('addTaskModal');
+  var scrim = document.getElementById('modalScrim');
+  var cancelBtn = document.getElementById('cancelAdd');
+  var form = document.getElementById('addTaskForm');
+  var lastFocused = null;
+
+  function openModal(){
+    lastFocused = document.activeElement;
+    modal.hidden = false;
+    scrim.hidden = false;
+    document.getElementById('taskName').focus();
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal(){
+    modal.hidden = true;
+    scrim.hidden = true;
+    document.body.style.overflow = '';
+    if (lastFocused) lastFocused.focus();
+  }
+
+  addBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  scrim.addEventListener('click', closeModal);
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !modal.hidden) closeModal();
+  });
+
+  function formatTime(value){
+    if (!value) return '';
+    var parts = value.split(':');
+    var h = parseInt(parts[0], 10);
+    var m = parts[1];
+    var period = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12;
+    if (h12 === 0) h12 = 12;
+    return h12 + ':' + m + ' ' + period;
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    var name = document.getElementById('taskName').value.trim();
+    if (!name) return;
+
+    var petSelect = document.getElementById('taskPet');
+    var assigneeSelect = document.getElementById('taskAssignee');
+    var timeValue = document.getElementById('taskTime').value;
+    var assigneeOption = assigneeSelect.options[assigneeSelect.selectedIndex];
+    var color = assigneeOption.getAttribute('data-color') || '#ff6f59';
+    var initial = assigneeOption.value.charAt(0);
+
+    var li = document.createElement('li');
+    li.className = 'task-item';
+    li.dataset.state = 'upcoming';
+
+    li.innerHTML =
+      '<button type="button" class="check-toggle" aria-pressed="false" aria-label="Mark ' + name + ' as done"></button>' +
+      '<div class="task-body">' +
+        '<div class="task-top-row"><p class="task-title">' + name + '</p></div>' +
+        '<p class="task-meta">' +
+          '<span>' + petSelect.value + '</span>' +
+          '<span>&middot; ' + formatTime(timeValue) + '</span>' +
+          '<span class="caregiver-chip"><span class="caregiver-dot" style="background:' + color + ';">' + initial + '</span> ' + assigneeOption.value + '</span>' +
+        '</p>' +
+      '</div>';
+
+    taskList.insertBefore(li, taskList.firstChild);
+    updateCounts();
+    liveRegion.textContent = 'Added new task: ' + name;
+
+    form.reset();
+    document.getElementById('taskTime').value = '17:00';
+    closeModal();
+  });
+
+  updateCounts();
+})();
+</script>
+</body>
+</html>

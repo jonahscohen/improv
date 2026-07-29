@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Budget Dashboard - July 2026</title>
+<style>
+  :root{
+    --bg: #f6f7f5;
+    --surface: #ffffff;
+    --surface-muted: #f0f1ee;
+    --border: #dfe2dd;
+    --border-strong: #c7cbc2;
+    --ink: #1c211b;
+    --ink-soft: #52584e;
+    --ink-faint: #7a8073;
+    --accent: #2f5d4e;
+    --accent-soft: #e3ece7;
+    --accent-strong: #1f4235;
+    --good: #2f6d3f;
+    --good-bg: #e6efe6;
+    --warn: #8a5a12;
+    --warn-bg: #faf1de;
+    --bad: #9c3b30;
+    --bad-bg: #fbeae7;
+    --focus: #1c5fd6;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --shadow-1: 0 1px 2px rgba(20,24,18,0.06), 0 1px 1px rgba(20,24,18,0.04);
+    --shadow-2: 0 4px 16px rgba(20,24,18,0.08);
+    color-scheme: light;
+  }
+
+  *, *::before, *::after{ box-sizing: border-box; }
+
+  html{ font-size: 16px; }
+
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-variant-numeric: tabular-nums;
+  }
+
+  a{ color: var(--accent-strong); }
+
+  .skip-link{
+    position: absolute;
+    left: -999px;
+    top: 0;
+    background: var(--ink);
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius-sm);
+    z-index: 100;
+  }
+  .skip-link:focus{ left: 1rem; top: 1rem; }
+
+  button, input{
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  button{
+    cursor: pointer;
+  }
+
+  :focus-visible{
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Layout shell ---------- */
+
+  .app-shell{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  .app-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem 0 1.25rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+  }
+
+  .brand{
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .brand-mark{
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+  }
+
+  .brand-name{
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-sub{
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+  }
+
+  .period-control{
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.3rem;
+  }
+
+  .period-btn{
+    background: transparent;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: var(--ink-soft);
+  }
+  .period-btn:hover{ background: var(--surface-muted); }
+
+  .period-label{
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0 0.35rem;
+    min-width: 108px;
+    text-align: center;
+  }
+
+  .header-actions{
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .demo-toggle{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .demo-toggle button{
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: var(--radius-sm);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink-faint);
+  }
+
+  .demo-toggle button[aria-pressed="true"]{
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    border-color: var(--accent-soft);
+  }
+
+  .avatar{
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+
+  main{ display: block; }
+
+  h1, h2, h3{
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .section-heading{
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.9rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .section-heading .hint{
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--ink-faint);
+  }
+
+  section{ margin-bottom: 2.25rem; }
+
+  .visually-hidden{
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---------- Alerts ---------- */
+
+  .alert-list{
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .alert{
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    background: var(--warn-bg);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .alert[data-severity="high"]{
+    border-left-color: var(--bad);
+    background: var(--bad-bg);
+  }
+
+  .alert-glyph{
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--warn);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    margin-top: 0.05rem;
+  }
+
+  .alert[data-severity="high"] .alert-glyph{ background: var(--bad); }
+
+  .alert-body{ flex: 1; }
+
+  .alert-title{
+    font-weight: 700;
+    margin: 0 0 0.15rem;
+  }
+
+  .alert-desc{
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .alert-dismiss{
+    flex: none;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.3rem 0.55rem;
+    color: var(--ink-soft);
+  }
+  .alert-dismiss:hover{ background: rgba(0,0,0,0.03); }
+
+  /* ---------- Summary cards ---------- */
+
+  .summary-grid{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.15rem;
+    box-shadow: var(--shadow-1);
+  }
+
+  .card-label{
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-value{
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .card-value.negative{ color: var(--bad); }
+  .card-value.positive{ color: var(--good); }
+
+  .card-sub{
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .trend{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-weight: 700;
+  }
+  .trend.up{ color: var(--bad); }
+  .trend.down{ color: var(--good); }
+
+  .goal-progress-track{
+    margin-top: 0.65rem;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    overflow: hidden;
+  }
+
+  .goal-progress-fill{
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+
+  /* ---------- Two column content ---------- */
+
+  .content-grid{
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-1);
+  }
+
+  /* Category list */
+
+  .category-list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .category-row{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 1rem;
+    align-items: center;
+  }
+
+  .category-name-group{
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .category-swatch{
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: none;
+  }
+
+  .category-amounts{
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .category-amounts strong{
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .category-track{
+    grid-column: 1 / -1;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .category-fill{
+    height: 100%;
+    border-radius: 999px;
+  }
+
+  .category-status{
+    grid-column: 1 / -1;
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+  }
+
+  .category-status.over{ color: var(--bad); font-weight: 600; }
+
+  /* Transactions */
+
+  .txn-list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .txn-row{
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .txn-row:last-child{ border-bottom: none; }
+
+  .txn-icon{
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+
+  .txn-main{
+    flex: 1;
+    min-width: 0;
+  }
+
+  .txn-name{
+    font-size: 0.87rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .txn-meta{
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+    margin-top: 0.1rem;
+  }
+
+  .txn-amount{
+    flex: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .txn-amount.income{ color: var(--good); }
+
+  .txn-flag{
+    display: inline-block;
+    margin-left: 0.4rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bad);
+    background: var(--bad-bg);
+    border-radius: 999px;
+    padding: 0.08rem 0.45rem;
+    vertical-align: middle;
+  }
+
+  .panel-footer-link{
+    display: block;
+    text-align: center;
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    width: 100%;
+    color: var(--accent-strong);
+  }
+  .panel-footer-link:hover{ text-decoration: underline; }
+
+  /* ---------- Budget adjustment ---------- */
+
+  .adjust-panel{
+    margin-top: 1.5rem;
+  }
+
+  .adjust-intro{
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin: 0 0 1.1rem;
+    max-width: 62ch;
+  }
+
+  .adjust-grid{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem 1.5rem;
+  }
+
+  .adjust-row{
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+  }
+
+  .adjust-row-top{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .adjust-label{
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .adjust-remaining{
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+  }
+
+  .adjust-remaining.tight{ color: var(--warn); font-weight: 600; }
+  .adjust-remaining.over{ color: var(--bad); font-weight: 600; }
+
+  .adjust-input-row{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .stepper{
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .stepper button{
+    background: transparent;
+    border: none;
+    width: 30px;
+    height: 32px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .stepper button:hover{ background: var(--surface-muted); }
+
+  .stepper input{
+    width: 84px;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    height: 32px;
+    background: var(--surface);
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .stepper input::-webkit-outer-spin-button,
+  .stepper input::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .stepper input[type="number"]{ -moz-appearance: textfield; }
+
+  .adjust-actions{
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .adjust-status{
+    font-size: 0.8rem;
+    color: var(--good);
+    font-weight: 600;
+    margin-right: auto;
+    display: none;
+  }
+
+  .adjust-status.visible{ display: inline-flex; align-items: center; gap: 0.35rem; }
+
+  .btn{
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 1.05rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+  }
+
+  .btn-primary{
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover{ background: var(--accent-strong); }
+
+  .btn-secondary{
+    background: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--ink);
+  }
+  .btn-secondary:hover{ background: var(--surface-muted); }
+
+  /* ---------- Empty state ---------- */
+
+  .empty-state{
+    display: none;
+    text-align: center;
+    padding: 3.5rem 1.5rem 4rem;
+    background: var(--surface);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+  }
+
+  .empty-state.visible{ display: block; }
+
+  .app-body.is-empty .populated-only{ display: none; }
+
+  .empty-glyph{
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin: 0 auto 1.1rem;
+  }
+
+  .empty-state h2{
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p{
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    max-width: 40ch;
+    margin: 0 auto 1.5rem;
+  }
+
+  .empty-steps{
+    list-style: none;
+    padding: 0;
+    margin: 0 auto 1.75rem;
+    max-width: 380px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .empty-steps li{
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+
+  .empty-steps .num{
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+  }
+
+  /* ---------- Footer ---------- */
+
+  footer{
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* ---------- Live region ---------- */
+
+  #live-region{
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+  }
+
+  /* ---------- Responsive ---------- */
+
+  @media (max-width: 980px){
+    .summary-grid{ grid-template-columns: repeat(2, 1fr); }
+    .content-grid{ grid-template-columns: 1fr; }
+    .adjust-grid{ grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 600px){
+    .app-shell{ padding: 0 1rem 3rem; }
+    .summary-grid{ grid-template-columns: 1fr; }
+    .app-header{ padding-top: 1.1rem; }
+    .period-label{ min-width: 0; }
+    .card-value{ font-size: 1.3rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+  }
+
+  @media (prefers-contrast: more){
+    :root{
+      --border: #9aa093;
+      --border-strong: #6b7163;
+    }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">B</div>
+      <div>
+        <div class="brand-name">Budget</div>
+        <div class="brand-sub">Household finances, kept simple</div>
+      </div>
+    </div>
+
+    <nav class="period-control" aria-label="Select month">
+      <button type="button" class="period-btn" aria-label="Previous month">‹</button>
+      <span class="period-label" id="period-label">July 2026</span>
+      <button type="button" class="period-btn" aria-label="Next month">›</button>
+    </nav>
+
+    <div class="header-actions">
+      <div class="demo-toggle" role="group" aria-label="Preview mode">
+        <span class="visually-hidden">Preview mode:</span>
+        <button type="button" id="show-populated" aria-pressed="true">My budget</button>
+        <button type="button" id="show-empty" aria-pressed="false">New account</button>
+      </div>
+      <div class="avatar" aria-hidden="true">JR</div>
+      <span class="visually-hidden">Signed in as Jamie R.</span>
+    </div>
+  </header>
+
+  <main id="main-content" class="app-body">
+
+    <div id="live-region" role="status" aria-live="polite"></div>
+
+    <!-- ============ EMPTY STATE (new users) ============ -->
+    <section class="empty-state" id="empty-state" aria-labelledby="empty-heading">
+      <div class="empty-glyph" aria-hidden="true">$</div>
+      <h2 id="empty-heading">Let's set up your first budget</h2>
+      <p>Once you connect an account or add a transaction, your monthly summary, spending categories, and savings progress will show up here automatically.</p>
+      <ol class="empty-steps">
+        <li><span class="num" aria-hidden="true">1</span> Add your monthly income so we can calculate what's available to spend.</li>
+        <li><span class="num" aria-hidden="true">2</span> Create a few spending categories, like groceries or transportation.</li>
+        <li><span class="num" aria-hidden="true">3</span> Set a savings goal to track progress toward, month over month.</li>
+      </ol>
+      <button type="button" class="btn btn-primary">Add your first transaction</button>
+    </section>
+
+    <!-- ============ POPULATED VIEWS ============ -->
+
+    <section class="populated-only" aria-labelledby="alerts-heading">
+      <h2 id="alerts-heading" class="visually-hidden">Alerts</h2>
+      <div class="alert-list" id="alert-list">
+        <div class="alert" data-severity="high" id="alert-dining">
+          <span class="alert-glyph" aria-hidden="true">!</span>
+          <div class="alert-body">
+            <p class="alert-title">Dining out is 42% over budget</p>
+            <p class="alert-desc">You've spent $284 of a $200 monthly limit, mostly in the last two weeks. Consider adjusting the category budget below.</p>
+          </div>
+          <button type="button" class="alert-dismiss" data-dismiss="alert-dining">Dismiss</button>
+        </div>
+        <div class="alert" data-severity="medium" id="alert-subscription">
+          <span class="alert-glyph" aria-hidden="true">i</span>
+          <div class="alert-body">
+            <p class="alert-title">New recurring charge detected</p>
+            <p class="alert-desc">"Northline Streaming" charged $17.99 for the first time on July 21. Review it if you don't recognize it.</p>
+          </div>
+          <button type="button" class="alert-dismiss" data-dismiss="alert-subscription">Dismiss</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="populated-only" aria-labelledby="summary-heading">
+      <h2 id="summary-heading" class="visually-hidden">Month summary</h2>
+      <div class="summary-grid">
+        <div class="card">
+          <div class="card-label">Income this month</div>
+          <div class="card-value">$5,240</div>
+          <div class="card-sub">2 deposits received</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Spent so far</div>
+          <div class="card-value">$3,812</div>
+          <div class="card-sub"><span class="trend up" aria-hidden="true">^</span> 8% more than June</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Remaining to budget</div>
+          <div class="card-value positive">$1,428</div>
+          <div class="card-sub">Across 6 categories</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Savings goal: Emergency fund</div>
+          <div class="card-value">72%</div>
+          <div class="goal-progress-track" role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100" aria-label="Emergency fund savings goal, 72 percent complete">
+            <div class="goal-progress-fill" style="width: 72%;"></div>
+          </div>
+          <div class="card-sub">$3,600 of $5,000 goal</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="content-grid populated-only">
+
+      <section class="panel" aria-labelledby="categories-heading">
+        <div class="section-heading">
+          <h2 id="categories-heading">Spending by category</h2>
+          <span class="hint">Budget vs. actual, July</span>
+        </div>
+        <ul class="category-list">
+
+          <li class="category-row">
+            <div class="category-name-group">
+              <span class="category-swatch" style="background:#c65d4a;" aria-hidden="true"></span>
+              Dining out
+            </div>
+            <div class="category-amounts"><strong>$284</strong> of $200</div>
+            <div class="category-track" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" aria-label="Dining out, 142 percent of budget used">
+              <div class="category-fill" style="width: 100%; background:#c65d4a;"></div>
+            </div>
+            <div class="category-status over">$84 over budget</div>
+          </li>
+
+          <li class="category-row">
+            <div class="category-name-group">
+              <span class="category-swatch" style="background:#2f5d4e;" aria-hidden="true"></span>
+              Groceries
+            </div>
+            <div class="category-amounts"><strong>$512</strong> of $600</div>
+            <div class="category-track" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100" aria-label="Groceries, 85 percent of budget used">
+              <div class="category-fill" style="width: 85%; background:#2f5d4e;"></div>
+            </div>
+            <div class="category-status">$88 remaining</div>
+          </li>
+
+          <li class="category-row">
+            <div class="category-name-group">
+              <span class="category-swatch" style="background:#8a5a12;" aria-hidden="true"></span>
+              Transportation
+            </div>
+            <div class="category-amounts"><strong>$168</strong> of $250</div>
+            <div class="category-track" role="progressbar" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100" aria-label="Transportation, 67 percent of budget used">
+              <div class="category-fill" style="width: 67%; background:#8a5a12;"></div>
+            </div>
+            <div class="category-status">$82 remaining</div>
+          </li>
+
+          <li class="category-row">
+            <div class="category-name-group">
+              <span class="category-swatch" style="background:#4a6fa5;" aria-hidden="true"></span>
+              Utilities
+            </div>
+            <div class="category-amounts"><strong>$205</strong> of $220</div>
+            <div class="category-track" role="progressbar" aria-valuenow="93" aria-valuemin="0" aria-valuemax="100" aria-label="Utilities, 93 percent of budget used">
+              <div class="category-fill" style="width: 93%; background:#4a6fa5;"></div>
+            </div>
+            <div class="category-status">$15 remaining</div>
+          </li>
+
+          <li class="category-row">
+            <div class="category-name-group">
+              <span class="category-swatch" style="background:#7a5a9e;" aria-hidden="true"></span>
+              Entertainment
+            </div>
+            <div class="category-amounts"><strong>$61</strong> of $120</div>
+            <div class="category-track" role="progressbar" aria-valuenow="51" aria-valuemin="0" aria-valuemax="100" aria-label="Entertainment, 51 percent of budget used">
+              <div class="category-fill" style="width: 51%; background:#7a5a9e;"></div>
+            </div>
+            <div class="category-status">$59 remaining</div>
+          </li>
+
+          <li class="category-row">
+            <div class="category-name-group">
+              <span class="category-swatch" style="background:#5a8a7a;" aria-hidden="true"></span>
+              Personal care
+            </div>
+            <div class="category-amounts"><strong>$74</strong> of $110</div>
+            <div class="category-track" role="progressbar" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100" aria-label="Personal care, 67 percent of budget used">
+              <div class="category-fill" style="width: 67%; background:#5a8a7a;"></div>
+            </div>
+            <div class="category-status">$36 remaining</div>
+          </li>
+
+        </ul>
+      </section>
+
+      <section class="panel" aria-labelledby="transactions-heading">
+        <div class="section-heading">
+          <h2 id="transactions-heading">Recent transactions</h2>
+          <span class="hint">Last 7 days</span>
+        </div>
+        <ul class="txn-list">
+          <li class="txn-row">
+            <span class="txn-icon" aria-hidden="true">GR</span>
+            <div class="txn-main">
+              <div class="txn-name">Green Valley Grocers</div>
+              <div class="txn-meta">Jul 25, Groceries</div>
+            </div>
+            <div class="txn-amount">-$86.40</div>
+          </li>
+          <li class="txn-row">
+            <span class="txn-icon" aria-hidden="true">NL</span>
+            <div class="txn-main">
+              <div class="txn-name">Northline Streaming <span class="txn-flag">New</span></div>
+              <div class="txn-meta">Jul 24, Entertainment</div>
+            </div>
+            <div class="txn-amount">-$17.99</div>
+          </li>
+          <li class="txn-row">
+            <span class="txn-icon" aria-hidden="true">PC</span>
+            <div class="txn-main">
+              <div class="txn-name">Paycheck deposit</div>
+              <div class="txn-meta">Jul 22, Income</div>
+            </div>
+            <div class="txn-amount income">+$2,620.00</div>
+          </li>
+          <li class="txn-row">
+            <span class="txn-icon" aria-hidden="true">TB</span>
+            <div class="txn-main">
+              <div class="txn-name">Thistle &amp; Basil Kitchen</div>
+              <div class="txn-meta">Jul 21, Dining out</div>
+            </div>
+            <div class="txn-amount">-$64.10</div>
+          </li>
+          <li class="txn-row">
+            <span class="txn-icon" aria-hidden="true">MB</span>
+            <div class="txn-main">
+              <div class="txn-name">Metro Transit pass</div>
+              <div class="txn-meta">Jul 20, Transportation</div>
+            </div>
+            <div class="txn-amount">-$45.00</div>
+          </li>
+          <li class="txn-row">
+            <span class="txn-icon" aria-hidden="true">CE</span>
+            <div class="txn-main">
+              <div class="txn-name">City Electric &amp; Gas</div>
+              <div class="txn-meta">Jul 19, Utilities</div>
+            </div>
+            <div class="txn-amount">-$132.75</div>
+          </li>
+          <li class="txn-row">
+            <span class="txn-icon" aria-hidden="true">CF</span>
+            <div class="txn-main">
+              <div class="txn-name">Corner Cafe</div>
+              <div class="txn-meta">Jul 18, Dining out</div>
+            </div>
+            <div class="txn-amount">-$22.50</div>
+          </li>
+        </ul>
+        <button type="button" class="panel-footer-link">View all transactions</button>
+      </section>
+
+    </div>
+
+    <section class="panel adjust-panel populated-only" aria-labelledby="adjust-heading">
+      <div class="section-heading">
+        <h2 id="adjust-heading">Adjust monthly budgets</h2>
+        <span class="hint">Changes apply to July</span>
+      </div>
+      <p class="adjust-intro">Move money between categories as your month changes. Amounts update the remaining balance shown above once saved.</p>
+
+      <form id="adjust-form">
+        <div class="adjust-grid">
+
+          <div class="adjust-row">
+            <div class="adjust-row-top">
+              <span class="adjust-label"><span class="category-swatch" style="background:#c65d4a;" aria-hidden="true"></span>Dining out</span>
+              <span class="adjust-remaining over" data-remaining-for="dining">$84 over</span>
+            </div>
+            <div class="adjust-input-row">
+              <div class="stepper">
+                <button type="button" data-step="-10" data-target="dining" aria-label="Decrease dining out budget by $10">-</button>
+                <input type="number" id="budget-dining" data-category="dining" data-spent="284" value="200" min="0" step="10" aria-label="Dining out monthly budget in dollars" />
+                <button type="button" data-step="10" data-target="dining" aria-label="Increase dining out budget by $10">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="adjust-row">
+            <div class="adjust-row-top">
+              <span class="adjust-label"><span class="category-swatch" style="background:#2f5d4e;" aria-hidden="true"></span>Groceries</span>
+              <span class="adjust-remaining" data-remaining-for="groceries">$88 left</span>
+            </div>
+            <div class="adjust-input-row">
+              <div class="stepper">
+                <button type="button" data-step="-10" data-target="groceries" aria-label="Decrease groceries budget by $10">-</button>
+                <input type="number" id="budget-groceries" data-category="groceries" data-spent="512" value="600" min="0" step="10" aria-label="Groceries monthly budget in dollars" />
+                <button type="button" data-step="10" data-target="groceries" aria-label="Increase groceries budget by $10">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="adjust-row">
+            <div class="adjust-row-top">
+              <span class="adjust-label"><span class="category-swatch" style="background:#8a5a12;" aria-hidden="true"></span>Transportation</span>
+              <span class="adjust-remaining" data-remaining-for="transportation">$82 left</span>
+            </div>
+            <div class="adjust-input-row">
+              <div class="stepper">
+                <button type="button" data-step="-10" data-target="transportation" aria-label="Decrease transportation budget by $10">-</button>
+                <input type="number" id="budget-transportation" data-category="transportation" data-spent="168" value="250" min="0" step="10" aria-label="Transportation monthly budget in dollars" />
+                <button type="button" data-step="10" data-target="transportation" aria-label="Increase transportation budget by $10">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="adjust-row">
+            <div class="adjust-row-top">
+              <span class="adjust-label"><span class="category-swatch" style="background:#4a6fa5;" aria-hidden="true"></span>Utilities</span>
+              <span class="adjust-remaining tight" data-remaining-for="utilities">$15 left</span>
+            </div>
+            <div class="adjust-input-row">
+              <div class="stepper">
+                <button type="button" data-step="-10" data-target="utilities" aria-label="Decrease utilities budget by $10">-</button>
+                <input type="number" id="budget-utilities" data-category="utilities" data-spent="205" value="220" min="0" step="10" aria-label="Utilities monthly budget in dollars" />
+                <button type="button" data-step="10" data-target="utilities" aria-label="Increase utilities budget by $10">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="adjust-row">
+            <div class="adjust-row-top">
+              <span class="adjust-label"><span class="category-swatch" style="background:#7a5a9e;" aria-hidden="true"></span>Entertainment</span>
+              <span class="adjust-remaining" data-remaining-for="entertainment">$59 left</span>
+            </div>
+            <div class="adjust-input-row">
+              <div class="stepper">
+                <button type="button" data-step="-10" data-target="entertainment" aria-label="Decrease entertainment budget by $10">-</button>
+                <input type="number" id="budget-entertainment" data-category="entertainment" data-spent="61" value="120" min="0" step="10" aria-label="Entertainment monthly budget in dollars" />
+                <button type="button" data-step="10" data-target="entertainment" aria-label="Increase entertainment budget by $10">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="adjust-row">
+            <div class="adjust-row-top">
+              <span class="adjust-label"><span class="category-swatch" style="background:#5a8a7a;" aria-hidden="true"></span>Personal care</span>
+              <span class="adjust-remaining" data-remaining-for="personal">$36 left</span>
+            </div>
+            <div class="adjust-input-row">
+              <div class="stepper">
+                <button type="button" data-step="-10" data-target="personal" aria-label="Decrease personal care budget by $10">-</button>
+                <input type="number" id="budget-personal" data-category="personal" data-spent="74" value="110" min="0" step="10" aria-label="Personal care monthly budget in dollars" />
+                <button type="button" data-step="10" data-target="personal" aria-label="Increase personal care budget by $10">+</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="adjust-actions">
+          <span class="adjust-status" id="adjust-status" role="status">Saved</span>
+          <button type="button" class="btn btn-secondary" id="adjust-reset">Reset</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </form>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>Figures shown are sample data for preview purposes.</span>
+    <span>Budget, last synced Jul 26, 2026, 9:14 AM</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var appBody = document.querySelector('.app-body');
+  var emptyState = document.getElementById('empty-state');
+  var btnPopulated = document.getElementById('show-populated');
+  var btnEmpty = document.getElementById('show-empty');
+  var live = document.getElementById('live-region');
+
+  function setMode(isEmpty){
+    if(isEmpty){
+      appBody.classList.add('is-empty');
+      emptyState.classList.add('visible');
+      btnEmpty.setAttribute('aria-pressed', 'true');
+      btnPopulated.setAttribute('aria-pressed', 'false');
+      live.textContent = 'Showing new account view with no budget data yet.';
+    } else {
+      appBody.classList.remove('is-empty');
+      emptyState.classList.remove('visible');
+      btnPopulated.setAttribute('aria-pressed', 'true');
+      btnEmpty.setAttribute('aria-pressed', 'false');
+      live.textContent = 'Showing your budget for July 2026.';
+    }
+  }
+
+  btnPopulated.addEventListener('click', function(){ setMode(false); });
+  btnEmpty.addEventListener('click', function(){ setMode(true); });
+
+  // Alert dismissal
+  document.querySelectorAll('.alert-dismiss').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-dismiss');
+      var alertEl = document.getElementById(id);
+      if(alertEl){
+        var title = alertEl.querySelector('.alert-title');
+        var msg = title ? title.textContent + ' dismissed.' : 'Alert dismissed.';
+        alertEl.parentNode.removeChild(alertEl);
+        live.textContent = msg;
+      }
+    });
+  });
+
+  // Budget adjustment steppers
+  var currencyFmt = function(n){
+    var sign = n < 0 ? '-' : '';
+    return sign + '$' + Math.abs(n).toLocaleString('en-US');
+  };
+
+  function updateRemaining(input){
+    var category = input.getAttribute('data-category');
+    var spent = parseFloat(input.getAttribute('data-spent')) || 0;
+    var budget = parseFloat(input.value) || 0;
+    var remainingEl = document.querySelector('[data-remaining-for="' + category + '"]');
+    if(!remainingEl) return;
+
+    var diff = budget - spent;
+    remainingEl.classList.remove('tight', 'over');
+
+    if(diff < 0){
+      remainingEl.textContent = currencyFmt(Math.abs(diff)) + ' over';
+      remainingEl.classList.add('over');
+    } else if(budget > 0 && diff / budget <= 0.1){
+      remainingEl.textContent = currencyFmt(diff) + ' left';
+      remainingEl.classList.add('tight');
+    } else {
+      remainingEl.textContent = currencyFmt(diff) + ' left';
+    }
+  }
+
+  document.querySelectorAll('.stepper input[type="number"]').forEach(function(input){
+    updateRemaining(input);
+    input.addEventListener('input', function(){ updateRemaining(input); });
+  });
+
+  document.querySelectorAll('.stepper button[data-step]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var targetCategory = btn.getAttribute('data-target');
+      var step = parseInt(btn.getAttribute('data-step'), 10);
+      var input = document.querySelector('input[data-category="' + targetCategory + '"]');
+      if(!input) return;
+      var current = parseFloat(input.value) || 0;
+      var next = Math.max(0, current + step);
+      input.value = next;
+      updateRemaining(input);
+    });
+  });
+
+  var form = document.getElementById('adjust-form');
+  var statusEl = document.getElementById('adjust-status');
+  var statusTimer = null;
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    statusEl.textContent = 'Saved';
+    statusEl.classList.add('visible');
+    live.textContent = 'Budget changes saved for July 2026.';
+    if(statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(function(){
+      statusEl.classList.remove('visible');
+    }, 4000);
+  });
+
+  var resetBtn = document.getElementById('adjust-reset');
+  var initialValues = {};
+  document.querySelectorAll('.stepper input[type="number"]').forEach(function(input){
+    initialValues[input.id] = input.value;
+  });
+
+  resetBtn.addEventListener('click', function(){
+    document.querySelectorAll('.stepper input[type="number"]').forEach(function(input){
+      input.value = initialValues[input.id];
+      updateRemaining(input);
+    });
+    statusEl.classList.remove('visible');
+    live.textContent = 'Budget adjustments reset to last saved values.';
+  });
+
+})();
+</script>
+</body>
+</html>

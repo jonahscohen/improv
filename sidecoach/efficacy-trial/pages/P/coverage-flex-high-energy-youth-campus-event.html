@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BuildBurst Weekend - Student Innovation Weekend</title>
+<meta name="description" content="BuildBurst Weekend is a three-day campus innovation challenge open to students of every major and skill level. Find your team, build something real, and walk away with prizes, mentorship, and a portfolio piece.">
+<style>
+  :root {
+    --color-bg: #ffffff;
+    --color-bg-alt: #f7f2ff;
+    --color-ink: #1b1330;
+    --color-ink-soft: #4b4463;
+    --color-primary: #6d28d9;
+    --color-primary-dark: #4c1d95;
+    --color-pink-strong: #be185d;
+    --color-orange-strong: #c2410c;
+    --color-pink-bright: #ec4899;
+    --color-orange-bright: #f97316;
+    --color-purple-bright: #7c3aed;
+    --color-dark-bg: #180f2e;
+    --color-dark-bg-alt: #241a3d;
+    --color-on-dark: #fdfbff;
+    --color-on-dark-soft: #c9bfe0;
+    --color-border: #e6dcfa;
+    --focus-ring: #facc15;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --max-width: 1120px;
+    --shadow-soft: 0 12px 30px rgba(76, 29, 149, 0.14);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+    color: var(--color-ink);
+    background: var(--color-bg);
+    line-height: 1.55;
+  }
+
+  h1, h2, h3 {
+    font-weight: 800;
+    line-height: 1.12;
+    margin: 0;
+  }
+
+  p { margin: 0; }
+
+  a {
+    color: inherit;
+  }
+
+  ul { margin: 0; padding: 0; list-style: none; }
+
+  img { max-width: 100%; display: block; }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 0.75rem;
+    top: -3.5rem;
+    background: var(--color-primary-dark);
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-sm);
+    z-index: 1000;
+    transition: top 0.2s ease;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .skip-link:focus {
+    top: 0.75rem;
+  }
+
+  .wrap {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 1.25rem;
+  }
+
+  /* ---------- Header ---------- */
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 500;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-weight: 800;
+    font-size: 1.15rem;
+    text-decoration: none;
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+
+  .brand-spark {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--color-purple-bright), var(--color-pink-bright), var(--color-orange-bright));
+    flex: none;
+  }
+
+  .primary-nav {
+    display: none;
+  }
+
+  .primary-nav ul {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .primary-nav a {
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-ink-soft);
+    padding: 0.35rem 0.1rem;
+    border-bottom: 2px solid transparent;
+  }
+
+  .primary-nav a:hover,
+  .primary-nav a:focus-visible {
+    color: var(--color-primary-dark);
+    border-bottom-color: var(--color-primary);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 42px;
+    height: 42px;
+    background: var(--color-bg-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+  }
+
+  .nav-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    margin: 0 auto;
+    background: var(--color-ink);
+    border-radius: 2px;
+  }
+
+  .mobile-nav {
+    display: none;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+
+  .mobile-nav.is-open {
+    display: block;
+  }
+
+  .mobile-nav ul {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 0 1rem;
+  }
+
+  .mobile-nav a {
+    display: block;
+    padding: 0.65rem 0;
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .mobile-nav a:hover,
+  .mobile-nav a:focus-visible {
+    color: var(--color-primary-dark);
+  }
+
+  /* ---------- Buttons ---------- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.98rem;
+    padding: 0.85rem 1.5rem;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-dark);
+  }
+
+  .btn-ghost-dark {
+    background: transparent;
+    border-color: rgba(253, 251, 255, 0.55);
+    color: var(--color-on-dark);
+  }
+
+  .btn-ghost-dark:hover {
+    background: rgba(253, 251, 255, 0.12);
+  }
+
+  .btn-ghost-light {
+    background: transparent;
+    border-color: var(--color-primary);
+    color: var(--color-primary-dark);
+  }
+
+  .btn-ghost-light:hover {
+    background: var(--color-bg-alt);
+  }
+
+  .btn-block {
+    width: 100%;
+  }
+
+  .btn-sm {
+    padding: 0.6rem 1.1rem;
+    font-size: 0.88rem;
+  }
+
+  /* ---------- Hero ---------- */
+
+  .hero {
+    position: relative;
+    background: radial-gradient(circle at 15% 15%, #3b1f73 0%, var(--color-dark-bg) 55%), var(--color-dark-bg);
+    color: var(--color-on-dark);
+    overflow: hidden;
+    padding: 3.5rem 0 3rem;
+  }
+
+  .hero::before,
+  .hero::after {
+    content: "";
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(50px);
+    opacity: 0.55;
+    z-index: 0;
+  }
+
+  .hero::before {
+    width: 320px;
+    height: 320px;
+    background: var(--color-pink-bright);
+    top: -120px;
+    right: -80px;
+  }
+
+  .hero::after {
+    width: 260px;
+    height: 260px;
+    background: var(--color-orange-bright);
+    bottom: -100px;
+    left: -60px;
+    opacity: 0.35;
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(253, 251, 255, 0.12);
+    border: 1px solid rgba(253, 251, 255, 0.25);
+    color: var(--color-on-dark);
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    margin-bottom: 1.25rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.1rem, 6vw, 3.4rem);
+    max-width: 16ch;
+    margin-bottom: 1rem;
+  }
+
+  .hero-gradient-word {
+    background: linear-gradient(90deg, var(--color-orange-bright), var(--color-pink-bright), var(--color-purple-bright));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero-sub {
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    color: var(--color-on-dark-soft);
+    max-width: 52ch;
+    margin-bottom: 1.75rem;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.6rem;
+    margin-bottom: 2rem;
+    font-size: 0.95rem;
+  }
+
+  .hero-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+
+  .hero-meta-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-pink-bright);
+    flex: none;
+  }
+
+  .hero-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+  }
+
+  /* ---------- Stats bar ---------- */
+
+  .stats-bar {
+    background: var(--color-dark-bg-alt);
+    color: var(--color-on-dark);
+    padding: 1.5rem 0;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: clamp(1.4rem, 4vw, 1.9rem);
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--color-orange-bright), var(--color-pink-bright));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+    color: var(--color-on-dark-soft);
+    font-weight: 600;
+  }
+
+  /* ---------- Sections generic ---------- */
+
+  section {
+    padding: 3.25rem 0;
+  }
+
+  .section-alt {
+    background: var(--color-bg-alt);
+  }
+
+  .section-head {
+    max-width: 62ch;
+    margin-bottom: 2rem;
+  }
+
+  .section-head .tag {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-pink-strong);
+    margin-bottom: 0.6rem;
+  }
+
+  .section-head h2 {
+    font-size: clamp(1.6rem, 4vw, 2.15rem);
+    margin-bottom: 0.75rem;
+  }
+
+  .section-head p {
+    color: var(--color-ink-soft);
+    font-size: 1.02rem;
+  }
+
+  /* ---------- Who should attend ---------- */
+
+  .who-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+  }
+
+  .who-card {
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1.4rem;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .who-card-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 999px;
+    background: var(--color-bg-alt);
+    color: var(--color-primary-dark);
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .who-card h3 {
+    font-size: 1.08rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .who-card p {
+    color: var(--color-ink-soft);
+    font-size: 0.96rem;
+  }
+
+  .reassure-banner {
+    margin-top: 1.75rem;
+    background: var(--color-primary);
+    color: #fff;
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .reassure-banner strong {
+    font-weight: 800;
+  }
+
+  /* ---------- Schedule ---------- */
+
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .day-card {
+    background: #fff;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .day-card-head {
+    padding: 1.1rem 1.4rem;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.05rem;
+  }
+
+  .day-card:nth-of-type(1) .day-card-head { background: var(--color-primary); }
+  .day-card:nth-of-type(2) .day-card-head { background: var(--color-pink-strong); }
+  .day-card:nth-of-type(3) .day-card-head { background: var(--color-orange-strong); }
+
+  .day-card-sub {
+    display: block;
+    font-weight: 600;
+    font-size: 0.82rem;
+    opacity: 0.9;
+    margin-top: 0.2rem;
+  }
+
+  .day-card-body {
+    padding: 1.25rem 1.4rem 1.4rem;
+  }
+
+  .day-card-body li {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px dashed var(--color-border);
+    font-size: 0.94rem;
+  }
+
+  .day-card-body li:last-child {
+    border-bottom: none;
+  }
+
+  .day-time {
+    flex: none;
+    width: 5.4rem;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+    font-size: 0.85rem;
+  }
+
+  .day-desc {
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- Teams ---------- */
+
+  .teams-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+    align-items: start;
+  }
+
+  .teams-copy h2 {
+    font-size: clamp(1.6rem, 4vw, 2.1rem);
+    margin-bottom: 0.85rem;
+  }
+
+  .teams-copy p {
+    color: var(--color-on-dark-soft);
+    margin-bottom: 1rem;
+  }
+
+  .teams-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .teams-list li {
+    background: rgba(253, 251, 255, 0.06);
+    border: 1px solid rgba(253, 251, 255, 0.16);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.1rem;
+  }
+
+  .teams-list h3 {
+    font-size: 1rem;
+    color: var(--color-on-dark);
+    margin-bottom: 0.3rem;
+  }
+
+  .teams-list p {
+    color: var(--color-on-dark-soft);
+    font-size: 0.92rem;
+    margin: 0;
+  }
+
+  .teams-section {
+    background: var(--color-dark-bg);
+    color: var(--color-on-dark);
+  }
+
+  /* ---------- Prizes ---------- */
+
+  .prize-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+    margin-bottom: 2.25rem;
+  }
+
+  .prize-card {
+    border-radius: var(--radius-md);
+    padding: 1.4rem;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .prize-card.grand {
+    background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+    color: #fff;
+    border: none;
+  }
+
+  .prize-card .prize-label {
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .prize-card.grand .prize-label {
+    color: rgba(253, 251, 255, 0.85);
+  }
+
+  .prize-card:not(.grand) .prize-label {
+    color: var(--color-pink-strong);
+  }
+
+  .prize-amount {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+
+  .prize-card p.prize-desc {
+    font-size: 0.94rem;
+  }
+
+  .prize-card:not(.grand) p.prize-desc {
+    color: var(--color-ink-soft);
+  }
+
+  .prize-card.grand p.prize-desc {
+    color: var(--color-on-dark-soft);
+  }
+
+  .support-box {
+    background: var(--color-bg-alt);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    border: 1px solid var(--color-border);
+  }
+
+  .support-box h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .support-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .support-list li {
+    font-size: 0.95rem;
+    color: var(--color-ink-soft);
+    padding-left: 1.1rem;
+    position: relative;
+  }
+
+  .support-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-orange-bright);
+  }
+
+  .support-list strong {
+    color: var(--color-ink);
+  }
+
+  /* ---------- FAQ ---------- */
+
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .faq-item {
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.25rem 1.25rem;
+  }
+
+  .faq-item summary {
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 1rem 0;
+    list-style: none;
+    position: relative;
+    padding-right: 2rem;
+  }
+
+  .faq-item summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-item summary::after {
+    content: "+";
+    position: absolute;
+    right: 0;
+    top: 0.85rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .faq-item[open] summary::after {
+    content: "\2212";
+  }
+
+  .faq-item p {
+    color: var(--color-ink-soft);
+    padding-bottom: 1.1rem;
+    font-size: 0.96rem;
+  }
+
+  /* ---------- Final CTA ---------- */
+
+  .final-cta {
+    background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary) 55%, var(--color-pink-strong));
+    color: #fff;
+    text-align: center;
+    border-radius: var(--radius-lg);
+    padding: 2.75rem 1.5rem;
+    margin: 0 1.25rem;
+  }
+
+  .final-cta h2 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    margin-bottom: 0.75rem;
+  }
+
+  .final-cta p {
+    color: rgba(253, 251, 255, 0.9);
+    max-width: 46ch;
+    margin: 0 auto 1.5rem;
+  }
+
+  .deadline-pill {
+    display: inline-block;
+    background: rgba(253, 251, 255, 0.16);
+    border: 1px solid rgba(253, 251, 255, 0.35);
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ---------- Footer ---------- */
+
+  .site-footer {
+    padding: 2.5rem 0 6.5rem;
+    color: var(--color-ink-soft);
+    font-size: 0.9rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .footer-brand {
+    font-weight: 800;
+    color: var(--color-ink);
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-col h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink);
+    margin-bottom: 0.6rem;
+  }
+
+  .footer-col a {
+    text-decoration: none;
+    color: var(--color-ink-soft);
+  }
+
+  .footer-col a:hover,
+  .footer-col a:focus-visible {
+    color: var(--color-primary-dark);
+  }
+
+  .footer-col li {
+    padding: 0.25rem 0;
+  }
+
+  .footer-bottom {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.82rem;
+  }
+
+  /* ---------- Sticky mobile register bar ---------- */
+
+  .sticky-register {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 400;
+    background: rgba(24, 15, 46, 0.96);
+    backdrop-filter: blur(6px);
+    padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(253, 251, 255, 0.12);
+  }
+
+  .sticky-register .btn {
+    width: 100%;
+  }
+
+  @media (min-width: 860px) {
+    .sticky-register { display: none; }
+  }
+
+  /* ---------- Responsive breakpoints ---------- */
+
+  @media (min-width: 640px) {
+    .stats-grid { grid-template-columns: repeat(4, 1fr); }
+    .who-grid { grid-template-columns: repeat(2, 1fr); }
+    .schedule-grid { grid-template-columns: repeat(3, 1fr); }
+    .prize-grid { grid-template-columns: repeat(2, 1fr); }
+    .footer-grid { grid-template-columns: 1.4fr 1fr 1fr; }
+  }
+
+  @media (min-width: 860px) {
+    .primary-nav { display: block; }
+    .nav-toggle { display: none; }
+    .mobile-nav { display: none !important; }
+    .who-grid { grid-template-columns: repeat(4, 1fr); }
+    .teams-layout { grid-template-columns: 1.1fr 1fr; }
+    .prize-grid { grid-template-columns: repeat(2, 1fr) ; }
+    .prize-grid .grand { grid-column: 1 / -1; }
+    .site-footer { padding-bottom: 2.5rem; }
+  }
+
+  @media (min-width: 1024px) {
+    .prize-grid { grid-template-columns: repeat(3, 1fr); }
+    .prize-grid .grand { grid-column: span 3; }
+  }
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#overview">
+        <span class="brand-spark" aria-hidden="true"></span>
+        BuildBurst Weekend
+      </a>
+
+      <nav class="primary-nav" aria-label="Primary">
+        <ul>
+          <li><a href="#who">Who's it for</a></li>
+          <li><a href="#schedule">Schedule</a></li>
+          <li><a href="#teams">Teams</a></li>
+          <li><a href="#prizes">Prizes</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a class="btn btn-primary btn-sm" href="#register">Register</a>
+        <button class="nav-toggle" type="button" id="navToggle" aria-expanded="false" aria-controls="mobileNav" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+
+    <nav class="mobile-nav" id="mobileNav" aria-label="Mobile">
+      <ul class="wrap">
+        <li><a href="#who">Who's it for</a></li>
+        <li><a href="#schedule">Schedule</a></li>
+        <li><a href="#teams">Teams</a></li>
+        <li><a href="#prizes">Prizes</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#register">Register</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="overview">
+      <div class="wrap hero-inner">
+        <span class="eyebrow">Northbridge University campus event</span>
+        <h1>Bring an idea. Leave with a <span class="hero-gradient-word">team, a build, and momentum.</span></h1>
+        <p class="hero-sub">BuildBurst Weekend is a three-day innovation challenge open to every major and every skill level. No prior hackathon experience needed, just show up curious.</p>
+
+        <div class="hero-meta">
+          <span class="hero-meta-item"><span class="hero-meta-dot" aria-hidden="true"></span>October 17-19, 2026</span>
+          <span class="hero-meta-item"><span class="hero-meta-dot" aria-hidden="true"></span>Innovation Commons, Hollis Hall</span>
+          <span class="hero-meta-item"><span class="hero-meta-dot" aria-hidden="true"></span>Free to attend</span>
+        </div>
+
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="#register">Register now</a>
+          <a class="btn btn-ghost-dark" href="#who">See if it's for you</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="stats-bar">
+      <div class="wrap stats-grid">
+        <div>
+          <span class="stat-number">300+</span>
+          <span class="stat-label">Students expected</span>
+        </div>
+        <div>
+          <span class="stat-number">40+</span>
+          <span class="stat-label">Majors represented last year</span>
+        </div>
+        <div>
+          <span class="stat-number">$5,000</span>
+          <span class="stat-label">In total prizes</span>
+        </div>
+        <div>
+          <span class="stat-number">0</span>
+          <span class="stat-label">Experience required</span>
+        </div>
+      </div>
+    </div>
+
+    <section id="who">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="tag">Who should attend</span>
+          <h2>If you're curious, you already qualify.</h2>
+          <p>BuildBurst isn't just for computer science majors or people who've done this before. It's built for a room full of different backgrounds working on the same problem.</p>
+        </div>
+
+        <div class="who-grid">
+          <div class="who-card">
+            <span class="who-card-index" aria-hidden="true">1</span>
+            <h3>First-timers</h3>
+            <p>Never been to an event like this? Most attendees haven't either. Friday's kickoff is built to get everyone oriented before anything is expected of you.</p>
+          </div>
+          <div class="who-card">
+            <span class="who-card-index" aria-hidden="true">2</span>
+            <h3>Any major, not just tech</h3>
+            <p>Business, design, health sciences, communications, undecided. The strongest teams last year mixed disciplines. Bring your major's perspective, not a coding resume.</p>
+          </div>
+          <div class="who-card">
+            <span class="who-card-index" aria-hidden="true">3</span>
+            <h3>Builders and non-builders</h3>
+            <p>Some roles need code. Others need research, storytelling, design, or pitching. Every team needs people who aren't touching a keyboard the whole time.</p>
+          </div>
+          <div class="who-card">
+            <span class="who-card-index" aria-hidden="true">4</span>
+            <h3>Solo or with friends</h3>
+            <p>Come with a group, come with one friend, or come alone. Team formation on Friday night is designed specifically for people arriving without a team.</p>
+          </div>
+        </div>
+
+        <div class="reassure-banner">
+          <strong>Not sure you're "technical enough"?</strong> Neither were most of last year's participants before Friday night. Mentors and workshops are built for exactly that starting point.
+        </div>
+      </div>
+    </section>
+
+    <section class="section-alt" id="schedule">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="tag">Schedule overview</span>
+          <h2>Three days, paced so nobody burns out.</h2>
+          <p>You don't need to stay overnight or attend every minute. Meals, quiet space, and rest breaks are built into the schedule.</p>
+        </div>
+
+        <div class="schedule-grid">
+          <article class="day-card">
+            <div class="day-card-head">
+              Friday
+              <span class="day-card-sub">Kickoff &amp; team formation</span>
+            </div>
+            <ul class="day-card-body">
+              <li><span class="day-time">5:00 PM</span><span class="day-desc">Check-in, dinner, and welcome talk</span></li>
+              <li><span class="day-time">6:00 PM</span><span class="day-desc">Challenge tracks announced</span></li>
+              <li><span class="day-time">6:45 PM</span><span class="day-desc">Team-formation mixer for solo attendees</span></li>
+              <li><span class="day-time">8:00 PM</span><span class="day-desc">Teams lock in and start early planning</span></li>
+            </ul>
+          </article>
+
+          <article class="day-card">
+            <div class="day-card-head">
+              Saturday
+              <span class="day-card-sub">Full build day</span>
+            </div>
+            <ul class="day-card-body">
+              <li><span class="day-time">9:00 AM</span><span class="day-desc">Breakfast and workshop track opens</span></li>
+              <li><span class="day-time">11:00 AM</span><span class="day-desc">Mentor office hours begin (all day)</span></li>
+              <li><span class="day-time">1:00 PM</span><span class="day-desc">Lunch and progress check-ins</span></li>
+              <li><span class="day-time">6:00 PM</span><span class="day-desc">Dinner and pitch-coaching session</span></li>
+              <li><span class="day-time">9:00 PM</span><span class="day-desc">Venue quiets down for the night</span></li>
+            </ul>
+          </article>
+
+          <article class="day-card">
+            <div class="day-card-head">
+              Sunday
+              <span class="day-card-sub">Demos &amp; awards</span>
+            </div>
+            <ul class="day-card-body">
+              <li><span class="day-time">9:00 AM</span><span class="day-desc">Breakfast and final polish time</span></li>
+              <li><span class="day-time">11:00 AM</span><span class="day-desc">Team demos to judging panel</span></li>
+              <li><span class="day-time">1:00 PM</span><span class="day-desc">Judging deliberation, snacks provided</span></li>
+              <li><span class="day-time">1:30 PM</span><span class="day-desc">Awards ceremony and closing</span></li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="teams-section" id="teams">
+      <div class="wrap teams-layout">
+        <div class="teams-copy">
+          <span class="tag" style="color: var(--color-orange-bright);">Team formation</span>
+          <h2>Show up without a team. That's normal.</h2>
+          <p>Roughly half of every BuildBurst cohort arrives without a team already formed. The Friday mixer exists specifically to solve that, and organizers stay in the room to help quieter attendees find a fit.</p>
+          <p>Teams can also form ahead of time through the group chat that opens after registration, if you'd rather sort things out in advance.</p>
+        </div>
+
+        <ul class="teams-list">
+          <li>
+            <h3>Team size: 1 to 5 people</h3>
+            <p>Register solo, as a pair, or as a full group. There's no penalty for smaller teams. Judging accounts for team size.</p>
+          </li>
+          <li>
+            <h3>Friday night pitch board</h3>
+            <p>Have half an idea but no group? Pin it to the pitch board and let others opt in, or browse ideas looking for a builder, designer, or researcher.</p>
+          </li>
+          <li>
+            <h3>No idea yet? Also fine.</h3>
+            <p>Every challenge track ships with three starter prompts. Teams are welcome to adopt one instead of inventing something from scratch.</p>
+          </li>
+          <li>
+            <h3>Cross-major matching</h3>
+            <p>On request, organizers will help balance a team so it isn't five people from the same major and skill set.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="prizes">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="tag">Prizes &amp; support</span>
+          <h2>What you walk away with, win or not.</h2>
+          <p>Every team leaves with a working prototype, a practiced pitch, and mentor feedback. Prizes are a bonus on top of that.</p>
+        </div>
+
+        <div class="prize-grid">
+          <div class="prize-card grand">
+            <span class="prize-label">Grand prize</span>
+            <span class="prize-amount">$2,500 + mentorship package</span>
+            <p class="prize-desc">Awarded to the strongest overall build, judged on execution, clarity of the pitch, and real-world relevance.</p>
+          </div>
+          <div class="prize-card">
+            <span class="prize-label">Best social impact</span>
+            <span class="prize-amount">$750</span>
+            <p class="prize-desc">For the project with the clearest positive effect on a campus or community problem.</p>
+          </div>
+          <div class="prize-card">
+            <span class="prize-label">Best first-time team</span>
+            <span class="prize-amount">$500</span>
+            <p class="prize-desc">Reserved for teams where every member is attending a build event for the first time.</p>
+          </div>
+          <div class="prize-card">
+            <span class="prize-label">People's choice</span>
+            <span class="prize-amount">$500</span>
+            <p class="prize-desc">Voted on by all attendees during Sunday's demo session, independent of the judging panel.</p>
+          </div>
+        </div>
+
+        <div class="support-box">
+          <h3>Support resources included for everyone</h3>
+          <ul class="support-list">
+            <li><strong>All meals covered.</strong> Dinner Friday through lunch Sunday, plus snacks.</li>
+            <li><strong>24-hour mentor lounge.</strong> Industry volunteers and faculty on hand for technical, design, and business questions.</li>
+            <li><strong>Beginner workshop track.</strong> Intro sessions on rapid prototyping, no-code tools, and pitching, running in parallel all Saturday.</li>
+            <li><strong>Quiet rest space.</strong> A low-light room for breaks, with the event never requiring an all-nighter.</li>
+            <li><strong>Event swag.</strong> T-shirt, notebook, and stickers for every registered attendee.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-alt" id="faq">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="tag">FAQ</span>
+          <h2>Still deciding? Start here.</h2>
+        </div>
+
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>Do I need coding experience to join?</summary>
+            <p>No. Teams need a mix of skills, not identical ones. Design, research, writing, and pitching are just as central as building. The Saturday workshop track is built for attendees with no technical background.</p>
+          </details>
+          <details class="faq-item">
+            <summary>What if I don't have a team yet?</summary>
+            <p>Come anyway. The Friday mixer and pitch board exist specifically for solo attendees, and organizers are on hand to help you find a fit if you don't want to navigate it alone.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Is there a cost to attend?</summary>
+            <p>No. Registration is free and includes all meals, workshop access, and event swag for the full weekend.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Do I have to stay the whole weekend?</summary>
+            <p>No. Attend Friday and Saturday only, or join Saturday morning if Friday doesn't work. Just let your team know your availability during check-in so schedules can be planned around it.</p>
+          </details>
+          <details class="faq-item">
+            <summary>What should I bring?</summary>
+            <p>A laptop or tablet if you have one, a phone charger, and a water bottle. Nothing else is required. Notebooks and basic supplies are provided at check-in.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How are teams judged?</summary>
+            <p>A panel scores each team on the working prototype, the clarity of the Sunday pitch, and real-world relevance of the idea. Team size and experience level are factored in, so smaller and first-time teams compete on even footing.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="register">
+      <div class="wrap">
+        <div class="final-cta">
+          <span class="deadline-pill">Registration closes October 10, 2026</span>
+          <h2>Reserve your spot at BuildBurst Weekend</h2>
+          <p>Free to attend, open to every major, and built so first-timers land on their feet. Bring a team or come find one on Friday night.</p>
+          <a class="btn btn-ghost-dark" style="background:#fff; color: var(--color-primary-dark); border-color:#fff;" href="mailto:register@buildburstweekend.example.edu?subject=BuildBurst%20Weekend%20Registration&body=I%27d%20like%20to%20register%20for%20BuildBurst%20Weekend%2C%20October%2017-19%2C%202026.">Start registration</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <div class="footer-brand">BuildBurst Weekend</div>
+          <p>A student-run innovation challenge hosted at Northbridge University's Innovation Commons.</p>
+        </div>
+        <div class="footer-col">
+          <h3>Event</h3>
+          <ul>
+            <li><a href="#who">Who should attend</a></li>
+            <li><a href="#schedule">Schedule</a></li>
+            <li><a href="#teams">Team formation</a></li>
+            <li><a href="#prizes">Prizes &amp; support</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h3>Contact</h3>
+          <ul>
+            <li><a href="mailto:hello@buildburstweekend.example.edu">hello@buildburstweekend.example.edu</a></li>
+            <li>Innovation Commons, Hollis Hall</li>
+            <li>Northbridge University</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>BuildBurst Weekend is a fictional student event used for demonstration purposes.</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="sticky-register" id="stickyRegister">
+    <a class="btn btn-primary" href="#register">Register for BuildBurst Weekend</a>
+  </div>
+
+  <script>
+    (function () {
+      var toggle = document.getElementById('navToggle');
+      var nav = document.getElementById('mobileNav');
+
+      if (!toggle || !nav) {
+        return;
+      }
+
+      toggle.addEventListener('click', function () {
+        var isOpen = nav.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        toggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+      });
+
+      nav.addEventListener('click', function (event) {
+        if (event.target.tagName === 'A') {
+          nav.classList.remove('is-open');
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.setAttribute('aria-label', 'Open menu');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
