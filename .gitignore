@@ -27,3 +27,11 @@ __pycache__/
 
 # sidecoach image cache: generated assets, never source
 .sidecoach-cache/
+
+# transient probe artifacts written by verification passes, never source
+__flowprobe.*
+__liveflow.*
+__pageprobe.*
+__t.js
+__t.d.ts
+*.tmp.js

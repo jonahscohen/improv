@@ -61,6 +61,19 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/sidecoach-craft-floor.sh",
+            "timeout": 15,
+            "statusMessage": "Loading craft floor..."
+          }
+        ]
+      }
     ]
   },
   "statusLine": {

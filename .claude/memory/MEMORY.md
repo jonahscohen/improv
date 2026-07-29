@@ -170,3 +170,5 @@
 - [** ACTIVE ** LOCALPROJECTX's detector fails OPEN on every degenerate input - exit 0 on missing file, garbage, no args, and linked-stylesheet-only def…](feedback_localprojectx_detector_fail_open.md)
 - [** ACTIVE ** Discoverability and reachability outrank internal quality on the scoreboard - a capability nothing can invoke scores ZERO; imag…](decision_discoverability_outranks_internal_quality.md)
 - [Real key fragment purged, two false claims corrected](session_2026-07-29_real-key-fragment-purged-and-two-false-claims.md) - four chars of a live key were committed inside the test written to prove tails do not leak; also the reachability zero was an importer grep against a subprocess spawn
+- [harness reach mirror](session_2026-07-29_harness-reach-mirror.md) - sidecoach now installs to 6 agent harnesses; Codex silently ignores a symlinked SKILL.md so the mirror copies; OpenCode already read ~/.claude/skills
+- [Craft floor is live; nothing in ~/.claude is symlinked](session_2026-07-29_craft-floor-is-live-and-nothing-is-symlinked.md) - the floor fires on UI edits now, and the installer copies rather than links, so repo edits to hooks or settings do not go live
