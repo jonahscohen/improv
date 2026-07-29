@@ -1358,3 +1358,6 @@
 
 <!-- archived 2026-07-27 (moved from MEMORY.md to stay under load budget) -->
 - [** SUPERSEDED ** Statusline led line 1 with the active model + version; replaced by the two-line layout above…](session_2026-07-27_statusline-model-segment.md)
+
+<!-- archived 2026-07-29 (moved from MEMORY.md to stay under load budget) -->
+- [does sidecoach help? a pre-registered 3-arm trial](session_2026-07-28_does-sidecoach-help.md) - closes Codex F7. n=17x3 arms, 51 pages, design Codex-reviewed twice BEFORE data (round 1 rejected th…
