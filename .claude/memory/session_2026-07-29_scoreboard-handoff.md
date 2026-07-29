@@ -17,7 +17,9 @@ Handoff written at team pause. Deliberately not re-verified, per the shutdown in
 
 **WIN 12 / LOSS 12 / TIE 1 / UNMEASURED 5, 30 rows.** Live in `sidecoach/benchmark/SCOREBOARD.md`.
 
-**IMPORTANT CAVEAT.** That tally is from the last run that COMPLETED. A later edit batch (anti-spoof gate on the fail-closed rows, per-tool timing exit codes, surface-wide sweeps, the mutation row moving to UNMEASURED, the drift reporter) went in afterwards and its regeneration never finished - the machine was at load 27 from concurrent agents and the run was still going at pause. **So the document does not currently reflect the harness.** First action for the next session: `bash benchmark/run-scoreboard.sh` and expect the tally to move. Do not quote the current numbers as derived from the current script.
+**IMPORTANT CAVEAT.** That tally is from the last run that COMPLETED. A later edit batch (anti-spoof gate on the fail-closed rows, per-tool timing exit codes, surface-wide sweeps, the mutation row moving to UNMEASURED, the drift reporter) went in afterwards and its regeneration **was KILLED at the team pause, confirmed, not merely unfinished** - the machine was at load 27 from concurrent agents. `benchmark/derivations.tsv` was never created, which is the fastest way to confirm this from disk: if that file is absent, no run has completed since the drift reporter landed.
+
+**So the document does not currently reflect the harness.** First action for the next session: `bash benchmark/run-scoreboard.sh` and expect the tally to move. Do not quote the current numbers as derived from the current script. Run it on an unloaded machine; at load 27 the roughly 26 node invocations did not finish inside 10 minutes, and that is contention, not a hang (syntax checks clean and the reachability probe alone is 54ms).
 
 ## (b) NOT yet reclassified as OUT OF SCOPE
 
