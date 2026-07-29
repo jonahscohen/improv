@@ -93,6 +93,7 @@
             "sidecoach-postuserp",
             "sidecoach-keyword",
             "sidecoach-taste-gate",
+            "sidecoach-craft-floor",
             "sidecoach-postresponse",
             "sidecoach-detect"
           ]
@@ -535,6 +536,7 @@
     "sidecoach-preamble": "Injects PRODUCT.md + DESIGN.md into every session.",
     "sidecoach-postuserp": "Sends your prompt to the sidecoach daemon.",
     "sidecoach-taste-gate": "Reviews .html/.css the moment they are written, but only inside a project that has a DESIGN.md; the taste validator runs on .html, the anti-pattern ban sweep on both.",
+    "sidecoach-craft-floor": "Loads the standing craft floor before a UI file is written or edited: 15 rules with concrete values and 10 banned patterns each carrying what to do instead, every entry naming its in-repo source. Fires regardless of which verb ran, or none, and stays silent on non-UI paths. At most once per 15 minutes per project.",
     "sidecoach-postresponse": "Folds sidecoach daemon results into the reply.",
     "sidecoach-detect": "Scans each UI file you write with the real detect engine and reports findings - advisory, never blocks, and off by default (opt-in; the per-edit browser scan adds a few seconds).",
     "voice-mandate": "Decides each session whether the speak tool is allowed, based on install and mute state.",
@@ -607,6 +609,7 @@
     "sidecoach-preamble": "sidecoach",
     "sidecoach-postuserp": "sidecoach",
     "sidecoach-taste-gate": "sidecoach",
+    "sidecoach-craft-floor": "sidecoach",
     "sidecoach-postresponse": "sidecoach",
     "sidecoach-detect": "sidecoach",
     "voice-mandate": "voice-output",

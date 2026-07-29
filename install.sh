@@ -622,6 +622,379 @@ install_bundled_skill() {
 }
 
 # ------------------------------------------------------------
+# HARNESS SKILL MIRRORING: the same skill payload, into the OTHER agent harnesses
+# already installed on this machine.
+#
+# WHY THIS EXISTS. install_bundled_skill deploys to ONE place, ~/.claude/skills. Measured
+# 2026-07-29: a competing design skill mirrors its payload into fourteen harness
+# directories while ours reached one, and reach is the widest gap on the board. The payload
+# is identical markdown; the only thing standing between it and five more harnesses was a
+# loop nobody had written.
+#
+# THE ROOTS BELOW WERE MEASURED, NOT READ OFF A DOC. Each row was confirmed against the
+# harness's own loader on this machine, because a documented path that the shipped binary
+# does not scan is a directory full of files nobody loads - the exact "reach" that is not
+# reach:
+#   - gemini    ~/.gemini/skills   `gemini skills list` enumerates SKILL.md under it (16 found).
+#   - codex     ~/.codex/skills    `codex debug prompt-input` prints its own skill-roots
+#                                  table; r0 IS this path. NOTE it is NOT ~/.agents/skills -
+#                                  that is codex's PROJECT root, and a global install placed
+#                                  there is invisible. Doc tables disagree with the binary
+#                                  here; the binary wins.
+#   - cursor    ~/.cursor/skills   created by Cursor itself; no CLI enumerator ships, so this
+#                                  row is convention-confirmed rather than loader-confirmed,
+#                                  and it says so rather than claiming a probe it does not have.
+#   - kiro      ~/.kiro/skills     observed carrying a third-party skill installed there.
+#   - agents    ~/.agents/skills   the cross-harness convention dir, present with its own
+#                                  skill lock file. Also convention-confirmed only.
+#
+# OPENCODE IS DELIBERATELY ABSENT AND MUST STAY ABSENT. `opencode debug skill` was run
+# before any of this landed and it already returned all 17 skills, every one resolved from
+# /Users/spare3/.claude/skills/<name>/SKILL.md - OpenCode reads the Claude root directly.
+# Adding an opencode row would deploy a second copy of a payload it already loads and would
+# inflate the reach count with a target that was never missing. Same reasoning applies to any
+# future Claude-compatible harness: probe first, and if it already reads ~/.claude/skills,
+# it needs no row.
+#
+# THE GATE IS "IS THE HARNESS HOME THERE", and it is the whole safety story. A row whose home
+# directory does not exist is SKIPPED, never created. Planting ~/.trae/skills/sidecoach on a
+# machine with no Trae is not distribution, it is a directory that makes a count look bigger.
+#
+# Rows are `label:home-relative-path:skills-root-relative-path`, newline separated, both
+# paths relative to $HOME so a redirected HOME redirects every target with it. Override the
+# whole table with IMPROV_HARNESS_ROOTS (same format) or disable the pass with
+# IMPROV_HARNESS_MIRROR=0.
+HARNESS_SKILL_ROOTS_DEFAULT='cursor:.cursor:.cursor/skills
+gemini:.gemini:.gemini/skills
+codex:.codex:.codex/skills
+kiro:.kiro:.kiro/skills
+agents:.agents:.agents/skills'
+
+# Every harness/skill pair this run deployed, as `harness:skill` lines. Read by
+# verify_harness_skills at the end of the run, exactly like SKILLS_DEPLOYED - so the
+# verification checks what THIS run did and never fails over a harness it was not asked
+# to touch.
+HARNESS_SKILLS_DEPLOYED=""
+
+# harness_home_is_inside_home <abs-path>
+#
+# THE HOME-ESCAPE ASSERTION, and it is here because this installer has already shipped one.
+# A prior version planted shims into the real /opt/homebrew/bin while running under a
+# redirected HOME, and the verification loop PASSED because every path it checked resolved
+# inside the sandbox. Any new install path has to prove it cannot do that, so every harness
+# destination is checked against the PHYSICAL $HOME before a single file is written.
+#
+# Resolves the deepest EXISTING ancestor rather than the path itself, so a target directory
+# that does not exist yet is still checked (its parent chain is what a symlink could
+# redirect). A path that is `$HOME/.cursor/skills` where `.cursor` is a symlink to /etc gets
+# rejected here, which is the case a string prefix test would wave through.
+harness_home_is_inside_home() {
+  local _hh_path="$1" _hh_probe _hh_phys _hh_home
+  _hh_home="$(cd "$HOME" 2>/dev/null && pwd -P)" || return 1
+  [ -n "$_hh_home" ] || return 1
+
+  _hh_probe="$_hh_path"
+  while [ -n "$_hh_probe" ] && [ "$_hh_probe" != "/" ] && [ ! -d "$_hh_probe" ]; do
+    _hh_probe="${_hh_probe%/*}"
+    [ -n "$_hh_probe" ] || _hh_probe="/"
+  done
+  [ -d "$_hh_probe" ] || return 1
+  _hh_phys="$(cd "$_hh_probe" 2>/dev/null && pwd -P)" || return 1
+  [ -n "$_hh_phys" ] || return 1
+
+  # Equal to $HOME is not acceptable for a skills root - only strictly beneath it.
+  case "$_hh_phys" in
+    "$_hh_home"/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# harness_skill_targets
+#
+# Prints one `label<TAB>absolute-skills-root` line per harness whose home exists AND whose
+# skills root passes the containment assertion. Prints nothing and exits 0 when no harness
+# qualifies, because "no other harness on this machine" is a normal outcome, not a failure.
+#
+# EVERY DIAGNOSTIC HERE GOES TO STDERR, and that is load-bearing rather than tidy. This
+# function's STDOUT is a machine-readable target list consumed through `$(...)`, and
+# install.sh's warn/info/err all print to STDOUT. A rejected row that warned on stdout
+# became an extra "row" in the caller's list, and the caller would then have taken the
+# warning TEXT as a destination path and run `mkdir -p '<warning text>/<skill>'` relative to
+# the current directory - a write outside $HOME, produced by the very guard that exists to
+# prevent writes outside $HOME. Found by mutating the presence gate out and watching the
+# clean-mirror row go red for the wrong reason; the mutation earned its keep.
+harness_skill_targets() {
+  local _hst_rows _hst_row _hst_label _hst_home _hst_root _hst_abs_home _hst_abs_root
+  _hst_rows="${IMPROV_HARNESS_ROOTS:-$HARNESS_SKILL_ROOTS_DEFAULT}"
+  while IFS= read -r _hst_row; do
+    [ -n "$_hst_row" ] || continue
+    case "$_hst_row" in \#*) continue ;; esac
+    _hst_label="${_hst_row%%:*}"
+    _hst_row="${_hst_row#*:}"
+    _hst_home="${_hst_row%%:*}"
+    _hst_root="${_hst_row#*:}"
+    if [ -z "$_hst_label" ] || [ -z "$_hst_home" ] || [ -z "$_hst_root" ] || [ "$_hst_home" = "$_hst_root" ]; then
+      warn "harness-skills: ignoring malformed row (want label:home:skills-root)" >&2
+      continue
+    fi
+    # A LABEL CANNOT CONTAIN A TAB. The output format is tab-separated, so a tab in a label
+    # would split one row into a wrong label and a wrong path.
+    case "$_hst_label" in
+      *"	"*) warn "harness-skills: ignoring row - a harness label cannot contain a tab" >&2; continue ;;
+    esac
+    # ABSOLUTE PATHS IN A ROW ARE REJECTED, not honoured. The two relative paths are what
+    # makes a redirected HOME actually redirect; an absolute row would escape it silently,
+    # which is the one failure mode this whole block is written against.
+    case "$_hst_home$_hst_root" in
+      /*|*..*) warn "harness-skills: ignoring row '$_hst_label' - home and root must be relative to \$HOME with no .." >&2; continue ;;
+    esac
+    _hst_abs_home="$HOME/$_hst_home"
+    _hst_abs_root="$HOME/$_hst_root"
+    [ -d "$_hst_abs_home" ] || continue          # harness not installed - skip, never create
+    if ! harness_home_is_inside_home "$_hst_abs_root"; then
+      warn "harness-skills: $_hst_label root does not resolve inside \$HOME - refusing to write $_hst_abs_root" >&2
+      continue
+    fi
+    printf '%s\t%s\n' "$_hst_label" "$_hst_abs_root"
+  done <<EOF
+$_hst_rows
+EOF
+  return 0
+}
+
+# harness_row_is_wellformed <line>
+#
+# The consumers' own check on a line they read from harness_skill_targets. Belt and braces
+# on purpose: the producer above already routes diagnostics to stderr, and this makes a
+# future regression there non-destructive instead of merely visible. A line only counts as a
+# row when it carries a tab AND an absolute path after it. Anything else - a stray
+# diagnostic, a blank, a truncated line - is dropped rather than used as a destination.
+harness_row_is_wellformed() {
+  local _hr_line="$1" _hr_root
+  case "$_hr_line" in
+    *"	"*) : ;;
+    *) return 1 ;;
+  esac
+  _hr_root="${_hr_line#*	}"
+  case "$_hr_root" in
+    /*) : ;;
+    *) return 1 ;;
+  esac
+  # A label is everything before the tab and must be non-empty.
+  [ -n "${_hr_line%%	*}" ] || return 1
+  return 0
+}
+
+# install_skill_to_harnesses <skill-name>
+#
+# Mirrors one repo skill directory into every qualifying harness root. Uses the SAME
+# link_or_copy_data primitive install_bundled_skill uses - no second deploy primitive, and
+# no `sed -i` on the payload: sidecoach's frontmatter is `name` + `description` only, and
+# every harness in the table supports both, so there is nothing to rewrite per target. If a
+# future skill needs per-harness frontmatter, that is a transform step to add here
+# deliberately, not a reason to hand-edit installed files.
+#
+# IT PINS THE DEPLOY MODE TO `copy`, WHICH IS THE OPPOSITE OF WHAT ~/.claude/skills GETS,
+# and the reason is measured rather than stylistic. On the first live run this mirror
+# deployed symlinks (dev checkout, so hook_deploy_mode said symlink) and reported five
+# harnesses installed with a clean byte-compare. Codex CLI 0.142.5 then showed sidecoach
+# NOWHERE in `codex debug prompt-input`. Isolated by swapping the single symlink for a real
+# file with nothing else changed: the skill appeared immediately. **Codex does not follow a
+# symlinked SKILL.md.** Claude Code, OpenCode and Gemini CLI all do (each was observed
+# loading one), so this is per-harness behavior with no way to detect it from disk.
+#
+# Given that, a symlink risks ZERO reach in a harness that silently ignores it, while a copy
+# risks STALE reach - and stale reach has a detector (verify_harness_skills below, plus the
+# end-of-run read-back and `sidecoach doctor`), whereas silent non-loading had none. So the
+# mirror copies, always, and staleness is answered by checking rather than by linking. The
+# refresh after editing a SKILL.md is `./install.sh --only sidecoach`.
+#
+# Failure is per-harness and non-fatal: one unwritable harness root records a partial
+# failure and the remaining harnesses still get the payload.
+install_skill_to_harnesses() {
+  local _ish_name="${1:-}" _ish_src _ish_list _ish_f _ish_rel _ish_label _ish_root
+  local _ish_dst _ish_rc=0 _ish_n=0 _ish_h=0 _ish_line _ish_saved_mode _ish_had_mode=0
+  if [ -z "$_ish_name" ] || [ "$#" -gt 1 ]; then
+    err "install_skill_to_harnesses: usage: install_skill_to_harnesses <skill-name>"
+    return 2
+  fi
+  if [ "${IMPROV_HARNESS_MIRROR:-1}" = "0" ]; then
+    info "harness-skills: mirroring disabled (IMPROV_HARNESS_MIRROR=0) - $_ish_name stays Claude-only"
+    return 0
+  fi
+  _ish_src="$REPO_DIR/claude/skills/$_ish_name"
+  if [ ! -d "$_ish_src" ]; then
+    warn "harness-skills: skills/$_ish_name source missing in repo - skipping"
+    return 0
+  fi
+
+  # Same temp-file walk as install_bundled_skill, for the same reason: process
+  # substitution discards find's exit status, so an unreadable source tree would mirror a
+  # SUBSET and report success.
+  _ish_list="$(mktemp "${TMPDIR:-/tmp}/improv-harness-XXXXXX")" || {
+    err "harness-skills: could not create a temp file for the source walk"
+    return 1
+  }
+  if ! find "$_ish_src" ! -name '.DS_Store' -type f -print0 > "$_ish_list" 2>/dev/null; then
+    rm -f "$_ish_list"
+    err "harness-skills: could not read the source tree at $_ish_src"
+    return 1
+  fi
+
+  # Pin copy mode for the duration of the mirror, then restore whatever the caller had.
+  # Set on the ENV rather than passed as an argument because hook_deploy_mode reads this one
+  # variable and there is exactly one deploy decision in this installer; a second parameter
+  # threaded through link_or_copy_data would be a second decision that could disagree with
+  # it. Restored below (including the unset case) so the Claude-side deploy that runs after
+  # this in a full install still gets its own auto decision.
+  if [ -n "${IMPROV_HOOK_DEPLOY+x}" ]; then _ish_had_mode=1; _ish_saved_mode="$IMPROV_HOOK_DEPLOY"; fi
+  IMPROV_HOOK_DEPLOY=copy
+
+  while IFS= read -r _ish_line; do
+    [ -n "$_ish_line" ] || continue
+    harness_row_is_wellformed "$_ish_line" || continue
+    _ish_label="${_ish_line%%	*}"
+    _ish_root="${_ish_line#*	}"
+    _ish_h=$((_ish_h + 1))
+    _ish_n=0
+    while IFS= read -r -d '' _ish_f; do
+      _ish_rel="${_ish_f#"$_ish_src"/}"
+      _ish_dst="$_ish_root/$_ish_name/$_ish_rel"
+      mkdir -p "${_ish_dst%/*}" || {
+        record_component_failure "harness-skills" "could not create ${_ish_dst%/*} for $_ish_label - $_ish_name is not mirrored there."
+        _ish_rc=1
+        break
+      }
+      link_or_copy_data "$_ish_f" "$_ish_dst" || {
+        record_component_failure "harness-skills" "could not deploy $_ish_rel into $_ish_label - $_ish_name is incomplete there."
+        _ish_rc=1
+        break
+      }
+      _ish_n=$((_ish_n + 1))
+    done < "$_ish_list"
+    if [ "$_ish_n" -gt 0 ]; then
+      HARNESS_SKILLS_DEPLOYED="${HARNESS_SKILLS_DEPLOYED}${_ish_label}:${_ish_name}
+"
+      ok "harness-skills: $_ish_name -> $_ish_label ($_ish_n file(s))"
+    fi
+  done <<EOF
+$(harness_skill_targets)
+EOF
+  rm -f "$_ish_list"
+  if [ "$_ish_had_mode" = "1" ]; then IMPROV_HOOK_DEPLOY="$_ish_saved_mode"; else unset IMPROV_HOOK_DEPLOY; fi
+
+  if [ "$_ish_h" -eq 0 ]; then
+    info "harness-skills: no other agent harness found on this machine - $_ish_name is Claude-only here"
+  fi
+  return "$_ish_rc"
+}
+
+# verify_harness_skills [skill-name ...]
+#
+# READ-ONLY proof that the mirrored payload is present and byte-identical in every harness
+# root this run deployed to. Same contract as verify_installed_skills: names the harness and
+# the file, distinguishes DANGLING from MISSING from STALE, and refuses to report clean
+# having examined nothing.
+#
+# With no arguments it verifies exactly what HARNESS_SKILLS_DEPLOYED recorded. With names it
+# verifies those skills against every CURRENTLY qualifying harness, which is the form the
+# standalone --verify-harness-skills flag uses (a fresh process has an empty ledger).
+verify_harness_skills() {
+  local _vh_pairs="" _vh_line _vh_label _vh_name _vh_root _vh_src _vh_dst
+  local _vh_bad=0 _vh_checked=0 _vh_pairs_n=0 _vh_list _vh_f _vh_rel
+  local _vh_srcroot="$REPO_DIR/claude/skills"
+
+  if [ ! -d "$_vh_srcroot" ]; then
+    err "verify-harness-skills: no skill sources at $_vh_srcroot"
+    return 2
+  fi
+
+  if [ "$#" -gt 0 ]; then
+    for _vh_name in "$@"; do
+      if [ ! -d "$_vh_srcroot/$_vh_name" ]; then
+        err "verify-harness-skills: unknown skill '$_vh_name' - no source at $_vh_srcroot/$_vh_name"
+        return 2
+      fi
+      while IFS= read -r _vh_line; do
+        [ -n "$_vh_line" ] || continue
+        harness_row_is_wellformed "$_vh_line" || continue
+        _vh_label="${_vh_line%%	*}"
+        _vh_root="${_vh_line#*	}"
+        [ -d "$_vh_root/$_vh_name" ] || continue   # not mirrored there - not drift
+        _vh_pairs="${_vh_pairs}${_vh_label}:${_vh_name}
+"
+      done <<EOF
+$(harness_skill_targets)
+EOF
+    done
+  else
+    _vh_pairs="$HARNESS_SKILLS_DEPLOYED"
+  fi
+
+  while IFS= read -r _vh_line; do
+    [ -n "$_vh_line" ] || continue
+    _vh_label="${_vh_line%%:*}"
+    _vh_name="${_vh_line#*:}"
+    _vh_root=""
+    while IFS= read -r _vh_f; do
+      [ -n "$_vh_f" ] || continue
+      harness_row_is_wellformed "$_vh_f" || continue
+      case "$_vh_f" in
+        "$_vh_label	"*) _vh_root="${_vh_f#*	}" ;;
+      esac
+    done <<EOF
+$(harness_skill_targets)
+EOF
+    if [ -z "$_vh_root" ]; then
+      err "verify-harness-skills: harness '$_vh_label' no longer resolves to a skills root"
+      _vh_bad=$((_vh_bad + 1))
+      continue
+    fi
+    _vh_pairs_n=$((_vh_pairs_n + 1))
+    _vh_src="$_vh_srcroot/$_vh_name"
+    _vh_dst="$_vh_root/$_vh_name"
+    _vh_list="$(mktemp "${TMPDIR:-/tmp}/improv-vharness-XXXXXX")" || {
+      err "verify-harness-skills: could not create a temp file for the source walk"
+      return 1
+    }
+    if ! find "$_vh_src" ! -name '.DS_Store' -type f -print0 > "$_vh_list" 2>/dev/null; then
+      rm -f "$_vh_list"
+      err "verify-harness-skills: $_vh_name - could not read the source tree at $_vh_src"
+      _vh_bad=$((_vh_bad + 1))
+      continue
+    fi
+    while IFS= read -r -d '' _vh_f; do
+      _vh_rel="${_vh_f#"$_vh_src"/}"
+      _vh_checked=$((_vh_checked + 1))
+      if [ -L "$_vh_dst/$_vh_rel" ] && [ ! -e "$_vh_dst/$_vh_rel" ]; then
+        err "verify-harness-skills: $_vh_label/$_vh_name/$_vh_rel is a DANGLING symlink -> $(readlink "$_vh_dst/$_vh_rel")"
+        _vh_bad=$((_vh_bad + 1))
+      elif [ ! -e "$_vh_dst/$_vh_rel" ]; then
+        err "verify-harness-skills: $_vh_label/$_vh_name/$_vh_rel is MISSING from $_vh_dst"
+        _vh_bad=$((_vh_bad + 1))
+      elif ! cmp -s "$_vh_dst/$_vh_rel" "$_vh_f"; then
+        err "verify-harness-skills: $_vh_label/$_vh_name/$_vh_rel is STALE - the mirrored copy differs from the repo source"
+        _vh_bad=$((_vh_bad + 1))
+      fi
+    done < "$_vh_list"
+    rm -f "$_vh_list"
+  done <<EOF
+$_vh_pairs
+EOF
+
+  if [ "$_vh_bad" -gt 0 ]; then
+    err "verify-harness-skills: $_vh_bad problem(s) across $_vh_pairs_n harness/skill pair(s)"
+    return 1
+  fi
+  if [ "$_vh_pairs_n" -eq 0 ]; then
+    info "verify-harness-skills: nothing mirrored to verify (no other harness on this machine, or mirroring disabled)"
+    return 0
+  fi
+  ok "verify-harness-skills: $_vh_pairs_n harness/skill pair(s), $_vh_checked file(s) match their repo source"
+  return 0
+}
+
+# ------------------------------------------------------------
 # seed_design_reference_catalog: create ~/.claude/design-references/ and its starter
 # vocabulary, once, without ever touching an existing one.
 #
@@ -2309,6 +2682,9 @@ Usage:
   ./install.sh --verify-skills [NAME...]
                                 Check installed skills against their repo source, then
                                 exit. 0 clean, 1 missing-or-stale, 2 usage
+  ./install.sh --verify-harness-skills NAME...
+                                Same check against the OTHER harnesses on this machine
+                                (cursor/gemini/codex/kiro/.agents), then exit
   ./install.sh --help           Show this help
 
 Components (for --only KEYS):
@@ -2377,6 +2753,16 @@ while [[ $# -gt 0 ]]; do
         VERIFY_SKILL_NAMES+=("$1"); shift
       done
       ;;
+    # The harness-mirror counterpart of --verify-skills, same trailing-names shape. Answers
+    # "is the payload actually present and current in cursor/gemini/codex/kiro/.agents", which
+    # a check against ~/.claude/skills alone cannot see.
+    --verify-harness-skills)
+      VERIFY_HARNESS_SKILLS=1; shift
+      VERIFY_HARNESS_SKILL_NAMES=()
+      while [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; do
+        VERIFY_HARNESS_SKILL_NAMES+=("$1"); shift
+      done
+      ;;
     --help|-h)      print_help; exit 0 ;;
     --personal)     shift ;;  # already consumed in pre-pass, just shift past it
     *)              err "Unknown flag: $1"; print_help; exit 2 ;;
@@ -2405,6 +2791,15 @@ fi
 # Exits with verify_installed_skills' own code: 0 clean, 1 missing-or-stale, 2 usage.
 if [ "${VERIFY_SKILLS:-0}" = "1" ]; then
   verify_installed_skills ${VERIFY_SKILL_NAMES[@]+"${VERIFY_SKILL_NAMES[@]}"}
+  exit $?
+fi
+
+# The harness-mirror counterpart, same READ-ONLY guarantee and the same exit contract:
+# 0 clean, 1 missing-or-stale-in-a-harness, 2 usage. Called with no names it has an empty
+# ledger (a fresh process deployed nothing), so the useful form always names skills:
+# `./install.sh --verify-harness-skills sidecoach`.
+if [ "${VERIFY_HARNESS_SKILLS:-0}" = "1" ]; then
+  verify_harness_skills ${VERIFY_HARNESS_SKILL_NAMES[@]+"${VERIFY_HARNESS_SKILL_NAMES[@]}"}
   exit $?
 fi
 
@@ -3781,7 +4176,7 @@ deactivate_task_list() {
 deactivate_sidecoach() {
   [ -d "$CLAUDE_DIR/skills/sidecoach" ] && rm -rf "$CLAUDE_DIR/skills/sidecoach"
   local f
-  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh sidecoach-detect.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
+  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-detect.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
     [ -L "$CLAUDE_DIR/hooks/$f" ] && rm -f "$CLAUDE_DIR/hooks/$f"
   done
   [ -L "$HOME/.local/bin/sidecoach" ] && rm -f "$HOME/.local/bin/sidecoach"
@@ -7095,6 +7490,14 @@ if picked sidecoach; then
   # was missing a file it ships. Flagged by Codex.
   install_bundled_skill sidecoach
 
+  # REACH: the same payload into every OTHER agent harness installed on this machine
+  # (cursor / gemini / codex / kiro / .agents), gated on the harness home already existing.
+  # See install_skill_to_harnesses for which roots were loader-confirmed and why OpenCode is
+  # deliberately not one of them (it reads ~/.claude/skills directly - measured).
+  # Non-fatal by construction: it records its own partial failures, so a locked-down harness
+  # directory never aborts the sidecoach install.
+  install_skill_to_harnesses sidecoach || true
+
   # Sidecoach's 7 hooks deploy + wire via install_app_hooks (see the `picked sidecoach &&`
   # line in the app-hook pass). The 7th, sidecoach-detect, ships OPT-IN via the default-off
   # seed near the top of this script, so a plain install deploys the other 6 and leaves the
@@ -7360,7 +7763,7 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 # decision_beats_hooks_stay_project_scoped.md).
 picked reflect      && install_app_hooks reflect-nudge.sh
 picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh
-picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-postresponse.sh sidecoach-detect.sh
+picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-detect.sh
 picked fable        && install_app_hooks fable-orchestrator-guard.sh
 picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
 picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
@@ -7650,6 +8053,21 @@ if [ "${#DELEGATED_SKILLS_DEPLOYED[@]}" -gt 0 ]; then
         "the $_dsd_name skill on disk is not what a completed install looks like - see the verify-delegated-skill errors above"
     fi
   done
+fi
+
+# The harness mirror, read back in the same place for the same reason. A mirror that ran and
+# wrote a truncated or stale payload into cursor/gemini/codex would otherwise be reported as
+# reach while the file the harness loads is not the file the repo ships - which is the exact
+# shape of "a harness directory that receives files nobody can use".
+#
+# Scoped to what THIS run mirrored (HARNESS_SKILLS_DEPLOYED), same as the Claude check above.
+if [ -n "${HARNESS_SKILLS_DEPLOYED:-}" ]; then
+  echo ""
+  info "--- verifying harness-mirrored skills ---"
+  if ! verify_harness_skills; then
+    record_component_failure "harness-skills" \
+      "mirrored skills do not match their repo source - see the verify-harness-skills errors above"
+  fi
 fi
 
 # ============================================================
