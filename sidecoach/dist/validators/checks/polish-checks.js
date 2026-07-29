@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.POLISH_CHECKS = exports.checkGenericity = exports.checkTypographyRhythm = exports.checkConcentricRadius = exports.checkOpticalAlignment = exports.checkTextWrapBalance = exports.checkFontSmoothing = exports.checkStaggeredEnter = exports.checkStateCompleteness = exports.checkShadowHierarchy = exports.checkShadowsOverBorders = exports.checkSkipLoadAnimation = exports.checkInterruptibleAnimations = exports.checkAnimatePresenceInitial = exports.checkImageOutline = exports.checkSubtleExit = exports.checkTabularNums = exports.checkSparseWillChange = exports.checkNoTransitionAll = exports.checkIconSwapCompound = exports.checkScaleOnPress = exports.checkReducedMotion = void 0;
 const check_context_1 = require("../check-context");
+const source_locator_1 = require("../source-locator");
 const polish_standard_validator_1 = require("../../polish-standard-validator");
 // A css-rule presence verdict: no CSS -> inconclusive; needle present -> pass; absent -> fail.
 function cssPresence(ctx, needle, okMsg, badMsg, fix) {
@@ -19,8 +20,9 @@ exports.checkIconSwapCompound = checkIconSwapCompound;
 const checkNoTransitionAll = (ctx) => {
     if (!(0, check_context_1.hasCss)(ctx))
         return (0, check_context_1.inconclusive)('no CSS source collected', 'unreadable_input');
+    // DEFECT locations: the `transition: all` declarations themselves.
     return (0, polish_standard_validator_1.hasTransitionAll)(ctx.cssText)
-        ? (0, check_context_1.fail)('transition: all found; use explicit properties', [], 'Replace transition: all with specific properties')
+        ? (0, check_context_1.fail)('transition: all found; use explicit properties', (0, source_locator_1.locate)(ctx, /transition\s*:\s*all\b/i, 'css', 5), 'Replace transition: all with specific properties')
         : (0, check_context_1.pass)('no transition: all');
 };
 exports.checkNoTransitionAll = checkNoTransitionAll;
@@ -28,7 +30,7 @@ const checkSparseWillChange = (ctx) => {
     if (!(0, check_context_1.hasCss)(ctx))
         return (0, check_context_1.inconclusive)('no CSS source collected', 'unreadable_input');
     return (0, polish_standard_validator_1.hasWillChangeAll)(ctx.cssText)
-        ? (0, check_context_1.fail)('will-change: all found', [], 'Use will-change for specific properties only')
+        ? (0, check_context_1.fail)('will-change: all found', (0, source_locator_1.locate)(ctx, /will-change\s*:\s*all\b/i, 'css', 5), 'Use will-change for specific properties only')
         : (0, check_context_1.pass)('no will-change: all');
 };
 exports.checkSparseWillChange = checkSparseWillChange;
@@ -72,7 +74,7 @@ const checkInterruptibleAnimations = (ctx) => {
     if (!(0, check_context_1.hasCss)(ctx))
         return (0, check_context_1.inconclusive)('no CSS source collected', 'unreadable_input');
     return (0, polish_standard_validator_1.hasKeyframeAnimationOnInteractiveState)(ctx.cssText)
-        ? (0, check_context_1.fail)('interactive state (:hover/:focus/:active) uses a keyframe animation, which cannot be interrupted', [], 'Use a CSS transition for interactive state changes (interruptible); reserve @keyframes/animation for run-once staged sequences')
+        ? (0, check_context_1.fail)('interactive state (:hover/:focus/:active) uses a keyframe animation, which cannot be interrupted', (0, source_locator_1.locate)(ctx, /:(?:hover|focus|active)[^{}]*\{[^}]*animation\s*:/i, 'css', 5), 'Use a CSS transition for interactive state changes (interruptible); reserve @keyframes/animation for run-once staged sequences')
         : (0, check_context_1.pass)('no keyframe animation on interactive states');
 };
 exports.checkInterruptibleAnimations = checkInterruptibleAnimations;

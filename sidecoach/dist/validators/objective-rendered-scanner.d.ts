@@ -26,7 +26,7 @@
  * classification (S1-S4) is added incrementally. With no rules implemented yet, scanObjectiveRendered renders
  * and returns []. Each subsequent step fills one class and turns its calibration fixtures green.
  */
-import { chromium } from 'playwright';
+import type { chromium } from 'playwright';
 export type ObjectiveRule = 'broken-image' | 'skipped-heading' | 'low-contrast' | 'gray-on-color' | 'justified-text';
 export interface ObjectiveFinding {
     rule: ObjectiveRule;

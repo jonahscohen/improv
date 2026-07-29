@@ -10,6 +10,7 @@ const component_gallery_reference_1 = require("./component-gallery-reference");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowBComponentResearchHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowB_component_research');
@@ -92,7 +93,19 @@ class FlowBComponentResearchHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'WCAG validation complete', required: false, description: `${validationResults.length} components validated` },
             ]);
             // Build guidance
+            // TEACH, THEN CHECK. Research flows are where the brief matters most and was missing entirely:
+            // this runs BEFORE a component exists, so there is nothing to grade and a findings-only payload
+            // would be empty. What it needs is the standard - check the validated pattern before deriving
+            // one, because every standard component carries keyboard and aria requirements nobody gets right
+            // from first principles - plus the interaction craft the component will be judged against later.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                findingClasses: ['a11y'],
+                lawDomains: ['research', 'interaction'],
+                domainLabel: 'component patterns',
+            });
             const guidance = [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no accessibility rules were measurable on this project.'),
                 `Brand personality: ${brandPersonality || 'Not defined'}`,
                 `Design approach: ${designApproach}`,
                 '',

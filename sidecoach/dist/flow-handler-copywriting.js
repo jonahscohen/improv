@@ -9,6 +9,7 @@ const landing_composition_data_1 = require("./landing-composition-data");
 const copywriting_templates_1 = require("./copywriting-templates");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowXCopywritingHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowX_copywriting');
@@ -32,7 +33,21 @@ class FlowXCopywritingHandler extends flow_handler_1.BaseFlowHandler {
             productPurpose: context.projectContext?.product?.purpose,
             brandPersonality: context.projectContext?.product?.brandPersonality,
         };
-        const guidance = [`Register: ${register}`, `Product name: ${productName}`, ''];
+        // TEACH, THEN CHECK. This flow drafts copy, so the brief is the writing standard it must hold to:
+        // no rhetorical templates, no slop words, error messages with all three parts, and the specific
+        // verb-plus-object rule for buttons. The two copy rules the registry can actually measure -
+        // buzzword density and generic button labels - are enumerated below, so a draft written into a page
+        // that already fails them is told so.
+        const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'produce',
+            ruleKeys: ['polish/marketing-buzzword', 'a11y/button-label-specific', 'a11y/chart-text-fallback'],
+            lawDomains: ['writing'],
+            domainLabel: 'copy',
+        });
+        const guidance = [
+            ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no copy rules were measurable on this project.'),
+            `Register: ${register}`, `Product name: ${productName}`, '',
+        ];
         const artifacts = [];
         let totalSlots = 0;
         let totalOptions = 0;

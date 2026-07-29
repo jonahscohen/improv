@@ -19,27 +19,21 @@ exports.motionMarkerFindingsFromScore = motionMarkerFindingsFromScore;
 exports.analyzeHtmlOnBrowserSubjective = analyzeHtmlOnBrowserSubjective;
 exports.scanSubjectiveRendered = scanSubjectiveRendered;
 /**
- * OWNED rendered SUBJECTIVE (taste) scanner (Sidecoach Stage 1 - reimplement-and-own).
+ * The playwright chromium driver, resolved AT LAUNCH TIME instead of at module load.
  *
- * The taste-frontier sibling of objective-rendered-scanner.ts. Detects SUBJECTIVE design idioms by RENDERING the
- * page and reading the real DOM + computed styles - the same render-determinism + hermetic posture as the
- * objective scanner, so the computed-style the detector reads comes from the SAME render the dev labeler
- * screenshotted (render-basis parity). Authored from a readability/spec basis, independent of the eval labeler.
+ * `import { chromium } from 'playwright'` at module scope cost every consumer 134ms even when
+ * no browser was ever launched (measured 2026-07-29: it was the single largest cost in a static
+ * scan of bin/sidecoach-detect.js, which never renders). The `import type` above keeps every
+ * `typeof chromium.launch` annotation in this file working and is erased at runtime.
  *
- * STAGE 1 classes (added incrementally, highest eval-weight first):
- *   - tiny-text : text rendered small enough to strain readability (notably small body or interface text).
- *   - nested-cards : a card-like container holding a meaningfully-smaller card-like container.
- *   - marketing-buzzword : the page's copy LEANS on generic marketing buzzwords (seamless, powerful, revolutionary,
- *       ...) rather than concrete specifics - a holistic weighted-density measure over the content copy (Stage 5a
- *       v2 rebuild; reimplement-and-own; calibrated on a register-diverse dev corpus).
- *
- * PRECISION-FIRST (lead condition): tiny-text is prevalent and easy to over-fire (12px captions are near-
- * universal). The page-level trigger is therefore conservative and readability-grounded, NOT tuned to match the
- * vision labeler: a single 12px caption does not make a page "tiny-text".
- *
- * INDEPENDENCE: PRODUCT scanner; MUST NOT import anything under eval/. Distinct artifact from the eval referee.
+ * FAIL-CLOSED: a missing or broken playwright now throws from inside the launch path, where the
+ * existing try/catch turns it into `available: false` with a reason - rather than crashing the
+ * whole module at import. That is strictly safer: an unavailable scan is still never clean.
  */
-const playwright_1 = require("playwright");
+function chromiumDriver() {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('playwright').chromium;
+}
 exports.SUBJECTIVE_RULES = [
     'tiny-text', 'nested-cards', 'marketing-buzzword', 'default-typeface',
     'extreme-negative-tracking', 'all-caps-body', 'oversized-h1', 'sub-11px-ui',
@@ -1752,7 +1746,7 @@ async function analyzeHtmlOnBrowserSubjective(browser, html, timeoutMs = 30000, 
  * timeout returns { available:false } - never a false "clean". */
 async function scanSubjectiveRendered(html, opts = {}) {
     const timeoutMs = opts.timeoutMs ?? 30000;
-    const launch = opts.launcher ?? (() => playwright_1.chromium.launch({ headless: true }));
+    const launch = opts.launcher ?? (() => chromiumDriver().launch({ headless: true }));
     let browser = null;
     try {
         browser = await launch();

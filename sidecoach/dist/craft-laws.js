@@ -1,0 +1,770 @@
+"use strict";
+// Domain craft laws - the teaching material for flows that run BEFORE there is a page to measure.
+//
+// WHY THIS FILE EXISTS, AND WHY IT IS SEPARATE FROM THE REGISTRY NOTES.
+//
+// `craft-probe.ts` gives every flow a real list of FAILING rules, and `craft-corpus.ts` teaches those
+// rules. That covers the check-then-teach case. It does not cover the other half of sidecoach's verb
+// surface: `craft`, `shape`, `animate`, `colorize`, `distill` and their neighbours run to PRODUCE
+// something, often before the artifact exists. A probe of an empty directory legitimately finds
+// nothing, and "nothing failed" must not be rendered as "nothing to teach" for a flow whose entire
+// job is to make something good in the first place. For those flows the brief is the up-front
+// standard, and the payload says so rather than implying a measurement it did not take.
+//
+// PROVENANCE IS THE POINT. Every note below carries the in-repo file its substance came from, and
+// the values in the `fix` fields are transcribed from those files, not invented. The reference
+// corpus under `reference/_extracted/` is thousands of lines of the human's own accumulated
+// guidance that no flow handler read; these notes are the wiring. Where two sources disagree on a
+// real value (press scale 0.96 vs 0.98, ease-in on exits) the note carries the house value and names
+// the disagreement rather than silently picking one.
+//
+// A NOTE ON SIZE. This file is long because the material is long. It is never emitted in full: the
+// selection and cap in `craft-corpus.ts` bound what any single payload prints, and a flow asks only
+// for the domains it owns. A corpus that is broad on disk and narrow per payload is the design.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.LAW_CRAFT = void 0;
+exports.lawKeysForDomain = lawKeysForDomain;
+exports.lawDomains = lawDomains;
+exports.lawKeysForDomains = lawKeysForDomains;
+const TP = 'reference/_extracted/tactical-polish';
+const BENCIUM = 'reference/_extracted/external/bencium-design';
+const TYPEUI = 'reference/_extracted/external/typeui-fundamentals';
+const RUI = 'reference/_extracted/external/refactoring-ui';
+const LAWS = 'src/design-laws.ts';
+/**
+ * The law corpus, keyed `law/<domain>/<slug>`.
+ *
+ * `severity` is carried explicitly because these notes are not registry rules and so have no
+ * registry severity to rank by. The ladder is the registry's own (blocker / major / minor /
+ * advisory) so one comparator orders law notes and rule notes together.
+ */
+exports.LAW_CRAFT = {
+    // ==================== TYPOGRAPHY ====================
+    'law/typography/modular-ratio': {
+        ruleKey: 'law/typography/modular-ratio',
+        title: 'One modular ratio',
+        severity: 'major',
+        good: 'Every size on the surface derived from a single base of 16px times one chosen ratio, so each step up is perceptibly larger than the one below it.',
+        why: 'Sizes picked by eye land 2-3px apart, and the eye reads that as a rendering accident rather than a level change, so the reader gets no signal about what to read first. A flat 14/16/18/20 ramp is the most common form of this.',
+        fix: 'Pick one ratio and derive the whole ladder: 1.125 for dense data UI, 1.2 for general product UI (body 16, h4 19, h3 23, h2 28, h1 33), 1.25 for marketing (body 16, h1 49), 1.333 for bold marketing (h1 64), 1.5 for a high-contrast hero (h1 81). Never below 1.25 for a marketing surface. Then snap the raw output to whole values from 12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72 so no size lands on a fractional pixel.',
+        example: '/* base 16, ratio 1.25 */\n--text-body: 1rem;    /* 16 */\n--text-h3: 1.5rem;    /* 24 */\n--text-h2: 2.25rem;   /* 36 */\n--text-h1: 3rem;      /* 48 */',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/line-height-inverse': {
+        ruleKey: 'law/typography/line-height-inverse',
+        title: 'Line-height inverse to size',
+        severity: 'major',
+        good: 'Leading that tightens as size grows: body at 1.5, a 32px heading at 1.2, a 48px display at 1.1.',
+        why: 'At 16px the vertical jump between lines is large relative to the letters, so loose leading stops the eye doubling back onto the line it just read. At 48px the glyph fills that space itself, so the same 1.5 opens canyons and the headline stops reading as one object.',
+        fix: 'Ramp it: 16px to 1.5, 24px to 1.35, 32px to 1.2, 48px to 1.1, 72px to 1.05. The sanity formula in the 14-64px range is line-height = 1.6 - (font-size-px / 100). Body stays in 1.4-1.6, headings in 1.05-1.25, UI labels and buttons in 1.0-1.2. Accented Latin and CJK need 1.5 or more.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/measure-cap': {
+        ruleKey: 'law/typography/measure-cap',
+        title: 'Cap the measure',
+        severity: 'major',
+        good: 'Desktop body running 45-75 characters per line, capped with max-width: 65ch on the prose container.',
+        why: 'Past roughly 90 characters the eye has to hunt for the start of the next line and reading speed drops sharply. Under about 30 characters the paragraph breaks so often that the rhythm goes. Both failures are invisible in a screenshot and immediate to a reader.',
+        fix: 'Set max-width: 65ch on the prose container. If the column must stay wide, compensate by raising line-height to 1.7-1.8; if it must stay narrow, drop toward 1.4. Long-form wants 18-20px body at 1.6 and a 65ch measure; dense UI wants 14-16px at 1.4. Always ship a cap even on ultra-wide screens.',
+        example: '.prose { max-width: 65ch; }',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/heading-size-by-role': {
+        ruleKey: 'law/typography/heading-size-by-role',
+        title: 'Heading size follows role',
+        severity: 'major',
+        good: 'Semantic level taken from the document outline and visual size taken from the heading\'s role on its surface, so a card title is small even though it is a heading.',
+        why: 'Rendering a card title at display size because it is "the title of the card" makes twelve sibling cards each shout as loudly as the page hero, and page-level scanning is destroyed. This is the most common typography mistake in generated UI.',
+        fix: 'Size by role, not by tag. Page hero h1 at clamp 36-72px, one per page. Section opener h2 at 28-44px. Sub-section h3 at 22-32px. Card or tile title h3/h4 at 16-20px and never above 20px unless the card IS the hero. Modal title 18-24px, never larger than the hero behind it. Footer and sidebar group labels 14-16px, often uppercase with 0.06em tracking. Display scale at 30px and up belongs only to the hero h1 and a major h2.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/tracking-by-size-case': {
+        ruleKey: 'law/typography/tracking-by-size-case',
+        title: 'Tracking by size and case',
+        severity: 'minor',
+        good: 'Body tracking left alone, large display pulled tighter, and ALL-CAPS labels opened up.',
+        why: 'A font\'s default spacing is calibrated for body text near 16px. Scale that to 48px and the gaps scale with it, so the headline reads loose and cheap. Set caps at default and the uniform-height rectangles jam together and stop being scannable.',
+        fix: 'Display headlines get letter-spacing: -0.02em (range -0.01em to -0.03em). Headings get -0.01em. Body stays at 0 - do not touch it. ALL-CAPS labels get 0.05em to 0.15em, with 0.08em-0.15em for eyebrow and section labels. Footer column titles and nav group labels uppercase at 0.06em or more.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/size-floors': {
+        ruleKey: 'law/typography/size-floors',
+        title: 'Absolute size floors',
+        severity: 'major',
+        good: 'Web body at 16-18px, form labels and controls at 14-16px, captions no smaller than 12px.',
+        why: 'These are the points where legibility actually fails rather than stylistic preferences. A 12px interactive label means the reader cannot reliably read what they are about to click, which is a functional defect, not a taste one.',
+        fix: 'Body floor 14px, target 16-18px (1rem to 1.125rem). Form labels and UI controls 14-16px and never 12px on anything interactive. Captions 12-13px with 11px the absolute floor. Native floors are iOS 17pt and Android 16sp. A stat or metric numeral is not a heading - set "99.99%" as a paragraph at display size rather than promoting it to an h1.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/fluid-clamp': {
+        ruleKey: 'law/typography/fluid-clamp',
+        title: 'Fluid type via clamp',
+        severity: 'minor',
+        good: 'Each display size as one clamp() whose minimum is the mobile legibility floor and whose preferred value mixes a rem base with a viewport term.',
+        why: 'A single-term 5vw preferred value gives 16px at a 320px viewport, below every legibility floor, and grows without bound on a 2560px monitor. The rem term is also what keeps browser zoom working, so a pure-vw value fails WCAG 1.4.4 outright.',
+        fix: 'Write clamp(2.25rem, 0.875rem + 5vw, 4.5rem) rather than clamp(2.25rem, 5vw, 4.5rem) - the fixed offset fixes small-viewport balance. Use one clamp per scale step and keep body on a fixed rem so measure stays stable. Know the crossover: 36px / 0.05 means it locks at 36px below a 720px viewport and at the max above 1440px. For component-level type prefer container queries over viewport units.',
+        example: 'h1 { font-size: clamp(2.25rem, 0.875rem + 5vw, 4.5rem); }\nh2 { font-size: clamp(1.875rem, 4vw, 2.75rem); }',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/weight-discipline': {
+        ruleKey: 'law/typography/weight-discipline',
+        title: 'Weight discipline',
+        severity: 'minor',
+        good: 'Two to four weights per family, body at 400 or 500, and 600 upward reserved for headings and key labels.',
+        why: 'Thin and Light strokes physically thin out at small sizes and drop rendered contrast below 4.5:1, so the weight becomes an accessibility failure rather than a style choice. At the other end Black 900 fills in its counters and the glyph turns into a blob.',
+        fix: 'Declare 400, 500, 600, 700 and stay inside them. Never ship Thin 100 or Light 200/300 below 18px, and never Black 900 below 24px. Prefer the variable version of the family and fall back to 2-4 static weights only if none exists. Cap the project at three families (brand display, UI sans, code mono); one family carried by real weight and size contrast covers most work.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/pair-across-classification': {
+        ruleKey: 'law/typography/pair-across-classification',
+        title: 'Pair across classification',
+        severity: 'minor',
+        good: 'One family by default, two with a reason, never three - and when pairing, one serif with one sans at matched x-heights.',
+        why: 'Two visually similar sans-serifs read as dissonance rather than contrast: the reader senses something is off but gets no hierarchy signal from the difference, so the second font\'s load cost buys nothing.',
+        fix: 'Use a validated pattern: display serif headline over sans body for editorial; a single humanist sans with weight-driven hierarchy for product UI; old-style serif throughout for heritage; geometric sans with monospace for developer tools. Gate every candidate on the ambiguous set Il1 O0 rn/m a/o cl/d - the winner separates all of them at body size. Test with real content at shipping sizes on both light and dark backgrounds.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/typography/no-system-stack-default': {
+        ruleKey: 'law/typography/no-system-stack-default',
+        title: 'Choose a real typeface',
+        severity: 'major',
+        good: 'Body and headings set in a family that was deliberately picked, not left on whatever the browser supplies.',
+        why: 'The bare system-ui stack and its monoculture members are what you get when nobody chose. A page on the default stack reads as unfinished even when every other decision on it is right, because type is the largest surface on most pages.',
+        fix: 'Set body and heading font-family to a face you picked. When the document must stay self-contained with no external fonts, lead with a characterful OS-installed face ahead of any generic fallback: Iowan Old Style, Charter, Baskerville or Cambria for serif; Optima, Avenir, Futura or Gill Sans for sans. Avoid leading with Arial, Helvetica, Times, Georgia, Verdana or Segoe UI.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.typography)`,
+    },
+    // ==================== COLOR ====================
+    'law/color/enough-greys': {
+        ruleKey: 'law/color/enough-greys',
+        title: 'Eight to ten greys',
+        severity: 'major',
+        good: 'A palette with 8-10 grey steps, 5-10 shades of the brand colour, and multiple shades per semantic accent so background and text can differ.',
+        why: 'A five-colour palette gives you one grey, so every border, divider, disabled state, placeholder, secondary text and tertiary text is forced to share it and the surface flattens into a single tone with no depth. You need more colours than you think.',
+        fix: 'Build 8-10 greys and tint them slightly cool or warm rather than leaving them at 0% saturation, which reads as dead. Give each semantic accent at least a light background shade and a dark text shade. Never use pure #000 or #fff as either end.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/color/saturation-at-extremes': {
+        ruleKey: 'law/color/saturation-at-extremes',
+        title: 'Boost saturation at the ends',
+        severity: 'minor',
+        good: 'A ramp whose saturation number rises as lightness approaches either extreme, dipping only at the mid base.',
+        why: 'Perceived saturation drops at extreme lightness even when the channel is unchanged, so lightening a 100% red by moving only lightness produces a chalky pink that looks desaturated at 100% S. A ramp built by moving lightness alone goes chalky at the top and muddy at the bottom.',
+        fix: 'Curve saturation up at both ends and rotate hue a few degrees with it: 50 at hsl(220, 100%, 97%), 300 at hsl(214, 85%, 78%), 500 at hsl(212, 75%, 55%) as the base, 700 at hsl(214, 85%, 40%), 950 at hsl(218, 100%, 14%). Rotate toward cool hues as you darken and bright hues as you lighten, roughly an 8 degree swing across the ramp.',
+        example: '--brand-500: hsl(212, 75%, 55%);\n--brand-900: hsl(216, 95%, 22%);',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/color/contrast-minimums': {
+        ruleKey: 'law/color/contrast-minimums',
+        title: 'Contrast minimums',
+        severity: 'blocker',
+        good: '4.5:1 on body text, 3:1 on large text and UI components, measured against the background that actually renders behind them.',
+        why: 'Contrast sits at the top of the priority order: accessibility, then readability, then hierarchy, then performance, then brand, then preference. A failing ratio overrides the brand argument that produced it, and liking how it looks is explicitly not a reason to ship it.',
+        fix: 'Body text under 18pt regular or 14pt bold needs 4.5:1. Large text at 24px regular or 18.5px bold, and UI components including focus rings and icons, need 3:1. AAA body is 7:1. Measure against the real background including images and gradients, and measure dark mode separately - passing in light does not imply passing in dark. Do not fix it with opacity, which lowers contrast.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/color/flip-dont-darken': {
+        ruleKey: 'law/color/flip-dont-darken',
+        title: 'Flip contrast, do not darken',
+        severity: 'minor',
+        good: 'A failing white-on-colour pairing inverted to dark text on a light tint of the same colour.',
+        why: 'Darkening the background until white text passes is a one-way ratchet that ends at near-black, and the hue that carried the meaning - this is an error, this is a warning - is gone by the time the ratio passes.',
+        fix: 'Use the 50 or 100 shade as background and the 700 or 800 shade as text from the same ramp: light red background with dark red text for an error, and the same move for warning and success. Never rely on hue alone - pair every status colour with an icon or a text label so the information survives colour blindness.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/color/near-black-near-white': {
+        ruleKey: 'law/color/near-black-near-white',
+        title: 'Near-black on near-white',
+        severity: 'minor',
+        good: 'Text at #1A1A1A on a #FAFAFA page rather than #000 on #FFF, and the symmetric move in dark mode.',
+        why: 'Maximum contrast is not maximum comfort. Pure black on pure white causes eye strain over a long read, and pure white on pure black causes halation, where the glyph edges bloom and the text appears to vibrate.',
+        fix: 'Set body text to #1A1A1A and the page to #FAFAFA. In dark mode pull both ends in symmetrically - the 950 shade of the grey ramp as background and the 50 shade as text - rather than literal #000 and #fff. Tint every neutral with chroma 0.005-0.015 toward the brand hue and reduce chroma near the extremes.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/color/colour-as-tertiary-lever': {
+        ruleKey: 'law/color/colour-as-tertiary-lever',
+        title: 'Colour reinforces, never replaces',
+        severity: 'minor',
+        good: 'Primary content dark, secondary grey, tertiary lighter grey - at the same or similar font size.',
+        why: 'The instinct for a de-emphasised item like a timestamp is to shrink it, which makes it hard to read for exactly the readers who need it. Dropping the colour de-emphasises it while keeping it legible, which is why colour is the escape hatch that saves small text.',
+        fix: 'Keep the size readable and set the colour to a light grey instead of shrinking. Pair with weight (primary 600-700, secondary 400, nothing below 400 for UI) and with case and tracking. Give a text-adjacent icon a softer, lower-contrast colour than the text, because an icon\'s solid area reads heavier than letters at the same value.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/color/commitment-level': {
+        ruleKey: 'law/color/commitment-level',
+        title: 'Pick a commitment level',
+        severity: 'minor',
+        good: 'One declared level of colour commitment held consistently across the surface, rather than an accent applied wherever something looked empty.',
+        why: 'Inconsistent commitment is what makes a page read as assembled rather than designed: a drenched hero above restrained cards tells the reader the two sections came from different decisions.',
+        fix: 'Choose one and hold it: Restrained keeps accent under 10% and only on action; Committed runs 30-60%; Full names 3-4 colours; Drenched makes the surface itself the colour. Brand registers can take Full or Drenched; product registers want Restrained or Committed so clarity survives. Work in OKLCH for strategic colours rather than HSL or RGB.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.color)`,
+    },
+    'law/color/text-on-image': {
+        ruleKey: 'law/color/text-on-image',
+        title: 'Text over images',
+        severity: 'major',
+        good: 'Text over a photo carrying one of three deliberate treatments so contrast holds at the worst-case pixel, not just where you happened to look.',
+        why: 'A photo\'s luminance varies across the frame, so text that passes 4.5:1 over the dark corner fails over the bright sky in the same image - and the failure moves as the image is cropped responsively.',
+        fix: 'Pick one: a semi-transparent black scrim over the image for light text; reduce the contrast of the image itself; or desaturate the image and multiply-blend the brand colour into it. For short runs a text-shadow sized to the worst-case pixel also works. Control aspect ratio with object-fit or background-size: cover for user-uploaded content.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/color/grayscale-first': {
+        ruleKey: 'law/color/grayscale-first',
+        title: 'Grayscale before colour',
+        severity: 'minor',
+        good: 'Layout and spacing solved with no colour at all, and colour added only once the hierarchy already reads.',
+        why: 'Starting in colour means answering what is important and what colour it is at the same time, and colour becomes a crutch for hierarchy that was never built. Grayscale first forces size, weight, position and spacing to do the work, so the result also survives an accessibility audit - meaning was never carried by hue.',
+        fix: 'Do the first pass in grayscale, then add colour. When choosing the personality, commit to concrete values rather than adjectives: serious/elegant wants a serif with 0-2px radius; playful wants a rounded sans with 12-16px radius; technical wants a mono at 0px radius; consumer SaaS wants a geometric sans at 6-8px radius with one accent plus a status set.',
+        source: `${RUI}/SKILL.md`,
+    },
+    // ==================== SPATIAL ====================
+    'law/spatial/exponential-scale': {
+        ruleKey: 'law/spatial/exponential-scale',
+        title: 'Exponential spacing scale',
+        severity: 'major',
+        good: 'Spacing drawn from a fixed scale where no two adjacent values sit closer than about 25%: 4, 8, 12, 16, 24, 32, 48, 64, 96, 128.',
+        why: 'On a linear scale the same +4px means two different things depending where you are - 12 to 16 is a large visual change and 100 to 104 is invisible. An exponential scale makes "one step up" a reliable instruction instead of a guess.',
+        fix: 'Use 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 and take the next value when you need more room, or jump two steps when one is not enough. Never an arbitrary 123px. A 4, 5, 6, 7, 8 scale fails because 7 to 8 is a 14% change nobody can see. Prefer gap over margins so margin-collapse cannot surprise you.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/spatial/proximity-grouping': {
+        ruleKey: 'law/spatial/proximity-grouping',
+        title: 'Between-group beats within-group',
+        severity: 'major',
+        good: 'The gap separating two groups visibly larger than the gap between items inside a group.',
+        why: 'Proximity is what tells the reader which label belongs to which input. When a label\'s bottom margin equals the input\'s bottom margin the relationship is genuinely ambiguous, and the reader has to test both readings.',
+        fix: 'Double the space between an input and the next label relative to the label-to-input space: 8px label to input, 16px or 24px input to next label. Start each block with too much room and subtract until it looks right, rather than starting tight and adding.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/spatial/de-emphasise-to-emphasise': {
+        ruleKey: 'law/spatial/de-emphasise-to-emphasise',
+        title: 'De-emphasise to emphasise',
+        severity: 'minor',
+        good: 'A primary element that stands out because its competitors were quietened, not because it was amplified.',
+        why: 'The normal instinct backfires: making the save button bigger and adding a glow gives you four elements competing instead of one winner. Subtraction is the only move that reduces the number of loud things on the surface.',
+        fix: 'Remove the background colour from the cards or sidebar surrounding the target; turn valid-but-inactive nav items from black to a soft grey. Then the primary is the loudest element without being touched. Reach for subtraction before addition every time.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/spatial/four-levels-then-squint': {
+        ruleKey: 'law/spatial/four-levels-then-squint',
+        title: 'Three or four levels, then squint',
+        severity: 'major',
+        good: 'Any one surface carrying at most 3-4 hierarchy levels with exactly one element dominating.',
+        why: 'Past four levels the hierarchy collapses. Each extra level compresses the perceptual distance between all the others, so a fifth tier does not add information, it removes the distinction between the first and second.',
+        fix: 'Cap at 3-4 levels and one dominant element per surface. Then run the squint test: shrink to about 25% or blur it, and the primary must still be the first thing the eye lands on. If two things tie, one of them is not a separate level. Build hierarchy from several dimensions at once - size 3:1 or more, weight, colour, case, position, space - not size alone.',
+        source: `${TYPEUI}/typography-principles.md`,
+    },
+    'law/spatial/max-width-not-percent': {
+        ruleKey: 'law/spatial/max-width-not-percent',
+        title: 'Shrink the canvas',
+        severity: 'minor',
+        good: 'Elements sized to their content with max-width, so a 600px form stays 600px on a 1400px screen.',
+        why: 'Percentage widths shrink everything at the same rate, but a large desktop element needs to shrink faster than a small one as the screen narrows. Proportional scaling therefore produces a mobile layout where the hero still dominates and the body text is unreadable.',
+        fix: 'Use max-width on the element and let it shrink only once the viewport is narrower than its ideal size. Make sidebars a fixed width sized for their content and let the main column flex. Never use em for layout widths - it compounds with inherited font-size. If a form feels empty, move supporting text into a side column rather than widening the inputs.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/spatial/two-part-shadows': {
+        ruleKey: 'law/spatial/two-part-shadows',
+        title: 'Two-part shadows',
+        severity: 'minor',
+        good: 'Every shadow drawn as two layers - a large soft ambient shadow plus a tight darker occlusion shadow near the contact edge - from a small set of elevation tiers.',
+        why: 'One shadow alone looks like a CSS shadow. The pair looks like an object resting on a surface, because that is what a physical object casts under a single light source.',
+        fix: 'Ship layered values rather than hand-writing a single box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1) with 0 2px 4px -1px rgba(0,0,0,0.06) for a medium tier, and 0 20px 25px -5px rgba(0,0,0,0.1) with 0 10px 10px -5px rgba(0,0,0,0.04) for a large one. Tier by distance from the surface: tight for buttons, medium for dropdowns, diffuse for modals. Lighter reads closer, darker reads further away.',
+        example: '.elevation-medium {\n  box-shadow:\n    0 4px 6px -1px rgba(0, 0, 0, 0.1),\n    0 2px 4px -1px rgba(0, 0, 0, 0.06);\n}',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/spatial/thicken-dont-darken': {
+        ruleKey: 'law/spatial/thicken-dont-darken',
+        title: 'Thicken hairlines',
+        severity: 'advisory',
+        good: 'A border that reads too subtle fixed by going to 2px at the same colour.',
+        why: 'Darkening adds noise: a dark 1px line reads as a hard edge competing with the content, whereas a wider line at the same soft colour reads as more present without becoming another thing to look at.',
+        fix: 'Move border-width from 1px to 2px and hold the colour constant. The same logic runs the other way for icons - an icon next to text carries more solid area so it reads heavier, and the fix is a softer lower-contrast colour rather than a smaller icon.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/spatial/no-nested-cards': {
+        ruleKey: 'law/spatial/no-nested-cards',
+        title: 'Cards are the lazy answer',
+        severity: 'minor',
+        good: 'Cards used only where they are genuinely the best affordance, and never one inside another.',
+        why: 'A card inside a card gives the reader two competing container boundaries for one piece of content, so the grouping stops meaning anything. It is also the shape a layout takes when nobody decided how to group things.',
+        fix: 'Before reaching for a card, try whitespace, a rule, or a heading. Never nest one card inside another - flatten to a single surface and separate the inner items with spacing from the scale instead. Vary padding between sections for rhythm; identical padding everywhere reads as monotony.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.spatial)`,
+    },
+    // ==================== MOTION ====================
+    'law/motion/frequency-first': {
+        ruleKey: 'law/motion/frequency-first',
+        title: 'Frequency decides first',
+        severity: 'major',
+        good: 'Motion gated on how often the reader will see it, with keyboard-triggered and high-frequency actions carrying none at all.',
+        why: 'Repeat count converts a 200ms flourish into hundreds of daily waits, so animation on a keyboard-initiated action makes the whole interface feel slower than the user\'s hands. "It looks cool" is only a valid reason on a rare or first-run surface.',
+        fix: 'Delete the animation outright above roughly 100 uses a day (shortcuts, command palette) and reduce it hard in the tens-per-day band (hovers, list navigation). Keep standard timing for occasional surfaces (modals, drawers, toasts) and allow delight only on rare or first-time ones. Valid reasons to keep motion: spatial continuity, state indication, feedback, explanation, or preventing a jarring change - if none apply, delete it.',
+        source: `${TP}/motion-review.md`,
+    },
+    'law/motion/duration-budget': {
+        ruleKey: 'law/motion/duration-budget',
+        title: 'Duration budget',
+        severity: 'major',
+        good: 'UI motion under 300ms, with each element type sitting in its own band.',
+        why: 'A number gives you something to fail against in review, so "over 300ms with no stated reason" becomes a finding rather than a taste argument. Without one, durations drift upward one component at a time.',
+        fix: 'Button press 100-160ms, tooltip 125-200ms, dropdown 150-250ms, modal or drawer 200-500ms with the close faster than the open. Cross-check against element weight: under 100px at 150ms, 100-500px at 300ms, over 500px at 500ms. Keep every UI interaction under 500ms; marketing surfaces may run longer deliberately. Exits run about 75% of the enter, so 150ms against a 300ms enter.',
+        source: `${TP}/motion-review.md`,
+    },
+    'law/motion/ease-out-named-curves': {
+        ruleKey: 'law/motion/ease-out-named-curves',
+        title: 'Ease-out and named curves',
+        severity: 'major',
+        good: 'Entering and exiting elements easing out, on-screen movement easing in-out, and every curve living as a named token rather than hand-rolled per component.',
+        why: 'ease-in is slowest at the exact moment the reader is watching the element start, so it reads as lag. And the built-in CSS keywords are weak - a deliberate custom curve is most of the difference between "it animates" and "it feels engineered".',
+        fix: 'Define the curves once and reference them: --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1) for UI enter and exit, --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1) for on-screen movement, --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1) for sheets, --ease-swap: cubic-bezier(0.2, 0, 0, 1) for icon and content swaps. Use linear only for constant motion. The softer Material set - ease-out cubic-bezier(0, 0, 0.2, 1) - suits general product UI where the strong curves feel too assertive. Never bounce or elastic overshoot.',
+        example: '--ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);\n--ease-swap: cubic-bezier(0.2, 0, 0, 1);',
+        source: `${TP}/motion-review.md` + ` and ${BENCIUM}/MOTION-SPEC.md`,
+    },
+    'law/motion/physical-origin': {
+        ruleKey: 'law/motion/physical-origin',
+        title: 'Plausible origin and scale',
+        severity: 'minor',
+        good: 'Popovers, dropdowns and tooltips scaling from their trigger, and nothing entering from scale(0).',
+        why: 'Nothing in the physical world appears from nothing, and a dropdown that grows from its own centre visually detaches from the button that opened it, so the eye loses the causal link between the click and the result.',
+        fix: 'Set transform-origin to the trigger edge - top left for a menu below and left of its button. Replace transform: scale(0) with scale(0.95) plus opacity 0; the useful entry range is 0.9 to 0.97. Modals are the exemption and belong centred: opacity 0 with scale 0.95 in, scale 1 at rest, back to 0.95 out, over 300ms ease-out.',
+        source: `${TP}/motion-review.md`,
+    },
+    'law/motion/gpu-only-properties': {
+        ruleKey: 'law/motion/gpu-only-properties',
+        title: 'Animate transform and opacity only',
+        severity: 'major',
+        good: 'Motion expressed through transform and opacity, with layout properties never animated.',
+        why: 'Animating width, height, margin, padding, top or left re-runs layout on every frame, which is the difference between a smooth 60fps transition and a visibly stuttering one on a mid-range phone.',
+        fix: 'Move layout animation onto transform and opacity. filter is also compositable and safe to animate within the blur budget. Never animate top, left, width, height, background, border or color. Keep will-change to transform, opacity and filter on two or three elements at most, added after observing first-frame stutter rather than before. Avoid driving a child transform by mutating a CSS variable on the parent - that recalculates style across every child.',
+        source: `${TP}/performance.md`,
+    },
+    'law/motion/pause-offscreen-loops': {
+        ruleKey: 'law/motion/pause-offscreen-loops',
+        title: 'Pause off-screen loops',
+        severity: 'minor',
+        good: 'Every infinite animation - marquee, pulse, shimmer, spinner - pausing when it scrolls out of view.',
+        why: 'An off-screen keyframe loop keeps compositing at full rate, so several looping decorations on a long page compound into steady background load and drain battery for frames no eye ever receives.',
+        fix: 'Toggle animation-play-state: paused from an IntersectionObserver, and pause the tween on ScrollTrigger onLeave in GSAP or Motion. Give every requestAnimationFrame loop an explicit stop condition too - guard the tick on document.hidden or !el.isConnected, null the frame id once settled, and cancel on visibilitychange.',
+        example: 'const io = new IntersectionObserver((es) => {\n  for (const e of es) e.target.classList.toggle("is-paused", !e.isIntersecting);\n});',
+        source: `${TP}/performance.md`,
+    },
+    'law/motion/blur-budget': {
+        ruleKey: 'law/motion/blur-budget',
+        title: 'The blur budget',
+        severity: 'minor',
+        good: 'Animated blur capped at 8px, with 2-4px the band you actually reach for.',
+        why: 'Blur is one of the most expensive filters to composite, especially in Safari, so the ceiling is set by the cost curve rather than by taste. The 2-4px band is cheap enough to animate freely, which is why it is the one to use when masking a transition.',
+        fix: 'Cap animated filter: blur() at 8px and use blur(4px) to blur(0) for entrances and icon swaps. Use blur(2px) as a soft-focus mask when two overlapping states refuse to read as one transformation. Reserve values near 20px for static decorative backdrops - a frosted panel or dimmed background - and never animate those.',
+        source: `${TP}/motion-review.md`,
+    },
+    'law/motion/reduced-motion-gentler': {
+        ruleKey: 'law/motion/reduced-motion-gentler',
+        title: 'Reduced motion is gentler, not zero',
+        severity: 'blocker',
+        good: 'A reduced-motion branch that keeps opacity and colour feedback while removing movement, and hover motion gated on a real pointer.',
+        why: 'It is the movement that triggers vestibular discomfort, not the fade, so stripping all animation to nothing also removes the state-change feedback these readers still need. Ungated hover motion separately leaves phone users stuck in a hover state after a tap.',
+        fix: 'Add @media (prefers-reduced-motion: reduce) and collapse animation-duration and transition-duration to 0.01ms with animation-iteration-count: 1, keeping opacity and colour changes visible. Gate hover-driven motion behind @media (hover: hover) and (pointer: fine). In Motion, read useReducedMotion() and branch the duration rather than removing the transition.',
+        example: '@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration: 0.01ms !important;\n    transition-duration: 0.01ms !important;\n  }\n}',
+        source: `${BENCIUM}/MOTION-SPEC.md`,
+    },
+    'law/motion/verify-by-slowing': {
+        ruleKey: 'law/motion/verify-by-slowing',
+        title: 'Verify feel by slowing it down',
+        severity: 'advisory',
+        good: 'Uncertain motion slowed 2-5x and checked for three specific failures: coordinated properties drifting out of sync, easing that ends abruptly, and a wrong origin.',
+        why: 'A 200ms animation gives you about twelve frames at real speed, which is not enough to see that opacity finished 40ms before the transform did. Imperfections invisible during a build session also surface immediately after a night away.',
+        fix: 'Slow it 2-5x or step it in the animation inspector, then re-watch with fresh eyes. Test gestures on a real device rather than a desktop pointer. Work the fix hierarchy in order, preferring the earliest move: delete it, reduce it, fix the easing, fix the origin, make it interruptible, move it to the GPU, split the timing, polish it, gate it.',
+        source: `${TP}/motion-review.md`,
+    },
+    // ==================== RESPONSIVE ====================
+    'law/responsive/mobile-first-min-width': {
+        ruleKey: 'law/responsive/mobile-first-min-width',
+        title: 'Mobile-first min-width cascade',
+        severity: 'major',
+        good: 'Base styles with no media query at all, and every breakpoint expressed as min-width so complexity is added upward.',
+        why: 'A desktop-first stylesheet spends its media queries removing things, which means the mobile payload still ships all the desktop CSS. Starting at mobile forces the essential-content decision first and gives better mobile performance by default.',
+        fix: 'Write unprefixed base CSS for the narrowest case, then add @media (min-width: 640px), 768px, 1024px, 1280px, 1536px. Never author max-width queries that undo desktop styles. Let content drive where the breaks land - three usually suffice - rather than copying a device list.',
+        source: `${BENCIUM}/RESPONSIVE-DESIGN.md`,
+    },
+    'law/responsive/breakpoint-tiers': {
+        ruleKey: 'law/responsive/breakpoint-tiers',
+        title: 'Breakpoints are device facts',
+        severity: 'minor',
+        good: 'Layout decisions taken at 480, 768, 1024 and 1440, each chosen because a real device sits at that boundary.',
+        why: 'Each boundary is something you can reason about rather than a round number: 768 is iPad portrait, so below it a hamburger is mandatory and above it a horizontal nav fits; 1024 is iPad landscape and the first width where a multi-column dashboard is viable.',
+        fix: 'Use 0-479 for small phones (single column, stacked nav), 480-767 for modern phones (single column, bottom navigation), 768-1023 for tablets (two columns, sidebar nav), 1024-1439 for laptops (multi-column, full nav), and 1440+ for desktop (capped containers). Above 1920 cap explicitly or content sprawls.',
+        source: `${BENCIUM}/RESPONSIVE-DESIGN.md`,
+    },
+    'law/responsive/pattern-per-tier': {
+        ruleKey: 'law/responsive/pattern-per-tier',
+        title: 'Each pattern has a form per tier',
+        severity: 'minor',
+        good: 'Navigation, tables, filters, modals and action bars each having a defined shape at each tier rather than being re-decided per feature.',
+        why: 'It turns "make it responsive" into a lookup instead of a judgment call per component, which is what stops two features built a month apart from disagreeing about what a tablet is. It also encodes the non-obvious middle states.',
+        fix: 'Navigation goes hamburger to horizontal at 768. Sidebar goes drawer, then collapsible at 768, then always visible at 1024. A data table goes collapsed cards, then horizontal scroll at 768, then full table at 1024 - do not jump cards straight to table. Modals go full-screen below 768 and centred above. Card grids go 1, 2, 3, 4 columns across the tiers. Action bars are fixed-bottom on phones and inline from 768.',
+        source: `${BENCIUM}/RESPONSIVE-DESIGN.md`,
+    },
+    'law/responsive/touch-targets': {
+        ruleKey: 'law/responsive/touch-targets',
+        title: 'Touch targets and tap delay',
+        severity: 'blocker',
+        good: 'Every interactive element at least 44x44 CSS pixels with touch-manipulation declared.',
+        why: '44px has four independent authorities behind it (Apple HIG 44pt, Material 48dp, WCAG 2.5.5 and 2.5.8), so it is the number that survives an audit. touch-manipulation separately removes the browser\'s 300ms tap delay, which is the cheapest perceived-latency win available on mobile.',
+        fix: 'Set min-width and min-height to 44px and add touch-manipulation. Where the visual must stay small, extend the hit area with a centred pseudo-element rather than growing the icon, and never let two interactive elements share hit area. For AAA add 24px of clear space around the target.',
+        source: `${BENCIUM}/RESPONSIVE-DESIGN.md`,
+    },
+    'law/responsive/thumb-zone': {
+        ruleKey: 'law/responsive/thumb-zone',
+        title: 'Primary actions in the bottom third',
+        severity: 'major',
+        good: 'The primary mobile action sitting in the bottom third of the viewport rather than a top corner.',
+        why: 'Roughly 75% of phone touches happen in the bottom third, and top corners are unreachable one-handed on any phone over six inches. So a compliant 44x44 target in the top right is technically correct and practically unusable - hitting the size minimum is not the same as being reachable.',
+        fix: 'Move mobile primary CTAs into the bottom third using a fixed bottom action bar below 768px, switching to inline from 768 up. Reserve top corners for low-frequency actions like close and menu toggle.',
+        source: `${BENCIUM}/RESPONSIVE-DESIGN.md`,
+    },
+    'law/responsive/input-method-not-width': {
+        ruleKey: 'law/responsive/input-method-not-width',
+        title: 'Detect input method, not width',
+        severity: 'major',
+        good: 'Hover-revealed UI gated on the pointer\'s capabilities rather than on viewport width.',
+        why: 'A hover-only control has no equivalent on a touch screen at any width, so a width-based guess leaves the action unreachable on a large tablet and duplicated on a small laptop with a trackpad.',
+        fix: 'Gate hover affordances on @media (hover: hover) and (pointer: fine) rather than min-width. Use svh or dvh instead of vh for full-height elements so the iOS address bar does not shift content, and env(safe-area-inset-*) near notches and home indicators. Add overscroll-contain to horizontal scrollers so reaching the end does not hand the gesture to the page.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.responsive)`,
+    },
+    'law/responsive/fluid-images': {
+        ruleKey: 'law/responsive/fluid-images',
+        title: 'Responsive images',
+        severity: 'minor',
+        good: 'Images shipped at several widths with a sizes map that matches the layout\'s real column behaviour, plus lazy loading past the hero.',
+        why: 'The sizes attribute is what lets the browser choose a file before layout, so it has to describe the same column math the grid does. Telling the browser 100vw inside a three-column desktop grid makes it download roughly three times the bytes it needs.',
+        fix: 'Provide srcset with width descriptors and a sizes map like (max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw. Add loading="lazy" to every image past the first, and fetchpriority="high" to the hero if it must stay eager. Set width and height or aspect-ratio so the browser reserves space and the page does not shift on load.',
+        source: `${BENCIUM}/RESPONSIVE-DESIGN.md`,
+    },
+    'law/responsive/verify-at-widths': {
+        ruleKey: 'law/responsive/verify-at-widths',
+        title: 'Render at each width',
+        severity: 'major',
+        good: 'Responsive behaviour confirmed by rendering at a fixed set of widths, one on each side of every breakpoint.',
+        why: 'Breakpoints asserted from the stylesheet are a claim, not a result: the query can be right and the content still break. Emulators also do not reproduce touch, thumb reach or real network, which is why device testing is a separate step.',
+        fix: 'Render at 375x667, 390x844, 768x1024, 1024x1366 and 1920x1080 - those land either side of every tier boundary, so passing all five means each transition was exercised. At each width check nav fit, hit areas and horizontal overflow. Then confirm on a physical phone and tablet.',
+        source: `${BENCIUM}/RESPONSIVE-DESIGN.md`,
+    },
+    // ==================== INTERACTION ====================
+    'law/interaction/eight-states': {
+        ruleKey: 'law/interaction/eight-states',
+        title: 'Eight interactive states',
+        severity: 'major',
+        good: 'Each control defining every state it can actually reach: default, hover, focus, active, disabled, and where relevant loading, error and success.',
+        why: 'A missing state is a moment where the interface stops answering. A button with no loading state gets clicked twice; one with no disabled state looks available when it is not; one with no error state fails silently.',
+        fix: 'Walk each control and add the reachable states. Do not signal disabled with opacity alone, which usually breaks contrast - change the surface and keep the text legible. Prefer a skeleton over a spinner for loading because it also holds the layout. Validate on blur rather than on keystroke, with real-time reserved for things like password strength.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.interaction)`,
+    },
+    'law/interaction/focus-visible-ring': {
+        ruleKey: 'law/interaction/focus-visible-ring',
+        title: 'Visible focus rings',
+        severity: 'blocker',
+        good: 'Every interactive element showing a clear ring when reached by keyboard, and no ring on a mouse click.',
+        why: 'Without it a keyboard user cannot tell where they are on the page, which makes the interface unusable rather than merely awkward. It is the most consequential interaction defect there is.',
+        fix: 'Style :focus-visible rather than :focus, with a 2-3px ring at 3:1 contrast or better against its surroundings and about 2px of offset. Never remove an outline without replacing it. The ring counts as a UI component for contrast purposes, so it needs 3:1 in both themes.',
+        example: '.button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.interaction)`,
+    },
+    'law/interaction/button-hierarchy': {
+        ruleKey: 'law/interaction/button-hierarchy',
+        title: 'Button treatment by hierarchy',
+        severity: 'minor',
+        good: 'Button treatment chosen by position in the hierarchy rather than by what the button semantically does, with one primary per surface.',
+        why: 'The rule that catches people is that destructive does not mean always red and prominent. A big red Delete beside a quiet Save inverts the page\'s real hierarchy and makes the dangerous action the most attractive target on screen.',
+        fix: 'One primary per surface: solid background, white text. Secondary: a 1-2px outline with coloured text on a transparent background. Tertiary: text only with an underline on hover, for Cancel and Learn more. A destructive action that is NOT primary takes the tertiary or outline treatment with red text; only the confirmation-modal case gets a solid red primary.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    'law/interaction/labels-not-placeholders': {
+        ruleKey: 'law/interaction/labels-not-placeholders',
+        title: 'Labels, never placeholders',
+        severity: 'blocker',
+        good: 'Every control carrying a persistent visible label, with the placeholder used only for format hints.',
+        why: 'A placeholder disappears the moment the reader types, so it cannot serve as the accessible name and it cannot be re-read while filling the field. The reader loses the question exactly when they are answering it.',
+        fix: 'Give each control its own <label> tied by for and id, or a wrapping label, or an aria-label. One label elsewhere does not cover a sibling control. Wrap checkboxes and radios in their label so the text shares the hit target and there are no dead zones. Add an autocomplete token to named fields so password managers fill correctly.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.interaction)`,
+    },
+    'law/interaction/undo-over-confirm': {
+        ruleKey: 'law/interaction/undo-over-confirm',
+        title: 'Undo over confirm',
+        severity: 'minor',
+        good: 'Destructive actions completing immediately with an undo affordance, rather than stopping to ask.',
+        why: 'A confirmation dialog is trained away within a week - the reader learns to dismiss it without reading, so it stops preventing the mistake it exists for while still costing every deliberate action a click.',
+        fix: 'Perform the action and offer undo for a window afterwards. Where a confirm genuinely is required (irreversible, or destructive at scale) name the destruction in the button - "Delete 5 items" rather than "Proceed" - and use a native <dialog> or the inert attribute so focus is actually trapped. Reach for the Popover API for tooltips and light-dismiss overlays instead of hand-rolling one.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.interaction)`,
+    },
+    'law/interaction/progressive-disclosure': {
+        ruleKey: 'law/interaction/progressive-disclosure',
+        title: 'Inline before modal',
+        severity: 'minor',
+        good: 'Secondary detail revealed in place, with a modal used only when the task genuinely must interrupt.',
+        why: 'A modal is the default answer rather than a decision. It takes the reader out of context, loses their scroll position, traps focus, and on a phone it usually becomes a full-screen page anyway - so most modals are a worse version of the inline layout they replaced.',
+        fix: 'Try inline expansion, a details disclosure, a side panel, or a dedicated route before a modal. Keep modals for genuinely blocking decisions and destructive confirmations. When one is warranted, use native <dialog> so focus trapping and Escape come for free, and make it full-screen below 768px.',
+        source: `${LAWS} (ANTI_PATTERNS.modal_as_first_thought)`,
+    },
+    // ==================== WRITING ====================
+    'law/writing/specific-verb-object': {
+        ruleKey: 'law/writing/specific-verb-object',
+        title: 'Specific verb plus object',
+        severity: 'major',
+        good: 'Every button naming what it will do to what: "Save changes", "Send invite", "Delete 5 items".',
+        why: 'A generic label forces the reader to reconstruct the action from surrounding context, and it is unreadable out of context entirely - which is exactly how a screen reader announces it.',
+        fix: 'Replace OK, Submit, Go, Next, Done, Yes and Click here with a verb and its object. Name the destruction in destructive actions rather than softening it to Proceed. Give icon-only buttons an aria-label carrying the same phrase.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.writing)`,
+    },
+    'law/writing/no-rhetorical-templates': {
+        ruleKey: 'law/writing/no-rhetorical-templates',
+        title: 'No rhetorical templates',
+        severity: 'major',
+        good: 'Sentences carrying a specific claim in the product\'s own voice.',
+        why: 'The negation template - "Not a platform. A discipline." - and its relatives are the most recognisable shape of generated prose. A reader who has seen it twice stops reading for content, so the sentence costs trust rather than earning it.',
+        fix: 'Rewrite each flagged sentence as a concrete claim: who does what, and what changes as a result. Delete the antithesis rather than filling in the second half. Cut the triple-negation ladder ("Not a framework. Not a library. Not for everyone.") entirely rather than shortening it.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.writing)`,
+    },
+    'law/writing/no-slop-words': {
+        ruleKey: 'law/writing/no-slop-words',
+        title: 'No slop words',
+        severity: 'minor',
+        good: 'Verbs and nouns specific enough that swapping in a competitor\'s name would make the sentence false.',
+        why: 'Words like seamless, powerful, revolutionary and effortless are the predictable training-data default. They read as filler and weaken trust precisely where the copy is trying to earn it, because they make a claim that cannot be checked.',
+        fix: 'Replace each with a concrete verb or noun from this product\'s own vocabulary, or delete the sentence. Apply the substitution test: if the line stays true with a competitor\'s name in it, it says nothing. Every word earns its place.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.writing)`,
+    },
+    'law/writing/error-message-shape': {
+        ruleKey: 'law/writing/error-message-shape',
+        title: 'Error messages have three parts',
+        severity: 'major',
+        good: 'An error saying what happened, why, and what to do next - without blaming the reader.',
+        why: 'An error that only names the failure leaves the reader stuck, and one that blames them ("You entered an invalid value") adds friction to a moment that is already frustrating. Humour here reads as mockery because the reader is not in the mood for it.',
+        fix: 'Write all three parts: what happened, why it happened, how to fix it. Never humour in an error. Show the message next to the field with aria-invalid="true" and aria-describedby pointing at it, not only in a top-level summary, and move focus to the first invalid field on a failed submit.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.writing)`,
+    },
+    'law/writing/empty-states-onboard': {
+        ruleKey: 'law/writing/empty-states-onboard',
+        title: 'Empty states are onboarding',
+        severity: 'minor',
+        good: 'An empty state that acknowledges the emptiness, explains what the thing is for, and offers the action that fills it.',
+        why: 'An empty container reads as a broken page. It is also the reader\'s first encounter with the feature, so it is the highest-leverage teaching surface in the product and the easiest one to leave blank.',
+        fix: 'Never leave a container blank. Acknowledge the state, state the value in one line, and give a primary CTA - "Create your first project". Keep voice constant and let tone adapt to the moment: celebratory on success, plain and empathetic on error.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.writing)`,
+    },
+    'law/writing/kill-label-value': {
+        ruleKey: 'law/writing/kill-label-value',
+        title: 'Kill "Label: Value"',
+        severity: 'minor',
+        good: 'Data read as a phrase with the label absorbed into it, or with no label at all when the format speaks for itself.',
+        why: '"Label: Value" spends half the pixels and half the attention on the part carrying no information, and the label competes with the value for the same visual weight when the value is what the reader came for.',
+        fix: 'Combine them: "12 left in stock" rather than "In Stock: 12". Drop the label entirely for email, phone and price, where the format is self-evident. Where labels genuinely are needed, as on a data dashboard, demote them - smaller, lighter, uppercase with tracking - and let the data carry the weight.',
+        source: `${RUI}/references-consolidated.md`,
+    },
+    // ==================== CRITIQUE LENSES ====================
+    'law/critique/hierarchy-at-a-glance': {
+        ruleKey: 'law/critique/hierarchy-at-a-glance',
+        title: 'Hierarchy at a glance',
+        severity: 'major',
+        good: 'A reader identifying the primary action, the secondary content and the groupings without reading anything.',
+        why: 'If the hierarchy only resolves after reading, the reader has to parse the page rather than scan it, and every subsequent task on that page costs more. Hierarchy is the cheapest usability there is.',
+        fix: 'Blur the page or shrink it to 25% and name what you see first. If two things tie for first, one is not actually a different level. Fix by subtracting from the competitors before amplifying the target, and build the distinction from several dimensions at once rather than size alone.',
+        source: `${LAWS} (CRITIQUE_RULES.hierarchy)`,
+    },
+    'law/critique/cognitive-load': {
+        ruleKey: 'law/critique/cognitive-load',
+        title: 'Cognitive load and decision density',
+        severity: 'major',
+        good: 'Information chunked so no single view asks the reader to hold more than a few things at once, and no screen presenting more decisions than the task needs.',
+        why: 'Density is not the same as capability. A screen with fourteen equally weighted controls does not make the reader more powerful, it makes them slower, because every action now costs a scan of all fourteen.',
+        fix: 'Group related controls and put the rest behind progressive disclosure. Count the decisions the primary task actually requires and move everything else off the critical path. Prefer one obvious default over three equal options.',
+        source: `${LAWS} (CRITIQUE_RULES.cognitive_load)`,
+    },
+    'law/critique/affordances-discoverable': {
+        ruleKey: 'law/critique/affordances-discoverable',
+        title: 'Affordances are discoverable',
+        severity: 'major',
+        good: 'Interactive elements looking interactive without a hover, and non-interactive elements not looking clickable.',
+        why: 'A control the reader cannot find is not a feature. The inverse failure is as bad: a card that looks clickable and is not teaches the reader to distrust everything else that looks the same.',
+        fix: 'Give every control a resting affordance - a border, a surface, a weight or a colour - not hover-only styling. Remove card-like treatment from non-interactive containers. Check the whole surface with the pointer never moving, which is what a touch reader gets.',
+        source: `${LAWS} (CRITIQUE_RULES.affordances)`,
+    },
+    'law/critique/perceived-performance': {
+        ruleKey: 'law/critique/perceived-performance',
+        title: 'Perceived performance',
+        severity: 'minor',
+        good: 'A surface that feels fast because it responds immediately, holds its layout while loading, and never shifts content under the reader.',
+        why: 'Perceived speed and measured speed come apart: an optimistic update on a 400ms request feels instant, and a spinner over the same request feels slow. The layout shift is the part readers hate most because it moves the thing they were about to touch.',
+        fix: 'Acknowledge every interaction within about 100ms even if the result is not ready. Use a skeleton sized like the real content rather than a spinner, so the layout is reserved. Set width and height on images. Apply an optimistic update where the failure case is recoverable.',
+        source: `${LAWS} (CRITIQUE_RULES.perceived_performance)`,
+    },
+    'law/critique/register-alignment': {
+        ruleKey: 'law/critique/register-alignment',
+        title: 'Register alignment',
+        severity: 'major',
+        good: 'The design obeying the laws of its register: design IS the product for brand surfaces, design SERVES the product for app surfaces.',
+        why: 'The two registers want opposite things, so applying the wrong set produces work that is competent and wrong: an ambitious scroll-driven hero inside an admin table, or a restrained monochrome landing page for a brand that needed a voice.',
+        fix: 'For a brand register allow Full or Drenched colour, a distinctive display face, fluid type and ambitious motion, and weight the category-reflex check heavily. For a product register hold to Restrained or Committed colour, a clarity-optimised sans at fixed rem sizing, a constraint library with tokens, and motion limited to feedback and state change, weighting accessibility and responsiveness instead.',
+        source: `${LAWS} (REGISTER_SPECIFIC_LAWS)`,
+    },
+    'law/critique/copy-precision': {
+        ruleKey: 'law/critique/copy-precision',
+        title: 'Copy precision',
+        severity: 'minor',
+        good: 'No heading restated in the body beneath it, and no sentence that survives deletion without loss.',
+        why: 'Redundant copy is the most common way a page gets longer without getting more useful, and a restated heading specifically teaches the reader that the headings are decoration rather than structure.',
+        fix: 'Read each heading and the first line under it together; if the second repeats the first, cut one. Delete each sentence in turn and keep the deletion whenever nothing was lost. Every word earns its place.',
+        source: `${LAWS} (CRITIQUE_RULES.copy_precision)`,
+    },
+    // ==================== CATEGORY REFLEX ====================
+    'law/reflex/first-order-palette': {
+        ruleKey: 'law/reflex/first-order-palette',
+        title: 'First-order category reflex',
+        severity: 'major',
+        good: 'A palette that could not be guessed from the product category alone.',
+        why: 'If the colours are predictable from the category, the design is the training-data default rather than a decision, and it will look like every competitor in the space - which is the opposite of what a brand surface is for.',
+        fix: 'Name the reflex answer for this category out loud, then choose against it deliberately. The known reflexes: dark blue for observability, green for fintech, orange or red CTAs for ecommerce, blue for healthcare, cream for AI workflow SaaS, neon-on-black for crypto, Linear-clean monochrome zinc for productivity.',
+        source: `${LAWS} (CATEGORY_REFLEX.first_order)`,
+    },
+    'law/reflex/second-order-aesthetic': {
+        ruleKey: 'law/reflex/second-order-aesthetic',
+        title: 'Second-order category reflex',
+        severity: 'major',
+        good: 'An aesthetic family that could not be guessed from the category plus its obvious anti-references.',
+        why: 'Removing the obvious palette is not enough, because the fallback is itself a reflex. Observability without dark blue lands on Linear-clean or editorial-typographic; fintech avoiding green lands on gradient mesh; ecommerce without red lands on a card stack.',
+        fix: 'Check the second order explicitly: with the obvious answer removed, name what you would reach for next and reject that too if it appears on the saturated-lane list. Then commit to a direction you can defend on grounds other than "it is not the cliche".',
+        source: `${LAWS} (CATEGORY_REFLEX.second_order)`,
+    },
+    // ==================== TOKENS ====================
+    'law/tokens/semantic-naming': {
+        ruleKey: 'law/tokens/semantic-naming',
+        title: 'Semantic token names',
+        severity: 'major',
+        good: 'Tokens named for their role rather than their value: --text-body, not --font-size-16.',
+        why: 'A value-named token is a lie the first time the value changes: --font-size-16 set to 18px is worse than a literal, because now the name actively misleads. Role names survive retheming, which is the entire point of having tokens.',
+        fix: 'Name by role and tier: --text-body, --text-display, --surface-raised, --border-subtle, --shadow-md, --radius-card. Keep a two-layer system where semantic tokens reference primitives (--brand-500) rather than restating hex. Reference tokens from components as var(--token) so a theme change is one edit.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.typography)`,
+    },
+    'law/tokens/no-hardcoded-in-states': {
+        ruleKey: 'law/tokens/no-hardcoded-in-states',
+        title: 'Interactive states are token-driven',
+        severity: 'blocker',
+        good: 'Hover, active and focus colours derived from tokens, so a theme switch moves them with everything else.',
+        why: 'A hardcoded hex in a :hover rule inside a project that has a token system is the specific failure that makes dark mode look half-finished: the resting state adapts, the hover reverts to the light-mode colour, and the reader sees the seam.',
+        fix: 'Replace the literal with a token: background: var(--c-brand-hover) rather than #2563eb. If the hover shade does not exist yet, add it to the ramp rather than inlining it once. The same applies to focus ring colour and to disabled surfaces.',
+        source: 'src/validators/checks/theming-checks.ts',
+    },
+    'law/tokens/radius-scale': {
+        ruleKey: 'law/tokens/radius-scale',
+        title: 'One or two radius tokens',
+        severity: 'blocker',
+        good: 'A radius scale of one or two named values used everywhere, rather than a fresh literal per component.',
+        why: 'Scattered radius literals are the reason nested surfaces stop looking concentric and a page reads as assembled from parts. The reader senses the corners disagreeing without being able to name it.',
+        fix: 'Define --radius-sm and --radius-md (plus --radius-full for pills) and reference them. When nesting, keep the curves parallel with outerRadius = innerRadius + padding: an 8px button inside 4px of padding wants a 12px container. Above about 24px of padding treat the layers as separate surfaces and choose each independently.',
+        source: 'src/validators/checks/theming-checks.ts',
+    },
+    'law/tokens/dark-mode-own-values': {
+        ruleKey: 'law/tokens/dark-mode-own-values',
+        title: 'Dark mode is its own design',
+        severity: 'major',
+        good: 'A dark theme with its own measured values and a declared color-scheme, not the light values inverted.',
+        why: 'Inversion produces the wrong result in both directions: shadows disappear because there is nothing lighter to cast onto, and saturated colours that read as confident on white read as glaring on black. Contrast also has to be re-measured, because passing in light implies nothing about dark.',
+        fix: 'Give dark mode its own surface ramp for depth, reduce text weight slightly, and pull saturation down. Declare color-scheme: dark (or "light dark") so native controls, scrollbars and form fields adapt. Simplify layered shadows to a single ring such as 0 0 0 1px rgba(255,255,255,0.08). Measure every text pair again in the dark theme.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.color)`,
+    },
+    // ==================== COMPOSITION ====================
+    'law/composition/feature-before-shell': {
+        ruleKey: 'law/composition/feature-before-shell',
+        title: 'Feature before shell',
+        severity: 'major',
+        good: 'One real piece of content built and made right at small scale before any decision about nav, footer or page frame.',
+        why: 'Building the shell first is tempting because chrome is mechanical, and it produces a specific failure: the shell gets over-designed and the content becomes an afterthought, so the page ends up as elaborate chrome around a small empty middle.',
+        fix: 'Build the actual content first - one feature card, one form, one data table - get it right at small scale, then decide what frame it needs. Design the happy path before the edge cases, which is also what prevents an over-designed empty state.',
+        source: `${RUI}/SKILL.md`,
+    },
+    'law/composition/section-rhythm': {
+        ruleKey: 'law/composition/section-rhythm',
+        title: 'Vary the section rhythm',
+        severity: 'major',
+        good: 'Consecutive sections differing in structure, density and vertical rhythm, not a uniform stack of the same block.',
+        why: 'A page of identically shaped sections gives the reader no sense of progress, so they cannot tell whether they are a third or two thirds of the way through. Uniformity also removes emphasis: if every section is equally loud, none is.',
+        fix: 'Alternate the shape deliberately - a wide statement, then a two-column detail, then a narrow prose passage. Vary vertical padding between sections using the spacing scale rather than one constant. Give at most one section per page the display-scale treatment, and let the others step down.',
+        source: `${LAWS} (SHARED_DESIGN_LAWS.spatial)`,
+    },
+    'law/composition/no-identical-card-grid': {
+        ruleKey: 'law/composition/no-identical-card-grid',
+        title: 'Not another card grid',
+        severity: 'minor',
+        good: 'Feature content shaped by what it actually contains, rather than poured into a row of same-size icon-heading-text cards.',
+        why: 'The three-up card grid is the shape a section takes when nobody decided how the content differs. It flattens three unequal things into equal weight, and it is instantly recognisable as the default answer.',
+        fix: 'Ask whether the items are genuinely peers. If one matters more, give it more room and break the grid. If they are steps, use a sequence with real ordinals. If they are comparisons, use a table. Keep a card grid only where the items truly are interchangeable, and vary size or span within it.',
+        source: `${LAWS} (ANTI_PATTERNS.identical_card_grids)`,
+    },
+    'law/composition/one-idea-per-section': {
+        ruleKey: 'law/composition/one-idea-per-section',
+        title: 'One idea per section',
+        severity: 'minor',
+        good: 'Each section making a single point, with its heading naming that point specifically.',
+        why: 'A section carrying two ideas forces the reader to hold the first while parsing the second, and its heading has to become vague enough to cover both - which is how a page fills with headings that say nothing.',
+        fix: 'Split any section whose heading needs an "and" to be accurate. Write the heading as the claim rather than the topic: "Ships in one afternoon" rather than "Speed". Cut supporting copy that repeats the heading rather than extending it.',
+        source: `${LAWS} (CRITIQUE_RULES.copy_precision)`,
+    },
+    // ==================== RESEARCH ====================
+    'law/research/validated-patterns-first': {
+        ruleKey: 'law/research/validated-patterns-first',
+        title: 'Check the validated pattern first',
+        severity: 'major',
+        good: 'A standard component built from how established design systems already solved it, rather than reasoned out from scratch.',
+        why: 'Every standard component has accessibility requirements and state edge cases that are not obvious from the visual - a combobox needs specific aria roles and keyboard handling that nobody derives correctly on a first pass. Re-deriving it produces something that looks right and fails a keyboard.',
+        fix: 'Before building a button, modal, accordion, tabs, toast, card, select or form control, look up how several mature systems handle it: the naming, the state set, the keyboard map, the aria contract. Adopt their state list even if the visual is entirely yours. Match their naming so the component is findable by the next person.',
+        source: 'src/component-gallery-reference.ts',
+    },
+    'law/research/reference-before-invention': {
+        ruleKey: 'law/research/reference-before-invention',
+        title: 'Reference before invention',
+        severity: 'minor',
+        good: 'A direction anchored to specific references that were actually looked at, with a stated reason for each.',
+        why: 'Without references the output regresses toward the training-data average, which is exactly the category reflex. A named reference also makes the direction reviewable - someone can disagree with the reference instead of arguing about taste.',
+        fix: 'Collect references before deciding, and write down what specifically is being taken from each - the type treatment, the density, the colour commitment - rather than the whole look. Name at least one anti-reference too, so the direction has an edge. Reject any reference you cannot say something concrete about.',
+        source: 'src/design-references-reference.ts',
+    },
+    'law/research/font-selection-criteria': {
+        ruleKey: 'law/research/font-selection-criteria',
+        title: 'Gate the typeface on real criteria',
+        severity: 'minor',
+        good: 'A typeface chosen against stated criteria and tested with real content at shipping sizes, not picked from a list of names.',
+        why: 'Most bad type choices are invisible in a specimen and obvious in production, because the specimen shows the letters the designer likes at a size nobody ships. The ambiguous-character set is where it fails first.',
+        fix: 'Gate every candidate on Il1, O0, rn/m, a/o and cl/d - the winner separates all of them at body size without squinting. Require 5 or more weights as a quality signal, and prefer a variable version. Avoid condensed faces with short x-heights for UI body. Then set the real copy at the real sizes on the real background, in both themes, before committing.',
+        source: 'src/fontshare-reference.ts',
+    },
+    'law/research/motion-library-glue': {
+        ruleKey: 'law/research/motion-library-glue',
+        title: 'Use the canonical glue',
+        severity: 'minor',
+        good: 'Scroll and timeline work built on the established integration pattern rather than a fresh wiring per project.',
+        why: 'The failure modes here are not about taste, they are about lifecycle: a scroll trigger that never refreshes after dynamic content, an animation that leaks on unmount, a smooth-scroll library silently eating wheel events inside a child that has its own overflow.',
+        fix: 'Use the known integration for the stack in play, clean up in the effect teardown, and refresh scroll triggers after content changes height. When a smooth-scroll library is present, give any independently scrolling child the library\'s escape hatch or its wheel events never arrive. Verify by actually scrolling the region, not by checking that a scrollbar exists.',
+        source: 'src/motion-patterns-reference.ts',
+    },
+};
+/**
+ * Which law notes belong to a domain.
+ *
+ * A flow asks for the domains it OWNS and cannot reach into another flow's material, so the
+ * typography verb never teaches form autocomplete. Derived from the key prefix so adding a note
+ * needs no second edit here.
+ */
+function lawKeysForDomain(domain) {
+    const prefix = `law/${domain}/`;
+    return Object.keys(exports.LAW_CRAFT).filter((k) => k.startsWith(prefix));
+}
+/** Every domain the law corpus covers. */
+function lawDomains() {
+    return [...new Set(Object.keys(exports.LAW_CRAFT).map((k) => k.split('/')[1]))].sort();
+}
+/** All law keys for a list of domains, in domain order then declaration order. */
+function lawKeysForDomains(domains) {
+    const out = [];
+    for (const d of domains)
+        out.push(...lawKeysForDomain(d));
+    return out;
+}
+//# sourceMappingURL=craft-laws.js.map

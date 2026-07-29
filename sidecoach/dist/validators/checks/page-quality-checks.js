@@ -2,6 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PAGE_QUALITY_CHECKS = exports.checkButtonLabelSpecific = exports.checkChartA11yFallback = exports.checkColorSchemeDark = exports.checkTextOverflowStrategy = exports.checkImageLazyLoad = exports.checkImageDimensions = void 0;
 const check_context_1 = require("../check-context");
+const source_locator_1 = require("../source-locator");
+// The <img> tag pattern the checks below both count and locate. ONE source so the located
+// lines cannot describe a different set of tags than the count in the message.
+const IMG_TAG_RE = /<img\b[^>]*>/gi;
+const hasExplicitDims = (tag) => ((/\bwidth\s*=/i.test(tag) && /\bheight\s*=/i.test(tag)) || /aspect-ratio/i.test(tag));
 // Comment-stripped lowercased haystack (HTML + JS/CSS block + JS line comments; line strip guarded against ':'
 // so https:// survives) - same registry-quality posture as forms-checks.
 const hay = (ctx) => `${ctx.markup || ''}\n${ctx.cssText || ''}\n${ctx.html || ''}`
@@ -14,10 +19,10 @@ const checkImageDimensions = (ctx) => {
     const imgs = hay(ctx).match(/<img\b[^>]*>/g);
     if (!imgs || imgs.length === 0)
         return (0, check_context_1.notApplicable)('no <img> elements');
-    const missing = imgs.filter((t) => !(((/\bwidth\s*=/.test(t)) && (/\bheight\s*=/.test(t))) || /aspect-ratio/.test(t)));
+    const missing = imgs.filter((t) => !hasExplicitDims(t));
     return missing.length === 0
         ? (0, check_context_1.pass)('images declare explicit dimensions (or aspect-ratio)')
-        : (0, check_context_1.fail)(`${missing.length} image(s) lack width+height/aspect-ratio (causes layout shift)`, [], 'Set width and height (or aspect-ratio) on <img> so the browser reserves space before load');
+        : (0, check_context_1.fail)(`${missing.length} image(s) lack width+height/aspect-ratio (causes layout shift)`, (0, source_locator_1.locateWhere)(ctx, IMG_TAG_RE, (tag) => !hasExplicitDims(tag), 'markup'), 'Set width and height (or aspect-ratio) on <img> so the browser reserves space before load');
 };
 exports.checkImageDimensions = checkImageDimensions;
 // IMGPERF_002: below-the-fold images should lazy-load.
@@ -38,9 +43,16 @@ const checkImageLazyLoad = (ctx) => {
             return false; // intentionally eager
         return i > 0; // first image exempt
     });
+    const isEager = (tag, i) => {
+        if (/loading\s*=\s*["']?lazy/i.test(tag))
+            return false;
+        if (/fetchpriority\s*=\s*["']?high/i.test(tag))
+            return false;
+        return i > 0;
+    };
     return eager.length === 0
         ? (0, check_context_1.pass)('below-the-fold images use loading="lazy" (the first/hero image may load eagerly)')
-        : (0, check_context_1.fail)(`${eager.length} below-the-fold image(s) not lazy-loaded`, [], 'Add loading="lazy" to images past the first/hero (or fetchpriority="high" if intentionally eager) so below-the-fold images defer their fetch');
+        : (0, check_context_1.fail)(`${eager.length} below-the-fold image(s) not lazy-loaded`, (0, source_locator_1.locateWhere)(ctx, IMG_TAG_RE, isEager, 'markup'), 'Add loading="lazy" to images past the first/hero (or fetchpriority="high" if intentionally eager) so below-the-fold images defer their fetch');
 };
 exports.checkImageLazyLoad = checkImageLazyLoad;
 // CONTENT_002: overflow-prone text containers need a wrap/clamp strategy.
@@ -50,7 +62,9 @@ const checkTextOverflowStrategy = (ctx) => {
         return (0, check_context_1.notApplicable)('no overflow-prone text container');
     return /overflow-wrap|word-break|break-words|line-clamp|-webkit-line-clamp|text-wrap/.test(h)
         ? (0, check_context_1.pass)('long text has a wrap/clamp strategy')
-        : (0, check_context_1.fail)('text container can overflow without a wrap/clamp strategy', [], 'Add overflow-wrap/word-break or a line-clamp so long strings (URLs, emails) do not break the layout');
+        // ANCHOR: the overflow-prone container that needs the strategy. Nothing at this line is
+        // itself wrong, so it must not be reported as a defect site.
+        : (0, check_context_1.failAnchor)('text container can overflow without a wrap/clamp strategy', (0, source_locator_1.locate)(ctx, /text-overflow\s*:\s*ellipsis|\btruncate\b|line-clamp/i, 'both', 3), 'Add overflow-wrap/word-break or a line-clamp so long strings (URLs, emails) do not break the layout');
 };
 exports.checkTextOverflowStrategy = checkTextOverflowStrategy;
 // DARKMODE_001: when the page expresses dark-mode intent, declare the color-scheme: dark CSS property (NOT the
@@ -61,7 +75,7 @@ const checkColorSchemeDark = (ctx) => {
         return (0, check_context_1.notApplicable)('no dark-mode intent');
     return /(?<!prefers-)color-scheme\s*:\s*[^;}]*\bdark\b/.test(h)
         ? (0, check_context_1.pass)('color-scheme: dark declared for native control theming')
-        : (0, check_context_1.fail)('dark mode without a color-scheme: dark declaration', [], 'Add color-scheme: dark (or light dark) so native controls, scrollbars, and form fields adapt');
+        : (0, check_context_1.failAnchor)('dark mode without a color-scheme: dark declaration', (0, source_locator_1.locate)(ctx, /prefers-color-scheme|dark-mode|darkmode|data-theme|\.dark\b/i, 'both', 3), 'Add color-scheme: dark (or light dark) so native controls, scrollbars, and form fields adapt');
 };
 exports.checkColorSchemeDark = checkColorSchemeDark;
 // CHART_003: a chart needs a text or table fallback for assistive tech.
@@ -75,7 +89,7 @@ const checkChartA11yFallback = (ctx) => {
     }
     return /<table\b|<figcaption\b|aria-label=|aria-describedby=|sr-only|visually-hidden|role=["']table["']/.test(h)
         ? (0, check_context_1.pass)('chart provides a text/table fallback')
-        : (0, check_context_1.fail)('chart has no text/table fallback for assistive tech', [], 'Add a <table>, aria-label/aria-describedby, or an sr-only summary so the data is reachable without sight');
+        : (0, check_context_1.failAnchor)('chart has no text/table fallback for assistive tech', (0, source_locator_1.locate)(ctx, /<canvas\b|recharts|highcharts|echarts|amcharts|class=["'][^"']*\b(?:chart|graph|sparkline|plot)/i, 'both', 3), 'Add a <table>, aria-label/aria-describedby, or an sr-only summary so the data is reachable without sight');
 };
 exports.checkChartA11yFallback = checkChartA11yFallback;
 // COPY_003: button labels should be specific, not generic ("submit"/"click here"/"ok").
@@ -90,10 +104,14 @@ const checkButtonLabelSpecific = (ctx) => {
     }
     if (!texts.length)
         return (0, check_context_1.notApplicable)('no button text to evaluate');
-    const generic = texts.filter((l) => /^(submit|ok|okay|click here|button|go|next|done|yes|no)$/i.test(l.trim()));
+    const GENERIC_LABEL_RE = /^(submit|ok|okay|click here|button|go|next|done|yes|no)$/i;
+    const generic = texts.filter((l) => GENERIC_LABEL_RE.test(l.trim()));
     return generic.length === 0
         ? (0, check_context_1.pass)('button labels are specific')
-        : (0, check_context_1.fail)(`generic button label(s): ${generic.slice(0, 3).join(', ')}`, [], 'Use action-specific labels ("Save changes", "Send invite") so the purpose is clear out of context');
+        : (0, check_context_1.fail)(`generic button label(s): ${generic.slice(0, 3).join(', ')}`, 
+        // DEFECT: the offending <button> itself. Same normalization the count uses, so the
+        // located tags are exactly the counted ones.
+        (0, source_locator_1.locateWhere)(ctx, /<button\b[^>]*>([\s\S]*?)<\/button>/gi, (tag) => GENERIC_LABEL_RE.test(tag.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()), 'markup'), 'Use action-specific labels ("Save changes", "Send invite") so the purpose is clear out of context');
 };
 exports.checkButtonLabelSpecific = checkButtonLabelSpecific;
 exports.PAGE_QUALITY_CHECKS = {

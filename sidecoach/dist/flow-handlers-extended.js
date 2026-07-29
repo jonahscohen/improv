@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowYExploreHandler = void 0;
 const flow_handler_1 = require("./flow-handler");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 // T-0015 (2026-05-28): legacy Flow1/Flow3/Flow6/Flow8/Flow9/Flow11/Flow12/Flow13/Flow14
 // handlers removed as duplicates of their lettered canonicals
 // (flowO/flowK/flowP/flowR/flowI/flowF/flowM/flowN/flowQ respectively).
@@ -21,12 +22,23 @@ class FlowYExploreHandler extends flow_handler_1.BaseFlowHandler {
     async execute(context) {
         // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
         (0, model_routing_1.applyModelSelection)(this.flowId, context);
+        // TEACH, THEN CHECK. Exploration is deliberately unjudged, so the brief here is narrow on purpose:
+        // it teaches only the reflex checks, because open-ended generation with no reflex check is the
+        // single most reliable way to produce the category default while believing you explored. Everything
+        // else about this flow stays unconstrained, which is the point of it.
+        const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'produce',
+            findingClasses: ['anti-pattern'],
+            lawDomains: ['reflex', 'research'],
+            domainLabel: 'exploration',
+        });
         return {
             flowId: this.flowId,
             flowName: this.getFlowName(),
             status: 'success',
             message: 'Entering Exploration/Discovery Mode - Open-Ended Brainstorming',
             guidance: [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no anti-pattern rules were measurable on this project.'),
                 'This is an open-ended exploration with no success criteria',
                 'Goal: generate ideas and variations without judgment',
                 'Try multiple directions, not just one "best" answer',

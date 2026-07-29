@@ -140,6 +140,38 @@ export interface AssetContract {
      * a real render, and the marker lives in the bytes so renaming the file cannot launder it.
      */
     expectSynthetic?: boolean;
+    /**
+     * Pixels the CALLER decoded, for formats this repo cannot decode itself.
+     *
+     * WHY THIS EXISTS (2026-07-29). Every Gemini image model answers a PNG request with JPEG, and this repo decodes
+     * PNG only, so all four pixel checks returned `unverified` on the output of the provider we default to. Pixel
+     * verification is the strongest property this tool has and it did not cover our own default path.
+     *
+     * The fix is not a hand-written JPEG decoder. `bin/sidecoach-image.js` obtains real RGBA through a browser
+     * (playwright is already a dependency of this package) and supplies it here. A browser's JPEG decoder is a
+     * battle-tested reference implementation; a hand-rolled inverse DCT would be a new correctness risk, and a
+     * confidently wrong contrast number is worse than an honest `unverified`. Validated against an independent
+     * decoder: probe pixels agreed exactly or within 1 unit, and the whole-image channel sum differed by a mean of
+     * 0.15 per 255 across 3.17 million samples.
+     *
+     * THIS DOES NOT LOOSEN ANYTHING, and that boundary is the point:
+     *   - `format-matches` still FAILS when the bytes are not the format contracted. What the provider did is a
+     *     fact, and supplying pixels does not change it. A JPEG answer to a PNG request stays a failure.
+     *   - The synthetic marker is read from PNG bytes ONLY. Supplied pixels can never assert provenance, so a
+     *     placeholder still cannot be laundered into a real render through this door.
+     *   - When no pixels are supplied and the format is not decodable in-repo, the behaviour is exactly as before:
+     *     `unverified`, with the reason named.
+     *
+     * Dimensions must match what the bytes' own header reports, or the supply is REFUSED rather than trusted; a
+     * caller handing over pixels from a different image would otherwise get a contrast measurement of something
+     * else entirely.
+     */
+    decodedPixels?: {
+        rgba: Uint8Array;
+        width: number;
+        height: number;
+        source: string;
+    };
 }
 export interface VerifyReport {
     verdict: AssetVerdict;

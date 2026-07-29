@@ -10,7 +10,10 @@ const flow_memory_schema_1 = require("./flow-memory-schema");
 const extended_domain_validator_1 = require("./extended-domain-validator");
 const icon_source_reference_1 = require("./icon-source-reference");
 const design_md_parser_1 = require("./design-md-parser");
+const image_asset_production_1 = require("./image-asset-production");
+const image_brief_compiler_1 = require("./image-brief-compiler");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowG_component_implementation');
@@ -77,6 +80,16 @@ class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler
             const formsDomainRules = extended_domain_validator_1.ExtendedDomainValidator.getRulesByDomain('forms');
             const formsPassRate = extendedValidationReport.passRateByDomain['forms'] || '0%';
             const formsPassed = Math.round((parseFloat(formsPassRate) / 100) * formsDomainRules.length);
+            // ASSET PRODUCTION LENS. This is the step that makes image generation part of building rather than a
+            // side CLI: `/sidecoach craft <feature>` runs this flow, so a request naming a backdrop, texture, plate,
+            // portrait, object, thumbnail, or social card produces the asset here, with the contrast contract compiled
+            // from the same resolution that wrote the prompt. Fully contained and offline by default; it cannot spend
+            // and it cannot fail the build. A component that needs no raster is told so rather than handed a plate.
+            const assetOutcome = (0, image_asset_production_1.runAssetProductionLens)(context, {
+                // A caller that knows where the page keeps its assets says so; otherwise the cache directory holds them.
+                outDirRel: typeof context.metadata?.imageOutDir === 'string' ? context.metadata.imageOutDir : undefined,
+                brief: typeof context.metadata?.imageBrief === 'object' ? context.metadata.imageBrief : undefined,
+            });
             // Build checklist
             const checklist = this.createChecklist([
                 { label: 'Component name identified', required: true, description: componentName },
@@ -90,6 +103,12 @@ class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler
                 { label: 'Verify side-by-side with design source', required: true, description: 'Visual match confirmed' },
                 { label: 'Document component API and props', required: false, description: 'Usage examples included' },
             ]);
+            // Appended with its own stable id rather than an index-derived one, because a downstream reader keys on
+            // `asset-production` to find this verdict. Required whenever a raster was asked for, and completed only on
+            // `verified`, so a failed or unchecked asset is a blocker rather than a warning.
+            // The second argument matters only when the lens did not run at all: a raster request that never reached the
+            // step must not read as done. See assetProductionChecklistItem.
+            checklist.push((0, image_asset_production_1.assetProductionChecklistItem)(assetOutcome, (0, image_brief_compiler_1.briefWantsRaster)(context.utterance || '')));
             // Citation helper for DESIGN.md token references
             const designContent = context.metadata?.designContent || '';
             const designTokens = context.metadata?.designTokens || {};
@@ -101,8 +120,20 @@ class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler
             const ctaText = designTokens.colors?.brand?.cream || '(undefined in DESIGN.md)';
             const buttonRadius = designTokens.rounded?.md || '(undefined in DESIGN.md)';
             const cardShadow = designTokens.shadow?.md || '(undefined in DESIGN.md)';
+            // TEACH, THEN CHECK. This is the flow that actually WRITES a component, so it is the highest-
+            // leverage place in the whole surface for the brief to land: the difference between a control
+            // that has every reachable state and one that is missing focus, disabled and loading is decided
+            // here, once, rather than being found later by the audit verb. The a11y and theming rules already
+            // failing on the project are enumerated below, because a new component inherits its surroundings.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                findingClasses: ['a11y', 'theming'],
+                lawDomains: ['interaction', 'research'],
+                domainLabel: 'component implementation',
+            });
             // Build guidance
             const guidance = [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no accessibility or theming rules were measurable on this project.'),
                 `Component: ${componentName}`,
                 `Register: ${register}`,
                 '',
@@ -147,6 +178,8 @@ class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler
                 '- Copy matches writing domain rules',
                 '- Responsive: no overflow or misalignment on mobile/tablet',
                 '- Side-by-side comparison with design source confirms visual match',
+                '',
+                ...(0, image_asset_production_1.assetProductionGuidance)(assetOutcome),
             ];
             const ariaLabelCount = validationResults.filter((r) => r.hasAriaLabels).length;
             const keyboardNavCount = validationResults.filter((r) => r.hasKeyboardInteraction).length;
@@ -164,6 +197,14 @@ class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler
                 .addValidation('ARIA labels implemented', ariaLabelCount === componentStates.length ? 'pass' : 'warning', `${ariaLabelCount}/${componentStates.length}`)
                 .addValidation('Keyboard navigation enabled', keyboardNavCount >= componentStates.length - 1 ? 'pass' : 'warning', `${keyboardNavCount}/${componentStates.length - 1} navigable`)
                 .addValidation('Semantic copy appropriate', semanticCopyCount === 3 ? 'pass' : 'warning', `${semanticCopyCount}/3 states with copy`)
+                // Fail-closed in memory too. `verified` passes, `not-needed` and a lens that never ran are recorded as
+                // warnings with their reason, and every other state is a FAIL, so a later reader of this record cannot
+                // mistake an unchecked or missing asset for a passing one.
+                .addValidation('Raster asset produced and verified', !assetOutcome || assetOutcome.status === 'not-needed'
+                ? 'warning'
+                : assetOutcome.status === 'verified'
+                    ? 'pass'
+                    : 'fail', assetOutcome ? assetOutcome.detail : 'asset lens did not run (no project path)')
                 .addArtifact('component-implementation', componentStates.length, ['flowH_motion_integration', 'flowI_motion_polish']);
             const memory = memoryBuilder.build();
             return {
@@ -174,6 +215,29 @@ class FlowGComponentImplementationHandler extends flow_handler_1.BaseFlowHandler
                 guidance,
                 checklist,
                 artifacts: [
+                    // Only a VERIFIED asset becomes an artifact. A failed or unchecked one is named in the guidance and the
+                    // checklist and withheld here, because an artifact is what a build composes with and composing with an
+                    // unchecked asset is the defect the verifier exists to prevent.
+                    ...((0, image_asset_production_1.isOfferableAsset)(assetOutcome)
+                        ? [
+                            this.createArtifact('reference', assetOutcome.synthetic ? 'Generated raster asset (verified placeholder)' : 'Generated raster asset (verified)', [
+                                assetOutcome.synthetic
+                                    ? 'PROVENANCE: this is the deterministic offline placeholder, marked inside its own bytes. Layout stand-in only, never shipped as art.'
+                                    : 'PROVENANCE: a live provider render, verified against its own decoded pixels.',
+                                `path: ${assetOutcome.path}`,
+                                `provider: ${assetOutcome.provider}${assetOutcome.model ? ` (${assetOutcome.model})` : ''}`,
+                                `size: ${assetOutcome.compiled.contract.size}`,
+                                assetOutcome.compiled.contract.ink
+                                    ? `overlay contrast: ${assetOutcome.compiled.contract.ink} (${assetOutcome.compiled.contract.inkSource}) measured over ${assetOutcome.compiled.contract.inkRegion.w}x${assetOutcome.compiled.contract.inkRegion.h} at ${assetOutcome.compiled.contract.inkRegion.x},${assetOutcome.compiled.contract.inkRegion.y}, floor ${assetOutcome.compiled.contract.minContrast}:1`
+                                    : 'overlay contrast: NOT contracted (DESIGN.md names no text colour)',
+                                `staging: ${assetOutcome.compiled.composition.id} (${assetOutcome.compiled.composition.label})`,
+                                `world: ${assetOutcome.compiled.concept.id} (${assetOutcome.compiled.concept.name})`,
+                                '',
+                                'prompt used:',
+                                assetOutcome.compiled.prompt,
+                            ].join('\n'), 'A raster asset generated for this component and verified against its decoded pixels. The prompt travels with it so the build knows what it is composing.'),
+                        ]
+                        : []),
                     this.createArtifact('reference', 'icon-source', (0, icon_source_reference_1.buildIconSourceArtifactContent)((0, icon_source_reference_1.createIconSourceReference)()), '8 approved icon libraries with selection protocol and provenance markers (taste/fabricated-svg gate enforcement)'),
                     this.createArtifact('reference', 'Interaction Domain Rules', interactionDomain.rules.join('\n'), '8 component states (default, hover, focus, active, disabled, loading, error, success)'),
                     this.createArtifact('reference', 'Writing Domain Rules', writingDomain.rules.join('\n'), 'Semantic copy, helpful errors, button labels (verb+object)'),

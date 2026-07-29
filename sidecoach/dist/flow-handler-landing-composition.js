@@ -8,6 +8,7 @@ const flow_handler_1 = require("./flow-handler");
 const landing_composition_data_1 = require("./landing-composition-data");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowWLandingCompositionHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowW_landing_composition');
@@ -23,7 +24,18 @@ class FlowWLandingCompositionHandler extends flow_handler_1.BaseFlowHandler {
         const taxonomy = (0, landing_composition_data_1.getSectionTaxonomy)(register);
         const rhythm = (0, landing_composition_data_1.getRhythmRules)(register);
         const antiPatterns = (0, landing_composition_data_1.getAntiPatternCallouts)(register);
+        // TEACH, THEN CHECK. This flow hands back a section taxonomy and a vertical gap in pixels, which
+        // tells a producer what sections EXIST and nothing about how to compose them. The brief adds the
+        // composition craft: build one real feature before the shell, vary the rhythm so a reader can feel
+        // where they are on the page, and stop pouring unequal content into an equal card grid.
+        const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'produce',
+            findingClasses: ['anti-pattern'],
+            lawDomains: ['composition', 'spatial'],
+            domainLabel: 'landing composition',
+        });
         const guidance = [
+            ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no anti-pattern rules were measurable on this project.'),
             `Register: ${register}`,
             `Section taxonomy (${taxonomy.length} sections):`,
             ...taxonomy.map((s) => `- ${s.name} (${s.id}): ${s.purpose}`),

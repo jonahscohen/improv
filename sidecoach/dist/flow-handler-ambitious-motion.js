@@ -7,6 +7,7 @@ exports.createFlowTHandler = createFlowTHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowT_ambitious_motion');
@@ -34,9 +35,25 @@ class FlowTAmbitiousMotionHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Verify stagger timing for sequences', required: true },
                 { label: 'Document animation library (Framer Motion, GSAP, etc.)', required: true },
             ]);
+            // TEACH, THEN CHECK. "Ambitious" is the verb most likely to produce motion that hurts: this is
+            // where a page acquires a 600ms hero entrance that replays on every load. So the brief leads
+            // with the constraints that make ambition survive contact with a reader - frequency decides
+            // before craft does, the duration budget, named easing curves, reduced motion as gentler rather
+            // than absent - and the motion rules failing on this project are enumerated under it.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                ruleKeys: [
+                    'polish/reduced-motion-respect', 'polish/interruptible-animations', 'polish/skip-load-animation',
+                    'polish/staggered-enter', 'polish/subtle-exit', 'polish/no-transition-all',
+                    'polish/sparse-will-change', 'polish/animatepresence-initial', 'polish/icon-swap-compound',
+                ],
+                lawDomains: ['motion'],
+                domainLabel: 'ambitious motion',
+            });
             const guidance = [
                 'Ambitious Motion: Advanced animation sequences and micro-interactions for delight.',
                 '',
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no motion rules were measurable on this project.'),
                 'MOTION TOKENS:',
                 '- Duration: 150ms (micro), 300ms (standard), 500ms (deliberate)',
                 '- Easing: exponential-out (easeOutExpo) for all motion',

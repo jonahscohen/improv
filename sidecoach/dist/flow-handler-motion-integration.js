@@ -16,6 +16,7 @@ const motion_stack_idioms_1 = require("./motion-stack-idioms");
 // literally the bounce curve Emil bans in the absorbed library.
 const reference_loader_1 = require("./reference-loader");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowH_motion_integration');
@@ -170,7 +171,22 @@ class FlowHMotionIntegrationHandler extends flow_handler_1.BaseFlowHandler {
             const durationFast = designTokens.motion?.duration?.fast || '(undefined in DESIGN.md)';
             const durationMedium = designTokens.motion?.duration?.medium || '(undefined in DESIGN.md)';
             // Build guidance
+            // TEACH, THEN CHECK. Integration is where motion stops being a spec and starts being code, so
+            // the failures this brief prevents are the lifecycle ones: a keyframe on an interactive state
+            // that cannot be interrupted, an entrance that replays on every load, a loop that keeps
+            // compositing off-screen. Those are not taste calls and they are not visible in a screenshot.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                ruleKeys: [
+                    'polish/reduced-motion-respect', 'polish/interruptible-animations', 'polish/skip-load-animation',
+                    'polish/no-transition-all', 'polish/sparse-will-change', 'polish/animatepresence-initial',
+                    'polish/staggered-enter', 'polish/subtle-exit',
+                ],
+                lawDomains: ['motion'],
+                domainLabel: 'motion integration',
+            });
             const guidance = [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no motion rules were measurable on this project.'),
                 `Brand Personality: ${brandPersonality || 'Not defined'}`,
                 `Register: ${register}`,
                 `Motion Intensity: ${intensity} (${register === 'brand' ? 'brand encourages ambitious motion' : 'product prefers restrained'})`,

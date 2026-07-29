@@ -20,6 +20,7 @@ const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const reference_loader_1 = require("./reference-loader");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowE_motion_patterns');
@@ -123,7 +124,22 @@ class FlowEMotionPatternsHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Motion patterns validated against rules', required: false, description: `${validationResults.length} patterns validated` },
             ]);
             // Build guidance
+            // TEACH, THEN CHECK. This flow recommends patterns; the brief supplies the constraints those
+            // patterns have to satisfy, with the real values the reference corpus carries - the named easing
+            // tokens rather than "use ease-out", the per-element duration bands, the 8px animated-blur
+            // ceiling, and the reduced-motion branch that stays legible instead of switching everything off.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                ruleKeys: [
+                    'polish/reduced-motion-respect', 'polish/interruptible-animations', 'polish/no-transition-all',
+                    'polish/staggered-enter', 'polish/subtle-exit', 'polish/skip-load-animation',
+                    'polish/sparse-will-change',
+                ],
+                lawDomains: ['motion', 'research'],
+                domainLabel: 'motion patterns',
+            });
             const guidance = [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no motion rules were measurable on this project.'),
                 `Brand personality: ${brandPersonality || 'Not defined'}`,
                 `Register: ${register}`,
                 `Motion intensity: ${intensity} (${register === 'brand' ? 'playful/ambitious for brand' : 'restrained for product'})`,

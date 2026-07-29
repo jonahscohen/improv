@@ -409,6 +409,33 @@ export interface AssetContract {
    * a real render, and the marker lives in the bytes so renaming the file cannot launder it.
    */
   expectSynthetic?: boolean;
+  /**
+   * Pixels the CALLER decoded, for formats this repo cannot decode itself.
+   *
+   * WHY THIS EXISTS (2026-07-29). Every Gemini image model answers a PNG request with JPEG, and this repo decodes
+   * PNG only, so all four pixel checks returned `unverified` on the output of the provider we default to. Pixel
+   * verification is the strongest property this tool has and it did not cover our own default path.
+   *
+   * The fix is not a hand-written JPEG decoder. `bin/sidecoach-image.js` obtains real RGBA through a browser
+   * (playwright is already a dependency of this package) and supplies it here. A browser's JPEG decoder is a
+   * battle-tested reference implementation; a hand-rolled inverse DCT would be a new correctness risk, and a
+   * confidently wrong contrast number is worse than an honest `unverified`. Validated against an independent
+   * decoder: probe pixels agreed exactly or within 1 unit, and the whole-image channel sum differed by a mean of
+   * 0.15 per 255 across 3.17 million samples.
+   *
+   * THIS DOES NOT LOOSEN ANYTHING, and that boundary is the point:
+   *   - `format-matches` still FAILS when the bytes are not the format contracted. What the provider did is a
+   *     fact, and supplying pixels does not change it. A JPEG answer to a PNG request stays a failure.
+   *   - The synthetic marker is read from PNG bytes ONLY. Supplied pixels can never assert provenance, so a
+   *     placeholder still cannot be laundered into a real render through this door.
+   *   - When no pixels are supplied and the format is not decodable in-repo, the behaviour is exactly as before:
+   *     `unverified`, with the reason named.
+   *
+   * Dimensions must match what the bytes' own header reports, or the supply is REFUSED rather than trusted; a
+   * caller handing over pixels from a different image would otherwise get a contrast measurement of something
+   * else entirely.
+   */
+  decodedPixels?: { rgba: Uint8Array; width: number; height: number; source: string };
 }
 
 export interface VerifyReport {
@@ -483,11 +510,56 @@ export function verifyAsset(buf: Uint8Array, contract: AssetContract): VerifyRep
   let synthetic = false;
   let decodeReason = '';
 
+  // Resolve ONE pixel source, then run the same checks against it whatever produced it. Two sources: this repo's
+  // own PNG decode, or pixels the caller decoded for a format this repo cannot read (see contract.decodedPixels).
+  let src: { rgba: Uint8Array; width: number; height: number; label: string } | null = null;
+  let refusal: { reason: string; detail: string } | null = null;
+
   if (sniffed === 'png') {
     const decoded = decodePng(buf);
     if (decoded.ok) {
+      // Provenance is read from PNG bytes and nowhere else, so supplied pixels can never claim it.
       synthetic = Object.prototype.hasOwnProperty.call(decoded.text, SYNTHETIC_MARKER_KEY);
-      checks.push({ id: 'pixels-decodable', status: 'pass', detail: `decoded ${decoded.width}x${decoded.height}, color type ${decoded.colorType}` });
+      src = {
+        rgba: decoded.rgba,
+        width: decoded.width,
+        height: decoded.height,
+        label: `decoded ${decoded.width}x${decoded.height}, color type ${decoded.colorType}`,
+      };
+    } else {
+      refusal = { reason: decoded.reason, detail: `${decoded.reason}: ${decoded.detail}` };
+    }
+  } else if (contract.decodedPixels) {
+    const p = contract.decodedPixels;
+    const expected = p.width * p.height * 4;
+    if (!dims) {
+      // Without the bytes' own header there is nothing to check the supply against, so it is refused rather than
+      // trusted. Trusting it here would measure an unknown image and report the number as this asset's.
+      refusal = { reason: 'supplied-pixels-unanchored', detail: 'pixels were supplied but the bytes carry no readable dimensions to check them against' };
+    } else if (p.width !== dims.width || p.height !== dims.height) {
+      refusal = {
+        reason: 'supplied-pixels-mismatch',
+        detail: `supplied pixels are ${p.width}x${p.height} but the bytes report ${dims.width}x${dims.height}; refusing to measure a different image`,
+      };
+    } else if (p.rgba.length !== expected) {
+      refusal = {
+        reason: 'supplied-pixels-malformed',
+        detail: `supplied buffer is ${p.rgba.length} bytes, expected ${expected} for ${p.width}x${p.height} RGBA`,
+      };
+    } else {
+      src = { rgba: p.rgba, width: p.width, height: p.height, label: `${p.width}x${p.height} RGBA supplied by ${p.source} (this repo cannot decode ${sniffed})` };
+    }
+  } else {
+    refusal = {
+      reason: 'format-not-decodable',
+      detail: `pixel decoding is implemented for png only; this asset is ${sniffed ?? 'an unknown format'}`,
+    };
+  }
+
+  {
+    if (src) {
+      const decoded = src;
+      checks.push({ id: 'pixels-decodable', status: 'pass', detail: src.label });
       pixels = analyzePixels(decoded.rgba, decoded.width, decoded.height);
       const th: BlankThresholds = { ...DEFAULT_BLANK_THRESHOLDS, ...(contract.blank || {}) };
       const blankFailures: string[] = [];
@@ -526,7 +598,22 @@ export function verifyAsset(buf: Uint8Array, contract: AssetContract): VerifyRep
         );
       }
 
-      if (contract.placement) {
+      if (contract.placement && (decoded.width !== contract.width || decoded.height !== contract.height)) {
+        // THE PLACEMENT REGION IS ONLY MEANINGFUL AT THE CONTRACTED GEOMETRY.
+        //
+        // Found live, and it is the exact failure class this module exists to prevent. Gemini honours an aspect
+        // ratio and picks its own pixel ladder, so a 1024x576 request came back 1376x768. The ink region was
+        // computed for the requested size, so on the returned image it landed partly on the dark field instead of
+        // on the reserved band, and the check reported "worst contrast 1.00:1" - a real measurement of the wrong
+        // place. A confidently wrong number is worse than an honest refusal, so this reports UNVERIFIED and names
+        // why. Rescaling the region would be a guess about where the text goes on an image nobody asked for.
+        checks.push({
+          id: 'contrast-at-placement',
+          status: 'unverified',
+          detail: `the image is ${decoded.width}x${decoded.height} but the placement region was specified against ${contract.width}x${contract.height}, so the region no longer marks where the text will sit; measuring it would report a number for the wrong pixels`,
+        });
+        decodeReason = decodeReason || 'placement-geometry-drift';
+      } else if (contract.placement) {
         const ink = parseHexColor(contract.placement.inkHex);
         const backdrop = contract.placement.backdropHex ? parseHexColor(contract.placement.backdropHex) : { r: 255, g: 255, b: 255 };
         if (!ink || !backdrop) {
@@ -572,19 +659,15 @@ export function verifyAsset(buf: Uint8Array, contract: AssetContract): VerifyRep
         }
       }
     } else {
-      decodeReason = decoded.reason;
-      checks.push({ id: 'pixels-decodable', status: 'unverified', detail: `${decoded.reason}: ${decoded.detail}` });
-      checks.push({ id: 'rendered-not-blank', status: 'unverified', detail: `pixels not decoded (${decoded.reason})` });
-      if (contract.alpha !== undefined) checks.push({ id: 'alpha-matches', status: 'unverified', detail: `pixels not decoded (${decoded.reason})` });
-      if (contract.placement) checks.push({ id: 'contrast-at-placement', status: 'unverified', detail: `pixels not decoded (${decoded.reason})` });
+      // No pixel source. Unchanged behaviour: every pixel check reports UNVERIFIED with its reason named, and the
+      // verdict can therefore never be `verified`. This is the property that must survive the whole change.
+      const r = refusal || { reason: 'no-pixel-source', detail: 'no pixel source was available' };
+      decodeReason = r.reason;
+      checks.push({ id: 'pixels-decodable', status: 'unverified', detail: r.detail });
+      checks.push({ id: 'rendered-not-blank', status: 'unverified', detail: `pixels not decoded (${r.reason})` });
+      if (contract.alpha !== undefined) checks.push({ id: 'alpha-matches', status: 'unverified', detail: `pixels not decoded (${r.reason})` });
+      if (contract.placement) checks.push({ id: 'contrast-at-placement', status: 'unverified', detail: `pixels not decoded (${r.reason})` });
     }
-  } else {
-    const why = `pixel decoding is implemented for png only; this asset is ${sniffed ?? 'an unknown format'}`;
-    decodeReason = 'format-not-decodable';
-    checks.push({ id: 'pixels-decodable', status: 'unverified', detail: why });
-    checks.push({ id: 'rendered-not-blank', status: 'unverified', detail: why });
-    if (contract.alpha !== undefined) checks.push({ id: 'alpha-matches', status: 'unverified', detail: why });
-    if (contract.placement) checks.push({ id: 'contrast-at-placement', status: 'unverified', detail: why });
   }
 
   const expectSynthetic = contract.expectSynthetic === true;

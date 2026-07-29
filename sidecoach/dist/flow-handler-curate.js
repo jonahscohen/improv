@@ -7,6 +7,7 @@ exports.createFlowUHandler = createFlowUHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowUCurateHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowU_curate');
@@ -29,9 +30,21 @@ class FlowUCurateHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Create reference playbook (patterns, anti-patterns)', required: true },
                 { label: 'Share reference library with team', required: true },
             ]);
+            // TEACH, THEN CHECK. Curation is the one flow whose output is a judgment about OTHER work, so
+            // what it needs taught is the standard for what makes a reference worth keeping and how to
+            // record it - reference before invention, and gating a candidate on concrete criteria rather
+            // than a name. The project's own anti-pattern failures are enumerated below because a library
+            // curated by someone shipping those patterns will inherit them.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                findingClasses: ['anti-pattern'],
+                lawDomains: ['research', 'reflex'],
+                domainLabel: 'reference capture',
+            });
             const guidance = [
                 'Curate: Build an ongoing reference library of design patterns and anti-patterns.',
                 '',
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no anti-pattern rules were measurable on this project.'),
                 'CURATION STRATEGY:',
                 '1. Define criteria: What makes a reference worth capturing? (novelty, quality, applicability)',
                 '2. Sources: Design inspiration sites, competitor products, open-source projects, small interactions',

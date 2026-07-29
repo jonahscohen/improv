@@ -28,8 +28,7 @@ export interface RenderedAuditResult {
         subjective: RenderedAuditLens;
     };
 }
-export declare function looksLikeUrl(target: string | undefined | null): boolean;
-export declare function normalizeRenderUrl(target: string): string;
+export { looksLikeUrl, normalizeRenderUrl } from './render-target';
 /** Entry documents probed, in order, when the target is a directory. */
 export declare const DIRECTORY_ENTRY_DOCUMENTS: readonly ["index.html", "index.htm"];
 export type RenderableTargetKind = 'url' | 'file' | 'directory';

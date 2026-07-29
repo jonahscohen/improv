@@ -555,6 +555,75 @@ exports.VERB_REGISTRY = {
             'memory entry',
         ],
     },
+    // ---------------------------------------------------------------------------
+    // new-work: the greenfield / replacement flow. Added 2026-07-29.
+    //
+    // WHY IT IS A SEPARATE VERB FROM `craft`. craft builds a feature INSIDE an established
+    // world; its chain assumes the visual system already exists and its job is to extend it.
+    // new-work is the case where the world itself is the open question: a new surface, or a
+    // replacement identity. Routing that through craft skipped the two steps that only matter
+    // when nothing is settled - drawing the direction from outside your own ranking, and gating
+    // the composition before component code - and the run converged on the category default with
+    // nothing in it able to say so.
+    //
+    // THE HYPHEN IS LOAD-BEARING and it is why slash-command-router's command class had to be
+    // widened from \w+ to [\w-]+. Before that change this entry could exist in the registry and
+    // still be unreachable, because the parser rejected the utterance before it ever looked here.
+    // That is the shape of defect `sidecoach doctor` now reports: registered, documented,
+    // undispatchable.
+    //
+    // The chain is craft's, minus component research (the component vocabulary is derived from
+    // the chosen direction rather than researched against an incumbent) and plus explore-discovery
+    // and reference-inspiration at the front, which is where direction selection lives. The
+    // detailed six-step procedure - including the roll, the preauthor gate and the fail-closed
+    // detector pass - is in reference/new-work.md, which the guidance below points at.
+    'new-work': {
+        command: 'new-work',
+        description: 'Carry a brief to a verified deliverable for a NEW surface or a replacement visual identity: establish product truth, ask the two or three questions that change the work, draw the direction rather than picking a favourite, prove the palette, gate the composition before writing component code, then verify with the fail-closed detector and record the system from what was built.',
+        skillRefPath: 'reference/new-work.md',
+        phase: 'craft',
+        flowIds: [
+            'flowA_brand_verify',
+            'flowY_explore_discovery',
+            'flowD_reference_inspiration',
+            'flowC_font_research',
+            'flowE_motion_patterns',
+            'flowF_design_tokens',
+            'flowG_component_implementation',
+            'flowH_motion_integration',
+            'flowI_accessibility',
+            'flowM_responsive_validation',
+            'flowJ_tactical_polish',
+            'flowK_multi_lens_audit',
+        ],
+        guidanceAppend: [
+            'Load reference/new-work.md and follow its six steps in order; each ends in a check that can fail, and a failing check stops the step.',
+            'PRODUCT.md confirmed present and not a stub before any direction work; teach was run first if it was missing.',
+            'Direction DRAWN via sidecoach-roll rather than chosen from your own ranking, and the seed recorded in the direction contract.',
+            'Palette proven: sidecoach-palette exited 0, so every required contrast pair passed before a colour was committed.',
+            'Composition gated before component code: sidecoach-preauthor exited 0 (exit 3 is inconclusive, not permission).',
+            'Verified with sidecoach-detect, which fails closed - a partial scan with zero findings exits 3 and is NOT a pass.',
+            'Token drift checked with sidecoach-drift against the DESIGN.md baseline; a missing baseline fails closed.',
+            'DESIGN.md written at the END from the built world, never before the build, then linted with zero findings.',
+        ],
+        parityChecklist: [
+            'product truth established',
+            'direction drawn',
+            'palette contrast verified',
+            'composition gated before build',
+            'commit every atom',
+            'detector pass fail-closed',
+            'DESIGN.md from the build',
+        ],
+        parityPlus: [
+            'sidecoach-roll direction draw (defeats single-ranking convergence)',
+            'sidecoach-palette WCAG-verified palette',
+            'sidecoach-preauthor render-before-build gate',
+            'sidecoach-detect fail-closed four-lens verification',
+            'BuildReport',
+            'memory entry',
+        ],
+    },
 };
 function getVerbList() {
     return Object.keys(exports.VERB_REGISTRY);

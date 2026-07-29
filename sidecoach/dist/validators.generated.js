@@ -540,7 +540,10 @@ exports.GENERATED_VALIDATORS = [
             "anti-pattern.glassmorphism-default",
             "anti-pattern.side-stripe-borders",
             "anti-pattern.hero-metric-template",
-            "anti-pattern.modal-as-first-thought"
+            "anti-pattern.modal-as-first-thought",
+            "anti-pattern.overused-font",
+            "anti-pattern.single-font",
+            "anti-pattern.bounce-easing"
         ],
         "registryScope": [
             "named-ban-compliance"
@@ -589,7 +592,10 @@ exports.GENERATED_VALIDATORS = [
                 "anti-pattern.glassmorphism-default",
                 "anti-pattern.side-stripe-borders",
                 "anti-pattern.hero-metric-template",
-                "anti-pattern.modal-as-first-thought"
+                "anti-pattern.modal-as-first-thought",
+                "anti-pattern.overused-font",
+                "anti-pattern.single-font",
+                "anti-pattern.bounce-easing"
             ],
             "blockingSeverities": [
                 "blocker",
@@ -665,6 +671,48 @@ exports.GENERATED_VALIDATORS = [
                             "jsx",
                             "vue",
                             "svelte"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.overused-font",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.single-font",
+                    "scope": "page",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
+                        ]
+                    ],
+                    "requireAllDiscoveredApplicableFiles": true
+                },
+                {
+                    "ruleId": "anti-pattern.bounce-easing",
+                    "scope": "file",
+                    "evidenceAlternativesByRequirement": [
+                        [
+                            "css",
+                            "scss",
+                            "less",
+                            "tsx",
+                            "html"
                         ]
                     ],
                     "requireAllDiscoveredApplicableFiles": true

@@ -43,6 +43,7 @@ const flow_memory_schema_1 = require("./flow-memory-schema");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 // TIER 3: POLISH/QA FLOWS
 /**
  * Flow J: 16-Point Tactical Polish
@@ -204,7 +205,17 @@ class FlowKMultiLensAuditHandler extends flow_handler_1.BaseFlowHandler {
         // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
         (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
+        // TEACH, THEN CHECK - a CHECK flow, so a clean project gets no brief. The five "Dimension N:"
+        // lines below are the clearest example in the repo of the defect this wiring fixes: each names a
+        // domain and its parenthetical lists what will be looked at. Nothing states what good looks like
+        // in any of the five. Scope is every finding class, which this flow legitimately owns.
+        const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'check',
+            lawDomains: ['critique'],
+            domainLabel: 'the five audit dimensions',
+        });
         const guidance = [
+            ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'nothing on disk could be checked, so this is not a clean result.'),
             'Dimension 1: Accessibility (WCAG compliance, semantic HTML, keyboard nav)',
             'Dimension 2: Performance (bundle size, Lighthouse scores, Core Web Vitals)',
             'Dimension 3: Theming (color system consistency, CSS variable usage, dark mode)',
@@ -316,7 +327,18 @@ class FlowLDesignCritiqueHandler extends flow_handler_1.BaseFlowHandler {
         // T-0012: per-flow model-tier routing. Stash selected model into context.metadata.
         (0, model_routing_1.applyModelSelection)(this.flowId, context);
         const enhancedContext = context;
+        // TEACH, THEN CHECK - a CHECK flow, so a clean project gets no brief. Below, this handler prints
+        // CRITIQUE_RULES as `<name> (weight: <n>): <description>` - the twelve lens NAMES with what each
+        // one asks. That is a rubric, and a rubric is not craft: it tells a reviewer what to look for and
+        // never what the good answer is, which is why a critique built on it comes back as a list of
+        // dimensions rather than a judgment. The brief carries the lens craft for the ones that failed.
+        const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'check',
+            lawDomains: ['critique'],
+            domainLabel: 'design critique',
+        });
         const guidance = [
+            ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'nothing on disk could be checked, so this is not a clean result.'),
             'Nielsen 10 Usability Heuristics: visibility, match with real world, user control, consistency, error prevention, recognition vs recall, flexibility, aesthetic, error recovery, help & documentation',
             'AI-slop detection: generated copy, template language, lack of personality, generic imagery',
             'Cognitive load: information density, task complexity, decision fatigue',
@@ -542,7 +564,17 @@ class FlowNRapidIterationHandler extends flow_handler_1.BaseFlowHandler {
         // Check if Justify is available for live browser iteration
         const justifyAvailable = process.env.JUSTIFY_AVAILABLE === 'true' ||
             process.env.JUSTIFY_SOCKET_PATH !== undefined;
-        const guidance = [];
+        // TEACH, THEN CHECK. Rapid iteration moves fast by construction, which is exactly when a producer
+        // stops consulting a standard - so the token craft goes in front of the loop rather than after it.
+        const craftN = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'produce',
+            findingClasses: ['theming'],
+            lawDomains: ['tokens'],
+            domainLabel: 'token-based iteration',
+        });
+        const guidance = [
+            ...(0, craft_flow_1.craftGuidanceBlock)(craftN, 'no theming rules were measurable on this project.'),
+        ];
         if (justifyAvailable) {
             guidance.push('LIVE BROWSER ITERATION ENABLED via Justify');
             guidance.push('---');
@@ -686,12 +718,24 @@ class FlowOCloneMatchHandler extends flow_handler_1.BaseFlowHandler {
                 'required-precision': 'exact',
             };
         }
+        // TEACH, THEN CHECK. Cloning is the one flow where craft can legitimately be overridden by the
+        // source - if the reference does something this corpus discourages, the clone reproduces it. So the
+        // brief here is scoped to the two domains where a clone still has to make its own decisions
+        // (type and spacing, which are what a visual match is actually measured on), and the project's real
+        // failures are enumerated so a clone is not blamed for defects it inherited from its surroundings.
+        const craftO = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'produce',
+            findingClasses: ['theming', 'anti-pattern'],
+            lawDomains: ['typography', 'spatial'],
+            domainLabel: 'clone fidelity',
+        });
         return {
             flowId: this.flowId,
             flowName: this.getFlowName(),
             status: 'success',
             message: 'Pixel-perfect 1:1 replication from reference',
             guidance: [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craftO, 'no theming or anti-pattern rules were measurable on this project.'),
                 'Clone means EXACT match - every detail must match the source',
                 'Match: element tree structure, nesting hierarchy, naming',
                 'Match: typography (font family, size, weight, line height, letter spacing)',
@@ -733,12 +777,21 @@ class FlowPConstraintDesignHandler extends flow_handler_1.BaseFlowHandler {
                 'trade-off-documentation': true,
             };
         }
+        // TEACH, THEN CHECK. A constraint flow needs the standard MORE than an unconstrained one, not less:
+        // the whole risk of designing to a budget is that the constraint becomes the excuse for dropping
+        // the floor. Scope is every finding class so the constraint is visibly traded against real rules.
+        const craftP = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'produce',
+            lawDomains: ['spatial', 'color'],
+            domainLabel: 'constrained design',
+        });
         return {
             flowId: this.flowId,
             flowName: this.getFlowName(),
             status: 'success',
             message: 'Design under explicit constraints and limits',
             guidance: [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craftP, 'no rules were measurable on this project.'),
                 'Constraints inspire creativity - work within explicit boundaries',
                 'Define the constraint clearly: budget (KB, components, time), scope, accessibility floor, performance target, etc.',
                 'Design within the constraint, not around it - find creative solutions',
@@ -780,12 +833,22 @@ class FlowQMigrationHandler extends flow_handler_1.BaseFlowHandler {
                 'signoff-required': true,
             };
         }
+        // TEACH, THEN CHECK. A migration is the cheapest moment to fix a token system, because every
+        // consumer is already being touched - so the token craft goes in the payload rather than being
+        // deferred to a later pass that never comes. The theming failures below are the concrete backlog.
+        const craftQ = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+            shape: 'produce',
+            findingClasses: ['theming', 'anti-pattern'],
+            lawDomains: ['tokens', 'critique'],
+            domainLabel: 'migration',
+        });
         return {
             flowId: this.flowId,
             flowName: this.getFlowName(),
             status: 'success',
             message: 'Component migration and API refactoring',
             guidance: [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craftQ, 'no theming or anti-pattern rules were measurable on this project.'),
                 'Migrations are high-risk: breaking changes affect all consumers',
                 'Pre-migration: map all dependencies (grep for component usage)',
                 'Define new API clearly before implementation (breaking changes documented)',

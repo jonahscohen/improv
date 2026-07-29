@@ -35,6 +35,17 @@ export interface ProductRuleResult {
     findingClass: string;
     evidenceKind?: EvidenceKind;
     evidenceLocations: string[];
+    /**
+     * What evidenceLocations POINT AT. 'defect' = the offending source itself (a
+     * `transition: all` declaration). 'anchor' = the site the missing thing has to be
+     * written, for an ABSENCE finding that has no defect line of its own ("no
+     * prefers-reduced-motion" points at the animation that needed the guard).
+     *
+     * Absent when evidenceLocations is empty. This is NOT decoration: presenting an anchor
+     * as though it were the defect line is the same class of error as the slice-line bug
+     * source-locator.ts documents, so the two are reported distinctly all the way to stdout.
+     */
+    locationKind?: 'defect' | 'anchor';
     message: string;
     remediation?: string;
 }
@@ -45,6 +56,7 @@ export interface ProductFinding {
     severity: CanonicalSeverity;
     findingClass: string;
     evidenceLocations: string[];
+    locationKind?: 'defect' | 'anchor';
     message: string;
     remediation?: string;
 }

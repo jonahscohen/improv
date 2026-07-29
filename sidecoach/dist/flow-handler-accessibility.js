@@ -7,6 +7,7 @@ exports.createFlowIHandler = createFlowIHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowI_accessibility');
@@ -202,9 +203,21 @@ class FlowIAccessibilityHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Document a11y decisions and testing results', required: false, description: 'For audit trail' },
             ]);
             // Build guidance
+            // TEACH, THEN CHECK - and this is a CHECK flow, so a clean project gets no brief. That is not a
+            // gap: `audit` exists so that a clean result means something, and a constant block appended to a
+            // passing run is the exact defect this wiring removes. When rules DO fail, all 25 a11y rules in
+            // the registry now have craft notes, so the brief teaches the failing ones - focus rings, per-
+            // control labels, error association, heading order - rather than restating their names.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'check',
+                findingClasses: ['a11y'],
+                lawDomains: ['interaction'],
+                domainLabel: 'accessibility',
+            });
             const guidance = [
                 'Accessibility Target: WCAG 2.1 Level AA (required standard)',
                 '',
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'nothing on disk could be checked, so this is not a clean result.'),
                 'Domain-by-Domain Accessibility Audit:',
                 '',
                 ...domainAuditResults.flatMap((domain) => [

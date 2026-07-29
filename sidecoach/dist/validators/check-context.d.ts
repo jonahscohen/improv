@@ -51,12 +51,20 @@ export interface RuleVerdict {
     status: RuleStatus;
     message: string;
     evidenceLocations?: string[];
+    /** See ProductRuleResult.locationKind. Defaults to 'defect' when locations are supplied
+     *  by a check directly; the applicability wrapper stamps 'anchor' when it fills them in. */
+    locationKind?: 'defect' | 'anchor';
     remediation?: string;
     normalizedErrorCategory?: NormalizedErrorCategory;
     evidenceKind?: EvidenceKind;
 }
 export declare const pass: (message: string, evidenceLocations?: string[]) => RuleVerdict;
+/** A check calling fail() with locations is pointing at the DEFECT itself. Absence findings
+ *  leave locations empty and let withRuleApplicability fill in the anchor. */
 export declare const fail: (message: string, evidenceLocations?: string[], remediation?: string) => RuleVerdict;
+/** fail() for an ABSENCE finding whose locations are the FIX SITE, not the defect. Use this
+ *  whenever nothing at the reported line is itself wrong. */
+export declare const failAnchor: (message: string, evidenceLocations?: string[], remediation?: string) => RuleVerdict;
 export declare const notApplicable: (message: string) => RuleVerdict;
 export declare const inconclusive: (message: string, category?: NormalizedErrorCategory) => RuleVerdict;
 export declare const hasCss: (ctx: ProductCheckContext) => boolean;
@@ -65,6 +73,19 @@ export declare const hasTrustedBrowserEvidence: (ctx: ProductCheckContext, kind:
 export declare const browserNumber: (ctx: ProductCheckContext, key: string) => number | undefined;
 export declare function stampResult(def: ProductRuleDefinition, v: RuleVerdict): ProductRuleResult;
 export type Applicability = true | false | 'unknown';
+export declare const INTERACTIVE_RE: RegExp;
+export declare const ICON_RE: RegExp;
+export declare const IMAGE_RE: RegExp;
+export declare const HEADING_RE: RegExp;
+export declare const MOTION_RE: RegExp;
+export declare const ROOT_TARGET_RE: RegExp;
+export declare const SHADOW_TARGET_RE: RegExp;
+export declare const OPTICAL_TARGET_RE: RegExp;
+export declare const FOCUSABLE_RE: RegExp;
+export declare const TABULAR_TARGET_RE: RegExp;
+export declare const TRANSITION_TARGET_RE: RegExp;
+export declare const FRAMER_TARGET_RE: RegExp;
+export declare const WILL_CHANGE_TARGET_RE: RegExp;
 export declare const interactiveTargetApplicability: (ctx: ProductCheckContext) => Applicability;
 export declare const iconTargetApplicability: (ctx: ProductCheckContext) => Applicability;
 export declare const imageTargetApplicability: (ctx: ProductCheckContext) => Applicability;

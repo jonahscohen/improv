@@ -448,7 +448,25 @@ export const PROVIDERS: Record<string, ProviderSpec> = {
   nanobanana: NANOBANANA_PROVIDER,
 };
 
-/** Order the `auto` chain walks. First entry is preferred; every provider is attempted before giving up. */
+/**
+ * Order the `auto` chain walks. First entry is preferred; every provider is attempted before giving up.
+ *
+ * OPENAI IS FIRST BECAUSE ITS OUTPUT IS FULLY VERIFIABLE, which is a stronger reason than preference and is now
+ * measured rather than assumed (2026-07-29):
+ *
+ *   gpt-image-2 returns PNG. A live 1024x1024 render verified with every check executing natively and passing:
+ *   format, geometry, pixels-decodable, rendered-not-blank, alpha, and contrast-at-placement at 17.99:1.
+ *   Measured cost 0.0063 USD from the provider's own usage data.
+ *
+ *   Every Gemini image model returns JPEG whatever format is requested, and it picks its own pixel ladder for a
+ *   requested aspect. So its output fails the format check by construction, its geometry drifts on non-square
+ *   aspects, and its pixels are readable only through the browser transcode in image-jpeg-pixels.ts. That path
+ *   produces real numbers, but a Gemini asset can never reach a `verified` verdict while it answers in the wrong
+ *   format.
+ *
+ * The chain therefore reaches the provider that can actually be certified first, and falls back to the one whose
+ * output verifies at header level plus transcoded pixels. Do NOT reorder this without re-measuring both.
+ */
 export const AUTO_CHAIN: string[] = ['openai', 'nanobanana'];
 
 /** The offline renderer's pseudo-provider id. It is never part of AUTO_CHAIN, by design. */

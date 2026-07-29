@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import type { chromium } from 'playwright';
 import type { BrowserDomEvidence, BrowserEvidenceMeta } from './check-context';
 export interface CollectedBrowserEvidence {
     browserEvidence: BrowserEvidenceMeta;
@@ -16,7 +16,7 @@ export type BrowserEvidenceCollection = {
     available: false;
     reason: string;
 };
-export declare function renderUrlFromContext(raw: unknown): string | undefined;
+export { renderUrlFromContext } from '../render-target';
 export declare function isSubresourceAllowed(suppliedUrl: string, requestedUrl: string): boolean;
 export declare function collectBrowserEvidence(renderUrl: string | undefined, signal?: AbortSignal, launcher?: () => Promise<Awaited<ReturnType<typeof chromium.launch>>>): Promise<BrowserEvidenceCollection>;
 //# sourceMappingURL=browser-evidence-collector.d.ts.map

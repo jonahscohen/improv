@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.A11Y_CHECKS = exports.checkMinHitArea = exports.checkFocusVisible = void 0;
 const check_context_1 = require("../check-context");
+const source_locator_1 = require("../source-locator");
 const polish_standard_validator_1 = require("../../polish-standard-validator");
 const checkFocusVisible = (ctx) => {
     // Applicability FIRST: a focusable target can live in markup (e.g. a <button> in an
@@ -17,7 +18,10 @@ const checkFocusVisible = (ctx) => {
         return (0, check_context_1.inconclusive)('cannot establish focusable targets from collected evidence', 'unreadable_input');
     return (0, polish_standard_validator_1.hasFocusVisible)(ctx.cssText)
         ? (0, check_context_1.pass)(':focus-visible present')
-        : (0, check_context_1.fail)('implement :focus-visible for keyboard navigation', [], 'Add :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }');
+        // ANCHOR: the focusable target the probe just found - the element whose focus styling is
+        // missing. focus-visible has no PROBES entry (its applicability is checked inline above),
+        // so it resolves its anchor from the same FOCUSABLE_RE that gated it.
+        : (0, check_context_1.failAnchor)('implement :focus-visible for keyboard navigation', (0, source_locator_1.locateAnchor)(ctx, source_locator_1.FOCUSABLE_ANCHOR), 'Add :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }');
 };
 exports.checkFocusVisible = checkFocusVisible;
 const checkMinHitArea = (ctx) => {

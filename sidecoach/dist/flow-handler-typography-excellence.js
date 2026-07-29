@@ -8,6 +8,7 @@ const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const design_md_parser_1 = require("./design-md-parser");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowS_typography_excellence');
@@ -47,9 +48,25 @@ class FlowSTypographyExcellenceHandler extends flow_handler_1.BaseFlowHandler {
             const bodyFamily = designTokens.typography?.body?.family || '(undefined in DESIGN.md)';
             const baseSize = designTokens.typography?.scale?.base || '(undefined in DESIGN.md)';
             const lineHeight = designTokens.typography?.scale?.line_height || '(undefined in DESIGN.md)';
+            // TEACH, THEN CHECK. The block below states this project's token values and a fixed ladder
+            // (`- Heading: 32px, semibold (h2)`) with no ratio, no measure, no reason and no source - and
+            // those hard-coded sizes are not even derived from the project's own scale. The brief carries
+            // the real typographic craft (one modular ratio, line-height inverse to size, the 65ch measure,
+            // heading size by role rather than by tag) and any type rule failing here is named below it.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                ruleKeys: [
+                    'polish/typography-rhythm', 'polish/default-typeface', 'polish/tiny-text',
+                    'polish/text-wrap-balance', 'polish/tabular-nums', 'polish/font-smoothing',
+                    'a11y/justified-text', 'a11y/heading-order', 'polish/text-overflow-strategy',
+                ],
+                lawDomains: ['typography'],
+                domainLabel: 'typography',
+            });
             const guidance = [
                 'Typography Excellence: Master type scales, kerning, variable fonts, and reading comfort.',
                 '',
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no typography rules were measurable on this project.'),
                 'TYPE SCALE:',
                 `- Display family: ${displayFamily}${cite('typography.display.family')}`,
                 `- Body family: ${bodyFamily}${cite('typography.body.family')}`,

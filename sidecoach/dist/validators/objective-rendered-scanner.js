@@ -6,34 +6,21 @@ exports.inPageObjective = inPageObjective;
 exports.analyzeHtmlOnBrowser = analyzeHtmlOnBrowser;
 exports.scanObjectiveRendered = scanObjectiveRendered;
 /**
- * OWNED rendered OBJECTIVE scanner (Sidecoach Stage 1 - reimplement-and-own).
+ * The playwright chromium driver, resolved AT LAUNCH TIME instead of at module load.
  *
- * Detects the spec-grounded OBJECTIVE a11y/quality classes by RENDERING the page and reading the real DOM +
- * computed styles - the classes a faithful implementation of the public spec must agree on:
- *   - broken-image        : <img> with no usable source / fails to render (renders as a broken box)
- *   - skipped-heading     : WCAG 1.3.1 - the heading outline skips a level (e.g. h1 then h3)
- *   - low-contrast        : WCAG 1.4.3 - text/background contrast below the AA ratio (CSS Color 4 compositing)
- *   - gray-on-color       : WCAG 1.4.3 - desaturated (gray) text on a chromatic background, AA-failing
- *   - justified-text      : WCAG 1.4.8 - justified body text (uneven spacing / rivers; AAA 1.4.8 disallows)
+ * `import { chromium } from 'playwright'` at module scope cost every consumer 134ms even when
+ * no browser was ever launched (measured 2026-07-29: it was the single largest cost in a static
+ * scan of bin/sidecoach-detect.js, which never renders). The `import type` above keeps every
+ * `typeof chromium.launch` annotation in this file working and is erased at runtime.
  *
- * AUTHORED FROM PUBLIC SPECS ONLY (WCAG 2.x SC 1.3.1 / 1.4.3 / 1.4.8 ; CSS Color Module Level 4 alpha
- * compositing ; WAI-ARIA heading roles). Copies NOTHING from oracle.
- *
- * INDEPENDENCE (eval integrity): this is the PRODUCT scanner. It is a DISTINCT artifact from the eval
- * ground-truth referee (eval/objective-label-rendered.mjs). It MUST NOT import anything under eval/. Both
- * draw on the same PUBLIC specs; neither shares code with the other. The committed test
- * src/__tests__/referee-independence.test.ts mechanically enforces zero eval/ imports in this module's graph.
- *
- * ENGINE: reuses the product's already-shipped Playwright dependency + the same render-determinism +
- * hermeticity posture as src/validators/browser-evidence-collector.ts (no new engine / dependency). Render is
- * deterministic + spec-faithful: page scripts stripped, external subresources blocked (inline content only),
- * fixed 1280x800 viewport, reduced motion - so objective defects reflect the authored HTML/CSS, reproducibly.
- *
- * STAGE 1 / S0 STATUS: render harness + types + independence boundary established; the per-class in-page
- * classification (S1-S4) is added incrementally. With no rules implemented yet, scanObjectiveRendered renders
- * and returns []. Each subsequent step fills one class and turns its calibration fixtures green.
+ * FAIL-CLOSED: a missing or broken playwright now throws from inside the launch path, where the
+ * existing try/catch turns it into `available: false` with a reason - rather than crashing the
+ * whole module at import. That is strictly safer: an unavailable scan is still never clean.
  */
-const playwright_1 = require("playwright");
+function chromiumDriver() {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('playwright').chromium;
+}
 exports.OBJECTIVE_RULES = [
     'broken-image', 'skipped-heading', 'low-contrast', 'gray-on-color', 'justified-text',
 ];
@@ -360,7 +347,7 @@ async function analyzeHtmlOnBrowser(browser, html, timeoutMs = 30000, render = {
  */
 async function scanObjectiveRendered(html, opts = {}) {
     const timeoutMs = opts.timeoutMs ?? 30000;
-    const launch = opts.launcher ?? (() => playwright_1.chromium.launch({ headless: true }));
+    const launch = opts.launcher ?? (() => chromiumDriver().launch({ headless: true }));
     let browser;
     try {
         browser = await launch();

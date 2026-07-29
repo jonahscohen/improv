@@ -10,6 +10,7 @@ const project_context_1 = require("./project-context");
 const design_laws_1 = require("./design-laws");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 function nonEmptyStringOrNull(v) {
     if (typeof v === 'string' && v.trim().length > 0)
         return v;
@@ -95,7 +96,20 @@ class FlowABrandVerifyHandler extends flow_handler_1.BaseFlowHandler {
                 { label: `Design laws cached: ${designLawsCached.length} domains`, required: true },
                 { label: 'Pre-flight checks passed', required: true, description: preflightIssues.length === 0 ? 'All checks passed' : `${preflightIssues.length} issues found` },
             ]);
+            // TEACH, THEN CHECK. This handler already imported `design-laws.ts` - and what it pulled out
+            // were the law STRINGS, printed as a bulleted list below. A list of rule statements is not
+            // instruction: it says what the rules ARE and never what good looks like, why it matters, or
+            // what to change. That is the defect measured across ten handlers on 2026-07-29. The brief now
+            // carries the reflex and register craft, which is most valuable here because a category reflex
+            // caught at brand-verify is caught before anything gets built on top of it.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                findingClasses: ['anti-pattern'],
+                lawDomains: ['reflex', 'critique'],
+                domainLabel: 'brand direction and category reflex',
+            });
             const guidance = [
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no anti-pattern rules were measurable on this project.'),
                 `Register: ${registerDetected === 'brand' ? 'Design IS the product (marketing, landing, campaigns)' : 'Design SERVES the product (app UI, dashboard, tool)'}`,
                 `Design laws loaded for ${registerDetected} register:`,
                 ...designLawsCached.map((law) => `  - ${law}`),

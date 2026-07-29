@@ -23,7 +23,8 @@ function toFinding(validatorId, r) {
     return {
         validatorId, ruleId: r.ruleId, canonicalRuleKey: r.canonicalRuleKey,
         severity: r.severity, findingClass: r.findingClass,
-        evidenceLocations: r.evidenceLocations, message: r.message, remediation: r.remediation,
+        evidenceLocations: r.evidenceLocations, locationKind: r.locationKind,
+        message: r.message, remediation: r.remediation,
     };
 }
 // Synthesize a required rule the validator did not cleanly produce. Looks up the

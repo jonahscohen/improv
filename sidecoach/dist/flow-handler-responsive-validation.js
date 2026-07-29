@@ -15,6 +15,7 @@ const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");
 const reference_loader_1 = require("./reference-loader");
 const model_routing_1 = require("./model-routing");
+const craft_flow_1 = require("./craft-flow");
 class FlowMResponsiveValidationHandler extends flow_handler_1.BaseFlowHandler {
     constructor() {
         super('flowM_responsive_validation');
@@ -49,9 +50,26 @@ class FlowMResponsiveValidationHandler extends flow_handler_1.BaseFlowHandler {
                 { label: 'Responsive degrade plan documented per component (XS / SM / MD behavior named explicitly)', required: true },
             ]);
             const breakpointLines = breakpoints.map((b) => `- ${b.name} (${b.range}): primary=${b.primaryPattern} | nav=${b.navPattern} | table=${b.tablePattern}`);
+            // TEACH, THEN CHECK. Shape is `produce`, not `check`, and the reason is worth stating: the
+            // registry has only a handful of responsive-decidable rules from static source (hit area needs
+            // DOM geometry, most of it needs a render), so a findings-only brief here would teach almost
+            // nothing on a page with real responsive defects. The craft for this domain lives in the law
+            // corpus - the min-width cascade, tier boundaries as device facts, the thumb zone, input-method
+            // detection over width - and `adapt` is invoked to CHANGE the layout, not just grade it. The
+            // rules that ARE statically decidable are still enumerated below.
+            const craft = await (0, craft_flow_1.flowCraft)(context.projectPath, {
+                shape: 'produce',
+                ruleKeys: [
+                    'a11y/min-hit-area', 'perf/image-dimensions', 'perf/image-lazy-load',
+                    'polish/text-overflow-strategy', 'polish/tiny-text', 'polish/typography-rhythm',
+                ],
+                lawDomains: ['responsive'],
+                domainLabel: 'responsive behaviour',
+            });
             const guidance = [
                 'Responsive Validation: Bencium 5-tier breakpoint table + WCAG 2.5.5 hit-area floor (44x44) + named anti-patterns + iOS-Safari gotchas.',
                 '',
+                ...(0, craft_flow_1.craftGuidanceBlock)(craft, 'no statically decidable responsive rules were measurable on this project.'),
                 'BREAKPOINT TABLE (Bencium, prescribed):',
                 ...breakpointLines,
                 '',

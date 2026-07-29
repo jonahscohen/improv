@@ -125,6 +125,26 @@ function lineNumberAt(content, offset) {
     }
     return line;
 }
+/**
+ * Offset of the rule BODY (the first character after `{`) for a /([^{}]+)\{([^}]*)\}/ match.
+ *
+ * WHY THIS EXISTS: reporting `lineNumberAt(content, m.index)` is off by one whenever the
+ * previous rule ends on its own line. `[^{}]+` greedily consumes the newline after the
+ * previous rule's `}`, so m.index lands on the PREVIOUS rule's closing-brace line. Measured
+ * 2026-07-29: the canary's gradient-text rule is on line 6 and was reported as line 5.
+ *
+ * The fix is not "add one" - that would break a rule whose selector and brace share a line
+ * with the previous one. Anchoring to the offset of the TRIGGERING DECLARATION inside the
+ * body is correct in every layout, and it is also the more useful line: it points at the
+ * declaration a reader has to change, not at the selector above it.
+ */
+function bodyOffsetOf(match) {
+    return (match.index ?? 0) + match[1].length + 1;
+}
+/** File line of a declaration found at `declIndex` inside the body of a rule match. */
+function declarationLine(content, match, declIndex) {
+    return lineNumberAt(content, bodyOffsetOf(match) + (declIndex ?? 0));
+}
 function findingFromBan(banName, file, line, matchedText, severity = 'P1') {
     const ban = getBan(banName);
     return {
@@ -153,13 +173,14 @@ function scanSideStripeBorders(content, file) {
         const borderMatch = body.match(/border-(?:left|right)\s*:\s*([2-9]|[1-9][0-9]+)\s*px\s+(?:solid|dashed|dotted|double)\s+(?!transparent|inherit|currentColor)([^\n;]+);?/i);
         if (!borderMatch)
             continue;
+        const declLine = declarationLine(content, m, borderMatch.index);
         // Filter to ban targets: card / list / alert / callout / install / banner / notice
         // Match the keyword anywhere in a class token so namespaced/BEM names like
         // `.ref-callout`, `.tool-card`, `.foo__alert` are caught, not only bare `.card`.
         const targetable = /\.[\w-]*(?:card|alert|callout|notice|banner|install|tile|message|toast|tip|panel)[\w-]*\b|aside\b|blockquote\b/i.test(selector);
         if (!targetable)
             continue;
-        findings.push(findingFromBan('side-stripe-borders', file, lineNumberAt(content, m.index), `${selector} { ${borderMatch[0].trim()} }`, 'P1'));
+        findings.push(findingFromBan('side-stripe-borders', file, declLine, `${selector} { ${borderMatch[0].trim()} }`, 'P1'));
     }
     return findings;
 }
@@ -171,10 +192,12 @@ function scanGradientText(content, file) {
             continue;
         const selector = m[1].trim();
         const body = m[2];
-        const hasClip = /background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text/i.test(body);
+        // Matched (not tested) so the finding can point at the clip declaration's own line
+        // rather than at the rule-match start, which sits on the PREVIOUS rule's line.
+        const clip = body.match(/background-clip\s*:\s*text|-webkit-background-clip\s*:\s*text/i);
         const hasGradient = /(?:linear|radial|conic)-gradient\s*\(/i.test(body);
-        if (hasClip && hasGradient) {
-            findings.push(findingFromBan('gradient-text', file, lineNumberAt(content, m.index), `${selector} { ... background-clip: text + gradient }`, 'P1'));
+        if (clip && hasGradient) {
+            findings.push(findingFromBan('gradient-text', file, declarationLine(content, m, clip.index), `${selector} { ... background-clip: text + gradient }`, 'P1'));
         }
     }
     return findings;
@@ -187,7 +210,8 @@ function scanGlassmorphism(content, file) {
             continue;
         const selector = m[1].trim();
         const body = m[2];
-        const hasBlur = /backdrop-filter\s*:\s*[^;]*\bblur\s*\(/i.test(body);
+        const blur = body.match(/backdrop-filter\s*:\s*[^;]*\bblur\s*\(/i);
+        const hasBlur = blur !== null;
         // Low-alpha background: rgba(...) or hsla(...) with last component <= 0.4
         const lowAlphaMatch = body.match(/(?:rgba|hsla)\s*\(\s*[\d.,%\s]+,\s*(0?\.\d+|0|1)\s*\)/gi);
         let hasLowAlpha = false;
@@ -204,7 +228,7 @@ function scanGlassmorphism(content, file) {
             }
         }
         if (hasBlur && hasLowAlpha) {
-            findings.push(findingFromBan('glassmorphism-default', file, lineNumberAt(content, m.index), `${selector} { backdrop-filter: blur(...) + low-alpha background }`, 'P1'));
+            findings.push(findingFromBan('glassmorphism-default', file, declarationLine(content, m, blur.index), `${selector} { backdrop-filter: blur(...) + low-alpha background }`, 'P1'));
         }
     }
     return findings;

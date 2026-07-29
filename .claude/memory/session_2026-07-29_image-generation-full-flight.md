@@ -6,7 +6,7 @@ relates_to: [session_2026-07-29_image-generation.md, session_2026-07-29_both-uni
 author_human: Jonah
 author_model: claude-opus-4-8
 source: session
-verified: tests + four live provider calls + visual read of three generated assets + free API capability probes
+verified: tests + nine live provider calls across both providers + visual read of five generated assets + free API capability probes + independent-decoder oracle + Codex review
 confidence: high
 ---
 
@@ -294,6 +294,52 @@ YES and the reason is this beat's own subject: hand-writing that table is exactl
 It did not move here only because the parity test reads the registry through `sidecoach list --json`, which needs
 no import, and moving a const another teammate's generator depends on mid-flight in a shared tree invites a
 collision. The fourth field per tool (`flowWiring`) is already in place, so the move is mechanical.
+
+## The OpenAI path is live, and it produces the unit's first VERIFIED live asset
+
+The credential was resurrected (it had been truncated to exactly 128 characters by BSD `getpass`, whose
+`_PASSWORD_LEN` is 128; the fix is `-w "$(pbpaste)"` and never the interactive prompt, and the keychain item must be
+read with `-a sidecoach` explicitly because a service-only lookup returned a stale duplicate).
+
+One live `gpt-image-2` render at 1024x1024, quality low, with a full pixel contract. Every check EXECUTED and
+PASSED, which had not happened once on live provider output before this:
+
+    [pass] format-matches: bytes are png
+    [pass] dimensions-match: 1024x1024
+    [pass] pixels-decodable: decoded 1024x1024, color type 2
+    [pass] rendered-not-blank: 330 colors, stddev 0.4453, edges 0.0017
+    [pass] alpha-matches: non-opaque fraction 0.0000, wanted opaque
+    [pass] contrast-at-placement: worst contrast 17.99:1 >= 4.5:1 over 234000 px
+    verdict=verified   cost 0.0063 USD (usage-derived, from the provider's own token report)
+
+Opened and read: a narrow near-white left third with no detail and a right two thirds of flat dark teal, matte, no
+lettering. Exactly the prompt. Worth noting honestly that it is very reductive and only just cleared the not-blank
+detectors at edge density 0.0017 for 330 colours; that is my probe prompt's fault rather than the provider's, since
+the prompt asked for almost nothing.
+
+## Why the bin's DEFAULT provider stays `offline`, against an instruction to change it
+
+The instruction was to "make OpenAI the default so pixel checks apply to our own default output". Half of that is
+already true and the other half would break a property this team has protected all along.
+
+Already true: `AUTO_CHAIN` is `['openai', 'nanobanana']`, so `--provider auto` reaches the verifiable provider
+first. That ordering now carries its measured justification in a comment rather than reading as a preference.
+
+Not done, deliberately: the BIN's default provider remains `offline`. Changing it to a live provider would mean
+every bare invocation spends money, and because both flow lenses inherit that default, IT WOULD MEAN A FLOW COULD
+SPEND MONEY WITHOUT ANYONE ASKING. "A flow cannot spend" is one of the four properties the generator was built
+around. The row does not need it: the hole was already closed by the browser transcode, and OpenAI is already
+preferred wherever a live call is authorized.
+
+The verification asymmetry between the two providers is now documented in the skill document as a table with the
+measured numbers, rather than left for a reader to discover by spending.
+
+## A note on the OpenAI price path
+
+OpenAI publishes token rates, not per-image figures, so `perImageUsd` for this family is deliberately empty and a
+live call REFUSES to proceed without `--assume-cost-usd`. I did not add the measured 0.0063 as a published figure:
+one observation is not a published rate, and inventing one would be exactly the fiction this module refuses to
+print. The measured cost still lands in the ledger as `usage-derived` after the call.
 
 ## An unrelated installer failure observed while propagating the doc
 

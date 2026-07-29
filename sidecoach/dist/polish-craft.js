@@ -551,6 +551,11 @@ function craftBriefLines(rules, opts = {}) {
             for (const l of note.example.split('\n'))
                 lines.push(`     ${l}`);
         }
+        // The note has always CARRIED its source; printing it was added 2026-07-29 when the corpus was
+        // generalized across the other 25 verbs. Traceability that only exists in the source file is
+        // traceability the reader of the payload does not have, and a claim with a citation is checkable
+        // where a claim without one has to be taken on trust. Every verb's brief now cites the same way.
+        lines.push(`   Source: ${note.source}`);
         lines.push('');
     });
     return lines;

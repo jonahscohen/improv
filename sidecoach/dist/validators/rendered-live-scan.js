@@ -4,30 +4,21 @@ exports.UNPROBEABLE_RENDER_REASON = exports.EMPTY_RENDER_REASON = void 0;
 exports.inPageRenderIsEmpty = inPageRenderIsEmpty;
 exports.scanRenderedLive = scanRenderedLive;
 /**
- * LIVE rendered scan bridge (Sidecoach Stage 1 - Option B convergence).
+ * The playwright chromium driver, resolved AT LAUNCH TIME instead of at module load.
  *
- * The eval-facing scanners (objective-rendered-scanner.ts / subjective-rendered-scanner.ts) render an HTML
- * STRING via page.setContent - the hermetic basis that renders IDENTICALLY to the eval ground-truth referee, so
- * the head-to-head 0.894 proof stays valid. Eval imports those functions directly and MUST stay untouched.
+ * `import { chromium } from 'playwright'` at module scope cost every consumer 134ms even when
+ * no browser was ever launched (measured 2026-07-29: it was the single largest cost in a static
+ * scan of bin/sidecoach-detect.js, which never renders). The `import type` above keeps every
+ * `typeof chromium.launch` annotation in this file working and is erased at runtime.
  *
- * This module is the LIVE counterpart: it renders a real renderUrl via page.goto (so same-origin app scripts run
- * and the detector reads the ACTUAL rendered DOM of a live app, not a static shell), then runs the SAME in-page
- * detector functions (inPageObjective + inPageSubjective). One browser, one page, both detector families - the
- * "ONE memoized scan per target" the converged engine needs. The page-load boundary differs (goto vs setContent);
- * the detection LOGIC is shared. This is the additive live caller that ships the oracle-beating detection to
- * the natural-language workflow (Codex review P0-1 / P0-4 / P1-2 / P1-3).
- *
- * HERMETICITY: same-origin-only subresources (reuse isSubresourceAllowed), all WebSockets blocked, reduced
- * motion, fixed 1280x800 viewport - deterministic, no cross-origin traffic. FAIL-CLOSED: a launch/navigation
- * error returns {available:false} for BOTH families (never a false "0 findings = clean"); a single detector
- * throwing marks only that family unavailable. ABORTABLE: honors an AbortSignal at every phase, mirroring
- * browser-evidence-collector.ts.
- *
- * INDEPENDENCE: this is PRODUCT code. It MUST NOT import anything under eval/. It imports the product scanners +
- * the product collector only; the eval referee shares no code with it. referee-independence.test guards the
- * objective-scanner graph; this new module is not in that graph (the scanner does not import it).
+ * FAIL-CLOSED: a missing or broken playwright now throws from inside the launch path, where the
+ * existing try/catch turns it into `available: false` with a reason - rather than crashing the
+ * whole module at import. That is strictly safer: an unavailable scan is still never clean.
  */
-const playwright_1 = require("playwright");
+function chromiumDriver() {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('playwright').chromium;
+}
 const objective_rendered_scanner_1 = require("./objective-rendered-scanner");
 const subjective_rendered_scanner_1 = require("./subjective-rendered-scanner");
 const browser_evidence_collector_1 = require("./browser-evidence-collector");
@@ -102,7 +93,7 @@ async function scanRenderedLive(renderUrl, signal, opts = {}) {
         return { objective: { available: false, reason: r }, subjective: { available: false, reason: r } };
     }
     const timeoutMs = opts.timeoutMs ?? 30000;
-    const launch = opts.launcher ?? (() => playwright_1.chromium.launch({ headless: true }));
+    const launch = opts.launcher ?? (() => chromiumDriver().launch({ headless: true }));
     let browser;
     let launchPromise;
     let phase = 'launch';
