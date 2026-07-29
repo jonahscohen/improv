@@ -8,6 +8,7 @@ source: session
 verified: tests
 confidence: high
 relates_to: [reference_cmux_team_init_orphan_bug.md, session_2026-07-06_uncommitted-backlog-commit-sequence.md]
+superseded_by: session_2026-07-28_team-reaper-liveness.md
 ---
 
 The session team dir ~/.claude/teams/session-4bb2aafe/ kept losing its
