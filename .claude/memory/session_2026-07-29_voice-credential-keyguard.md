@@ -195,6 +195,48 @@ Live immediately, no session restart: `~/.claude/hooks/bash-guard.sh` is a symli
 repo file and the hook is exec'd fresh per tool call. `settings.json` was not touched (that
 registration is what would need a restart).
 
+# The write side, added because tonight produced the precedent for it
+
+Late the same night `adversary` found that four characters of a LIVE credential were
+committed into this repo, inside the very test fixture written to prove credential tails do
+not leak. The fixture copied a provider masked 401 echo verbatim, and the mask preserved the
+real tail. Purged in `5fcfdcee` with an invented tail and a comment saying why it has to stay
+that way.
+
+**The root cause is the same class this whole unit exists to close.** The sweep that was
+meant to catch it classified the hit on its SHAPE - masked, sitting in a test file - and
+never asked whether the visible part was real. It was human judgment applied to a pattern,
+and it produced an absolute claim ("no key fragment survives on disk") that was false. Prose
+did not catch it. A mechanical check on content does. That is the argument for the read-side
+gate too, one layer over: an agent that HAD the constraint asked the right question and then
+did not wait for the answer.
+
+So `claude/hooks/content-guard.sh` (the PreToolUse hook for Write/Edit/MultiEdit) now refuses
+a write carrying a key-prefix-anchored masked literal whose tail survives, unless the content
+or the file already on disk SAYS where that tail came from.
+
+**Why the check is shaped that way, and what it deliberately does not do.** The only check
+that could verify a tail is fake is one that compares it against the live credentials -
+four characters carry no entropy signal, so no entropy test can see them. That would make
+this guard a credential reader, on every file write, over keys this unit was told not to
+touch. It does not do that. Instead it enforces the QUESTION rather than the answer: either
+attestation passes, that the tail is synthetic, or that it was real and this file is the
+incident record, because both mean the author engaged with provenance. Silence is what gets
+blocked, and silence is what shipped the fragment.
+
+**Measured before shipping, because a noisy gate gets switched off.** Across every tracked
+file in the repo, the prefix-anchored pattern hits 4 times and all 4 are genuine masked-key
+literals. The same pattern without the prefix hits 17 times, 13 of them CSS comment banners
+in captured HTML corpus files - a 76 percent false-positive rate that would have made the
+gate worthless. All 4 real hits carry an attestation and all 4 pass as full writes.
+
+The attestation is looked for in the edited span AND in the file on disk, because an Edit
+hands the hook only `new_string`: a one-line tweak to that fixture, whose comment sits ten
+lines above, would otherwise be denied for a statement already present. Verified both ways -
+the identical masked literal is ALLOWED into the attested fixture and DENIED into a fresh
+file. The deny message quotes nothing from the match; echoing a real tail into the transcript
+would be the leak it exists to prevent.
+
 # Adjacent finding
 
 Codex is HEALTHY again as of 2026-07-29 03:47 (`codex-review.py --smoke` returned SMOKE_OK
@@ -224,6 +266,19 @@ gate stops it from being RUN, which is a fence, not a fix.
 
 # Files touched
 
-- `claude/hooks/bash-guard.sh` - keyguard gate (both shapes, two allowances); `!` added to
-  the shared `PREFIX` set
-- `claude/hooks/test-keyguard.sh` - new falsification suite
+- `claude/hooks/bash-guard.sh` - read-side keyguard (both shapes, the indirect-word
+  fallback, one allowance); `!` added to the shared `PREFIX` set
+- `claude/hooks/test-keyguard.sh` - new falsification suite, 77 assertions, 14 mutants
+- `claude/hooks/content-guard.sh` - write-side masked-tail attestation check
+- `claude/hooks/test-content-guard.sh` - 12 cases for it (47 passed / 0 failed overall)
+
+Both hooks are already registered and symlinked live, so both halves are live immediately and
+no session restart is needed. `settings.json` was not touched, which is the only change that
+would have required one.
+
+One process note worth keeping: writing the write-side check tripped TWO existing guards on
+my own edits - content-guard denied an edit that reproduced its own legacy-model line, and
+bash-guard denied a test command containing an attribution string. Neither was a false
+positive; both were the guards working on content that legitimately had to contain the banned
+pattern. I re-anchored the edit and rewrote the probe rather than asking for a bypass, since
+neither needed the banned text to do its job.
