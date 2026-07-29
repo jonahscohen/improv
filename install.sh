@@ -413,6 +413,74 @@ link_or_copy() {
 #
 # Ownership-aware: backup_if_exists preserves a user's own real same-named file
 # (their ~/.claude/agents/quick-answer.md) before it is replaced.
+# ------------------------------------------------------------
+# deps_current <dir> / deps_record <dir>: were the installed dependencies installed FROM THIS
+# manifest?
+#
+# WHY NOT "does node_modules exist". A presence-only test skips the install on a checkout that
+# ADDED or BUMPED a dependency; the build can then exit 0 against stale versions with every
+# artifact check passing, so the component is reported installed and is quietly wrong. Flagged
+# by independent review.
+#
+# WHY NOT MTIME EITHER, which is what this was first written as. justify/install.sh COPIES its
+# package.json into $JUSTIFY_DIR on every run, so the manifest is always newer than
+# node_modules and an mtime comparison can never once report "current" - the offline fix would
+# have been dead code for the component that needed it most. Caught by a row going red, not by
+# reading it back.
+#
+# SO: a CONTENT fingerprint of the manifest and any lockfile, recorded inside node_modules
+# after a successful install and compared on the next run. Immune to the installer rewriting
+# its own manifest, and it answers the question that actually matters.
+#
+# ONE-TIME COST, stated plainly: a machine whose node_modules predates this stamp has no stamp,
+# so the first run after upgrading still performs a real `npm install` and needs the network.
+# Every run after that is offline-capable. Guessing instead would mean assuming an unstamped
+# tree matches a manifest nobody recorded.
+#
+# Duplicated in justify/install.sh, lotus/install.sh and install.sh because those run as
+# separate processes. If you change the rule, change all three.
+_deps_sha() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" 2>/dev/null | cut -d' ' -f1
+  else
+    # No hasher: emit a token that can never match a recorded stamp, so the caller installs
+    # rather than skipping. Failing toward "do the work" is the safe direction here.
+    printf 'no-hasher'
+  fi
+}
+
+deps_fingerprint() {
+  local d="$1" f acc=""
+  for f in package.json package-lock.json npm-shrinkwrap.json yarn.lock pnpm-lock.yaml; do
+    if [ -f "$d/$f" ]; then
+      acc="${acc}${f}:$(_deps_sha "$d/$f")
+"
+    fi
+  done
+  # An empty accumulator means there is no manifest at all; return a token rather than the
+  # hash of nothing, so two different empty directories are not declared equivalent.
+  if [ -z "$acc" ]; then printf 'no-manifest'; return 0; fi
+  printf '%s' "$acc" | { if command -v shasum >/dev/null 2>&1; then shasum -a 256; else sha256sum; fi; } | cut -d' ' -f1
+}
+
+deps_current() {
+  local d="$1" want got
+  [ -d "$d/node_modules" ] || return 1
+  [ -f "$d/node_modules/.improv-deps-stamp" ] || return 1
+  want="$(deps_fingerprint "$d")"
+  got="$(cat "$d/node_modules/.improv-deps-stamp" 2>/dev/null)" || return 1
+  [ -n "$got" ] || return 1
+  [ "$got" = "$want" ]
+}
+
+deps_record() {
+  local d="$1"
+  [ -d "$d/node_modules" ] || return 0
+  deps_fingerprint "$d" > "$d/node_modules/.improv-deps-stamp" 2>/dev/null || true
+}
+
 link_or_copy_data() {
   local src="$1" dst="$2"
 
@@ -6995,8 +7063,31 @@ if picked sidecoach; then
   ensure_settings_seed \
     || record_component_failure config "settings.json could not be made safe to write - see above."
 
-  (cd "$REPO_DIR/sidecoach" && npm install --silent && npm run build) \
-    || warn "Sidecoach build failed - run 'cd sidecoach && npm run build' manually"
+  # A BUILD FAILURE IS A COMPONENT FAILURE, not a warning. This used to `warn` and carry on,
+  # so a broken or offline sidecoach build printed one yellow line and the run still reached
+  # "Installation complete." with exit 0 - the same false-success shape the ledger was built
+  # to end, in the one component whose whole value is the built artifact. Routed through the
+  # ledger like every other partial failure, so the run exits non-zero and says which
+  # component did not apply. The manual command is kept because that was the useful half.
+  #
+  # `npm install` is SKIPPED when the dependencies are CURRENT - node_modules present AND no
+  # newer manifest or lockfile beside it. Without the skip, re-running the installer on a
+  # machine where nothing has changed needed the network to succeed. Without the currency
+  # half, a checkout that bumps a dependency would build against the old tree and report
+  # success; `deps_current` is duplicated in justify/install.sh and lotus/install.sh, which
+  # run as separate processes. Note this is STRICTER than the tilt-lab block below, which
+  # still tests presence alone.
+  if deps_current "$REPO_DIR/sidecoach"; then
+    info "sidecoach dependencies already current - skipping npm install (rm -rf sidecoach/node_modules to force)"
+    (cd "$REPO_DIR/sidecoach" && npm run build) \
+      || record_component_failure sidecoach "the sidecoach build failed - run 'cd sidecoach && npm run build' to see why."
+  else
+    if (cd "$REPO_DIR/sidecoach" && npm install --silent && npm run build); then
+      deps_record "$REPO_DIR/sidecoach"
+    else
+      record_component_failure sidecoach "the sidecoach build failed - run 'cd sidecoach && npm install && npm run build' to see why."
+    fi
+  fi
 
   # Was a bare `ln -sf` of SKILL.md ALONE. Two defects: it ignored hook_deploy_mode, so a
   # throwaway clone got a link that dangled the moment the clone was deleted; and the repo

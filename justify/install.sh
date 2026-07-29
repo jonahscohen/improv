@@ -12,6 +12,27 @@ set -euo pipefail
 #   5  the ~/.claude.json MCP registration failed
 #   6  the skill could not be installed
 
+# $HOME IS VALIDATED BEFORE ANYTHING IS DERIVED FROM IT. Under `set -u` an unset HOME aborted
+# here with a bare "HOME: unbound variable" from line one, before any of the ownership logic
+# below could report anything useful; and an EMPTY HOME is worse than unset, because it
+# silently makes every path absolute-from-root - /.claude, /.local/bin - so a run would try to
+# install into the filesystem root and, on a permissive box, succeed. A relative HOME has the
+# same shape of problem one directory down. None of those is a "pretend user" this installer
+# can safely write for, so all three are refused by name. Flagged by independent review.
+if [ -z "${HOME:-}" ]; then
+  echo "ERROR: HOME is unset or empty - refusing to install." >&2
+  echo "       Every path this installer writes is derived from HOME; with no HOME they would" >&2
+  echo "       resolve against the filesystem root. Re-run with HOME set." >&2
+  exit 1
+fi
+case "$HOME" in
+  /*) ;;
+  *)
+    echo "ERROR: HOME is not an absolute path ($HOME) - refusing to install." >&2
+    exit 1
+    ;;
+esac
+
 CLAUDE_DIR="${HOME}/.claude"
 JUSTIFY_DIR="${CLAUDE_DIR}/justify"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -705,11 +726,89 @@ fi
 # today's build failed, so the same false success survives in a narrower window. A step
 # whose output this installer requires does not get to fail quietly. The manual commands
 # are still printed, because that is the useful half of the old warning.
-echo "Installing dependencies..."
-(cd "$JUSTIFY_DIR" && npm install 2>/dev/null) || {
-  echo "ERROR: npm install failed. Run manually: cd $JUSTIFY_DIR && npm install" >&2
-  exit 4
+# deps_current <dir> / deps_record <dir>: were the installed dependencies installed FROM THIS
+# manifest?
+#
+# WHY NOT "does node_modules exist". A presence-only test skips the install on a checkout that
+# ADDED or BUMPED a dependency; the build can then exit 0 against stale versions with every
+# artifact check passing, so the component is reported installed and is quietly wrong. Flagged
+# by independent review.
+#
+# WHY NOT MTIME EITHER, which is what this was first written as. justify/install.sh COPIES its
+# package.json into $JUSTIFY_DIR on every run, so the manifest is always newer than
+# node_modules and an mtime comparison can never once report "current" - the offline fix would
+# have been dead code for the component that needed it most. Caught by a row going red, not by
+# reading it back.
+#
+# SO: a CONTENT fingerprint of the manifest and any lockfile, recorded inside node_modules
+# after a successful install and compared on the next run. Immune to the installer rewriting
+# its own manifest, and it answers the question that actually matters.
+#
+# ONE-TIME COST, stated plainly: a machine whose node_modules predates this stamp has no stamp,
+# so the first run after upgrading still performs a real `npm install` and needs the network.
+# Every run after that is offline-capable. Guessing instead would mean assuming an unstamped
+# tree matches a manifest nobody recorded.
+#
+# Duplicated in justify/install.sh, lotus/install.sh and install.sh because those run as
+# separate processes. If you change the rule, change all three.
+_deps_sha() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" 2>/dev/null | cut -d' ' -f1
+  else
+    # No hasher: emit a token that can never match a recorded stamp, so the caller installs
+    # rather than skipping. Failing toward "do the work" is the safe direction here.
+    printf 'no-hasher'
+  fi
 }
+
+deps_fingerprint() {
+  local d="$1" f acc=""
+  for f in package.json package-lock.json npm-shrinkwrap.json yarn.lock pnpm-lock.yaml; do
+    if [ -f "$d/$f" ]; then
+      acc="${acc}${f}:$(_deps_sha "$d/$f")
+"
+    fi
+  done
+  # An empty accumulator means there is no manifest at all; return a token rather than the
+  # hash of nothing, so two different empty directories are not declared equivalent.
+  if [ -z "$acc" ]; then printf 'no-manifest'; return 0; fi
+  printf '%s' "$acc" | { if command -v shasum >/dev/null 2>&1; then shasum -a 256; else sha256sum; fi; } | cut -d' ' -f1
+}
+
+deps_current() {
+  local d="$1" want got
+  [ -d "$d/node_modules" ] || return 1
+  [ -f "$d/node_modules/.improv-deps-stamp" ] || return 1
+  want="$(deps_fingerprint "$d")"
+  got="$(cat "$d/node_modules/.improv-deps-stamp" 2>/dev/null)" || return 1
+  [ -n "$got" ] || return 1
+  [ "$got" = "$want" ]
+}
+
+deps_record() {
+  local d="$1"
+  [ -d "$d/node_modules" ] || return 0
+  deps_fingerprint "$d" > "$d/node_modules/.improv-deps-stamp" 2>/dev/null || true
+}
+
+# SKIPPED when the dependencies are already current. This installer used to run `npm install`
+# unconditionally, so re-installing a machine where nothing had changed still required the
+# network - and because the failure is `exit 4`, routed into the top-level ledger, an OFFLINE
+# re-install of an already-complete machine exited 1 having changed nothing at all.
+echo "Installing dependencies..."
+if deps_current "$JUSTIFY_DIR"; then
+  echo "  dependencies already current - skipping npm install (rm -rf $JUSTIFY_DIR/node_modules to force)"
+else
+  (cd "$JUSTIFY_DIR" && npm install 2>/dev/null) || {
+    echo "ERROR: npm install failed. Run manually: cd $JUSTIFY_DIR && npm install" >&2
+    exit 4
+  }
+  # Record WHAT was installed, so the next run can tell whether it is still current. Only
+  # after a SUCCESSFUL install - stamping a failed one would license skipping it forever.
+  deps_record "$JUSTIFY_DIR"
+fi
 
 echo "Building core script..."
 (cd "$JUSTIFY_DIR" && node build.js 2>/dev/null) || {
@@ -717,8 +816,21 @@ echo "Building core script..."
   exit 4
 }
 
+# `npx -y tsc` FETCHES when tsc is not already installed, and the `-y` means it does so
+# without asking. On a machine whose node_modules is intact the compiler is right there, so
+# prefer it and leave npx as the fallback for a tree that genuinely lacks it. This is the
+# other half of making an offline re-install possible.
 echo "Building server..."
-(cd "$JUSTIFY_DIR" && npx -y tsc -p tsconfig.server.json 2>/dev/null) || {
+# AN ARRAY, not a scalar. `$JUSTIFY_TSC` unquoted word-splits, so a home containing a space -
+# /Users/Alice Smith - turned the resolved compiler path into two nonexistent arguments and the
+# offline build failed for a reason unrelated to anything it was testing. Quoting the scalar
+# would have broken the two-word npx fallback instead. Flagged by independent review.
+if [ -x "$JUSTIFY_DIR/node_modules/.bin/tsc" ]; then
+  JUSTIFY_TSC=("$JUSTIFY_DIR/node_modules/.bin/tsc")
+else
+  JUSTIFY_TSC=(npx -y tsc)
+fi
+(cd "$JUSTIFY_DIR" && "${JUSTIFY_TSC[@]}" -p tsconfig.server.json 2>/dev/null) || {
   echo "ERROR: the server build failed. Run manually: cd $JUSTIFY_DIR && npx tsc -p tsconfig.server.json" >&2
   exit 4
 }
@@ -758,63 +870,173 @@ done
 chmod +x "$JUSTIFY_DIR/init.sh" "$JUSTIFY_DIR/remove.sh" "$JUSTIFY_DIR/justify-watch.sh" "$JUSTIFY_DIR/justify-done.sh" \
   "$JUSTIFY_DIR/justify-serve.sh" "$JUSTIFY_DIR/justify-worker.sh" "$JUSTIFY_DIR/justify-watch-arm.sh" "$JUSTIFY_DIR/justify-watch-disarm.sh"
 
-# Put commands in PATH - try /usr/local/bin first, then homebrew, then ~/.local/bin
-BIN_DIR=""
-for d in /usr/local/bin /opt/homebrew/bin "${HOME}/.local/bin"; do
-  if [ -d "$d" ] && [ -w "$d" ]; then
-    BIN_DIR="$d"
-    break
+# >>> justify-shim-bin-selection >>>
+# WHERE THE SHIMS GO, and the rule that decides it.
+#
+# THE DEFECT THIS REPLACES. The old selection took the first WRITABLE of /usr/local/bin,
+# /opt/homebrew/bin, $HOME/.local/bin. The first two of those belong to the real user no
+# matter what $HOME says, so a run with $HOME redirected planted symlinks into the real
+# machine's shared bin pointing at scripts inside the sandbox. Reproduced live on
+# 2026-07-28: eight shims in /opt/homebrew/bin aimed at a sandbox HOME, and the run
+# REPORTED SUCCESS, because the verification loop below compares each link against
+# "$JUSTIFY_DIR/$target" and $JUSTIFY_DIR is derived from the same redirected $HOME. The
+# links it had just mis-planted were exactly the links it expected. Self-consistency was
+# the false green.
+#
+# The guard that used to sit here refused only when $HOME resolved under a TEMP root. That
+# was the right subject in 2026-07-16 (a reaped /var/folders tree) and the wrong PREDICATE:
+# any durable sandbox path - /Users/me/Documents/sandbox, a CI workspace, a second checkout
+# under a home-relative dir - walked straight through it. It also could not be complied
+# with: its own advice was "set BIN_DIR inside the temp tree", while the selection above it
+# unconditionally reset BIN_DIR="" before probing, discarding any override.
+#
+# THE RULE NOW. A shared bin may be written ONLY when $HOME is this user's actual home
+# directory according to the account database - not according to $HOME, which is the thing
+# under suspicion. Anything else, including a home we cannot determine, falls back to
+# "$HOME/.local/bin", which belongs to whoever the run is pretending to be and is therefore
+# always safe to write. This strictly subsumes the temp-root check (a temp HOME is never the
+# passwd home), so that check is gone rather than kept alongside.
+#
+# WHY FALL BACK RATHER THAN REFUSE. The old guard exited 1, which fails every sandboxed
+# rehearsal of this installer - and rehearsing it in a sandbox is the correct thing to do,
+# which is how this defect came to be found in the first place. Redirecting the shims makes
+# a sandboxed install both correct AND useful. A run that cannot even create its own
+# ~/.local/bin still fails loudly below.
+#
+# A note on sudo: `id -un` under sudo is root, whose passwd home is /var/root, so a sudo run
+# with the caller's HOME preserved reads as "not the real home" and lands in $HOME/.local/bin
+# instead of a shared bin. That is the safe direction and is deliberate - a root-owned
+# symlink in /opt/homebrew/bin pointing into a user's home is worse than a user-owned one in
+# their own bin.
+
+# justify_real_home: the invoking user's home per the account database. Three probes because
+# no single one is portable, and a FAILURE to determine it must be distinguishable from
+# determining it to be empty - the caller treats "unknown" as "not the real home".
+# EVERY PROBE'S EXIT STATUS IS CHECKED, not just its output. A pipeline that prints a
+# plausible line and then fails - `dscl` emitting a cached row before erroring, a `getent`
+# that writes a passwd entry and exits non-zero - would otherwise be accepted, and since this
+# runs inside an `if`, errexit does not intervene. Accepting output from a failed probe is
+# the worst available outcome here: it says "this IS the real home" on no evidence, which is
+# the exact permission the shared-bin write needs. Flagged by independent review.
+#
+# The result must also look like an absolute path. A probe that succeeds and prints "" or a
+# relative fragment tells us nothing, and treating it as an answer would compare $HOME
+# against garbage.
+justify_real_home() {
+  local u h rc
+  u="$(id -un 2>/dev/null)" || return 1
+  [ -n "$u" ] || return 1
+  if command -v dscl >/dev/null 2>&1; then
+    h="$(dscl . -read "/Users/$u" NFSHomeDirectory 2>/dev/null | sed -n 's/^NFSHomeDirectory: *//p')"; rc=$?
+    if [ "$rc" -eq 0 ]; then case "$h" in /?*) printf '%s' "$h"; return 0 ;; esac; fi
   fi
-done
-if [ -z "$BIN_DIR" ]; then
+  if command -v getent >/dev/null 2>&1; then
+    h="$(getent passwd "$u" 2>/dev/null | cut -d: -f6)"; rc=$?
+    if [ "$rc" -eq 0 ]; then case "$h" in /?*) printf '%s' "$h"; return 0 ;; esac; fi
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    h="$(python3 -c 'import os,pwd,sys; sys.stdout.write(pwd.getpwuid(os.getuid()).pw_dir)' 2>/dev/null)"; rc=$?
+    if [ "$rc" -eq 0 ]; then case "$h" in /?*) printf '%s' "$h"; return 0 ;; esac; fi
+  fi
+  return 1
+}
+
+# justify_home_is_real: is $HOME the account's home? Compared PHYSICALLY on both sides, so a
+# symlinked home (/home -> /Users, a /private spelling, a trailing slash) still matches.
+justify_home_is_real() {
+  local rh rh_phys home_phys
+  rh="$(justify_real_home)" || return 1
+  [ -n "$rh" ] || return 1
+  home_phys="$(phys_of "$HOME" 2>/dev/null)" || home_phys="$HOME"
+  rh_phys="$(phys_of "$rh" 2>/dev/null)" || rh_phys="$rh"
+  [ "${home_phys%/}" = "${rh_phys%/}" ]
+}
+
+# justify_path_is_within <inner> <outer> - is <inner> at or below <outer>, PHYSICALLY?
+#
+# A LEXICAL PREFIX TEST IS NOT ENOUGH, and that gap was live: with HOME=/Users/a/sandbox and
+# $HOME/.local/bin a symlink to /opt/homebrew/bin, "$BIN_DIR" starts with "$HOME/" so every
+# lexical check passes while the writes land in the real shared bin. Resolve both sides
+# first. Flagged by independent review.
+justify_path_is_within() {
+  local inner="$1" outer="$2" ip op
+  ip="$(phys_of "$inner" 2>/dev/null)" || ip="$inner"
+  op="$(phys_of "$outer" 2>/dev/null)" || op="$outer"
+  ip="${ip%/}"; op="${op%/}"
+  [ -n "$op" ] || return 1
+  [ "$ip" = "$op" ] && return 0
+  case "$ip" in "$op"/*) return 0 ;; esac
+  return 1
+}
+
+# justify_choose_bin_dir <shared-bin>... - sets BIN_DIR.
+#
+# The candidate list is a PARAMETER, not a baked-in literal and not an environment
+# override. A parameter lets the regression suite drive this with fixture directories
+# without the production path growing a testing seam that a caller could point at a bin of
+# their choosing.
+justify_choose_bin_dir() {
+  local d
+  BIN_DIR=""
+  if justify_home_is_real; then
+    for d in "$@"; do
+      if [ -d "$d" ] && [ -w "$d" ]; then
+        BIN_DIR="$d"
+        return 0
+      fi
+    done
+  else
+    echo "NOTE: HOME ($HOME) is not this user's home directory." >&2
+    echo "      Planting the justify shims in \$HOME/.local/bin instead of a shared bin," >&2
+    echo "      so a sandboxed or redirected run cannot repoint the real user's commands." >&2
+  fi
   # Guarded like every other directory this installer creates. Flagged by independent
   # review: a ~/.local or ~/.local/bin symlinked into the checkout would otherwise get a
   # directory made inside tracked source, and shims planted there.
-  refuse_repo_mkdir "${HOME}/.local/bin" "shim bin" || exit 3
-  mkdir -p "${HOME}/.local/bin"
+  refuse_repo_mkdir "${HOME}/.local/bin" "shim bin" || return 3
+  if ! mkdir -p "${HOME}/.local/bin"; then
+    echo "ERROR: could not create ${HOME}/.local/bin for the justify shims" >&2
+    return 1
+  fi
+  # AND THEN CHECK WHERE IT ACTUALLY LANDED. "$HOME/.local/bin" is only a safe fallback if it
+  # really is inside $HOME; a symlink there pointing at /opt/homebrew/bin turns the fallback
+  # into the very escape this function exists to prevent, and every lexical test passes
+  # because the path still starts with "$HOME/". Refuse rather than redirect: at this point
+  # the run has no location left that it can prove is its own to write.
+  if ! justify_path_is_within "${HOME}/.local/bin" "$HOME"; then
+    echo "ERROR: ${HOME}/.local/bin resolves outside HOME ($HOME)." >&2
+    echo "       Refusing to plant shims through it - it would write a directory this run" >&2
+    echo "       does not own. Remove or repoint that link and re-run." >&2
+    return 1
+  fi
   BIN_DIR="${HOME}/.local/bin"
-fi
+  return 0
+}
 
-# Guard: a run with $HOME redirected into a temp tree (sandboxed installers,
-# dry-runs, CI) would plant symlinks into a SHARED bin pointing at a directory
-# macOS reaps hours later. The links survive, their targets do not, and every
-# justify-done call becomes "command not found" - which surfaces to the user as
-# a Justify panel hung on "Working..." forever while the source edits land
-# silently. Observed 2026-07-16: eight of ten shims dead this way.
+# justify_bin_dir_is_permitted <bin-dir> - 0 if this run is allowed to have written there.
 #
-# THE /private BLIND SPOT, reproduced live on 2026-07-28 while building the harness for
-# this file. On macOS /var and /tmp are symlinks INTO /private, so a $HOME spelled with
-# its PHYSICAL path - which is what `cd "$TMPDIR" && pwd -P` hands you, and what any
-# tool that resolves paths produces - arrives here as /private/var/folders/... That
-# matched neither /var/folders/* nor "$TMPDIR"*, the guard did not fire, and the run
-# planted eight shims in /opt/homebrew/bin pointing into a temp tree. The top-level
-# installer's hook_deploy_mode already knew about this and listed the /private variants;
-# this guard did not. So: resolve the path, and check both spellings against both forms.
+# THE INVARIANT THE PER-SHIM CHECKS CANNOT SEE. Every per-shim check compares against
+# "$JUSTIFY_DIR/$target", and $JUSTIFY_DIR comes from $HOME - so when $HOME is redirected
+# the whole verification loop is self-consistent and green while the shims sit in someone
+# else's bin. That is not a hole in the loop; it is the limit of what any check phrased in
+# terms of $HOME can detect, which is why the real fix is the selection above. This exists
+# so a future edit to the selection cannot quietly reintroduce the escape without a row
+# going red. A bin outside $HOME is legitimate ONLY when $HOME is the account's home.
+# The in-HOME carve-out resolves the path rather than prefix-matching it, for the same reason
+# the fallback does: "$HOME/.local/bin" symlinked to /opt/homebrew/bin satisfies a lexical
+# prefix test while sitting in the real shared bin.
+justify_bin_dir_is_permitted() {
+  local bd="$1"
+  if justify_path_is_within "$bd" "$HOME"; then
+    return 0
+  fi
+  justify_home_is_real
+}
+# <<< justify-shim-bin-selection <<<
+
 JUSTIFY_DIR_PHYS="$(phys_of "$JUSTIFY_DIR")" || JUSTIFY_DIR_PHYS="$JUSTIFY_DIR"
-justify_tmp_root="${TMPDIR:-/nonexistent}"
-justify_tmp_root="${justify_tmp_root%/}"
-justify_tmp_root_phys="$(cd "$justify_tmp_root" 2>/dev/null && pwd -P)" || justify_tmp_root_phys="$justify_tmp_root"
-justify_in_temp=0
-for candidate in "$JUSTIFY_DIR" "$JUSTIFY_DIR_PHYS"; do
-  case "$candidate" in
-    /tmp/*|/private/tmp/*|/var/tmp/*|/private/var/tmp/*|\
-    /var/folders/*|/private/var/folders/*|\
-    "$justify_tmp_root"/*|"$justify_tmp_root_phys"/*)
-      justify_in_temp=1
-      ;;
-  esac
-done
-if [ "$justify_in_temp" = 1 ]; then
-  case "$BIN_DIR" in
-    "$JUSTIFY_DIR"*|"$JUSTIFY_DIR_PHYS"*) ;;
-    *)
-      echo "ERROR: HOME is a temp tree ($HOME) but $BIN_DIR is a shared bin." >&2
-      echo "       Refusing to plant shims whose targets will be reaped." >&2
-      echo "       Re-run with a real HOME, or set BIN_DIR inside the temp tree." >&2
-      exit 1
-      ;;
-  esac
-fi
+
+justify_choose_bin_dir /usr/local/bin /opt/homebrew/bin || exit $?
 
 # name:target pairs, so planting and verification cannot drift apart.
 #
@@ -849,6 +1071,18 @@ while IFS=: read -r shim target; do
     shim_failures=$((shim_failures + 1))
     continue
   fi
+  # A link that already points somewhere ELSE is still ours to replace - stale and dangling
+  # justify-* links are exactly what this installer exists to repair - but the repoint is
+  # now ANNOUNCED rather than silent. The 2026-07-28 escape was invisible partly because
+  # eight links were rewritten without a word: the run's output was indistinguishable from
+  # a run that changed nothing. Ownership policy unchanged (see the block comment above);
+  # only its observability changed.
+  if [ -L "$BIN_DIR/$shim" ]; then
+    _existing="$(readlink "$BIN_DIR/$shim" 2>/dev/null || printf '')"
+    if [ -n "$_existing" ] && [ "$_existing" != "$JUSTIFY_DIR/$target" ]; then
+      echo "NOTE: repointing $BIN_DIR/$shim from $_existing to $JUSTIFY_DIR/$target" >&2
+    fi
+  fi
   if ! ln -sfn "$JUSTIFY_DIR/$target" "$BIN_DIR/$shim"; then
     echo "ERROR: could not plant $BIN_DIR/$shim" >&2
     shim_failures=$((shim_failures + 1))
@@ -856,6 +1090,15 @@ while IFS=: read -r shim target; do
 done <<SHIMS
 $justify_shims
 SHIMS
+
+# The ownership invariant, checked here rather than at selection time so that it covers the
+# state actually on disk. See justify_bin_dir_is_permitted for why the per-shim checks below
+# cannot see this class on their own.
+if ! justify_bin_dir_is_permitted "$BIN_DIR"; then
+  echo "ERROR: shims were planted in $BIN_DIR, which is outside HOME ($HOME)," >&2
+  echo "       and HOME is not this user's home directory. Refusing to report success." >&2
+  shim_failures=$((shim_failures + 1))
+fi
 
 # Falsify the install rather than trusting it. Three separate things are checked, because
 # each has been wrong on its own: the path is a SYMLINK (not a directory that swallowed

@@ -556,18 +556,106 @@ fi
 # exit 0. Worse, `(...) || { echo ...; }` takes the exit status of the ECHO, so the whole
 # statement returned 0 and `set -e` never saw a failure at all. Both flagged by
 # independent review; the manual commands are kept because that was the useful half.
-echo "Building Lotus plugin (webpack)..."
-(cd "$SCRIPT_DIR" && npm install --silent && npm run build) || {
-  echo "ERROR: the plugin build failed. Run manually: cd $SCRIPT_DIR && npm install && npm run build" >&2
-  exit 4
+# deps_current <dir> / deps_record <dir>: were the installed dependencies installed FROM THIS
+# manifest?
+#
+# WHY NOT "does node_modules exist". A presence-only test skips the install on a checkout that
+# ADDED or BUMPED a dependency; the build can then exit 0 against stale versions with every
+# artifact check passing, so the component is reported installed and is quietly wrong. Flagged
+# by independent review.
+#
+# WHY NOT MTIME EITHER, which is what this was first written as. justify/install.sh COPIES its
+# package.json into $JUSTIFY_DIR on every run, so the manifest is always newer than
+# node_modules and an mtime comparison can never once report "current" - the offline fix would
+# have been dead code for the component that needed it most. Caught by a row going red, not by
+# reading it back.
+#
+# SO: a CONTENT fingerprint of the manifest and any lockfile, recorded inside node_modules
+# after a successful install and compared on the next run. Immune to the installer rewriting
+# its own manifest, and it answers the question that actually matters.
+#
+# ONE-TIME COST, stated plainly: a machine whose node_modules predates this stamp has no stamp,
+# so the first run after upgrading still performs a real `npm install` and needs the network.
+# Every run after that is offline-capable. Guessing instead would mean assuming an unstamped
+# tree matches a manifest nobody recorded.
+#
+# Duplicated in justify/install.sh, lotus/install.sh and install.sh because those run as
+# separate processes. If you change the rule, change all three.
+_deps_sha() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" 2>/dev/null | cut -d' ' -f1
+  else
+    # No hasher: emit a token that can never match a recorded stamp, so the caller installs
+    # rather than skipping. Failing toward "do the work" is the safe direction here.
+    printf 'no-hasher'
+  fi
 }
+
+deps_fingerprint() {
+  local d="$1" f acc=""
+  for f in package.json package-lock.json npm-shrinkwrap.json yarn.lock pnpm-lock.yaml; do
+    if [ -f "$d/$f" ]; then
+      acc="${acc}${f}:$(_deps_sha "$d/$f")
+"
+    fi
+  done
+  # An empty accumulator means there is no manifest at all; return a token rather than the
+  # hash of nothing, so two different empty directories are not declared equivalent.
+  if [ -z "$acc" ]; then printf 'no-manifest'; return 0; fi
+  printf '%s' "$acc" | { if command -v shasum >/dev/null 2>&1; then shasum -a 256; else sha256sum; fi; } | cut -d' ' -f1
+}
+
+deps_current() {
+  local d="$1" want got
+  [ -d "$d/node_modules" ] || return 1
+  [ -f "$d/node_modules/.improv-deps-stamp" ] || return 1
+  want="$(deps_fingerprint "$d")"
+  got="$(cat "$d/node_modules/.improv-deps-stamp" 2>/dev/null)" || return 1
+  [ -n "$got" ] || return 1
+  [ "$got" = "$want" ]
+}
+
+deps_record() {
+  local d="$1"
+  [ -d "$d/node_modules" ] || return 0
+  deps_fingerprint "$d" > "$d/node_modules/.improv-deps-stamp" 2>/dev/null || true
+}
+
+# npm install SKIPPED when the dependencies are current, in both builds below. These ran
+# unconditionally, and because the failure is `exit 4` routed into the top-level ledger, an
+# OFFLINE re-install of an already-complete machine exited 1 having changed nothing.
+echo "Building Lotus plugin (webpack)..."
+if deps_current "$SCRIPT_DIR"; then
+  echo "  plugin dependencies already current - skipping npm install (rm -rf $SCRIPT_DIR/node_modules to force)"
+  (cd "$SCRIPT_DIR" && npm run build) || {
+    echo "ERROR: the plugin build failed. Run manually: cd $SCRIPT_DIR && npm run build" >&2
+    exit 4
+  }
+else
+  (cd "$SCRIPT_DIR" && npm install --silent && npm run build) || {
+    echo "ERROR: the plugin build failed. Run manually: cd $SCRIPT_DIR && npm install && npm run build" >&2
+    exit 4
+  }
+  deps_record "$SCRIPT_DIR"
+fi
 
 # --- Build the MCP server (tsc -> mcp-server/dist/server.js) -----------------
 echo "Building Lotus MCP server (tsc)..."
-(cd "$SCRIPT_DIR/mcp-server" && npm install --silent && npm run build) || {
-  echo "ERROR: the mcp-server build failed. Run manually: cd $SCRIPT_DIR/mcp-server && npm install && npm run build" >&2
-  exit 4
-}
+if deps_current "$SCRIPT_DIR/mcp-server"; then
+  echo "  mcp-server dependencies already current - skipping npm install (rm -rf $SCRIPT_DIR/mcp-server/node_modules to force)"
+  (cd "$SCRIPT_DIR/mcp-server" && npm run build) || {
+    echo "ERROR: the mcp-server build failed. Run manually: cd $SCRIPT_DIR/mcp-server && npm run build" >&2
+    exit 4
+  }
+else
+  (cd "$SCRIPT_DIR/mcp-server" && npm install --silent && npm run build) || {
+    echo "ERROR: the mcp-server build failed. Run manually: cd $SCRIPT_DIR/mcp-server && npm install && npm run build" >&2
+    exit 4
+  }
+  deps_record "$SCRIPT_DIR/mcp-server"
+fi
 
 SERVER_JS="$SCRIPT_DIR/mcp-server/dist/server.js"
 

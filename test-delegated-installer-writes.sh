@@ -184,16 +184,37 @@ need_lib(){
 # uncaught defect, and fails in the confident direction. Counted with perl on the whole
 # file rather than `grep -Fc`, because grep -F treats a multi-line literal as several
 # independent patterns and would report 3 for a three-line anchor that occurs once.
+# mutate <file> <anchor> <replacement> <want-count> [ws]
+#
+# A FIFTH ARGUMENT, "ws", MAKES THE ANCHOR INDENTATION-INSENSITIVE, and it exists because a
+# literal anchor silently welds a mutation to the LAYOUT of the code it breaks rather than to
+# its behaviour. On 2026-07-28 the two npm-install blocks in justify/install.sh and
+# lotus/install.sh moved inside an `if [ -d node_modules ]` gate and gained two spaces of
+# indent. Four anchors stopped matching; re-indenting them to suit the new tree then broke
+# this suite's own pristine-HEAD control, because HEAD still has the old indentation. An
+# anchor that cannot span both is an anchor that forces a choice between testing the fix and
+# keeping the control - so with "ws" every run of whitespace in the anchor, INCLUDING the
+# newlines, matches any run of whitespace. The exact-count check below is what keeps the
+# looser pattern honest: if it now matches more than one place, the row fails rather than
+# mutating something it was not aimed at.
 mutate(){
-  local file="$1" old="$2" new="$3" want="$4"
-  OLD="$old" NEW="$new" WANT="$want" perl -e '
+  local file="$1" old="$2" new="$3" want="$4" ws="${5:-}"
+  OLD="$old" NEW="$new" WANT="$want" WS="$ws" perl -e '
     my $f = shift;
     open my $fh, "<", $f or do { print "MUTATE-FAILED(open)"; exit 0 };
     local $/; my $t = <$fh>; close $fh;
-    my ($o, $n, $want) = ($ENV{OLD}, $ENV{NEW}, $ENV{WANT});
-    my $count = () = ($t =~ /\Q$o\E/g);
+    my ($o, $n, $want, $ws) = ($ENV{OLD}, $ENV{NEW}, $ENV{WANT}, $ENV{WS});
+    my $pat;
+    if ($ws) {
+      my @parts = grep { length } split /\s+/, $o;
+      if (!@parts) { print "MUTATE-FAILED(empty anchor)"; exit 0 }
+      $pat = join("\\s+", map { quotemeta } @parts);
+    } else {
+      $pat = quotemeta($o);
+    }
+    my $count = () = ($t =~ /$pat/g);
     if ($count != $want) { print "ANCHOR-MISSING(found $count, wanted $want)"; exit 0 }
-    $t =~ s/\Q$o\E/$n/g;
+    $t =~ s/$pat/$n/g;
     open my $out, ">", $f or do { print "MUTATE-FAILED(write)"; exit 0 };
     print $out $t; close $out;
     print "OK";
@@ -951,8 +972,32 @@ STUBPATH="$STUBBIN:/usr/bin:/bin:/usr/sbin:/sbin"
 # build gate at all, so the very first justify row marched straight through to the shims
 # and planted eight of them again. A harness that can damage the machine when the code it
 # tests regresses is not a harness, and "regressed" includes "older".
+# TWO ACCEPTED GUARD SHAPES, and this must stay true of both.
+#
+# The ORIGINAL guard refused when $JUSTIFY_DIR resolved under a temp root, and this gate
+# grepped for its /private spelling plus the physical resolution. On 2026-07-28 that
+# predicate was found to be too narrow to be the real protection: it only ever asked "is
+# HOME temporary", so a DURABLE sandbox HOME (/Users/me/Documents/sandbox, a CI workspace)
+# walked straight through it and planted eight shims in the real /opt/homebrew/bin. It was
+# replaced by a HOME-IDENTITY check - a shared bin may be written only when $HOME is the
+# account's own home directory - which strictly subsumes the temp case, so the temp-root
+# case statement is gone and the old grep no longer matches.
+#
+# Both shapes are accepted here rather than only the new one, because this suite's own
+# negative control runs it against pristine HEAD (see the comment above), and a gate that
+# hard-required the new shape would take the whole suite down on the very control that
+# proves its rows can fail.
+#
+# This remains a PRE-FLIGHT, not the guarantee. H3 measures the real property - every
+# justify shim in the shared bins is exactly as the suite found it - and that row is what
+# would catch a regression this grep was fooled by.
 shim_guard_ok(){
   local f="$1"
+  # new shape: HOME identity decides whether a shared bin may be used at all
+  if grep -q 'justify_home_is_real' "$f" && grep -q 'justify_bin_dir_is_permitted' "$f"; then
+    return 0
+  fi
+  # original shape: temp-root refusal with physical resolution
   grep -q '/private/var/folders/\*' "$f" && grep -q 'JUSTIFY_DIR_PHYS=' "$f"
 }
 SHARED_BIN_WRITABLE=0
@@ -960,14 +1005,14 @@ for d in /usr/local/bin /opt/homebrew/bin; do
   [ -d "$d" ] && [ -w "$d" ] && SHARED_BIN_WRITABLE=1
 done
 if shim_guard_ok "$JUSTIFY_INSTALLER"; then
-  ok "F0 justify's temp-HOME shim guard resolves the physical path and covers the /private spellings"
+  ok "F0 justify refuses a shared bin under a redirected HOME (HOME-identity check, or the original temp-root guard)"
   SHIM_STAGE_SAFE=1
 elif [ "$SHARED_BIN_WRITABLE" = 0 ]; then
-  bad "F0 justify's temp-HOME shim guard resolves the physical path and covers the /private spellings" \
+  bad "F0 justify refuses a shared bin under a redirected HOME (HOME-identity check, or the original temp-root guard)" \
       "no shared bin is writable here, so the rows below still run"
   SHIM_STAGE_SAFE=1
 else
-  bad "F0 justify's temp-HOME shim guard resolves the physical path and covers the /private spellings" \
+  bad "F0 justify refuses a shared bin under a redirected HOME (HOME-identity check, or the original temp-root guard)" \
       "a shared bin IS writable and the guard is not verifiable - refusing to run the rows that reach the shim stage"
   SHIM_STAGE_SAFE=0
 fi
@@ -1057,13 +1102,40 @@ elif grep -q "did not produce" "$out"; then
 else
   ok "F2 justify clears the artifact gate when the build output exists"
 fi
+# F2b - THE PROPERTY, not the mechanism. This row used to require rc=1 and the words
+# "Refusing to plant shims", which asserted one specific IMPLEMENTATION of the protection:
+# abort the run. The 2026-07-28 fix keeps the protection and changes the mechanism - a
+# redirected HOME now REDIRECTS the shims into "$HOME/.local/bin" instead of aborting,
+# because aborting failed every sandboxed rehearsal of this installer, and rehearsing it in
+# a sandbox is how the escape it protects against was found. So the row now asserts what
+# actually matters and is true of both mechanisms: no shim landed in a shared bin. It also
+# accepts the original abort, so the suite's pristine-HEAD control still passes here.
 if [ "$SHIM_STAGE_SAFE" != 1 ]; then
   :
-elif [ "$rc" = 1 ] && grep -q "Refusing to plant shims" "$out"; then
-  ok "F2b the temp-HOME shim guard stopped the run before any shared bin was touched"
 else
-  bad "F2b the temp-HOME shim guard stopped the run before any shared bin was touched" \
-      "rc=$rc; $(tail -5 "$out")"
+  f2b_shared_hits=0
+  for d in /usr/local/bin /opt/homebrew/bin; do
+    [ -d "$d" ] || continue
+    for s in "$d"/justify-*; do
+      [ -L "$s" ] || continue
+      case "$(readlink "$s")" in
+        "$FJ2H"/*) f2b_shared_hits=$((f2b_shared_hits + 1)) ;;
+      esac
+    done
+  done
+  f2b_own=0
+  [ -d "$FJ2H/.local/bin" ] && f2b_own="$(find "$FJ2H/.local/bin" -maxdepth 1 -name 'justify-*' 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "$f2b_shared_hits" -ne 0 ]; then
+    bad "F2b a redirected HOME planted no shim in a shared bin" \
+        "$f2b_shared_hits shared-bin shim(s) now point into the fixture HOME $FJ2H"
+  elif [ "$rc" = 1 ] && grep -q "Refusing to plant shims" "$out"; then
+    ok "F2b a redirected HOME planted no shim in a shared bin (original mechanism: run aborted)"
+  elif [ "$f2b_own" -gt 0 ]; then
+    ok "F2b a redirected HOME planted no shim in a shared bin (current mechanism: $f2b_own redirected into \$HOME/.local/bin)"
+  else
+    bad "F2b a redirected HOME planted no shim in a shared bin" \
+        "neither aborted nor redirected - rc=$rc, own-bin shims=$f2b_own; $(tail -5 "$out")"
+  fi
 fi
 real_shim_after="$(shim_snapshot)"
 if [ "$real_shim_before" = "$real_shim_after" ]; then
@@ -1506,8 +1578,8 @@ FJ6="$TMPROOT/g9-repo"; FJ6H="$TMPROOT/g9-home"; mkdir -p "$FJ6H/.claude/justify
 stage_justify "$FJ6"
 printf '// yesterday\n' > "$FJ6H/.claude/justify/dist/justify-core.js"
 printf '// yesterday\n' > "$FJ6H/.claude/justify/dist/server/index.js"
-mres=$(mutate "$FJ6/justify/install.sh" '  echo "ERROR: npm install failed. Run manually: cd $JUSTIFY_DIR && npm install" >&2
-  exit 4' '  echo "WARNING: npm install failed. Run manually: cd $JUSTIFY_DIR && npm install" >&2' 1)
+mres=$(mutate "$FJ6/justify/install.sh" 'echo "ERROR: npm install failed. Run manually: cd $JUSTIFY_DIR && npm install" >&2
+exit 4' '    echo "WARNING: npm install failed. Run manually: cd $JUSTIFY_DIR && npm install" >&2' 1 ws)
 if [ "$SHIM_STAGE_SAFE" = 1 ]; then
   HOME="$FJ6H" PATH="$FAILBIN:/usr/bin:/bin:/usr/sbin:/sbin" bash "$FJ6/justify/install.sh" > "$TMPROOT/g9.out" 2>&1
   # F7 asserts a failed build step stops the run before the stages after it. Violated
@@ -1583,13 +1655,13 @@ fi
 # ---- G13: lotus's fatal build step. Break it back to a warning and F12 must go RED.
 FL9="$TMPROOT/g13-repo"; FL9H="$TMPROOT/g13-home"; mkdir -p "$FL9H"
 stage_lotus "$FL9"; seed_lotus_artifacts "$FL9"
-mres=$(mutate "$FL9/lotus/install.sh" '  echo "ERROR: the plugin build failed. Run manually: cd $SCRIPT_DIR && npm install && npm run build" >&2
-  exit 4' '  echo "WARNING: the plugin build failed." >&2' 1)
+mres=$(mutate "$FL9/lotus/install.sh" 'echo "ERROR: the plugin build failed. Run manually: cd $SCRIPT_DIR && npm install && npm run build" >&2
+exit 4' '    echo "WARNING: the plugin build failed." >&2' 1 ws)
 # BOTH build steps go back to warnings, because the fixture fails both npm installs and
 # the second `exit 4` would otherwise stop the run for the other step's reason. Isolating
 # the mutation to one gate would leave this row green on evidence it did not produce.
-mres2=$(mutate "$FL9/lotus/install.sh" '  echo "ERROR: the mcp-server build failed. Run manually: cd $SCRIPT_DIR/mcp-server && npm install && npm run build" >&2
-  exit 4' '  echo "WARNING: the mcp-server build failed." >&2' 1)
+mres2=$(mutate "$FL9/lotus/install.sh" 'echo "ERROR: the mcp-server build failed. Run manually: cd $SCRIPT_DIR/mcp-server && npm install && npm run build" >&2
+exit 4' '    echo "WARNING: the mcp-server build failed." >&2' 1 ws)
 if [ "$mres" = OK ] && [ "$mres2" != OK ]; then mres="$mres2"; fi
 HOME="$FL9H" PATH="$FAILBIN:/usr/bin:/bin:/usr/sbin:/sbin" bash "$FL9/lotus/install.sh" > "$TMPROOT/g13.out" 2>&1
 # F12 asserts a failed build writes no registration. Violated when the mutated installer
