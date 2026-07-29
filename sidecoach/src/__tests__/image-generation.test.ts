@@ -320,17 +320,22 @@ async function testOpenAiAdapter(): Promise<void> {
     }
   }
 
-  // A provider that echoes the key back inside its error message must not get it onto a log line. This is the
-  // exact shape OpenAI returned for a rejected key on 2026-07-29, including its own partial mask.
+  // A provider that echoes the key back inside its error message must not get it onto a log line. This reproduces
+  // the shape OpenAI returned for a rejected key on 2026-07-29, including its own partial mask.
+  //
+  // The visible tail here is SYNTHETIC and must stay that way. The first version of this fixture pasted the real
+  // tail of a live credential straight out of the provider's response, which committed four characters of an active
+  // key in the very test written to prove tails do not leak. A mask that preserves a tail preserves a tail, and that
+  // applies to the fixture as much as to the log line. Never copy a provider's masked echo verbatim into a test.
   const echoed = await callProvider(
     OPENAI_PROVIDER,
     REQ,
     'k',
-    fixedTransport(401, { error: { message: 'Incorrect API key provided: sk-proj-********************pSZg. You can find your API key at https://platform.openai.com/account/api-keys.' } }),
+    fixedTransport(401, { error: { message: 'Incorrect API key provided: sk-proj-********************Qx7T. You can find your API key at https://platform.openai.com/account/api-keys.' } }),
   );
   assert(!echoed.ok, 'a rejected key is a failure');
   if (!echoed.ok) {
-    assert(!/pSZg/.test(echoed.detail), `the echoed key tail is redacted (got ${echoed.detail})`);
+    assert(!/Qx7T/.test(echoed.detail), `the echoed key tail is redacted (got ${echoed.detail})`);
     assert(!/sk-proj-\*/.test(echoed.detail), 'the masked key body is redacted too');
     assert(/sk-\[REDACTED\]/.test(echoed.detail), 'the redaction is visible rather than silent');
     assert(/Incorrect API key provided/.test(echoed.detail), 'the useful part of the message survives redaction');

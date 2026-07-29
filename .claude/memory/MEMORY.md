@@ -1,3 +1,8 @@
+- [** ACTIVE ** VOICE CREDENTIAL KEYGUARD - openai-tts-api-key is mechanically fenced to the voice path after two agents billed model calls to it in one day; a `!` negation bypass silencing every slice-based bash-guard gate fell out of the work](session_2026-07-29_voice-credential-keyguard.md)
+- [** ACTIVE ** TWO INSTALLER FAILURES BYPASS THE LEDGER - install_skill_to_harnesses returns 1 without recording on mktemp and find failures, and "|| true" at the call site discards it; the installer exits 0 having mirrored nothing](session_2026-07-29_adversary_two-installer-failures-bypass-the-ledger.md)
+- [** ACTIVE ** A REAL API KEY FRAGMENT IS COMMITTED - the "no key fragment survives on disk" claim is false; the live improv-openai-image-ap…](session_2026-07-29_adversary_real-key-tail-committed.md)
+- [** ACTIVE ** THE INSTALLED SKILL MISSTATES ITS OWN WIRING - sidecoach-image named 0 times in the loadable surface, SKILL.md says "…](session_2026-07-29_adversary_skill-text-misstates-the-wiring.md)
+- [** ACTIVE ** ADVERSARY PASS - SIX CLAIMS THAT SURVIVED - decoded-pixel contrast, the three-value verdict, the pre-flight budget cap, install.…](session_2026-07-29_adversary_claims-that-survived.md)
 - [** ACTIVE ** IMAGE GENERATION WITH VERIFIED OUTPUT - sidecoach can now produce raster assets AND read the bytes back. Two live providers (OpenAI gpt-image-…](session_2026-07-29_image-generation.md)
 - [** ACTIVE ** THE POLISH VERB NOW TEACHES - craft wired into the payload from tactical-polish + design-laws, notes SELECTED by the rules that actually failed,…](session_2026-07-29_wire-the-coach.md)
 - [** ACTIVE ** JUSTIFY $HOME ESCAPE CLOSED - justify/install.sh planted 8 shims into the real /opt/homebrew/bin under a redirected HOME and reported S…](session_2026-07-28_justify-home-escape-fix.md)
@@ -160,3 +165,8 @@
 - [** ACTIVE ** The test gate that reported green while suites printed their own failures - run-tests.ts counted exit 0 as a pass, so 4 suites that tally a…](session_2026-07-28_green-while-failing.md)
 - [** ACTIVE ** test-hook-registry stops mutating the live tree - the suite that produced three false measurements today built its zz-* fixtures in the REAL clau…](session_2026-07-28_suite-sandbox.md)
 - [** ACTIVE ** team-reaper never reaps a team whose LEAD is alive - the member guard only ever matched TEAMMATES (measured per-PID: lead carries `--sessi…](session_2026-07-28_team-reaper-liveness.md)
+- [** ACTIVE ** Falsifiable scoreboard vs LOCALPROJECTX plus a runnable harness - benchmark/SCOREBOARD.md + run-scoreboard.sh, 26 canary-gated rows across 9…](session_2026-07-29_scoreboard-harness.md)
+- [** ACTIVE ** Five instruments that reported confidently while structurally blind - relative-path grep, zsh glob expansion, stderr-only repor…](session_2026-07-29_scorekeeper-instrument-failures.md)
+- [** ACTIVE ** LOCALPROJECTX's detector fails OPEN on every degenerate input - exit 0 on missing file, garbage, no args, and linked-stylesheet-only def…](feedback_localprojectx_detector_fail_open.md)
+- [** ACTIVE ** Discoverability and reachability outrank internal quality on the scoreboard - a capability nothing can invoke scores ZERO; imag…](decision_discoverability_outranks_internal_quality.md)
+- [Real key fragment purged, two false claims corrected](session_2026-07-29_real-key-fragment-purged-and-two-false-claims.md) - four chars of a live key were committed inside the test written to prove tails do not leak; also the reachability zero was an importer grep against a subprocess spawn
