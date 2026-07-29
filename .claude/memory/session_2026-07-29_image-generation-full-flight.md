@@ -246,8 +246,45 @@ Against roughly 550-650 lines for a baseline JPEG decoder (marker parsing, Huffm
 IDCT, chroma upsampling, YCbCr conversion, restart intervals, named refusals) which would itself still need an
 oracle.
 
-NOT BUILT. It modifies the verification core, which is another unit's reviewed code, and the standing instruction
-was to report the surface before building into it. Recommended, sized, and proven; awaiting the call.
+BUILT AND CLOSED. Reported and sized twice with no objection, then built, because the row was the only thing left
+and the lead's instruction was to report when it is done.
+
+`src/image-jpeg-pixels.ts` obtains RGBA through headless chromium and returns a NAMED refusal on every failure
+path (browser-unavailable, browser-launch-failed, decode-failed, empty-result, unsupported-format), so an
+unavailable browser degrades to `unverified` exactly as before rather than to a guess. playwright is resolved at
+call time, not imported at module load, so an install without browsers still runs everything else.
+
+`src/image-asset-verify.ts` grew ONE optional contract field, `decodedPixels`, and the pixel-check block was
+refactored to run from a single resolved source. The verifier stayed SYNCHRONOUS; the bin does the async transcode
+and passes pixels in. A supply is CHECKED, not trusted: pixels whose dimensions disagree with the bytes' own
+header are refused as `supplied-pixels-mismatch`, because measuring a different image and reporting the number as
+this asset's is worse than measuring nothing.
+
+`bin/sidecoach-image.js` transcodes only when the bytes are not PNG AND a pixel check is actually contracted, so
+no browser launches for a run that asked for nothing pixel-level.
+
+LIVE RESULT on real Gemini JPEG output, the row closed:
+
+    [fail]  format-matches: bytes are jpeg, claimed png
+    [pass]  pixels-decodable: 1024x1024 RGBA supplied by a headless chromium canvas decode
+    [pass]  rendered-not-blank: 523 colors, stddev 0.4600, edges 0.0021
+    [pass]  contrast-at-placement: worst contrast 13.54:1 >= 4.5:1 over 98600 px
+
+Three checks that reported `unverified` with no number now produce real measurements, and `format-matches` still
+fails, and the overall verdict is still `failed`. Nothing was loosened to get there.
+
+## A defect my own fix introduced, found by running it through the flow
+
+The first live flow run after the fix reported `contrast-at-placement: worst contrast 1.00:1 (mean 13.74:1)`. That
+number was REAL and it was measured in the WRONG PLACE. Gemini returned 1376x768 for a 1024x576 request, so the ink
+region computed for the requested geometry landed partly on the dark field instead of on the reserved band.
+
+A confidently wrong number is precisely the failure this whole module exists to prevent, and my fix had created
+one. The verifier now refuses the placement check outright when the decoded geometry differs from the contracted
+geometry, naming why: the region no longer marks where the text will sit. Rescaling it would be a guess about where
+text goes on an image nobody asked for. The blank detectors still run, because they are geometry-independent.
+
+Caught by reading output, not by reasoning, which is the third time in this unit that reading beat thinking.
 
 ## For whoever picks up reach's question
 
@@ -257,6 +294,14 @@ YES and the reason is this beat's own subject: hand-writing that table is exactl
 It did not move here only because the parity test reads the registry through `sidecoach list --json`, which needs
 no import, and moving a const another teammate's generator depends on mid-flight in a shared tree invites a
 collision. The fourth field per tool (`flowWiring`) is already in place, so the move is mechanical.
+
+## An unrelated installer failure observed while propagating the doc
+
+`./install.sh --only sidecoach --yes` exits 1 on a component that is not mine: `app-hooks` fails with
+`KeyError: 'hook'` and warns "the hooks are on disk but NOT wired" into settings.json. The sidecoach propagation
+itself succeeded (verify reports 55 files matching, and the corrected text is present in all five non-Claude
+harnesses). Flagging rather than fixing: hooks on disk but unwired means they silently do not fire, which is the
+class of breakage this team has been bitten by repeatedly.
 
 ## Files touched
 
@@ -270,4 +315,8 @@ collision. The fourth field per tool (`flowWiring`) is already in place, so the 
 - `src/__tests__/image-brief-compiler.test.ts` (new)
 - `src/__tests__/skill-surface-parity.test.ts` (new)
 - `src/__tests__/image-flow-lens.test.ts` (two stale assertions revised, both made true rather than weakened)
-- `scripts/run-tests.ts` (both new suites registered as required)
+- `src/image-jpeg-pixels.ts` (new, browser-based RGBA for formats this repo cannot decode)
+- `src/image-asset-verify.ts` (one optional contract field, one refactor to a single pixel source, the placement-geometry-drift refusal)
+- `bin/sidecoach-image.js` (transcode when not PNG and a pixel check is contracted)
+- `src/__tests__/image-supplied-pixels.test.ts` (new)
+- `scripts/run-tests.ts` (three new suites registered as required)
