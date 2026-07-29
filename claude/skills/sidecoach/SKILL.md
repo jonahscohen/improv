@@ -1,11 +1,33 @@
 ---
 name: sidecoach
-description: The design orchestration system for Improv. 26 flows, a typed surface of 21 verb commands plus natural-language intent (legacy phase words kept as back-compat aliases), plus teach/document setup commands and a help command. Use for all design work: /sidecoach craft <feature>, /sidecoach shape <feature>, /sidecoach polish <target>, /sidecoach audit <target>, /sidecoach animate <target>, /sidecoach critique <target>, /sidecoach teach, /sidecoach document, /sidecoach list, /sidecoach help <verb>. Also invoke this skill when the task involves: brand verification, component research, font pairing, motion patterns, design tokens, accessibility audit, responsive design, typography, clone/implement a design, colorize, delight, bolder, overdrive, quieter, distill, clarify, optimize, harden, adapt, onboarding flows.
+description: The design orchestration system for Improv. 26 flows, a typed surface of 21 verb commands plus natural-language intent (legacy phase words kept as back-compat aliases), plus teach/document setup commands and a help command. Use for all design work: /sidecoach craft <feature>, /sidecoach shape <feature>, /sidecoach polish <target>, /sidecoach audit <target>, /sidecoach animate <target>, /sidecoach critique <target>, /sidecoach teach, /sidecoach document, /sidecoach list, /sidecoach help <verb>. Also invoke this skill when the task involves: brand verification, component research, font pairing, motion patterns, design tokens, accessibility audit, responsive design, typography, clone/implement a design, colorize, delight, bolder, overdrive, quieter, distill, clarify, optimize, harden, adapt, onboarding flows. Also owns IMAGE AND RASTER ASSET GENERATION with byte-level verification of the result (`sidecoach-image`): generate a hero backdrop, texture, plate, portrait, thumbnail, social card, or illustrative asset, then verify the produced pixels for geometry, format, actual-render, transparency, and real WCAG contrast for the text that will sit on it. Invoke it for "generate an image", "make a hero image", "need a background image", "generate an asset", "an og image", "a texture", and for any build where a page needs artwork rather than a placeholder.
 ---
 
 # Sidecoach - Design Intelligence Orchestration
 
 For a single-page reference covering every verb and flow at a glance, see [CHEATSHEET.md](./CHEATSHEET.md).
+
+## Reference documents - load the ONE that owns the request
+
+These ship beside this file and are loadable at runtime; the paths are relative to this
+document, so they resolve in whichever harness loaded it. Load the one that owns the request
+before acting, and do not load the others speculatively.
+
+| Load this | When |
+|---|---|
+| [reference/routing.md](reference/routing.md) | The request arrives and it is not obvious which verb owns it. Read this FIRST when unsure. |
+| [reference/new-work.md](reference/new-work.md) | A NEW surface, or a replacement visual identity. A brief with no existing surface behind it. Six steps, each ending in a check that can fail. |
+| [reference/tools.md](reference/tools.md) | You are about to invoke a sidecoach tool, or need an exit contract before acting on a result. Generated from the shipped registry, so its counts cannot drift from the code. |
+| [reference/doctor.md](reference/doctor.md) | A tool or verb named somewhere does not seem to exist, or someone asks what sidecoach actually ships and what is dead weight. |
+| [reference/harnesses.md](reference/harnesses.md) | Sidecoach is being used outside Claude Code, or this file has just been edited and the other harnesses need the change. |
+| [reference/design-judgment-rules.md](reference/design-judgment-rules.md) | A taste call needs to be checkable rather than asserted. Seven rules with exception whitelists. |
+| [reference/a11y-remediation.md](reference/a11y-remediation.md) | Applying accessibility fixes. Minimal-diff protocol, tool boundaries, audit failure patterns. |
+| [reference/responsive-foundation.md](reference/responsive-foundation.md) | Responsive work across breakpoints. |
+| [reference/robustness-stress-checklist.md](reference/robustness-stress-checklist.md) | Running `harden`. Six stress axes, each clearing only with a read screenshot or an explicit punt with a reason. |
+
+Two entry points are worth knowing before reading further: `/sidecoach new-work <brief>` for
+work that starts from a brief, and `/sidecoach doctor` when the question is whether a sidecoach
+capability is actually reachable.
 
 Sidecoach is the design workflow layer built into this Claude Code installation. It provides 26 intelligent flows (post-T-0015 cull, 2026-05-28) covering every phase of design work, with full orchestration, memory, and validation.
 
@@ -150,7 +172,7 @@ Type `/sidecoach list` to see all commands organized by phase (phase commands pl
 
 ## Standalone tools (sibling CLIs on the sidecoach surface)
 
-Alongside the `sidecoach` resolver, six self-contained CLIs ship in `sidecoach/bin/`. They are NOT verbs or flows - each is its own tool with its own fail-closed exit-code contract (a nonzero exit never means "clean") - but they are part of the sidecoach surface, so `sidecoach list` and `sidecoach help` enumerate them. Run `node bin/<tool> --help` for full options. Grouped by role:
+Alongside the `sidecoach` resolver, seven self-contained CLIs ship in `sidecoach/bin/`. They are NOT verbs or flows - each is its own tool with its own fail-closed exit-code contract (a nonzero exit never means "clean") - but they are part of the sidecoach surface, so `sidecoach list` and `sidecoach help` enumerate them. Run `node bin/<tool> --help` for full options, or `node bin/sidecoach.js list --json` for the machine-readable table this section is checked against. Grouped by role:
 
 **Generative (authoring aids)** - reach for these while shaping a new direction or design system:
 
@@ -160,6 +182,7 @@ Alongside the `sidecoach` resolver, six self-contained CLIs ship in `sidecoach/b
 | `sidecoach-roll` | Draw a design direction from the deck; seed for a reproducible draw, `--exclude` prior draws, `--model-top` ranks this build's own instinct last. | `node bin/sidecoach-roll.js [--seed <uint32>] [--exclude <id,...>]` (exit 0 drawn / 2 usage / 3 exhausted) |
 | `sidecoach-preauthor` | Render-before-build gate: from a brief JSON it renders board.html + mock.html and runs the rendered-audit engine over the mock, returning a fail-closed proceed/block verdict BEFORE you write component code. | `node bin/sidecoach-preauthor.js --brief <brief.json> [--out-dir <dir>]` (exit 0 proceed / 1 blocked / 2 usage / 3 inconclusive) |
 | `sidecoach-deck` | Present drawn directions as a Markdown (default) or rich-HTML pick list for the user to choose from; the user picks by responding. | `node bin/sidecoach-deck.js --ids <id,...> [--surface text\|rich]`, or pipe `sidecoach-roll | sidecoach-deck` (exit 0 presented / 2 usage) |
+| `sidecoach-image` | **Generate a raster asset and verify the bytes.** Two live providers (OpenAI images, Nano Banana / Google Gemini image) plus a deterministic offline renderer that is the DEFAULT, so nothing spends unless you say so. The differentiator is the second half: it decodes the image it produced and answers a contract - real geometry, real format, an actual render rather than a blank or a flat fill, the transparency you asked for, and real WCAG contrast for the text that will sit on top, measured against the actual pixels under that text. PNG is decoded in-repo; when a provider substitutes another format (every Gemini model answers a PNG request with JPEG) the pixels are read through a headless browser so the pixel checks still produce real numbers, while the format check still FAILS, because what the provider did is a fact. Verdicts are three-valued (pass / fail / UNVERIFIED) and unverified never folds into verified. **Auto-run by two flows** (see the flow-wiring note below), so a `craft` run that names an image produces one without you invoking anything. | `node bin/sidecoach-image.js generate --prompt "<brief>" --out hero.png [--provider offline\|openai\|nanobanana\|auto] [--size WxH] [--ink #hex --ink-region x,y,w,h --min-contrast 4.5] [--yes-spend --budget-usd 0.20]`, plus `verify <file>` and `budget` subcommands (exit 0 verified / 1 verify-failed / 3 unverified / 4 no-key / 6 provider / 7 budget / 8 needs-consent / 10 unpriced / 11 oversize / 12 legacy-model) |
 
 **Governance (checks / maintenance):**
 
@@ -168,7 +191,28 @@ Alongside the `sidecoach` resolver, six self-contained CLIs ship in `sidecoach/b
 | `sidecoach-refs` | Refresh the bundled reference systems on demand, merging and preserving your `/curate` captures (local captures survive an upstream refresh). `--check` is a pure read. | `node bin/sidecoach-refs.js [--check \| --apply]` (exit 0 ok / 2 usage / 3 upstream / 4 validation / 5 io / 10 drift / 70 internal) |
 | `sidecoach-drift` | Report custom-property tokens that drifted from the project's committed DESIGN.md baseline (off-system colors/radii/spacings/easings/durations), each named with its value and file. A missing baseline fails closed (never "no drift"). | `node bin/sidecoach-drift.js <project-dir> [--json]` (exit 0 no drift / 1 drift / 2 usage / 3 cannot assess) |
 
-**`sidecoach-drift` is additionally wired into the audit flow.** flowK (multi-lens audit - reached by `/sidecoach audit <project>`) invokes the drift bin for its Theming/token-consistency lens: a real drift escalates the Theming dimension to a failure that names the drifted tokens, while a clean or unassessable verdict leaves the other (still-manual) theming checks as warnings - never a false pass. The call is fully contained: if the bin is missing or errors, the audit keeps its static Theming placeholder and never crashes. The other five tools are invoked directly (by you or the user), not auto-run by a flow.
+### Which of these a flow runs for you (two of the seven)
+
+`node bin/sidecoach.js list --json` is the authoritative answer; every `flowWired: true` entry is a tool that runs whether or not anyone invokes it. Today that is exactly two:
+
+**`sidecoach-drift` feeds the audit flow.** flowK (multi-lens audit - reached by `/sidecoach audit <project>`) invokes the drift bin for its Theming/token-consistency lens: a real drift escalates the Theming dimension to a failure that names the drifted tokens, while a clean or unassessable verdict leaves the other (still-manual) theming checks as warnings - never a false pass.
+
+**`sidecoach-image` is auto-run by two flows, so image generation is part of doing design work rather than a side errand.**
+- **flowD (design references)**, reached by `/sidecoach craft` and `/sidecoach colorize`, runs it as the CONCEPT-SKETCH lens: a reference plate authored from the brief itself, offered as a reference only if the bytes passed verification.
+- **flowG (component implementation)**, in the `craft` chain, runs it as the ASSET-PRODUCTION lens: when the request names a raster (backdrop, texture, plate, portrait, object, thumbnail, scene, social card) it compiles the brief and produces the asset. When the request names none, it says so and produces nothing.
+
+Both calls are fully contained (a missing or erroring bin leaves the flow working and never crashes it) and both are OFFLINE by default, so a flow cannot spend money. Going live is an explicit operator action: set `SIDECOACH_IMAGE_PROVIDER` and `SIDECOACH_IMAGE_ALLOW_SPEND=1`.
+
+**The two live providers do NOT verify equally, and picking one is a real decision.** Measured 2026-07-29:
+
+| Provider | Format returned | Geometry | Pixel checks | Best achievable verdict |
+|---|---|---|---|---|
+| `openai` (`gpt-image-2`) | PNG, as requested | exact | run natively | **verified** (measured: contrast 17.99:1, cost 0.0063 USD) |
+| `nanobanana` (Gemini) | JPEG, whatever you ask for | honours the aspect, picks its own pixels | run via a headless browser transcode | `failed` on format, by construction |
+
+`--provider auto` walks OpenAI first for exactly this reason. Gemini output still gets real pixel numbers (the bytes are transcoded through a browser so contrast is genuinely measured), but its format check fails and it can never reach `verified` while it answers in the wrong format. When the geometry drifts too, the overlay-contrast check reports `unverified` rather than a number, because a placement region specified against a different size no longer marks where the text will sit and measuring it would report a real number for the wrong pixels.
+
+The remaining five tools are invoked directly, by you or the user, and no flow runs them.
 
 ## Mandatory Workflow Gates
 

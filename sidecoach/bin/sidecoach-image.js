@@ -751,10 +751,41 @@ async function runGenerate(parsed) {
   // or unverifiable asset is never cached and never reported as verified.
   // -------------------------------------------------------------------------
 
-  const report = verify.verifyAsset(bytes, built.contract);
+  // A provider that answers a PNG request with JPEG leaves this repo's PNG-only decoder unable to read the
+  // pixels, so the pixel checks report UNVERIFIED and the contrast measurement, which is the whole point of this
+  // tool, produces no number at all. Every Gemini image model does exactly that.
+  //
+  // So when the bytes are a format we cannot decode AND a pixel-level check is actually contracted, get real RGBA
+  // through a browser (playwright is already a dependency here) and hand it to the verifier. This does NOT soften
+  // any verdict: `format-matches` still fails on the wrong format, the synthetic marker is still read from PNG
+  // bytes only, and if the decode cannot happen the checks stay UNVERIFIED with the reason named. It only turns
+  // "we could not look" into a real measurement.
+  const contract = built.contract;
+  const wantsPixelChecks = Boolean(contract.placement) || contract.alpha !== undefined;
+  const sniffed = verify.sniffFormat(bytes);
+  if (wantsPixelChecks && sniffed && sniffed !== 'png') {
+    let pixelMod = null;
+    try {
+      pixelMod = require('../dist/image-jpeg-pixels');
+    } catch (err) {
+      console.error(`sidecoach-image: pixel transcode unavailable (${err && err.message ? err.message : String(err)}); pixel checks will report unverified.`);
+    }
+    if (pixelMod) {
+      const decoded = await pixelMod.decodeViaBrowser(bytes, sniffed, { playwrightPath: pixelMod.bundledPlaywrightPath() });
+      if (decoded.ok) {
+        contract.decodedPixels = { rgba: decoded.rgba, width: decoded.width, height: decoded.height, source: decoded.source };
+        console.error(`sidecoach-image: the provider returned ${sniffed}; pixels were read via ${decoded.source} so the pixel checks can run. The format check still fails.`);
+      } else {
+        console.error(`sidecoach-image: could not read ${sniffed} pixels (${decoded.reason}: ${decoded.detail}); the pixel checks will report unverified.`);
+      }
+    }
+  }
+
+  const report = verify.verifyAsset(bytes, contract);
   result.verification = report;
   result.verdict = report.verdict;
   result.synthetic = report.synthetic;
+  result.pixelSource = contract.decodedPixels ? contract.decodedPixels.source : null;
 
   try {
     ensureDir(path.dirname(path.resolve(out)));

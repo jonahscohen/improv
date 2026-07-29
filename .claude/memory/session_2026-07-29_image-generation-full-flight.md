@@ -10,7 +10,13 @@ verified: tests + nine live provider calls across both providers + visual read o
 confidence: high
 ---
 
-Commit stamp at authoring: 56251cb7.
+Commit stamp at authoring: 56251cb7. The unit was accepted and committed at d89d073a; the browser-transcode
+half and the provider-asymmetry table landed after that, in the following commit.
+
+A harness note for whoever writes the next beat, because it cost a blocked commit here: the memory-before-commit
+gate is a per-session flag cleared by a beat write that the PostToolUse hook can OBSERVE. Beat edits made through a
+`python3` heredoc in Bash are invisible to it, so the debt stays open even though the beat is genuinely written.
+Write beats with the Write or Edit tool, not through a shell script, or the gate blocks a commit it should pass.
 
 The generator built earlier today worked and nothing could reach it. This is the reachability and
 discoverability half, plus the layer that makes the prompt worth generating from.
@@ -348,6 +354,29 @@ print. The measured cost still lands in the ledger as `usage-derived` after the 
 itself succeeded (verify reports 55 files matching, and the corrected text is present in all five non-Claude
 harnesses). Flagging rather than fixing: hooks on disk but unwired means they silently do not fire, which is the
 class of breakage this team has been bitten by repeatedly.
+
+## The lead's independent render found better evidence than mine, and it settles a default
+
+Verified by the lead rather than taken on report: a live `gpt-image-2` render with all four pixel checks executing
+against decoded pixels, `unverifiedReasons` empty, and **contrast FAILING at 3.68:1 worst where the mean was
+9.57:1**. Cost 0.0064 USD usage-derived. He opened the PNG and confirmed a real photographic render matching the
+brief.
+
+That failing case is stronger evidence than my passing one, and it belongs here as the measured justification for a
+default that was previously only reasoned about: **worst-mode is correct and mean-mode would have shipped a
+legibility defect.** Mean would have passed that asset at 9.57:1 while a real patch under the headline sat at
+3.68:1. An average hides the one bright region that eats the text, which is exactly what the worst-case default
+exists to catch. Anyone tempted to switch `contrast-mode` to `mean` for a friendlier pass rate should read this
+paragraph first.
+
+## Two open items that are NOT this unit's, still live at hand-off
+
+1. `./install.sh --only sidecoach --yes` exits 1 on the `app-hooks` component with `KeyError: 'hook'`, warning that
+   the hooks are on disk but NOT wired into settings.json. Unwired hooks silently do not fire, which is the class of
+   breakage this repo has been bitten by repeatedly. The sidecoach skill propagation itself succeeds.
+2. The monitor's `--json` returns `checklist: []` for every flow, not just this one, so checklist-based gating does
+   not work for anything, including the asset-production blocker row this unit added. The verdict still reaches a
+   reader through `guidance`, which is what a model consumes.
 
 ## Files touched
 
