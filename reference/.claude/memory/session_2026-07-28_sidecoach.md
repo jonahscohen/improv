@@ -551,4 +551,4 @@ Copy drafts ready: 9 options for 3 slots (brand)
 - Pre-flight checks
 - Exponential-only easing - 2/4 pass
 
-Recorded: 2026-07-28T20:49:47.557Z
+Recorded: 2026-07-28T23:40:36.518Z
