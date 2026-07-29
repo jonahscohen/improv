@@ -160,6 +160,29 @@ Finding 3's fix then failed its own new test twice, and both failures were real:
 as a portrait request, and "set object-fit on the thumbnail element" still matched. Both are fixed and the
 second produced the general structural-noun rule rather than one more special case.
 
+## Proof through the REAL entry point, not through a handler called in a test
+
+The command a user actually types, run from a project directory:
+
+    node <sidecoach>/bin/sidecoach-monitor.js "/sidecoach craft a pricing hero with a full-bleed backdrop behind the headline" --json
+
+produced a 1536x864 RGBA PNG at `<project>/.sidecoach-cache/assets/backdrop-horizon-band-<digest>.png` and carried
+the whole compilation report plus the verdict in the monitor's guidance. Opened and read: it is the deterministic
+offline placeholder exactly as designed, a gradient field with hash-placed discs, a horizon band, and the swatch
+strip that encodes the hash bytes. It reads unmistakably as a placeholder rather than as art, which is the point.
+Contrast measured 1.20:1 against the 4.5:1 floor and correctly did not block, because those colours come from a
+prompt hash.
+
+Worth knowing: the first attempt at this produced NOTHING and reported only `flowA_brand_verify`. The demo project
+had no PRODUCT.md, and the craft chain gates on it. That gate is real and working; a project without PRODUCT.md
+gets no asset because it gets no craft chain.
+
+**A gap this exposed, and it is not mine to fix.** The monitor's aggregated `--json` output carries `checklist: []`
+for the whole run, empty rather than short, so the asset row's blocker state does not reach a caller reading the
+monitor's JSON. The verdict IS in `guidance`, which is what a model consumes, so the capability reports honestly
+through the path that matters. But a caller branching on `checklist` sees nothing at all, for any flow, not just
+this one.
+
 ## What is still short of full flight
 
 - **The JPEG hole is open and cannot be closed with a request parameter.** Proven, for free. Closing it needs a
@@ -178,6 +201,62 @@ second produced the general structural-noun rule rather than one more special ca
   re-run. Correct as a cache policy, expensive as a workflow on Gemini today.
 - **Full-suite green is not claimed.** Two full test runs were racing in this shared tree, so the eight suites
   this unit can affect were run serially instead and all pass. The full suite is the tree's to report, not mine.
+
+## The JPEG hole: a fix that needs no decoder, proven against an independent oracle
+
+The lead's attack order was (1) ask the API for PNG, (2) size a baseline JPEG decoder, (3) change the default
+provider. Step 1 is closed as impossible, for free, above. Before sizing step 2 there is a fourth option that is
+better than both remaining ones, and it is now PROVEN rather than proposed.
+
+**Playwright is already a dependency of this package** (`package.json`, and `audit-rendered.ts` already drives a
+browser). A browser decodes JPEG natively. So real RGBA pixels can be obtained from JPEG bytes with no new
+dependency and, more importantly, WITHOUT a hand-written inverse DCT, which was the real risk in step 2: a wrong
+IDCT yields a wrong contrast number, and a confidently wrong number is worse than an honest `unverified`.
+
+Spike result: 1.5 seconds, correct dimensions, real RGBA.
+
+Validated against an INDEPENDENT decoder rather than trusted. `sips` (a macOS system tool, no dependency) was used
+to transcode the same JPEG to PNG, and that PNG was decoded by this repo's own PNG codec. Probe pixels agreed
+exactly at (200,400) and (700,384), differed by 1 unit at (1300,700), dimensions matched exactly, and the
+whole-image channel sum differed by a mean of 0.15 per 255 across 3.17 million samples. That is the expected
+difference between two correct JPEG implementations, and it is far below anything a WCAG contrast ratio is
+sensitive to.
+
+**The design that keeps the three-value rule intact.** `format-matches` must STILL FAIL on a JPEG answer to a PNG
+request, because that is a true fact about what the provider did, and transcoding then verifying our own re-encoded
+PNG would be laundering. What changes is only that the PIXEL checks stop returning `unverified`: they get real
+pixels, so `pixels-decodable`, `rendered-not-blank`, and `contrast-at-placement` produce real numbers. The overall
+verdict on Gemini output stays `failed` on format, and the contrast measurement exists. Nothing is loosened;
+`unverified` still means unverified whenever pixels genuinely cannot be read, including when no browser is
+available.
+
+**Keep the verifier SYNCHRONOUS.** `verifyAsset` is sync and the bin calls it sync; making it async would break the
+bin and its test suite. The move is to let the contract accept OPTIONALLY pre-decoded pixels, and have the bin do
+the async transcode and pass them in. The verifier stays pure and sync.
+
+Sizing, for the decision:
+
+    src/image-jpeg-pixels.ts     ~90 lines   browser launch, canvas decode, named refusals
+    src/image-asset-verify.ts    ~25 lines   accept optional pre-decoded RGBA; no async added
+    bin/sidecoach-image.js       ~30 lines   transcode when bytes are not png and a pixel check is contracted
+    tests                       ~120 lines   including the sips oracle comparison above
+    TOTAL                       ~265 lines, no new dependency, no hand-rolled codec
+
+Against roughly 550-650 lines for a baseline JPEG decoder (marker parsing, Huffman with byte-stuffing, dequantize,
+IDCT, chroma upsampling, YCbCr conversion, restart intervals, named refusals) which would itself still need an
+oracle.
+
+NOT BUILT. It modifies the verification core, which is another unit's reviewed code, and the standing instruction
+was to report the surface before building into it. Recommended, sized, and proven; awaiting the call.
+
+## For whoever picks up reach's question
+
+`reach` asked whether `STANDALONE_BINS` should move from `bin/sidecoach.js` into `src/standalone-bins.ts` so a
+build-time generator can import it and GENERATE `reference/tools.md` instead of hand-writing it. The answer is
+YES and the reason is this beat's own subject: hand-writing that table is exactly how two false statements shipped.
+It did not move here only because the parity test reads the registry through `sidecoach list --json`, which needs
+no import, and moving a const another teammate's generator depends on mid-flight in a shared tree invites a
+collision. The fourth field per tool (`flowWiring`) is already in place, so the move is mechanical.
 
 ## Files touched
 
