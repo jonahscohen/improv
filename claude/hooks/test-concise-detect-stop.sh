@@ -410,5 +410,77 @@ OUT=$(run "$FH" "$T")
                             || bad "reported count tracks the real overrun (7)"
 
 echo
+
+
+# ===========================================================================
+# Detection 3: VOLUME (added 2026-07-31, Jonah: "make it actually work")
+#
+# Measured on 232 real responses from a live transcript: the tangent+list gates
+# fired on 13 (5.6%) while 94 (40.5%) were long multi-section answers. The lexicon
+# can only catch an opener it already knows. These cases lock in the volume gate
+# AND the exemptions that keep it off legitimate output.
+# ===========================================================================
+
+LONG_PROSE="The fix is in. $(python3 -c "print('This sentence adds narration the reader did not ask for. '*45)")"
+THREE_SECTIONS='**First.** Detail about it here.
+
+**Second.** More detail here.
+
+**Third.** Yet more detail.
+
+Closing line.'
+BIG_TABLE="Here are the numbers.
+
+| a | b |
+|---|---|
+$(python3 -c "print('\n'.join('| row%d | value%d |' % (i, i) for i in range(60)))")
+
+Next: push it."
+BIG_CODE="Done.
+
+\`\`\`
+$(python3 -c "print('\n'.join('line %d of output' % i for i in range(120)))")
+\`\`\`"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$LONG_PROSE"
+fired "$(run "$H" "$H/t.jsonl")" && ok "a wall of prose fires the volume gate" || bad "a wall of prose fires the volume gate"
+
+# The shape the ORIGINAL gate exempted outright: one unbroken paragraph was a
+# single non-empty line, so too-little-prose waved it through at any length.
+H="$(newhome)"; transcript "$H/t.jsonl" "$(printf '%s' "$LONG_PROSE" | tr -d '\n')"
+fired "$(run "$H" "$H/t.jsonl")" && ok "a SINGLE-paragraph wall still fires (was exempt as too-little-prose)" || bad "a SINGLE-paragraph wall still fires"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$THREE_SECTIONS"
+fired "$(run "$H" "$H/t.jsonl")" && ok "three bold-led sections fire the briefing gate" || bad "three bold-led sections fire the briefing gate"
+
+H="$(newhome)"; transcript "$H/t.jsonl" '**Only.** One section and a short answer.'
+fired "$(run "$H" "$H/t.jsonl")" && bad "one bold section stays silent" || ok "one bold section stays silent"
+
+# Exemptions. A false fire here is the expensive failure the header warns about.
+H="$(newhome)"; transcript "$H/t.jsonl" "$BIG_TABLE"
+fired "$(run "$H" "$H/t.jsonl")" && bad "a wide table is data, not prose -> silent" || ok "a wide table is data, not prose -> silent"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$BIG_CODE"
+fired "$(run "$H" "$H/t.jsonl")" && bad "a large code dump -> silent" || ok "a large code dump -> silent"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$LONG_PROSE" "explain in detail how this works"
+fired "$(run "$H" "$H/t.jsonl")" && bad "depth requested -> volume gate stands down" || ok "depth requested -> volume gate stands down"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$LONG_PROSE" "walk me through the whole thing"
+fired "$(run "$H" "$H/t.jsonl")" && bad "'walk me through' -> volume gate stands down" || ok "'walk me through' -> volume gate stands down"
+
+# Tunable, same pattern as CHROME_TABGROUP_IDLE_SECONDS.
+H="$(newhome)"; transcript "$H/t.jsonl" "$LONG_PROSE"
+out=$(printf '{"session_id":"%s","transcript_path":"%s","stop_hook_active":false}' "$SID" "$H/t.jsonl" \
+      | HOME="$H" CONCISE_WORD_CAP=100000 CONCISE_SECTION_CAP=99 bash "$HOOK" 2>/dev/null)
+fired "$out" && bad "CONCISE_WORD_CAP raises the ceiling" || ok "CONCISE_WORD_CAP raises the ceiling"
+
+# MUTANT: the gate must be able to go red for the right reason.
+H="$(newhome)"; transcript "$H/t.jsonl" "$LONG_PROSE"
+[[ "$(run "$H" "$H/t.jsonl")" == *"words of prose"* ]] && ok "volume block names the word count" || bad "volume block names the word count"
+H="$(newhome)"; transcript "$H/t.jsonl" "$THREE_SECTIONS"
+[[ "$(run "$H" "$H/t.jsonl")" == *"bold-led sections"* ]] && ok "section block names the section count" || bad "section block names the section count"
+
+echo
 echo "== $pass passed, $fail failed =="
 [ "$fail" -eq 0 ]

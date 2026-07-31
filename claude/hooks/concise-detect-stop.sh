@@ -139,10 +139,12 @@ ITEM_RE = re.compile(r"^(\s*)(?:\d+[.)]|[-*+])\s+\S")
 FENCE_RE = re.compile(r"(?ms)^[ \t]{0,3}(?:```|~~~).*?(?:^[ \t]{0,3}(?:```|~~~)[ \t]*$|\Z)")
 
 
-def emit(skip="", tangent="", list_count=0):
+def emit(skip="", tangent="", list_count=0, words=0, sections=0):
     print("SKIP=" + skip.replace("\n", " "))
     print("TANGENT=" + tangent.replace("\n", " ")[:120])
     print("LIST=" + str(list_count))
+    print("WORDS=" + str(words))
+    print("SECTIONS=" + str(sections))
     sys.exit(0)
 
 
@@ -228,7 +230,12 @@ if total_chars and (fenced_chars + indented_chars) * 2 >= total_chars:
 prose = FENCE_RE.sub("", last_assistant)
 lines = [ln for ln in prose.split("\n") if not ln.lstrip().startswith(">")]
 nonempty = [i for i, ln in enumerate(lines) if ln.strip()]
-if len(nonempty) < 2:
+# This used to skip on line count alone, which exempted the single worst shape:
+# one unbroken paragraph of any length. A 480-word wall of text is exactly one
+# non-empty line and was waved through as "too little prose" (found 2026-07-31
+# while testing the volume gate). The skip is meant for a genuinely short answer,
+# so it now needs BOTH: too few lines to analyse AND too few words to matter.
+if len(nonempty) < 2 and len(prose.split()) < 40:
     emit(skip="too-little-prose")
 
 
@@ -293,7 +300,48 @@ for ln in lines:
         indent = len(ln[:len(ln) - len(ln.lstrip())].expandtabs(4))
         open_runs = {k: v for k, v in open_runs.items() if k < indent}
 
-emit(tangent=tangent, list_count=(worst if worst > 5 else 0))
+# --- Detection 3: volume -----------------------------------------------------
+# Added 2026-07-31 after Jonah: "modify the conciseness guard to actually work."
+# MEASURED on 232 real assistant responses from this session's own transcript: the
+# two structural detections above fired on 13 (5.6%), while 94 (40.5%) were long
+# multi-section answers. The lexicon can only ever catch a tangent that opens with
+# one of its named phrases, and the observed drift mostly does not.
+#
+# The header above says a length gate is deliberately absent because it false-fires
+# on legitimate deep dives. That reasoning still stands, and it is why this gate is
+# NOT a raw length check: it sits BEHIND the same user-asked-for-depth skip as
+# everything else (emit(skip="user-asked-for-depth") above returns before this
+# runs), and its thresholds were chosen from the measured distribution rather than
+# picked. Reversing a documented decision is worth stating plainly: the decision was
+# right about raw length and wrong about leaving volume unguarded entirely.
+#
+# Distribution over those 232 responses, prose only (code fences and table rows
+# excluded, since neither is prose the reader has to wade through):
+#   p50 191 words | p75 269 | p90 313 | p99 362 | max 397
+#   3+ bold-led sections: 11 responses (4.7%)
+# Chosen: words > 300 OR sections >= 3, which fires on 36 (15.5%) - roughly triple
+# the current coverage, all of it in the genuine long tail, and well short of the
+# 40% band that would start catching ordinary answers.
+#
+# Both thresholds are tunable, same pattern as CHROME_TABGROUP_IDLE_SECONDS.
+WORD_CAP = int(os.environ.get("CONCISE_WORD_CAP", "300"))
+SECTION_CAP = int(os.environ.get("CONCISE_SECTION_CAP", "3"))
+
+# Table rows are data, not prose - a wide comparison table is the concise way to
+# present numbers and must never be what trips a verbosity gate.
+prose_only = "\n".join(ln for ln in lines if not re.match(r"^\s*\|", ln))
+word_count = len(prose_only.split())
+sections = len([
+    p for p in prose_only.split("\n\n")
+    if p.strip().startswith("**")
+])
+
+emit(
+    tangent=tangent,
+    list_count=(worst if worst > 5 else 0),
+    words=(word_count if word_count > WORD_CAP else 0),
+    sections=(sections if sections >= SECTION_CAP else 0),
+)
 PYEOF
 )
 
@@ -306,11 +354,15 @@ SKIP_REASON=$(field SKIP || true)
 TANGENT=$(field TANGENT || true)
 LIST_COUNT=$(field LIST || true)
 case "$LIST_COUNT" in ''|*[!0-9]*) LIST_COUNT=0 ;; esac
+WORD_COUNT=$(field WORDS || true)
+case "$WORD_COUNT" in ''|*[!0-9]*) WORD_COUNT=0 ;; esac
+SECTION_COUNT=$(field SECTIONS || true)
+case "$SECTION_COUNT" in ''|*[!0-9]*) SECTION_COUNT=0 ;; esac
 
 [ -n "$SKIP_REASON" ] && exit 0
 
 # Clean stop -> re-arm the gate for the next burst.
-if [ -z "$TANGENT" ] && [ "$LIST_COUNT" -eq 0 ]; then
+if [ -z "$TANGENT" ] && [ "$LIST_COUNT" -eq 0 ] && [ "$WORD_COUNT" -eq 0 ] && [ "$SECTION_COUNT" -eq 0 ]; then
   rm -f "$BLOCKED_FLAG" 2>/dev/null || true
   exit 0
 fi
@@ -331,6 +383,12 @@ if [ -n "$TANGENT" ]; then
 fi
 if [ "$LIST_COUNT" -gt 0 ]; then
   REASON="$REASON Rule 7 (five is a ceiling, not a target): $LIST_COUNT items at one list level - cut to what changes the reader's next move, or split into priority tiers."
+fi
+if [ "$WORD_COUNT" -gt 0 ]; then
+  REASON="$REASON Rule 10 (prefer short - if a sentence can go, cut it): $WORD_COUNT words of prose, against a median of about 190 for this harness. Code blocks and tables are already excluded from that count, so this is prose the reader has to wade through. Lead with the answer and cut the supporting narration."
+fi
+if [ "$SECTION_COUNT" -gt 0 ]; then
+  REASON="$REASON Rule 4 (finish the current thread before raising tangents): $SECTION_COUNT bold-led sections - that is a briefing, not an answer. Keep the section that answers what was asked and drop the rest, or hold them until the user asks."
 fi
 REASON="$REASON Re-send your previous message with that removed - the trimmed answer only, nothing added. If the cut material matters, hold it until the user asks. Do not comment on this block. This gate fires once, then stays quiet until a clean response."
 
