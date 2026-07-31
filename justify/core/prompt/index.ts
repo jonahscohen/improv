@@ -1,4 +1,4 @@
-import { InlinePrompt, clampPromptTop } from './inline-prompt';
+import { InlinePrompt, clampPromptTop, clampPromptLeft } from './inline-prompt';
 import { currentPalette } from '../toolbar';
 import { enableEventIntercept, disableEventIntercept, getElementAtPoint } from '../event-intercept';
 import { generateSelector, getComputedStylesSubset, getNearbyText, getAccessibilityInfo } from '../element-utils';
@@ -348,7 +348,7 @@ export class PromptMode {
           if (_be2) {
             var _br2 = _be2.getBoundingClientRect();
             this.prompt.container.style.transition = "none";
-            this.prompt.container.style.left = (_br2.left + _br2.width / 2 - 150) + "px";
+            this.prompt.container.style.left = clampPromptLeft(_br2.left + _br2.width / 2 - 150, this.prompt.container.offsetWidth || 388) + "px";
             this.prompt.container.style.top = clampPromptTop(_mb2 + 12, _mt2 === Infinity ? undefined : _mt2, this.prompt.container.offsetHeight || 48) + "px";
           }
         }
@@ -358,6 +358,13 @@ export class PromptMode {
 
     this._boundResize = function (this: PromptMode) {
       if (this.multiSelect.getAll().length > 0) this._showSelOverlays();
+      // A viewport that narrows under an already-open prompt would leave it
+      // overflowing until the next selection change, and the rAF trackers only run
+      // while a selection is being followed. Re-clamp against the new width.
+      if (this.prompt?.visible) {
+        const c = this.prompt.container;
+        c.style.left = clampPromptLeft(parseFloat(c.style.left) || 0, c.offsetWidth || 388) + "px";
+      }
     }.bind(this);
     window.addEventListener("resize", this._boundResize);
 
@@ -885,7 +892,7 @@ export class PromptMode {
           }
           var _iwR = 300,
             _cxR = _botTr ? _botTr.getBoundingClientRect().left + _botTr.getBoundingClientRect().width / 2 - _iwR / 2 : _ml;
-          self.prompt.container.style.left = _cxR + "px";
+          self.prompt.container.style.left = clampPromptLeft(_cxR, self.prompt.container.offsetWidth || 388) + "px";
           self.prompt.container.style.top = clampPromptTop(_mb + 12, _topTr === Infinity ? undefined : _topTr, self.prompt.container.offsetHeight || 48) + "px";
         }
         self._selRaf = requestAnimationFrame(_update);

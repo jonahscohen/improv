@@ -7,6 +7,25 @@
 // route through this or the flip gets overwritten within a frame.
 import { currentPalette, registerThemedSurface, type Palette } from '../toolbar';
 
+/**
+ * Keep the prompt inside the viewport horizontally. Callers derive x by centring a
+ * 300px input on the selection, so a selection near either edge pushes the prompt
+ * off-screen - negative on the left, past innerWidth on the right.
+ *
+ * When the prompt is WIDER than the viewport, clamping alone cannot save it, so it
+ * sits flush at the margin and the container's max-width does the rest (the input
+ * carries min-width:0 so it can shrink; the two 36px buttons never shrink).
+ *
+ * Like clampPromptTop, this MUST be applied by every writer of container.left - the
+ * selection-follow trackers in prompt/index.ts overwrite it every frame otherwise.
+ */
+export function clampPromptLeft(x: number, w: number): number {
+  const margin = 8;
+  const max = window.innerWidth - w - margin;
+  if (max <= margin) return margin;
+  return Math.min(Math.max(x, margin), max);
+}
+
 export function clampPromptTop(bottomY: number, topY: number | undefined, h: number): number {
   const margin = 8;
   const reserve = 28;
@@ -47,12 +66,19 @@ export class InlinePrompt {
 
   constructor(shadowRoot: ShadowRoot | HTMLElement) {
     this.container = document.createElement("div");
-    this.container.style.cssText = "position:fixed;display:none;z-index:2147483647;pointer-events:auto;align-items:center;gap:8px;flex-direction:row";
+    // max-width is the second half of horizontal viewport protection: clamping the
+    // left edge cannot help when the prompt is wider than the viewport itself, which
+    // it is below ~404px (300 input + two 36px buttons + two 8px gaps + margins).
+    this.container.style.cssText = "position:fixed;display:none;z-index:2147483647;pointer-events:auto;align-items:center;gap:8px;flex-direction:row;max-width:calc(100vw - 16px);box-sizing:border-box";
 
     this.input = document.createElement("input");
     this.input.type = "text";
     this.input.placeholder = "Describe the change...";
-    this.input.style.cssText = "width:300px;min-width:300px;background:#1a1a1a;color:#e2e8f0;border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:10px 18px;transition:box-shadow 300ms ease,border-color 300ms ease;font-size:13px;font-family:JustifySans,system-ui,sans-serif;outline:none;box-shadow:0 4px 16px rgba(0,0,0,0.4);animation:justify-input-glow 3s ease-in-out infinite";
+    // width:300px is the intended size and still what it gets at any normal viewport.
+    // min-width:0 plus flex-shrink lets it give way instead of overflowing once the
+    // container's max-width bites; the buttons keep flex-shrink:0 so the input yields
+    // first and the controls stay reachable.
+    this.input.style.cssText = "width:300px;min-width:0;flex:0 1 300px;background:#1a1a1a;color:#e2e8f0;border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:10px 18px;transition:box-shadow 300ms ease,border-color 300ms ease;font-size:13px;font-family:JustifySans,system-ui,sans-serif;outline:none;box-shadow:0 4px 16px rgba(0,0,0,0.4);animation:justify-input-glow 3s ease-in-out infinite";
 
     this.input.addEventListener("focus", () => {
       this._focused = true;
@@ -331,8 +357,11 @@ export class InlinePrompt {
     this.container.style.display = "flex";
     const h = this.container.offsetHeight || 48;
     const top = clampPromptTop(y, aboveY, h);
+    // Measured in the same hidden pass as the height, because the width depends on
+    // whether max-width has shrunk the input on a narrow viewport.
+    const left = clampPromptLeft(x, this.container.offsetWidth || 388);
     this.container.style.transition = "left 200ms cubic-bezier(0.23,1,0.32,1),top 200ms cubic-bezier(0.23,1,0.32,1)";
-    this.container.style.left = `${x}px`;
+    this.container.style.left = `${left}px`;
     this.container.style.top = `${top}px`;
     this.container.style.visibility = "visible";
     this.visible = true;
