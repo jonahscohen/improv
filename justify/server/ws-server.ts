@@ -279,11 +279,9 @@ IP.1 = 127.0.0.1
 
       // Serve/save responses
       if (req.method === 'GET' && req.url === '/responses') {
-        const respFile = this.dataFile('responses.json');
         try {
-          const data = existsSync(respFile) ? readFileSync(respFile, 'utf-8') : '[]';
           res.setHeader('Content-Type', 'application/json');
-          res.end(data);
+          res.end(JSON.stringify(this.readResponses()));
         } catch { res.end('[]'); }
         return;
       }
@@ -292,8 +290,42 @@ IP.1 = 127.0.0.1
         req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
         req.on('end', () => {
           const respFile = this.dataFile('responses.json');
-          try { writeFileSync(respFile, body); } catch {}
+          // Filter through the tombstones before writing. A client that lost its
+          // clear-write and then posts a stale full array cannot re-add a cleared
+          // entry, which is the resurrection Jonah reported on 2026-07-31.
+          try {
+            const parsed = JSON.parse(body);
+            const arr = Array.isArray(parsed) ? this.dropCleared(parsed) : parsed;
+            writeFileSync(respFile, JSON.stringify(arr));
+          } catch {
+            try { writeFileSync(respFile, body); } catch {}
+          }
           res.end('ok');
+        });
+        return;
+      }
+      // Clear is a SERVER-AUTHORITATIVE tombstone, not a client read-modify-write.
+      // The client used to clear by posting the survivors, so if that write was
+      // lost - and a completed task reloads the page 1200ms later, which discards
+      // any request still in flight - the next GET served the stale file and every
+      // cleared task came back. Tombstones make that impossible: an id recorded
+      // here can never be served or appended again, whatever a later write says.
+      if (req.method === 'POST' && req.url === '/responses/clear') {
+        let body = '';
+        req.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+        req.on('end', () => {
+          try {
+            const parsed = JSON.parse(body || '{}');
+            const ids: string[] = Array.isArray(parsed?.ids) ? parsed.ids.map(String) : [];
+            this.addTombstones(ids);
+            const kept = this.dropCleared(this.readResponsesRaw());
+            writeFileSync(this.dataFile('responses.json'), JSON.stringify(kept));
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true, cleared: ids.length, remaining: kept.length }));
+          } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          }
         });
         return;
       }
@@ -1318,14 +1350,68 @@ IP.1 = 127.0.0.1
   private appendResponseFile(response: Record<string, unknown>): void {
     const respFile = this.dataFile('responses.json');
     try {
-      let arr: unknown[] = [];
-      if (existsSync(respFile)) {
-        const parsed = JSON.parse(readFileSync(respFile, 'utf-8'));
-        if (Array.isArray(parsed)) arr = parsed;
-      }
-      arr.push(response);
+      // dropCleared on the BASE array, not just the appended entry: this path
+      // reads whatever is on disk and writes it back, so without the filter a
+      // single append re-persists every stale entry sitting in the file.
+      const arr = this.dropCleared(this.readResponsesRaw());
+      if (!this.isCleared(response)) arr.push(response);
       writeFileSync(respFile, JSON.stringify(arr));
     } catch {}
+  }
+
+  // ---- Cleared-entry tombstones -------------------------------------------
+  // An entry's identity is promptId + timestamp, because promptId alone repeats
+  // (one prompt answered twice yields two entries with the same promptId, which
+  // is real: ~/.claude/justify/responses.json held prompt-54 and prompt-57
+  // multiple times on 2026-07-31).
+  private entryKey(e: unknown): string {
+    const r = (e || {}) as Record<string, unknown>;
+    return `${String(r.promptId ?? r.id ?? '')}|${String(r.timestamp ?? '')}`;
+  }
+
+  private readTombstones(): Set<string> {
+    const f = this.dataFile('responses-cleared.json');
+    try {
+      if (!existsSync(f)) return new Set();
+      const parsed = JSON.parse(readFileSync(f, 'utf-8'));
+      return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+    } catch { return new Set(); }
+  }
+
+  private addTombstones(ids: string[]): void {
+    const f = this.dataFile('responses-cleared.json');
+    try {
+      const set = this.readTombstones();
+      for (const id of ids) set.add(String(id));
+      // Bounded so a long-lived install cannot grow this without limit. The
+      // newest entries are the ones that can still be resurrected by a stale
+      // client array, so keep the tail.
+      const all = [...set];
+      writeFileSync(f, JSON.stringify(all.slice(-5000)));
+    } catch {}
+  }
+
+  private isCleared(e: unknown): boolean {
+    return this.readTombstones().has(this.entryKey(e));
+  }
+
+  private dropCleared(arr: unknown[]): unknown[] {
+    const tomb = this.readTombstones();
+    if (tomb.size === 0) return arr;
+    return arr.filter((e) => !tomb.has(this.entryKey(e)));
+  }
+
+  private readResponsesRaw(): unknown[] {
+    const respFile = this.dataFile('responses.json');
+    try {
+      if (!existsSync(respFile)) return [];
+      const parsed = JSON.parse(readFileSync(respFile, 'utf-8'));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  }
+
+  private readResponses(): unknown[] {
+    return this.dropCleared(this.readResponsesRaw());
   }
 
   recordMcpActivity(): void {

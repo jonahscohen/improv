@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { InlinePrompt } from '../../core/prompt/inline-prompt.js';
+import { InlinePrompt, clampPromptLeft } from '../../core/prompt/inline-prompt.js';
 
 // show() positioning contract: the input sits below the selection unless that
 // would run past the viewport bottom (reserving room for the button row that
@@ -76,5 +76,57 @@ describe('InlinePrompt.show viewport flip', () => {
     expect((p as any).container.style.visibility).toBe('visible');
     expect((p as any).container.style.display).toBe('flex');
     expect(p.visible).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Horizontal protection. Reported by Jonah 2026-07-31 with a screenshot: the
+// prompt bleeding off the right edge, its left corner clipped. The vertical axis
+// had clampPromptTop applied at all three writers of container.top; nothing
+// clamped container.left, and callers derive x by centring a 300px input on the
+// selection (rect.left + rect.width/2 - 150), so a selection near either edge
+// pushes the panel off-screen.
+describe('clampPromptLeft', () => {
+  const W = 388; // 300px input + two 36px buttons + two 8px gaps
+
+  const at = (vw: number) => {
+    vi.stubGlobal('window', { innerWidth: vw, innerHeight: 800 });
+  };
+
+  it('leaves a comfortably-placed prompt where it is', () => {
+    at(1440);
+    expect(clampPromptLeft(400, W)).toBe(400);
+  });
+
+  it('pulls a negative x back to the margin', () => {
+    at(1440);
+    expect(clampPromptLeft(-120, W)).toBe(8);
+  });
+
+  it('pulls an overflowing x back to the right margin', () => {
+    at(1440);
+    expect(clampPromptLeft(1300, W)).toBe(1440 - W - 8);
+  });
+
+  it('handles the reported case: a narrow viewport with the panel past the edge', () => {
+    at(646);
+    expect(clampPromptLeft(620, W)).toBe(646 - W - 8);
+  });
+
+  it('sits flush at the margin when the panel is wider than the viewport', () => {
+    // Clamping alone cannot save this; the container's max-width shrinks the input.
+    at(360);
+    expect(clampPromptLeft(500, W)).toBe(8);
+  });
+
+  it('never leaves the viewport, for any position at any width', () => {
+    for (let vw = 200; vw <= 2000; vw += 7) {
+      at(vw);
+      for (let x = -500; x <= vw + 500; x += 13) {
+        const left = clampPromptLeft(x, W);
+        expect(left).toBeGreaterThanOrEqual(8);
+        if (vw - W - 8 > 8) expect(left + W).toBeLessThanOrEqual(vw - 8);
+      }
+    }
   });
 });

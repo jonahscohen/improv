@@ -151,9 +151,7 @@ export class JustifyCore {
       const response = data as Record<string, unknown>;
       response.reviewed = false;
       this._changeHistory.push(response);
-      try {
-        fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{});
-      } catch {}
+      this._persistHistory();
       this._updateClaudeBadge();
       const status = response.status as string;
       if (status === 'completed') {
@@ -397,12 +395,12 @@ export class JustifyCore {
     );
     this._changesPanel.setOnDone((_promptId: string, entry: Record<string, unknown>) => {
       entry.reviewed = true;
-      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      this._persistHistory();
       this._updateClaudeBadge();
     });
     this._changesPanel.setOnUndoDone((_promptId: string, entry: Record<string, unknown>) => {
       entry.reviewed = false;
-      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      this._persistHistory();
       this._updateClaudeBadge();
     });
     this._changesPanel.setOnReply((promptId: string, text: string) => {
@@ -419,8 +417,9 @@ export class JustifyCore {
     });
 
     this._changesPanel.setOnClearAll(() => {
+      const cleared = this._changeHistory.slice();
       this._changeHistory = [];
-      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      this._persistCleared(cleared);
       this._updateClaudeBadge();
       this._clearTaskHighlights();
       if (this._claudeState === 'review' || this._claudeState === 'review-active') {
@@ -433,8 +432,9 @@ export class JustifyCore {
     // ("Completed" == marked done, not the response status - a needsInfo task can
     // be marked done too.)
     this._changesPanel.setOnClearCompleted(() => {
+      const cleared = this._changeHistory.filter(e => e.reviewed);
       this._changeHistory = this._changeHistory.filter(e => !e.reviewed);
-      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      this._persistCleared(cleared);
       this._updateClaudeBadge();
       this._clearTaskHighlights();
       const actionable = this._changeHistory.filter(e => !e.reviewed);
@@ -444,8 +444,9 @@ export class JustifyCore {
     });
 
     this._changesPanel.setOnClearReviewed(() => {
+      const cleared = this._changeHistory.filter(e => e.reviewed);
       this._changeHistory = this._changeHistory.filter(e => !e.reviewed);
-      try { fetch(`${this.justifyBaseUrl}/responses`,{method:'POST',body:JSON.stringify(this._changeHistory)}).catch(()=>{}); } catch {}
+      this._persistCleared(cleared);
       this._updateClaudeBadge();
       const actionable = this._changeHistory.filter(e => !e.reviewed);
       if (actionable.length === 0) {
@@ -1018,6 +1019,40 @@ export class JustifyCore {
   }
 
   private _hotRefreshTimer: number | null = null;
+
+  // Every history write has to survive the page going away. A completed task
+  // calls window.location.reload() 1200ms later (see _scheduleHotRefresh), and a
+  // plain fetch still in flight at teardown is discarded - which silently reverted
+  // clears and Mark Done, then served the stale file back on load. keepalive is
+  // exactly the flag for "finish this even if the document is unloading".
+  //
+  // Reported by Jonah 2026-07-31: cleared tasks reappearing after the next task
+  // completed. Every entry persisted at the time read reviewed=false despite
+  // having been marked done, which is the same lost write from the other side.
+  private _persistHistory(): void {
+    try {
+      fetch(`${this.justifyBaseUrl}/responses`, {
+        method: 'POST',
+        keepalive: true,
+        body: JSON.stringify(this._changeHistory),
+      }).catch(() => {});
+    } catch {}
+  }
+
+  // A clear is recorded as a tombstone rather than "write back what I kept", so a
+  // lost write cannot resurrect anything: the server refuses a cleared id on GET
+  // and on its own headless append, whatever a later stale array claims.
+  private _persistCleared(cleared: Array<Record<string, unknown>>): void {
+    const ids = cleared.map(e => `${String(e.promptId ?? (e as any).id ?? '')}|${String(e.timestamp ?? '')}`);
+    try {
+      fetch(`${this.justifyBaseUrl}/responses/clear`, {
+        method: 'POST',
+        keepalive: true,
+        body: JSON.stringify({ ids }),
+      }).catch(() => {});
+    } catch {}
+    this._persistHistory();
+  }
 
   private _scheduleHotRefresh(): void {
     if (this._hotRefreshTimer !== null) clearTimeout(this._hotRefreshTimer);
