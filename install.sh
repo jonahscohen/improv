@@ -1939,7 +1939,7 @@ DESCS+=(
   "Installs curate into ~/.claude/skills/ and seeds the personal catalog directory at ~/.claude/design-references/ (with a starter category vocabulary). Interactive 5-step wizard (/curate) captures one-off references into it, and it is consulted on UI builds. Deactivation removes the SKILL but preserves your catalog data. Bundled file. Also part of the 'skills' bundle."
   "Installs social-media into ~/.claude/skills/. Platform-specific sizing, safe zones, and content rules for 13 social platforms. Bundled file. Also part of the 'skills' bundle."
   "Installs design-team into ~/.claude/skills/. Orchestrates multi-agent design sprints with 16 roles across research/build/CD-review/revise phases. Bundled file. Also part of the 'skills' bundle."
-  "Installs visual-effects into ~/.claude/skills/ (recursive - ships 35 files of shader source). 14 generative shader backgrounds + 25 transformative FX + 17 post-process effects. Also part of the 'skills' bundle."
+  "Installs visual-effects into ~/.claude/skills/ (recursive - ships 35 files of shader source). 14 generative shader backgrounds + 26 transformative FX + 17 post-process effects. Also part of the 'skills' bundle."
   "Installs icon-source into ~/.claude/skills/. Rigorous protocol for sourcing icons verbatim from 8 approved libraries (Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols, plus animated variants). Bundled file. Also part of the 'skills' bundle."
 )
 FILES+=(
@@ -2098,7 +2098,7 @@ PERSONAL_TITLES=(
 )
 PERSONAL_DESCS=(
   "Personal: Ghostty terminal appearance (PolySans Neutral Mono font, custom 256-color palette, transparency, blur)."
-  "Personal: cinematic Ghostty effects (CRT curvature, TFT pixel grid, blazing cursor trail). Also clones the wider community shader library."
+  "Personal: cinematic Ghostty effects. Only the blazing cursor trail is active - the CRT curvature and TFT pixel-grid shaders ship but are commented out in config.ghostty, so uncomment them there if you want them. Also clones the wider community shader library."
 )
 PERSONAL_FILES=(
   "~/.config/ghostty/config (copy)"

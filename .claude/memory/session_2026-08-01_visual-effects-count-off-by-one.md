@@ -39,6 +39,20 @@ interesting rather than noise: "35 files" is exactly `find . -type f` in the ski
 standing instruction file. Correcting a number inside it while it is dirty with someone else's
 work risks entangling two unrelated changes in one commit. Raised for Jonah instead.
 
+## The same two errors also lived in install.sh
+
+`browser-tree.json` feeds the GUI; `install.sh`'s `DESCS` feed the command line. Both carried the
+stale 25, and install.sh additionally carried a worse one:
+
+    "Personal: cinematic Ghostty effects (CRT curvature, TFT pixel grid, blazing cursor trail)."
+
+`config.ghostty` has `bettercrt.glsl` and `tft.glsl` commented out. Only `cursor_blaze.glsl`
+loads, so **two of the three advertised effects were sold and never delivered.** Corrected to say
+which one is live and where to uncomment the others.
+
+Fixing one surface and not the other would have left the CLI stating as fact what the GUI had just
+stopped claiming.
+
 ## The general point
 
 A number in a description is a claim, and it ages. Nothing in the installer or the test suites
