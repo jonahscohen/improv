@@ -12,6 +12,10 @@
        (dark green here, pale green in dark), so the text on them has to invert
        too or one of the two themes ships unreadable. */
     --on-solid:#FAF7EE;
+    /* The log is a CONSOLE and should read as one in both themes. It used to
+       take --inverse, which flips to cream in dark mode - a bright slab in a
+       dark UI, which is the opposite of the terminal look intended. */
+    --console:#02272B; --on-console:#F4EFE4;
     --off-bg:rgba(2,39,43,0.05);
   }
   :root[data-theme="dark"]{
@@ -24,6 +28,7 @@
     --ok:#7FD0A6; --ok-bg:rgba(127,208,166,0.14);
     --part:#E0B45E; --part-bg:rgba(224,180,94,0.14);
     --on-solid:#02272B;
+    --console:#011A1D; --on-console:#F4EFE4;
     --off-bg:rgba(244,239,228,0.07);
   }
   :root{
@@ -272,16 +277,69 @@
     display:flex; align-items:center; gap:var(--s4); flex-wrap:nowrap;
     padding:var(--s3) var(--s6);
     border-top:1px solid var(--border-firm); background:var(--raised);
+    position:relative;   /* the toast stack anchors to this */
+  }
+
+  /* STATUS HAS ITS OWN PLACE NOW. It used to be written into a span in this bar
+     that the next row hover overwrote, so a message about a failed apply could
+     vanish before it was read. Anchored to the action bar rather than to the
+     viewport, so it always sits directly above it whatever height the bar is. */
+  .toasts{
+    position:absolute; bottom:100%; left:0; right:0;
+    display:flex; flex-direction:column; align-items:center; gap:var(--s2);
+    padding:0 var(--s5) var(--s4);
+    pointer-events:none;   /* the bar underneath stays clickable between toasts */
+  }
+  .toast{
+    pointer-events:auto;
+    display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:start; gap:var(--s3);
+    max-width:min(620px,100%);
+    padding:var(--s3) var(--s3) var(--s3) var(--s4);
+    border:1px solid var(--border-firm); border-radius:var(--r-md);
+    background:var(--raised); color:var(--text-primary);
+    font-size:var(--sm); line-height:1.45;
+    box-shadow:0 8px 24px rgba(2,39,43,0.16), 0 1px 2px rgba(2,39,43,0.10);
+  }
+  /* State reads as a TINT plus an icon, never an edge stripe. */
+  .toast--success{background:var(--ok-bg); border-color:var(--ok);}
+  .toast--success .toast__icon{color:var(--ok);}
+  .toast--error{background:var(--red-subtle); border-color:var(--red);}
+  .toast--error .toast__icon{color:var(--red);}
+  .toast--info .toast__icon{color:var(--text-secondary);}
+  .toast__icon{display:grid; place-items:center; width:18px; height:18px; margin-top:1px;}
+  .toast__icon svg{width:18px; height:18px; display:block;}
+  .toast__msg{min-width:0;}
+  .toast__x{
+    position:relative; display:grid; place-items:center;
+    width:20px; height:20px; padding:0; margin-top:1px;
+    border:0; background:none; border-radius:var(--r-sm);
+    color:var(--text-tertiary); cursor:pointer;
+    transition:color 120ms var(--ease);
+  }
+  .toast__x svg{width:15px; height:15px; display:block;}
+  .toast__x:hover{color:var(--text-primary);}
+  /* Small mark, comfortable target - same trick the row badge uses. */
+  .toast__x::after{content:""; position:absolute; inset:-12px;}
+
+  /* Transform only on the way in. An opacity keyframe here would risk the same
+     failure the pane animation had, where a non-advancing animation held the
+     from-state and hid the content. */
+  @keyframes toast-in{ from{transform:translateY(10px);} to{transform:none;} }
+  .toast{animation:toast-in 160ms var(--ease);}
+  .toast.is-leaving{opacity:0; transition:opacity 180ms var(--ease);}
+  @media (prefers-reduced-motion: reduce){
+    .toast{animation:none;}
+    .toast.is-leaving{transition:none;}
   }
   .staged{
     font-family:var(--font-mono); font-size:var(--xs); color:var(--text-primary);
     display:flex; align-items:center; gap:var(--s1); white-space:nowrap;
   }
-  .hint{
-    flex:1 1 0; min-width:0; color:var(--text-secondary); font-size:var(--xs);
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
-  .hint b{font-family:var(--font-mono); color:var(--text-secondary); font-weight:500;}
+  /* The status span that used to sit here is gone - messages are toasts now. It
+     was also the flex spacer, so the keys and actions take that job explicitly
+     rather than inheriting it from an element whose real purpose was text. */
+  .keys{margin-left:auto;}
   /* Measured 3.24:1 on --raised as tertiary. These are labels you read, not
      decoration, so they take secondary ink. */
   .actions{display:flex; gap:var(--s2); flex:0 0 auto; margin-left:auto; padding-left:var(--s5); border-left:1px solid var(--border-soft);}
@@ -294,7 +352,7 @@
 
   #log{
     margin:0; padding:var(--s4) var(--s6); max-height:34vh; overflow:auto;
-    background:var(--inverse); color:var(--on-inverse);
+    background:var(--console); color:var(--on-console);
     font-family:var(--font-mono); font-size:var(--xs); line-height:1.6;
     white-space:pre-wrap; border-top:1px solid var(--border-firm);
   }

@@ -170,8 +170,18 @@ class H(BaseHTTPRequestHandler):
             except BrokenPipeError:
                 p.kill(); return
         p.wait()
+        # CLOSING LINE. This is both the last thing a reader sees in the log and the
+        # signal the browser reads to decide whether the plan actually landed, so it
+        # is worded for the person and matched exactly by the client. Changing this
+        # wording means changing the matching test in index.html in the same commit,
+        # or every apply will report as failed.
+        if p.returncode == 0:
+            end = "\nAll changes applied successfully.\n"
+        else:
+            end = (f"\nApply did not complete. The installer stopped with status "
+                   f"{p.returncode} and your staged changes were kept.\n")
         try:
-            self.wfile.write(f"\n[exit {p.returncode}]\n".encode())
+            self.wfile.write(end.encode())
         except BrokenPipeError:
             pass
 

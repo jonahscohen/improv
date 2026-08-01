@@ -183,3 +183,4 @@
 - [verify-manual.sh's header claimed it clears the verification flag on any user message - it has never done that, and the claim made a safety gate look weaker than it is](session_2026-08-01_verify-manual-header-lied.md)
 - [Two-sentence descriptions for all 36 installable components - 19 had no description at all; five described behaviour install.sh does not have (sidecoach daemon, task-list scope, config hooks, cmux, ghostty paths)](session_2026-08-01_installer-component-descriptions.md)
 - [Ghostty advertised three shader effects while two were commented out, and the transformative-FX count had been stale at 25 for months - both in the GUI and the CLI](session_2026-08-01_visual-effects-count-off-by-one.md)
+- [The installer said "[exit 0]" to a human, and its status span was erased by the next hover - now a sentence that doubles as the machine signal, and a real toast](session_2026-08-01_toasts-replace-the-exit-code.md)

@@ -60,8 +60,10 @@
   <pre id="log" style="display:none"></pre>
 
   <footer class="actionbar">
+    <!-- Anchored to the action bar rather than to the viewport, so it always sits
+         directly above it whatever height the bar happens to be. -->
+    <div class="toasts" id="toasts" aria-live="polite"></div>
     <span class="staged" id="pendfoot"></span>
-    <span class="hint" id="detail"></span>
     <span class="keys"><kbd>&#8593;&#8595;</kbd> move <kbd>enter</kbd> toggle <kbd>&#8592;</kbd> back</span>
     <span class="actions">
       <button class="btn btn--quiet" id="btnQuit" type="button">Quit</button>
@@ -175,7 +177,7 @@ function stagedPlan() {
 let applying = false;
 async function runApply() {
   if (applying) return;                                     // guard: never fire /apply twice concurrently
-  if (pendingCount() === 0) { toast('Nothing staged to apply.'); return; }
+  if (pendingCount() === 0) { toast('Nothing staged to apply.','info'); return; }
   applying = true;
   const plan = stagedPlan();                                // snapshot the exact plan we post
   const log = document.getElementById('log');
@@ -189,27 +191,30 @@ async function runApply() {
     const m = await api('/manifest').then(r => r.json());    // refresh REAL state either way
     buildTreeFromManifest(m);
     // Only treat the apply as done - and clear the staged plan - if the installer
-    // exited 0. apply_pending is fail-loud (a rejected/pinned/failed plan ends
-    // non-zero), and clearing pending regardless would silently drop the user's
-    // staged changes.
-    const ok = res.ok && /\[exit 0\]\s*$/.test(out);
+    // reported success. apply_pending is fail-loud (a rejected/pinned/failed plan
+    // ends non-zero), and clearing pending regardless would silently drop the
+    // user's staged changes. This string is written by server.py's closing line;
+    // the two must change together.
+    const ok = res.ok && /All changes applied successfully\.\s*$/.test(out);
     render();
     if (ok) {
       for (const p of plan.install.concat(plan.uninstall)) delete pending[p];   // clear only a clean apply
       render();
+      const n = plan.install.length + plan.uninstall.length;
+      toast(n === 1 ? 'One change applied.' : `All ${n} changes applied.`, 'success');
     } else {
-      toast('Apply did not complete - your staged changes were kept. See the log above.');
+      toast('Some changes did not apply. Nothing was discarded - your selection is still staged, and the log above says what stopped.', 'error');
     }
   } catch (e) {
-    log.textContent += '\n[error] ' + e + '\n';
-    toast('Apply failed - your staged changes were kept.');
+    log.textContent += '\nThe connection to the installer was lost: ' + e + '\n';
+    toast('Lost contact with the installer. Your selection is still staged.', 'error');
   } finally {
     applying = false;
   }
 }
 function doQuit() {
   api('/shutdown', { method:'POST', body:'{}' }).catch(()=>{});
-  render(); toast('Installer stopped. You can close this tab.');
+  render(); toast('Installer stopped. You can close this tab.','info');
 }
 
 // ---- dom ----
@@ -362,7 +367,7 @@ function render(){
     const dsc=node.desc || node.tag || '';
     if(dsc) d.appendChild(mk('span','row__desc', dsc));
     d.addEventListener('click',()=>{ sel=i; activate(); });
-    d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); showDetail(); });
+    d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); });
     host.appendChild(d);
   });
 
@@ -386,17 +391,43 @@ function render(){
     pane.classList.add(navDir==='fwd'?'is-fwd':'is-back');
     navDir='';
   }
-  showDetail();
 }
 function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList) d.classList.toggle('sel', i===sel); }); }
-function showDetail(){
-  // Deliberately empty. This bar used to echo the selected row's name and
-  // description, both of which are already on screen a few inches above it -
-  // the same fact in a third place. It now speaks only when something happened
-  // that the rows cannot show: an apply that failed, a refusal, a shutdown.
-  // toast() is its only writer.
+// STATUS SPEAKS IN ONE PLACE, AND STAYS PUT. This used to write into a span in
+// the action bar that the next row hover overwrote, so a message about a failed
+// apply could disappear before it had been read. A toast owns its own lifetime.
+const T_ICON = {
+  success: '<svg data-icon-source="lucide:circle-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>',
+  error:   '<svg data-icon-source="lucide:circle-alert" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>',
+  info:    '<svg data-icon-source="lucide:info" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>'
+};
+const T_X = '<svg data-icon-source="lucide:x" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>';
+
+function toast(m, kind){
+  kind = T_ICON[kind] ? kind : 'info';
+  const host = document.getElementById('toasts');
+  while (host.children.length >= 3) host.firstElementChild.remove();  // never stack a wall
+  const t = mk('div','toast toast--'+kind);
+  // An error interrupts; anything else is announced politely when the reader is free.
+  t.setAttribute('role', kind==='error' ? 'alert' : 'status');
+  const ic = mk('span','toast__icon'); ic.innerHTML = T_ICON[kind]; t.appendChild(ic);
+  t.appendChild(mk('span','toast__msg', m));
+  const x = mk('button','toast__x'); x.type='button';
+  x.setAttribute('aria-label','Dismiss this message'); x.innerHTML = T_X;
+  t.appendChild(x);
+  host.appendChild(t);
+  let gone = false;
+  const close = () => {
+    if (gone) return; gone = true;
+    t.classList.add('is-leaving');
+    // Removal is on a timer, never on transitionend: a dropped event would leave
+    // the toast on screen for the rest of the session.
+    setTimeout(() => t.remove(), 200);
+  };
+  x.addEventListener('click', close);
+  // Something that went wrong is worth reading twice; a confirmation is not.
+  setTimeout(close, kind==='error' ? 10000 : 5000);
 }
-function toast(m){ const det=document.getElementById('detail'); det.textContent=''; det.appendChild(mk('b',null,m)); }
 
 function activate(){
   const path=rowsCache[sel]; if(!path) return;
@@ -404,7 +435,7 @@ function activate(){
   else { navDir='fwd'; nav=path.slice(); sel=0; }   // going deeper
   render();
 }
-function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%rowsCache.length; paintSel(); showDetail(); }
+function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%rowsCache.length; paintSel(); }
 
 document.getElementById('btnApply').addEventListener('click', runApply);
 document.getElementById('btnQuit').addEventListener('click', doQuit);
