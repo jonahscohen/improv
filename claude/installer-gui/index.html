@@ -3,343 +3,309 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Improv &mdash; Setup</title>
+<title>Improv Setup</title>
+<script>
+  // Theme is resolved BEFORE first paint so the page never flashes the wrong
+  // ground. Same pattern the marketing site uses: an inline script sets
+  // data-theme, the toggle flips it and persists the choice.
+  (function(){
+    try{
+      var t = localStorage.getItem('improv-setup-theme');
+      if(!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    }catch(e){ document.documentElement.setAttribute('data-theme','light'); }
+  })();
+</script>
 <style>
-  /* ==========================================================================
-     TOKENS - lifted verbatim from the marketing site (improv-site/styles.css).
-     Jonah, 2026-08-01: "lift the tokens specifically, nothing else". So the
-     values below are copied, not reinterpreted, and nothing here invents a new
-     brand colour. The two ADDITIONS are called out where they appear: the
-     installer has to express install STATE, and the marketing palette has no
-     semantic status colours because a marketing page never needed them.
-     ========================================================================== */
-  :root{
+  /* ── tokens: lifted from improv-site/styles.css ─────────────────────────── */
+  :root[data-theme="light"]{
     color-scheme:light;
-    /* colors.brand */
-    --color-red:#DC2618;
-    --color-ink:#02272B;
-    --color-cream:#F4EFE4;
-    --color-paper:#FAF7EE;
-
-    /* colors.text */
-    --text-primary:#02272B;
-    --text-secondary:#54564F;
-    --text-tertiary:#8B8A82;
-    --text-inverse:#F4EFE4;
-
-    /* colors.surface */
-    --surface-canvas:#F4EFE4;
-    --surface-raised:#FAF7EE;
-    --surface-inverse:#02272B;
-    --surface-alt:#ECE5D4;
-
-    /* colors.border */
-    --border-soft:rgba(2,39,43,0.08);
-    --border-firm:rgba(2,39,43,0.16);
-    --border-inverse:rgba(244,239,228,0.12);
-
-    /* colors.accent */
-    --accent-red-subtle:rgba(220,38,24,0.08);
-    --accent-red-border:rgba(220,38,24,0.24);
-
-    /* typography */
-    --font-display:'MADE Awelier','Iowan Old Style',Charter,Cambria,Georgia,serif;
-    --font-body:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
-    --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
-
-    --size-xs:0.78rem; --size-sm:0.88rem; --size-base:1rem;
-    --size-lg:1.18rem; --size-xl:1.5rem;
-    --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
-
-    /* rounded */
-    --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
-
-    /* spacing - 4pt grid */
-    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
-    --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
-
-    /* elevation */
-    --shadow-sm:0 1px 2px rgba(2,39,43,0.04),0 1px 1px rgba(2,39,43,0.06);
-    --shadow-md:0 2px 8px rgba(2,39,43,0.06),0 1px 2px rgba(2,39,43,0.08);
-    --shadow-lg:0 8px 24px rgba(2,39,43,0.08),0 2px 6px rgba(2,39,43,0.06);
-
-    /* motion */
-    --ease-out:cubic-bezier(0.2,0,0,1);
-    --duration-instant:100ms; --duration-fast:180ms;
-
-    /* ---- ADDITION 1: semantic status ------------------------------------
-       Install state is the whole subject of this screen and the marketing
-       palette has no status colours. These are derived to live in the same
-       world rather than pulled from a generic UI kit: the green carries the
-       ink's green undertone, the ochre sits with the cream. Kept deliberately
-       distinct from --color-red, which stays reserved for the brand mark and
-       for destructive intent, so "installed" can never read as "danger". */
-    --status-active:#1F6F4A;
-    --status-active-bg:rgba(31,111,74,0.10);
-    --status-partial:#9A6B12;
-    --status-partial-bg:rgba(154,107,18,0.10);
-    --status-none:var(--text-tertiary);
-    --status-none-bg:rgba(2,39,43,0.05);
+    --red:#DC2618; --logo-ink:#082525;
+    --text-primary:#02272B; --text-secondary:#54564F; --text-tertiary:#8B8A82;
+    --canvas:#F4EFE4; --raised:#FAF7EE; --alt:#ECE5D4; --inverse:#02272B; --on-inverse:#F4EFE4;
+    --border-soft:rgba(2,39,43,0.08); --border-firm:rgba(2,39,43,0.16);
+    --red-subtle:rgba(220,38,24,0.08); --red-border:rgba(220,38,24,0.28);
+    --ok:#1F6F4A; --ok-bg:rgba(31,111,74,0.10);
+    --part:#8A5E0F; --part-bg:rgba(138,94,15,0.10);
+    --off-bg:rgba(2,39,43,0.05);
   }
   :root[data-theme="dark"]{
     color-scheme:dark;
-    --surface-canvas:#02272B; --surface-raised:#0A3036; --surface-alt:#073035;
-    --surface-inverse:#F4EFE4;
-    --text-primary:#F4EFE4; --text-secondary:rgba(244,239,228,0.72);
-    --text-tertiary:rgba(244,239,228,0.52); --text-inverse:#02272B;
-    --border-soft:rgba(244,239,228,0.10); --border-firm:rgba(244,239,228,0.20);
-    --status-active:#6FC79B; --status-active-bg:rgba(111,199,155,0.14);
-    --status-partial:#D9A94E; --status-partial-bg:rgba(217,169,78,0.14);
-    --status-none-bg:rgba(244,239,228,0.07);
+    --red:#E8553F; --logo-ink:#F4EFE4;
+    --text-primary:#F4EFE4; --text-secondary:rgba(244,239,228,0.76); --text-tertiary:rgba(244,239,228,0.56);
+    --canvas:#02272B; --raised:#0A3036; --alt:#073035; --inverse:#F4EFE4; --on-inverse:#02272B;
+    --border-soft:rgba(244,239,228,0.10); --border-firm:rgba(244,239,228,0.22);
+    --red-subtle:rgba(232,85,63,0.12); --red-border:rgba(232,85,63,0.36);
+    --ok:#7FD0A6; --ok-bg:rgba(127,208,166,0.14);
+    --part:#E0B45E; --part-bg:rgba(224,180,94,0.14);
+    --off-bg:rgba(244,239,228,0.07);
   }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      color-scheme:dark;
-      --surface-canvas:#02272B; --surface-raised:#0A3036; --surface-alt:#073035;
-      --surface-inverse:#F4EFE4;
-      --text-primary:#F4EFE4; --text-secondary:rgba(244,239,228,0.72);
-      --text-tertiary:rgba(244,239,228,0.52); --text-inverse:#02272B;
-      --border-soft:rgba(244,239,228,0.10); --border-firm:rgba(244,239,228,0.20);
-      --status-active:#6FC79B; --status-active-bg:rgba(111,199,155,0.14);
-      --status-partial:#D9A94E; --status-partial-bg:rgba(217,169,78,0.14);
-      --status-none-bg:rgba(244,239,228,0.07);
-    }
+  :root{
+    --font-display:'MADE Awelier','Iowan Old Style',Charter,Georgia,serif;
+    --font-body:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --xs:0.78rem; --sm:0.88rem; --base:1rem; --lg:1.18rem; --xl:1.5rem;
+    --r-sm:4px; --r-md:8px; --r-full:9999px;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px;
+    --ease:cubic-bezier(0.2,0,0,1);
   }
 
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
   body{
-    background:var(--surface-canvas); color:var(--text-primary);
-    font-family:var(--font-body); font-size:var(--size-base); line-height:1.5;
+    background:var(--canvas); color:var(--text-primary);
+    font-family:var(--font-body); font-size:var(--base); line-height:1.5;
     -webkit-font-smoothing:antialiased;
-    display:flex; align-items:center; justify-content:center;
-    min-height:100vh; padding:var(--space-6);
+    /* FULL BLEED. The previous build centred a bordered, rounded, shadowed panel
+       in the viewport, which read as a window inside a window. This IS the
+       application, so it occupies the application. */
+    display:grid; grid-template-rows:auto 1fr auto; height:100vh; overflow:hidden;
   }
 
-  /* ---- the shell -------------------------------------------------------
-     Was a fake terminal window with traffic-light dots. Those read as a
-     screenshot of a tool rather than the tool, which is the opposite of the
-     "sturdy" ask - so the chrome is now a real application panel: a raised
-     paper plane on the cream canvas, with a firm border that holds its edges. */
-  .win{
-    width:100%; max-width:940px; background:var(--surface-raised);
-    border:1px solid var(--border-firm); border-radius:var(--radius-lg);
-    overflow:hidden; box-shadow:var(--shadow-lg);
-    display:flex; flex-direction:column; max-height:calc(100vh - var(--space-10));
+  /* ── top bar ────────────────────────────────────────────────────────────── */
+  .topbar{
+    display:flex; align-items:center; gap:var(--s5);
+    padding:var(--s4) var(--s6);
+    border-bottom:1px solid var(--border-firm); background:var(--raised);
   }
+  .logo{display:flex; align-items:center; flex:0 0 auto;}
+  .logo svg{height:28px; width:auto; display:block;}
+  .logo .cls-0{fill:var(--logo-ink); transition:fill 180ms var(--ease);}
+  .logo .cls-1{fill:var(--red);}
+  .topbar__sep{width:1px; height:24px; background:var(--border-firm); flex:0 0 auto;}
 
-  /* ---- header: WAYFINDING LAYER 1, "what am I in" ---------------------- */
-  .titlebar{
-    background:var(--surface-alt); border-bottom:1px solid var(--border-firm);
-    padding:var(--space-3) var(--space-5);
-    display:flex; align-items:baseline; gap:var(--space-3); flex-wrap:wrap;
-  }
-  .wordmark{
-    font-family:var(--font-display); font-size:var(--size-lg);
-    font-weight:var(--weight-regular); color:var(--text-primary);
-    letter-spacing:-.01em; line-height:1;
-  }
-  .wordmark .amp{color:var(--color-red);}   /* the one place red is spent */
-  .titletext{
-    font-family:var(--font-mono); font-size:var(--size-xs);
-    color:var(--text-tertiary); letter-spacing:.02em;
-  }
-  .titletext .path{color:var(--text-secondary);}
-  /* The old traffic-light dots are gone; the rule keeps any stray markup from
-     re-introducing them if this file is ever partially reverted. */
-  .dot{display:none;}
-
-  /* ---- body ------------------------------------------------------------- */
-  .screen{padding:var(--space-5) var(--space-5) var(--space-3); overflow-y:auto; flex:1 1 auto;}
-
-  /* ---- WAYFINDING LAYER 2: the trail --------------------------------------
-     A breadcrumb only helps if it reads as a PATH. The separators are now
-     spaced and tinted, and the final segment is the one that carries weight,
-     so "where am I" is answerable at a glance instead of by reading. */
   .crumb{
-    font-family:var(--font-mono); font-size:var(--size-xs);
-    color:var(--text-tertiary); margin-bottom:var(--space-2);
-    display:flex; align-items:center; gap:var(--space-1); flex-wrap:wrap;
+    display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap;
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
+    flex:1 1 auto; min-width:0;
   }
+  .crumb button{
+    font:inherit; color:var(--text-secondary); background:none; border:0;
+    padding:2px var(--s2); border-radius:var(--r-sm); cursor:pointer;
+  }
+  .crumb button:hover{background:var(--alt); color:var(--text-primary);}
   .crumb b{
-    color:var(--text-primary); font-weight:var(--weight-medium);
-    background:var(--surface-alt); border:1px solid var(--border-soft);
-    border-radius:var(--radius-sm); padding:1px var(--space-2);
+    color:var(--text-primary); font-weight:500;
+    background:var(--alt); border:1px solid var(--border-soft);
+    border-radius:var(--r-sm); padding:2px var(--s2);
   }
-  .lead{
-    color:var(--text-secondary); font-size:var(--size-sm);
-    margin:0 0 var(--space-4); max-width:70ch;
-    text-wrap:balance; overflow-wrap:anywhere;
-  }
-  .lead .meta{
-    font-family:var(--font-mono); font-size:var(--size-xs);
-    color:var(--text-tertiary); white-space:nowrap;
-  }
+  .crumb .chev{opacity:.55;}
 
-  /* ---- WAYFINDING LAYER 3: section landmarks ---------------------------
-     Was a dim letterspaced string floating over the rows. Now it is a real
-     landmark with a rule running off it, so the two groups read as separate
-     places rather than one long list. */
-  .seclabel{
-    display:flex; align-items:center; gap:var(--space-3);
-    font-family:var(--font-mono); font-size:var(--size-xs);
-    letter-spacing:.12em; color:var(--text-tertiary);
-    margin:var(--space-5) 0 var(--space-2);
+  .theme-toggle{
+    flex:0 0 auto; display:grid; place-items:center;
+    width:34px; height:34px; padding:0; cursor:pointer;
+    background:var(--alt); color:var(--text-secondary);
+    border:1px solid var(--border-firm); border-radius:var(--r-md);
+    transition:background 120ms var(--ease), color 120ms var(--ease), scale 150ms ease-out;
   }
-  .seclabel:first-child{margin-top:0;}
-  .seclabel::after{content:""; flex:1 1 auto; height:1px; background:var(--border-soft);}
+  .theme-toggle:hover{background:var(--canvas); color:var(--text-primary);}
+  .theme-toggle:active{scale:0.96;}
+  .theme-toggle svg{width:17px; height:17px;}
+  :root[data-theme="dark"] .theme-toggle .i-sun{display:none;}
+  :root[data-theme="light"] .theme-toggle .i-moon{display:none;}
 
-  /* ---- rows: the sturdiness ---------------------------------------------
-     Was flex with ch-width columns and white-space:pre, so columns drifted
-     whenever a name ran long. A grid makes the columns actually line up down
-     the whole list, which is most of what "sturdy" means on a screen like this. */
-  .rows{display:flex; flex-direction:column; gap:1px;}
-  .row{
-    display:grid;
-    /* The description column gets the slack. Fixed columns to its right used to
-       crush it to "rules, settin..." on a 940px panel, which loses the one piece
-       of text that explains what the component IS. stat/count/pend now size to
-       their content instead of reserving space they rarely use. */
-    grid-template-columns:1.4rem 1.4rem minmax(8rem,13rem) minmax(0,1fr) auto 3.5rem auto;
-    align-items:center; gap:var(--space-2);
-    padding:var(--space-2) var(--space-3);
-    border:1px solid transparent; border-radius:var(--radius-md);
-    cursor:pointer; user-select:none;
-    transition-property:background,border-color,scale;
-    transition-duration:var(--duration-instant);
-    transition-timing-function:var(--ease-out);
+  /* ── body: rail + pane ──────────────────────────────────────────────────── */
+  .body{display:grid; grid-template-columns:268px 1fr; min-height:0;}
+
+  /* THE WORKFLOW CHANGE. The previous build was a drill-down stack: opening a
+     group replaced the entire screen, so you lost sight of everything else and
+     had to walk back up to compare two components. A preferences dashboard keeps
+     its sections in view. The rail is permanent; only the pane changes. */
+  .rail{
+    border-right:1px solid var(--border-firm); background:var(--raised);
+    overflow-y:auto; padding:var(--s3) var(--s3) var(--s5);
+    display:flex; flex-direction:column; gap:2px;
   }
-  .row:hover{background:var(--surface-alt);}
-  /* A row is a control: it is clicked, and the arrow keys drive it. It had
-     default/hover/selected and nothing for the press, so a click produced no
-     physical confirmation at all. */
-  .row:active{scale:0.994; background:var(--surface-alt); border-color:var(--border-firm);}
-  .row:focus-visible{outline:2px solid var(--color-red); outline-offset:-1px;}
-  .row[aria-disabled="true"],.row.is-disabled{cursor:default;}
-  .row.sel{
-    background:var(--surface-alt); border-color:var(--accent-red-border);
-    box-shadow:inset 3px 0 0 var(--color-red);   /* the selected marker */
+  .rail__label{
+    font-family:var(--font-mono); font-size:0.68rem; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--text-tertiary);
+    padding:var(--s4) var(--s3) var(--s2);
   }
-  .row .caret{color:var(--text-tertiary); font-size:var(--size-xs); text-align:center;}
-  .row .glyph{text-align:center; font-size:var(--size-sm);}
-  .row .name{
-    font-family:var(--font-mono); font-size:var(--size-sm);
-    color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  .rail__item{
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--s3);
+    padding:var(--s2) var(--s3); border-radius:var(--r-md); cursor:pointer;
+    border:1px solid transparent; text-align:left; width:100%;
+    background:none; font:inherit; color:var(--text-primary);
+    transition:background 120ms var(--ease), border-color 120ms var(--ease);
   }
-  .row.feat .name{font-weight:var(--weight-semibold);}
-  .row.folder .name,.row.hook .name{color:var(--text-secondary);}
-  .row .tag{
-    font-size:var(--size-xs); color:var(--text-tertiary);
+  .rail__item:hover{background:var(--alt);}
+  .rail__item[aria-current="true"]{
+    background:var(--red-subtle); border-color:var(--red-border);
+    box-shadow:inset 3px 0 0 var(--red);
+  }
+  .rail__name{
+    font-family:var(--font-mono); font-size:var(--sm);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-
-  /* ---- WAYFINDING LAYER 4: state as a shape, not just a colour ----------
-     The status was a coloured word, so it depended on hue alone. It is now a
-     pill: a shape difference readable before the colour is, which also keeps
-     it legible for anyone who does not separate the green from the ochre. */
-  .row .stat{
-    justify-self:start;
-    font-family:var(--font-mono); font-size:var(--size-xs); letter-spacing:.02em;
-    padding:2px var(--space-2); border-radius:var(--radius-full);
-    white-space:nowrap; color:var(--status-none); background:var(--status-none-bg);
-  }
-  .row .count{
-    font-family:var(--font-mono); font-size:var(--size-xs);
-    color:var(--text-tertiary); text-align:right; font-variant-numeric:tabular-nums;
-  }
-  .row .pend{
-    font-family:var(--font-mono); font-size:var(--size-xs);
-    text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; min-width:1rem;
+  .rail__count{
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
+    font-variant-numeric:tabular-nums;
   }
 
-  /* Status colours reach the pill through the glyph class the JS already sets,
-     so no JS change is needed to colour the row's state. */
-  .g-active{color:var(--status-active);}
-  .g-partial{color:var(--status-partial);}
-  .g-none{color:var(--text-tertiary);}
-  .row:has(.g-active) .stat{color:var(--status-active); background:var(--status-active-bg);}
-  .row:has(.g-partial) .stat{color:var(--status-partial); background:var(--status-partial-bg);}
-
-  .action .name{color:var(--text-primary); font-family:var(--font-body); font-weight:var(--weight-medium);}
-  /* Apply / Quit / Back / Install-all are buttons, so they take the standard
-     press: scale 0.96 with an ease-out. A full-width ITEM row keeps the subtle
-     0.994 above - 0.96 across 900px is 36px of travel and reads as a glitch,
-     which is the rule's geometry not holding rather than the rule being wrong. */
-  .action{transition-property:background,border-color,scale; transition-duration:150ms; transition-timing-function:ease-out;}
-  .action:active{scale:0.96;}
-  .action{grid-template-columns:1.4rem 1.4rem 1fr;}
-  .danger .name{color:var(--color-red);}
-  .sep{height:1px; background:var(--border-soft); margin:var(--space-3) var(--space-1);}
-  .plus{color:var(--status-active);}
-  .minus{color:var(--color-red);}
-
-  /* ---- detail: the standing explanation --------------------------------- */
-  .detail{
-    overflow-wrap:anywhere;
-    border-top:1px solid var(--border-soft);
-    padding:var(--space-3) var(--space-5);
-    color:var(--text-secondary); font-size:var(--size-sm);
-    min-height:2.75rem; background:var(--surface-alt); flex:0 0 auto;
+  .pane{overflow-y:auto; padding:var(--s6) var(--s8);}
+  .pane__head{margin-bottom:var(--s5); max-width:72ch;}
+  .pane__title{
+    font-family:var(--font-display); font-size:var(--xl); line-height:1.15;
+    margin:0 0 var(--s2); text-wrap:balance; letter-spacing:-.01em; font-weight:400;
   }
-  .detail b{
-    font-family:var(--font-mono); color:var(--text-primary);
-    font-weight:var(--weight-medium);
+  .pane__desc{color:var(--text-secondary); font-size:var(--sm); margin:0; overflow-wrap:anywhere;}
+  .pane__meta{
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
+    margin-top:var(--s2); display:block;
+  }
+
+  .bulk{display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap;}
+  .btn{
+    font:inherit; font-size:var(--sm); cursor:pointer;
+    padding:var(--s2) var(--s4); border-radius:var(--r-md);
+    border:1px solid var(--border-firm); background:var(--raised); color:var(--text-primary);
+    transition:background 120ms var(--ease), border-color 120ms var(--ease), scale 150ms ease-out;
+  }
+  .btn:hover{background:var(--alt);}
+  .btn:active{scale:0.96;}
+  .btn--primary{background:var(--red); border-color:var(--red); color:#FFF; font-weight:600;}
+  .btn--primary:hover{background:var(--red); filter:brightness(1.08);}
+  .btn--primary[disabled]{
+    background:var(--alt); border-color:var(--border-firm);
+    color:var(--text-tertiary); cursor:default; font-weight:400; filter:none;
+  }
+  .btn--primary[disabled]:active{scale:1;}
+  .btn--quiet{background:none;}
+
+  /* ── the list ───────────────────────────────────────────────────────────── */
+  .rows{display:flex; flex-direction:column; gap:var(--s1);}
+  .row{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto auto;
+    align-items:center; gap:var(--s4);
+    padding:var(--s3) var(--s4);
+    background:var(--raised); border:1px solid var(--border-soft); border-radius:var(--r-md);
+    cursor:pointer; text-align:left; width:100%; font:inherit; color:var(--text-primary);
+    transition-property:background,border-color,scale;
+    transition-duration:120ms; transition-timing-function:var(--ease);
+  }
+  .row:hover{background:var(--alt); border-color:var(--border-firm);}
+  .row:active{scale:0.996;}
+  .row.sel{border-color:var(--red-border); box-shadow:inset 3px 0 0 var(--red);}
+  .row__glyph{font-size:var(--sm); line-height:1;}
+  /* Label over helper text. Both get the full column, so neither truncates. */
+  .row__text{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .row__name{
+    font-family:var(--font-mono); font-size:var(--sm);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .row__desc{
+    font-size:var(--xs); color:var(--text-tertiary); line-height:1.45;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .row__stat{
+    font-family:var(--font-mono); font-size:var(--xs); white-space:nowrap;
+    padding:2px var(--s3); border-radius:var(--r-full);
+    color:var(--text-tertiary); background:var(--off-bg);
+  }
+  .row__stat.is-on{color:var(--ok); background:var(--ok-bg);}
+  .row__stat.is-part{color:var(--part); background:var(--part-bg);}
+  .row__right{
+    font-family:var(--font-mono); font-size:var(--xs); text-align:right;
+    white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--text-tertiary);
+    min-width:5rem;
+  }
+  .plus{color:var(--ok);} .minus{color:var(--red);}
+  .g-active{color:var(--ok);} .g-partial{color:var(--part);} .g-none{color:var(--text-tertiary);}
+  .empty{color:var(--text-tertiary); font-size:var(--sm); padding:var(--s6) 0; overflow-wrap:anywhere;}
+
+  /* ── action bar ─────────────────────────────────────────────────────────── */
+  .actionbar{
+    display:flex; align-items:center; gap:var(--s4); flex-wrap:wrap;
+    padding:var(--s3) var(--s6);
+    border-top:1px solid var(--border-firm); background:var(--raised);
+  }
+  .staged{
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-secondary);
+    display:flex; align-items:center; gap:var(--s1); white-space:nowrap;
+  }
+  .hint{
+    flex:1 1 16rem; min-width:0; color:var(--text-tertiary); font-size:var(--xs);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .hint b{font-family:var(--font-mono); color:var(--text-secondary); font-weight:500;}
+  .keys{display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; color:var(--text-tertiary); font-size:var(--xs);}
+  .keys kbd{
+    font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary);
+    background:var(--canvas); border:1px solid var(--border-firm); border-bottom-width:2px;
+    border-radius:var(--r-sm); padding:1px var(--s2);
   }
 
   #log{
-    margin:0; padding:var(--space-4) var(--space-5); max-height:180px; overflow:auto;
-    background:var(--surface-inverse); color:var(--text-inverse);
-    font-family:var(--font-mono); font-size:var(--size-xs); line-height:1.6;
-    white-space:pre-wrap; border-top:1px solid var(--border-firm); flex:0 0 auto;
+    margin:0; padding:var(--s4) var(--s6); max-height:34vh; overflow:auto;
+    background:var(--inverse); color:var(--on-inverse);
+    font-family:var(--font-mono); font-size:var(--xs); line-height:1.6;
+    white-space:pre-wrap; border-top:1px solid var(--border-firm);
   }
 
-  /* ---- footer: the keyboard contract ------------------------------------ */
-  .footer{
-    border-top:1px solid var(--border-firm);
-    padding:var(--space-3) var(--space-5);
-    background:var(--surface-alt); color:var(--text-tertiary); font-size:var(--size-xs);
-    display:flex; justify-content:space-between; align-items:center;
-    gap:var(--space-4); flex-wrap:wrap; flex:0 0 auto;
-  }
-  .footer .keys{display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap;}
-  /* Keys were plain coloured text, indistinguishable from the labels beside
-     them. As chips they read as things you PRESS. */
-  .footer .keys span{
-    font-family:var(--font-mono); font-size:0.72rem; color:var(--text-secondary);
-    background:var(--surface-raised); border:1px solid var(--border-firm);
-    border-bottom-width:2px; border-radius:var(--radius-sm);
-    padding:1px var(--space-2); white-space:nowrap;
-  }
-  #pendfoot{
-    font-family:var(--font-mono); color:var(--text-secondary); white-space:nowrap;
-  }
-
-  :focus-visible{outline:2px solid var(--color-red); outline-offset:2px; border-radius:var(--radius-sm);}
-  @media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important;}}
-  @media (max-width:720px){
-    .row{grid-template-columns:1.4rem 1.4rem minmax(8rem,auto) 1fr; }
-    .row .tag,.row .count{display:none;}
+  :focus-visible{outline:2px solid var(--red); outline-offset:2px; border-radius:var(--r-sm);}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important;}}
+  @media (max-width:880px){
+    .body{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+    .rail{
+      border-right:0; border-bottom:1px solid var(--border-firm);
+      flex-direction:row; overflow-x:auto; gap:var(--s2); padding:var(--s3);
+    }
+    .rail__label{display:none;}
+    .rail__item{width:auto; grid-template-columns:auto auto; flex:0 0 auto;}
+    .rail__count{display:none;}
+    .pane{padding:var(--s5);}
+    .row{grid-template-columns:auto minmax(0,1fr) auto;}
+    .row__right{display:none;}
   }
 </style>
 </head>
 <body>
-  <div class="win" role="application" aria-label="Improv installer">
-    <div class="titlebar">
-      <span class="wordmark">Improv<span class="amp">&amp;</span></span>
-      <span class="titletext">You are here: <span class="path" id="titlepath">setup</span></span>
-    </div>
-    <div class="screen">
-      <div class="crumb" id="crumb"></div>
-      <div class="lead" id="lead"></div>
+
+  <header class="topbar">
+    <span class="logo">
+      <!-- assets/and-dev-black.svg from the marketing site, path data verbatim.
+           ONE copy rather than the site's two files: .cls-0 is driven by a theme
+           token so the mark follows light/dark instead of being swapped out. -->
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 54" role="img" aria-label="and-dev">
+        <path class="cls-0" d="m81.3 47.7c-2.3-0.5-3.8-0.7-3.8-3.5v-42.9c0-0.3-0.7-0.9-0.9-0.9l-12.3 3.2v2.5l1.4 0.3c2.1 0.5 3.1 1 3.1 4v10.8c-1.9-1.6-4.7-2.4-7.9-2.4-9.5 0-16.4 7.3-16.4 17.5 0 8.3 4.8 16.7 14.9 16.7 4.3 0 7.5-1.6 9.8-5.2l1 4.5c0.1 0.5 0.7 0.4 1.2 0.3l9.9-2.2v-2.4-0.3zm-12.4-3.5c-1.2 2-3.4 3.4-6.2 3.4-5.7 0-8.7-5.6-8.7-12.7 0-6.6 2.7-12.1 8.2-12.1 3.3 0 6.6 2.2 6.7 6.6v14.8z"/>
+        <path class="cls-0" d="m99.4 18.8c-9.9 0-17 7.4-17 17.2 0 8.4 5.1 17 16.9 17 6.8 0 11.6-2.5 15-9.2l-2.1-1.7c-2.2 3.2-4.9 5-9.7 5-6.6 0-11.1-5-11.1-12.8h20.8c1.2 0 1.7-0.6 1.7-1.8 0-6.6-4-13.7-14.5-13.7zm-7.9 12.3c0.4-4.5 2.6-9 7.2-9 4.2 0 6 3.1 6 7.9v1.1h-13.2z"/>
+        <path class="cls-0" d="m137.2 19.6h11.3v2.4c-2.5 0.4-3.4 1.8-4.3 4l-9.6 26.4h-5.3l-11.1-25.9c-1.1-2.5-2.2-4-4.8-4.5v-2.5h17.3v2.5c-2.6 0.4-3.5 1.1-3.3 3 0 0.8 0.4 1.7 0.8 2.9l6 14.6 5.3-14c0.4-1.1 0.7-2.2 0.7-3.2 0-2-1-2.9-3-3.2v-2.5z"/>
+        <path class="cls-1" d="m34.3 24.7c4-0.8 7.4-4.2 7.4-10.3 0-5.1-2.6-13.6-8.7-13.5-3.8 0-8.1 3.1-8.2 7 0 3.2 2.4 6.1 5.5 6.1 2.7 0 5-2.2 5-5 0-3.1-2.4-6-6.2-5.9 0.9-0.7 1.9-1.3 3.9-1.3 3.4-0.1 5.8 2 5.8 6.1 0 1.8-0.7 3.4-2.2 4.3-3.9 2.9-8.1 3.6-11.2 5.8-4 2.6-6.8 6.1-6.8 11.9 0 4.6 2 12.6 9 12.6 4.3 0.1 7.6-1.9 7.6-5.7 0-2.9-2.5-5.6-5.8-5.6-3 0-5.5 2.6-5.5 5.4 0 2.4 1.6 4.5 3.7 5.3-4.3-0.1-6.3-4.5-6.3-7.5 0-4.2 3.7-7.9 9.5-7.9 5.8-0.1 9.1 3.7 9.3 8.6 0.2 6.5-6.2 13.3-14.5 13.3s-13.1-7-13.1-13.7c0-3.8 1.1-6.7 4.7-9.2-4.2 0.5-9-3.6-9-9.5 0-5.1 4.5-8.3 8.1-8.3s6 1.6 6 5.7c0 2.6-1.4 4.8-3.8 4.8-1.7 0-3.5-1.3-3.5-3.2 0-1.4 1.1-2.3 2.3-1.8-0.5-0.7-1.2-1.1-2.3-1.1-1.6 0-3.7 1.5-3.7 4.1 0 2.4 1.9 4.4 4.7 4.4 2.6 0.1 6.9-2 6.9-6.8 0-4.6-3.1-7.1-7.2-7.1-5.4-0.1-14.1 5.6-14.1 11.5v1.2c0.2 5.6 5.3 8.6 9.7 8.5 1 0 1.6-0.2 2.1-0.4h-0.2c-4.8 3.4-9.7 7.3-9.7 13.8 0.2 5.3 3.6 11.4 12.1 11.4 6.1 0.1 14.7-1.9 18.8-4.8 3.3-2.3 6.5-6 6.5-11.7-0.1-4.4-3-9.3-6.6-11.5z"/>
+      </svg>
+    </span>
+    <span class="topbar__sep" aria-hidden="true"></span>
+    <nav class="crumb" id="crumb" aria-label="Breadcrumb"></nav>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme">
+      <!-- source: lucide "moon" - path verbatim from lucide.dev -->
+      <svg class="i-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
+      <svg class="i-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+    </button>
+  </header>
+
+  <div class="body">
+    <nav class="rail" id="rail" aria-label="Components"></nav>
+    <main class="pane">
+      <div class="pane__head">
+        <h1 class="pane__title" id="paneTitle">Setup</h1>
+        <p class="pane__desc" id="paneDesc"></p>
+        <span class="pane__meta" id="paneMeta"></span>
+      </div>
+      <div class="bulk" id="bulk"></div>
       <div class="rows" id="rows"></div>
-    </div>
-    <pre id="log" style="display:none"></pre>
-    <div class="detail" id="detail"></div>
-    <div class="footer">
-      <span class="keys"><span>&#8593;&#8595;</span> move <span>&#8594;</span> open <span>enter</span> toggle <span>&#8592;</span> back <span>a</span> apply <span>q</span> quit</span>
-      <span id="pendfoot"></span>
-    </div>
+    </main>
   </div>
+
+  <pre id="log" style="display:none"></pre>
+
+  <footer class="actionbar">
+    <span class="staged" id="pendfoot"></span>
+    <span class="hint" id="detail"></span>
+    <span class="keys"><kbd>&#8593;&#8595;</kbd> move <kbd>enter</kbd> toggle <kbd>&#8592;</kbd> back</span>
+    <button class="btn btn--quiet" id="btnQuit" type="button">Quit</button>
+    <button class="btn btn--primary" id="btnApply" type="button" disabled>Apply</button>
+  </footer>
 
 <script>
 // ---- server API (token-scoped; every request carries the page nonce) ----
@@ -349,14 +315,24 @@ function api(path, opts) {
   return fetch(u, opts || {});
 }
 
+// ---- theme ----
+const themeBtn = document.getElementById('themeToggle');
+function syncThemeLabel(){
+  const cur = document.documentElement.getAttribute('data-theme');
+  themeBtn.setAttribute('aria-label', cur === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+}
+themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem('improv-setup-theme', next); }catch(e){}
+  syncThemeLabel();
+});
+syncThemeLabel();
+
 // ---- tree + install state, populated from the live manifest ----
 let T = {};
 const installed = {}, pending = {};
 
-// Walk a bucket's members into the node shape the nav/render code consumes:
-//  - leaf   -> {tag,desc}                       (no children => isLeaf)
-//  - hooks  -> {folder,hooks,tag,desc,children} (each hook name is a leaf)
-//  - nested -> {tag,desc,children}              (recurse into its members)
 function walkMembers(members, out) {
   for (const mem of members) {
     if (mem.kind === 'leaf') {
@@ -385,7 +361,6 @@ function buildTreeFromManifest(m) {
     tree[b.key] = node;
   }
   T = tree;
-  // Install state comes straight from the manifest, keyed by leaf path.
   for (const k of Object.keys(installed)) delete installed[k];
   for (const [path, st] of Object.entries(m.state)) installed[path] = (st === 'active');
 }
@@ -394,9 +369,10 @@ async function boot() {
   try {
     const m = await api('/manifest').then(r => r.json());
     buildTreeFromManifest(m);
+    if (!nav.length) { const first = Object.keys(T)[0]; if (first) nav = [first]; }
     render();
   } catch (e) {
-    document.getElementById('lead').textContent = 'Could not load the installer manifest: ' + e;
+    document.getElementById('paneDesc').textContent = 'Could not load the installer manifest: ' + e;
   }
 }
 
@@ -409,10 +385,10 @@ function leafPaths(path){ const n=nodeAt(path); if(isLeaf(n)) return [path.join(
 // ---- state ----
 const GLYPH={active:'●',partial:'◐',none:'○'}, CLS={active:'g-active',partial:'g-partial',none:'g-none'};
 const LABEL={active:'installed',partial:'partial',none:'not installed'};
+const STATCLS={active:'is-on',partial:'is-part',none:''};
 function counts(path){ const L=leafPaths(path); return {on:L.filter(p=>installed[p]).length,total:L.length}; }
 function stateOf(path){ const n=nodeAt(path); if(isLeaf(n)) return installed[path.join('/')]?'active':'none';
   const c=counts(path); return c.on===0?'none':(c.on===c.total?'active':'partial'); }
-function leafPending(p){ return pending[p]||null; }
 function toggleLeaf(p){ const t=installed[p]?'uninstall':'install'; if(pending[p]===t) delete pending[p]; else pending[p]=t; }
 function stageAll(path,a){ leafPaths(path).forEach(p=>{ const want=a==='install'; if(installed[p]===want) delete pending[p]; else pending[p]=a; }); }
 function pendUnder(path){ const L=leafPaths(path); return {ins:L.filter(p=>pending[p]==='install').length, un:L.filter(p=>pending[p]==='uninstall').length}; }
@@ -441,8 +417,9 @@ async function runApply() {
     const m = await api('/manifest').then(r => r.json());    // refresh REAL state either way
     buildTreeFromManifest(m);
     // Only treat the apply as done - and clear the staged plan - if the installer
-    // exited 0. apply_pending is fail-loud (a rejected/pinned/failed plan ends non-zero),
-    // and clearing pending regardless would silently drop the user's staged changes.
+    // exited 0. apply_pending is fail-loud (a rejected/pinned/failed plan ends
+    // non-zero), and clearing pending regardless would silently drop the user's
+    // staged changes.
     const ok = res.ok && /\[exit 0\]\s*$/.test(out);
     render();
     if (ok) {
@@ -465,117 +442,145 @@ function doQuit() {
 
 // ---- dom ----
 function mk(tag,cls,text){ const e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; }
-function pendNodes(ins,un){ const a=[]; if(ins)a.push(mk('span','plus','+'+ins)); if(un){ if(a.length)a.push(document.createTextNode(' ')); a.push(mk('span','minus','−'+un)); } return a; }
 
-// ---- navigation ----
-let nav=[], sel=0;
-function inHooks(){ return nav.length && nodeAt(nav).hooks; }
-function buildRows(){
-  const rows=[];
-  if(nav.length===0){
-    rows.push({type:'label',name:'CORE COMPONENTS'});
-    for(const k of Object.keys(T)) if(T[k].featured) rows.push(itemRow([k]));
-    rows.push({type:'label',name:'MORE COMPONENTS'});
-    for(const k of Object.keys(T)) if(!T[k].featured) rows.push(itemRow([k]));
-    rows.push({type:'sep'});
-    const n=pendingCount();
-    rows.push({type:'apply',name:'Apply '+n+' change'+(n===1?'':'s'),disabled:n===0,hint:n?('Install and remove the '+n+' staged item'+(n===1?'':'s')+' now'):'Nothing staged yet - toggle items to stage changes'});
-    rows.push({type:'quit',name:'Quit',hint:'Leave the installer'});
-  } else {
-    const parent = nav.length===1 ? 'all groups' : nav[nav.length-2];
-    const here=nav[nav.length-1];
-    const hooksLabel = here==='Hooks' ? 'all hooks' : 'all '+here+' hooks';
-    rows.push({type:'back',name:'‹ Back to '+parent,hint:'Go up one level'});
-    rows.push({type:'installall',name:(inHooks()?'+ Enable '+hooksLabel+'…':'+ Install all of '+here+'…'),hint:'Stage every item here for install'});
-    rows.push({type:'uninstallall',name:(inHooks()?'− Disable '+hooksLabel+'…':'− Remove all of '+here+'…'),hint:'Stage every item here for removal'});
-    rows.push({type:'sep'});
-    for(const k of Object.keys(nodeAt(nav).children)) rows.push(itemRow(nav.concat(k)));
+// ---- navigation: nav[0] is the RAIL selection, deeper entries drill in -------
+let nav=[], sel=0, rowsCache=[];
+
+function renderRail(){
+  const rail=document.getElementById('rail'); rail.textContent='';
+  for(const [label,pred] of [['Core',k=>T[k].featured],['More',k=>!T[k].featured]]){
+    const keys=Object.keys(T).filter(pred);
+    if(!keys.length) continue;
+    rail.appendChild(mk('div','rail__label',label));
+    for(const k of keys){
+      const st=stateOf([k]), c=counts([k]);
+      const b=mk('button','rail__item'); b.type='button';
+      if(nav[0]===k) b.setAttribute('aria-current','true');
+      b.appendChild(mk('span','row__glyph '+CLS[st], GLYPH[st]));
+      b.appendChild(mk('span','rail__name', k));
+      b.appendChild(mk('span','rail__count', c.total>1?(c.on+'/'+c.total):''));
+      b.addEventListener('click',()=>{ nav=[k]; sel=0; render(); });
+      rail.appendChild(b);
+    }
   }
-  return rows;
-}
-function itemRow(path){
-  const key=path[path.length-1], node=nodeAt(path), st=stateOf(path);
-  const parentHooks = path.length>1 && nodeAt(path.slice(0,-1)).hooks;
-  const row={type:'item', path, name:key, tag:node.tag||'', st, feat:!!node.featured, hook:parentHooks && isLeaf(node), folder:!!node.folder, drill:!isLeaf(node)};
-  if(isLeaf(node)){ const p=leafPending(path.join('/')); row.pend = p?[p==='install'?mk('span','plus','+ install'):mk('span','minus','− uninstall')]:[]; }
-  else { const c=counts(path); row.count=c.on+'/'+c.total; const {ins,un}=pendUnder(path); row.pend=pendNodes(ins,un); }
-  row.hint = node.desc || node.tag || '';
-  return row;
 }
 
-// ---- render ----
-let rowsCache=[];
-function selectable(){ return rowsCache.map((r,i)=>(r.type!=='sep'&&r.type!=='label')?i:-1).filter(i=>i>=0); }
+function renderCrumb(){
+  const c=document.getElementById('crumb'); c.textContent='';
+  const home=mk('button',null,'Setup'); home.type='button';
+  home.addEventListener('click',()=>{ const f=Object.keys(T)[0]; nav=f?[f]:[]; sel=0; render(); });
+  c.appendChild(home);
+  nav.forEach((seg,i)=>{
+    c.appendChild(mk('span','chev','›'));
+    if(i===nav.length-1){ c.appendChild(mk('b',null,seg)); }
+    else { const b=mk('button',null,seg); b.type='button';
+      b.addEventListener('click',()=>{ nav=nav.slice(0,i+1); sel=0; render(); }); c.appendChild(b); }
+  });
+}
+
 function render(){
-  const crumb=document.getElementById('crumb'); crumb.textContent='';
-  crumb.appendChild(mk('span',null,'Setup'));
-  nav.forEach((seg,i)=>{ crumb.appendChild(document.createTextNode('›')); crumb.appendChild(i===nav.length-1?mk('b',null,seg):mk('span',null,seg)); });
-  const lead=document.getElementById('lead'); lead.textContent='';
-  if(nav.length===0){ lead.appendChild(document.createTextNode('Choose what runs on this machine. Open a group, toggle items to stage changes, then apply.')); document.getElementById('titlepath').textContent='setup'; }
-  else { const n=nodeAt(nav), c=counts(nav);
-    lead.appendChild(document.createTextNode((n.desc||n.tag||'')+'  '));
-    lead.appendChild(mk('span','meta', c.on+' of '+c.total+(n.hooks?' hooks on':' installed')));
-    document.getElementById('titlepath').textContent=nav.join(' › '); }
+  renderRail(); renderCrumb();
+  const n = nav.length ? nodeAt(nav) : null;
+  document.getElementById('paneTitle').textContent = nav[nav.length-1] || 'Setup';
+  document.getElementById('paneDesc').textContent = n ? (n.desc || n.tag || '') : '';
+  const meta=document.getElementById('paneMeta');
+  meta.textContent = n ? (counts(nav).on+' of '+counts(nav).total+(n.hooks?' hooks on':' installed')) : '';
 
-  rowsCache=buildRows();
-  const sels=selectable(); if(!sels.includes(sel)) sel=sels[0];
+  // Bulk actions are real buttons now, not rows pretending to be items.
+  const bulk=document.getElementById('bulk'); bulk.textContent='';
+  if(n && !isLeaf(n)){
+    const inHooks=!!n.hooks;
+    const bi=mk('button','btn', inHooks?'Enable all':'Install all'); bi.type='button';
+    bi.addEventListener('click',()=>{ stageAll(nav,'install'); render(); });
+    const bu=mk('button','btn', inHooks?'Disable all':'Remove all'); bu.type='button';
+    bu.addEventListener('click',()=>{ stageAll(nav,'uninstall'); render(); });
+    bulk.appendChild(bi); bulk.appendChild(bu);
+    if(nav.length>1){
+      const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
+      bb.addEventListener('click',()=>{ nav=nav.slice(0,-1); sel=0; render(); });
+      bulk.appendChild(bb);
+    }
+  }
+
+  rowsCache = (n && !isLeaf(n)) ? Object.keys(n.children).map(k=>nav.concat(k)) : [];
   const host=document.getElementById('rows'); host.textContent='';
-  rowsCache.forEach((r,i)=>{
-    if(r.type==='sep'){ host.appendChild(mk('div','sep')); return; }
-    if(r.type==='label'){ host.appendChild(mk('div','seclabel',r.name)); return; }
-    const d=mk('div','row'+(i===sel?' sel':''));
-    if(['back','installall','uninstallall','apply','quit'].includes(r.type)) d.classList.add('action');
-    if(r.type==='quit') d.classList.add('danger');
-    if(r.feat) d.classList.add('feat');
-    if(r.hook) d.classList.add('hook');
-    if(r.folder) d.classList.add('folder');
-    if(r.disabled) d.style.opacity=.4;
-    if(r.type==='item'){
-      d.appendChild(mk('span','caret', r.folder?'▾':(r.drill?'▸':' ')));
-      d.appendChild(mk('span','glyph '+CLS[r.st], GLYPH[r.st]));
-      d.appendChild(mk('span','name', r.name));
-      d.appendChild(mk('span','tag', r.tag));
-      d.appendChild(mk('span','stat', LABEL[r.st]));
-      d.appendChild(mk('span','count', r.count!==undefined?r.count:''));
-      const pe=mk('span','pend'); (r.pend||[]).forEach(x=>pe.appendChild(x)); d.appendChild(pe);
-    } else { d.appendChild(mk('span','caret',' ')); d.appendChild(mk('span','glyph',' ')); d.appendChild(mk('span','name', r.name)); }
+  if(!rowsCache.length){
+    host.appendChild(mk('div','empty', n && isLeaf(n)
+      ? 'This component installs as a single unit. Use the list on the left to turn it on or off.'
+      : 'Nothing to configure here.'));
+  }
+  if(sel>=rowsCache.length) sel=Math.max(0,rowsCache.length-1);
+  rowsCache.forEach((path,i)=>{
+    const key=path[path.length-1], node=nodeAt(path), st=stateOf(path), leaf=isLeaf(node);
+    const c=counts(path);
+    const d=mk('button','row'+(i===sel?' sel':'')); d.type='button';
+    d.appendChild(mk('span','row__glyph '+CLS[st], GLYPH[st]));
+    const txt=mk('span','row__text');
+    txt.appendChild(mk('span','row__name', key));
+    const dsc=node.desc || node.tag || '';
+    if(dsc) txt.appendChild(mk('span','row__desc', dsc));
+    d.appendChild(txt);
+    d.appendChild(mk('span','row__stat '+STATCLS[st], leaf?LABEL[st]:(c.on+'/'+c.total)));
+    const right=mk('span','row__right');
+    if(leaf){ const p=pending[path.join('/')];
+      if(p) right.appendChild(mk('span',p==='install'?'plus':'minus', p==='install'?'+ install':'− remove')); }
+    else { const {ins,un}=pendUnder(path);
+      if(ins) right.appendChild(mk('span','plus','+'+ins));
+      if(un){ if(ins) right.appendChild(document.createTextNode(' ')); right.appendChild(mk('span','minus','−'+un)); }
+      if(!ins&&!un) right.appendChild(mk('span','chev','›')); }
+    d.appendChild(right);
     d.addEventListener('click',()=>{ sel=i; activate(); });
-    d.addEventListener('mousemove',()=>{ if(sel!==i){ sel=i; paintSel(); showDetail(); } });
+    d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); showDetail(); });
     host.appendChild(d);
   });
+
   const pf=document.getElementById('pendfoot'); pf.textContent='';
-  if(pendingCount()){ const L=Object.values(pending); pendNodes(L.filter(a=>a==='install').length,L.filter(a=>a==='uninstall').length).forEach(x=>pf.appendChild(x)); pf.appendChild(document.createTextNode(' staged')); }
-  else { pf.appendChild(document.createTextNode('nothing staged')); }
+  const nP=pendingCount();
+  if(nP){ const L=Object.values(pending);
+    const ins=L.filter(a=>a==='install').length, un=L.filter(a=>a==='uninstall').length;
+    if(ins) pf.appendChild(mk('span','plus','+'+ins));
+    if(un){ if(ins) pf.appendChild(document.createTextNode(' ')); pf.appendChild(mk('span','minus','−'+un)); }
+    pf.appendChild(document.createTextNode(' staged'));
+  } else pf.appendChild(document.createTextNode('nothing staged'));
+  const ap=document.getElementById('btnApply');
+  ap.disabled = nP===0;
+  ap.textContent = nP ? ('Apply '+nP+' change'+(nP===1?'':'s')) : 'Apply';
   showDetail();
 }
-function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList.contains('sep')||d.classList.contains('seclabel'))return; d.classList.toggle('sel', i===sel); }); }
+function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList) d.classList.toggle('sel', i===sel); }); }
 function showDetail(){
-  const r=rowsCache[sel], det=document.getElementById('detail'); det.textContent='';
-  if(!r) return;
-  if(r.type==='item'){ det.appendChild(mk('b',null,r.name)); det.appendChild(document.createTextNode('  '+(r.hint||'')));
-    if(r.drill) det.appendChild(document.createTextNode('   (press → to open'+(r.folder?' the folder':'')+')'));
-    else det.appendChild(document.createTextNode('   (press enter to '+(installed[r.path.join('/')]?'turn off':'turn on')+')')); }
-  else det.appendChild(document.createTextNode(r.hint||''));
+  const det=document.getElementById('detail'); det.textContent='';
+  const path=rowsCache[sel]; if(!path) return;
+  const node=nodeAt(path), leaf=isLeaf(node);
+  det.appendChild(mk('b',null,path[path.length-1]));
+  det.appendChild(document.createTextNode('  '+(node.desc||node.tag||'')));
+  det.appendChild(document.createTextNode(leaf
+    ? '   (enter to '+(installed[path.join('/')]?'turn off':'turn on')+')'
+    : '   (enter to open)'));
 }
 function toast(m){ const det=document.getElementById('detail'); det.textContent=''; det.appendChild(mk('b',null,m)); }
 
-// ---- actions ----
 function activate(){
-  const r=rowsCache[sel]; if(!r||r.type==='sep'||r.type==='label') return;
-  if(r.type==='item'){ if(r.drill){ nav=r.path.slice(); sel=0; } else toggleLeaf(r.path.join('/')); }
-  else if(r.type==='back'){ nav=nav.slice(0,-1); sel=0; }
-  else if(r.type==='installall'){ stageAll(nav,'install'); }
-  else if(r.type==='uninstallall'){ stageAll(nav,'uninstall'); }
-  else if(r.type==='apply'){ runApply(); return; }
-  else if(r.type==='quit'){ doQuit(); return; }
+  const path=rowsCache[sel]; if(!path) return;
+  if(isLeaf(nodeAt(path))) toggleLeaf(path.join('/'));
+  else { nav=path.slice(); sel=0; }
   render();
 }
-function move(d){ const s=selectable(); if(!s.length)return; let p=s.indexOf(sel); if(p<0)p=0; p=(p+d+s.length)%s.length; sel=s[p]; paintSel(); showDetail(); }
+function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%rowsCache.length; paintSel(); showDetail(); }
+
+document.getElementById('btnApply').addEventListener('click', runApply);
+document.getElementById('btnQuit').addEventListener('click', doQuit);
 document.addEventListener('keydown',e=>{
+  if(e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
   if(e.key==='ArrowDown'){move(1);e.preventDefault();}
   else if(e.key==='ArrowUp'){move(-1);e.preventDefault();}
-  else if(e.key==='Enter'||e.key==='ArrowRight'||e.key===' '){activate();e.preventDefault();}
-  else if(e.key==='ArrowLeft'||e.key==='Escape'||e.key==='Backspace'){ if(nav.length){ nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }
+  else if(e.key==='Enter'||e.key==='ArrowRight'){
+    // Let a focused control do its own job rather than hijacking the key.
+    if(document.activeElement && document.activeElement.tagName==='BUTTON'
+       && document.activeElement.closest('.topbar,.actionbar,.bulk,.rail')) return;
+    activate(); e.preventDefault();
+  }
+  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>1){ nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }
   else if(e.key==='a'||e.key==='A'){ runApply(); }
   else if(e.key==='q'||e.key==='Q'){ doQuit(); }
 });
