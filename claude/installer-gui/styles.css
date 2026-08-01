@@ -102,10 +102,6 @@
     text-transform:uppercase; color:var(--text-tertiary);
     padding:var(--s4) var(--s3) var(--s2);
   }
-  .sw--sm{width:26px; height:15px;}
-  .sw--sm::after{width:11px; height:11px; top:1px; left:1px;}
-  .sw--sm.is-on::after{translate:11px 0;}
-  .sw--sm.is-part::after{translate:5px 0;}
   .rail__item{
     display:grid; grid-template-columns:1fr auto; align-items:center; gap:var(--s3);
     padding:var(--s2) var(--s3); border-radius:var(--r-md); cursor:pointer;
@@ -208,39 +204,43 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
 
-  /* STATE IS SHOWN ONCE. It used to be a coloured dot AND a coloured pill saying
-     the same thing, and the pill read "installed" on four rows out of five -
-     badging the majority state is decoration. This is a switch: the control you
-     are actually operating, unambiguous at a glance, and silent when nothing is
-     unusual. */
-  .sw{
-    justify-self:end;
-    width:34px; height:20px; border-radius:var(--r-full); flex:0 0 auto;
-    background:var(--off-bg); border:1px solid var(--border-firm);
-    position:relative; transition:background 140ms var(--ease), border-color 140ms var(--ease);
+  /* STATUS IS A BADGE, not a switch. A switch implies flipping it takes effect;
+     this installer stages and then applies, so the control was promising a
+     directness the model does not have. A badge states what is true and gets out
+     of the way. One shape, three readings, so the language is learnable at a
+     glance: quiet when a thing is as expected, coloured only when it is not. */
+  .badge{
+    display:inline-flex; align-items:center; gap:var(--s2);
+    font-family:var(--font-mono); font-size:var(--xs); white-space:nowrap;
+    padding:3px var(--s3); border-radius:var(--r-full);
+    border:1px solid transparent; justify-self:end;
   }
-  .sw::after{
-    content:""; position:absolute; top:2px; left:2px;
-    width:14px; height:14px; border-radius:var(--r-full);
-    background:var(--text-tertiary);
-    transition:translate 140ms var(--ease), background 140ms var(--ease);
+  .badge::before{
+    content:""; width:6px; height:6px; border-radius:var(--r-full);
+    background:currentColor; flex:0 0 auto;
   }
-  .sw.is-on{background:var(--ok-bg); border-color:var(--ok);}
-  .sw.is-on::after{translate:14px 0; background:var(--ok);}
-  .sw.is-part{background:var(--part-bg); border-color:var(--part);}
-  /* A staged switch is dashed: it has moved to where it WILL be, and the dash
-     says that has not happened yet. */
-  .sw.is-staged{border-style:dashed; border-width:1.5px;}
-  .sw.is-part::after{translate:7px 0; background:var(--part);}
+  /* The norm. Most things are installed, so this is the quietest reading - it
+     confirms without competing. */
+  .badge.is-on{color:var(--ok); background:var(--ok-bg);}
+  /* Absent, and unremarkable: an add-on you never wanted is not a problem. */
+  .badge.is-off{color:var(--text-tertiary); background:var(--off-bg);}
+  /* The one that wants attention: a group half-installed is usually not intended. */
+  .badge.is-part{color:var(--part); background:var(--part-bg);}
+  /* Pending. An outline rather than a fill, because nothing has happened yet. */
+  .badge.is-staged{background:none; border-style:dashed;}
+  .badge.is-staged.will-install{color:var(--ok); border-color:var(--ok);}
+  .badge.is-staged.will-remove{color:var(--red); border-color:var(--red);}
 
-  /* Only the exception speaks. A group that is fully on says nothing; one that is
-     partial says how far. */
-  .row__right{
-    font-family:var(--font-mono); font-size:var(--xs); text-align:right;
-    white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--text-secondary);
-    min-width:4.5rem;
+  /* A row that opens says so. This was the single worst omission: nothing
+     distinguished a row that toggles from a row that navigates. */
+  .row__go{
+    display:grid; place-items:center; width:20px; height:20px;
+    color:var(--text-tertiary); flex:0 0 auto;
+    transition:translate 140ms var(--ease), color 140ms var(--ease);
   }
-  .plus{color:var(--ok);} .minus{color:var(--red);}
+  .row__go svg{width:16px; height:16px; display:block;}
+  .row:hover .row__go{color:var(--text-secondary); translate:2px 0;}
+  .row__go--spacer{visibility:hidden;}
   .empty{color:var(--text-tertiary); font-size:var(--sm); padding:var(--s6) 0; overflow-wrap:anywhere;}
 
   /* ── action bar ─────────────────────────────────────────────────────────── */
@@ -286,12 +286,30 @@
     }
     .rail__label{display:none;}
     .sw--sm{width:26px; height:15px;}
-  .sw--sm::after{width:11px; height:11px; top:1px; left:1px;}
-  .sw--sm.is-on::after{translate:11px 0;}
-  .sw--sm.is-part::after{translate:5px 0;}
   .rail__item{width:auto; grid-template-columns:auto auto; flex:0 0 auto;}
     .rail__count{display:none;}
     .pane{padding:var(--s5);}
     .row{grid-template-columns:minmax(0,1fr) auto;}
     .row__right{display:none;}
   }
+
+/* ── directional motion ───────────────────────────────────────────────────────
+   Moving deeper and moving back are different journeys, and without a direction
+   cue a tree just blinks between unrelated screens. Forward enters from the
+   right, back enters from the left, so the motion matches the mental model of
+   going in and coming out. Short and eased-out: this is a cue, not a show. */
+@keyframes pane-in-fwd{ from{transform:translateX(20px);} to{transform:none;} }
+@keyframes pane-in-back{ from{transform:translateX(-20px);} to{transform:none;} }
+/* MOTION ONLY, NEVER OPACITY. The first version faded from 0 with fill-mode
+   `both`, so any moment the animation was not advancing left the pane at opacity
+   0 - and a stretched test showed it blank for seconds at a time. A directional
+   cue is not worth a state where the content is gone. Animating only the
+   transform means the worst case is content sitting 20px off-centre, which is a
+   blemish rather than an outage.
+   Forward enters from the right, back from the left, matching going in and
+   coming out of a tree. */
+.pane.is-fwd{animation:pane-in-fwd 190ms var(--ease);}
+.pane.is-back{animation:pane-in-back 190ms var(--ease);}
+@media (prefers-reduced-motion: reduce){
+  .pane.is-fwd,.pane.is-back{animation:none;}
+}

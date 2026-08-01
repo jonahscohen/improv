@@ -207,6 +207,9 @@ function mk(tag,cls,text){ const e=document.createElement(tag); if(cls)e.classNa
 
 // ---- navigation: nav[0] is the RAIL selection, deeper entries drill in -------
 let nav=[], sel=0, rowsCache=[];
+const CHEV = '<svg data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+// Which way the next render moved through the tree, so the pane can say so.
+let navDir='';
 
 function renderRail(){
   const rail=document.getElementById('rail'); rail.textContent='';
@@ -223,6 +226,7 @@ function renderRail(){
       b.appendChild(mk('span','rail__name', k));
       // A count that reads 9/9 says 'all', which the state already says.
       b.appendChild(mk('span','rail__count', (c.total>1 && c.on<c.total)?(c.on+'/'+c.total):''));
+      // Lateral: switching between siblings is not forward or backward, so no cue.
       b.addEventListener('click',()=>{ nav=[k]; sel=0; render(); });
       rail.appendChild(b);
     }
@@ -243,7 +247,7 @@ function renderCrumb(){
     c.appendChild(mk('span','chev','›'));
     if(i===nav.length-1){ c.appendChild(mk('b',null,seg)); }
     else { const b=mk('button',null,seg); b.type='button';
-      b.addEventListener('click',()=>{ nav=nav.slice(0,i+1); sel=0; render(); }); c.appendChild(b); }
+      b.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,i+1); sel=0; render(); }); c.appendChild(b); }
   });
 }
 
@@ -268,7 +272,7 @@ function render(){
     bulk.appendChild(bi); bulk.appendChild(bu);
     if(nav.length>1){
       const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
-      bb.addEventListener('click',()=>{ nav=nav.slice(0,-1); sel=0; render(); });
+      bb.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); });
       bulk.appendChild(bb);
     }
   }
@@ -290,29 +294,32 @@ function render(){
     const dsc=node.desc || node.tag || '';
     if(dsc) txt.appendChild(mk('span','row__desc', dsc));
     d.appendChild(txt);
-    // Only the exception speaks: a group that is fully on shows nothing, a
-    // partial one shows how far. "9/9" on every row is noise, not information.
-    d.appendChild(mk('span','row__right', (!leaf && st!=='active') ? (c.on+' of '+c.total) : ''));
-    // THE SWITCH SHOWS WHAT WILL BE TRUE, not what is true right now. Staging a
-    // change used to leave it unmoved, so flipping a switch did nothing visible
-    // and only a small label changed - a switch that does not move when you flip
-    // it is worse than the badge it replaced. The label carries "not applied yet";
-    // the switch carries intent.
+    // STATUS BADGE. One shape, and the colour is the whole reading: quiet when a
+    // thing is as expected, coloured only when it is not. A pending change
+    // overrides it as a dashed outline, because nothing has happened yet.
     const stagedAct = leaf ? (pending[path.join('/')]||'') : '';
-    const shown = stagedAct ? (stagedAct==='install'?'active':'none') : st;
-    d.appendChild(mk('span','sw '+STATCLS[shown]+(stagedAct?' is-staged':'')));
-    d.setAttribute('aria-pressed', shown==='active' ? 'true' : 'false');
-    const staged = stagedAct;
-    if(staged){
-      const r=d.querySelector('.row__right');
-      r.textContent=''; r.appendChild(mk('span',staged==='install'?'plus':'minus',
-        staged==='install'?'will install':'will remove'));
-    } else if(!leaf){
-      const {ins,un}=pendUnder(path); const r=d.querySelector('.row__right');
-      if(ins||un){ r.textContent='';
-        if(ins) r.appendChild(mk('span','plus','+'+ins));
-        if(un){ if(ins) r.appendChild(document.createTextNode(' ')); r.appendChild(mk('span','minus','−'+un)); } }
+    let bcls, btext;
+    if(stagedAct){
+      bcls = 'is-staged ' + (stagedAct==='install' ? 'will-install' : 'will-remove');
+      btext = stagedAct==='install' ? 'will install' : 'will remove';
+    } else if(leaf){
+      bcls = st==='active' ? 'is-on' : 'is-off';
+      btext = st==='active' ? 'installed' : 'not installed';
+    } else {
+      const {ins,un}=pendUnder(path);
+      if(ins||un){ bcls='is-staged '+(ins?'will-install':'will-remove');
+        btext=(ins?'+'+ins:'')+(ins&&un?' ':'')+(un?'−'+un:'')+' staged'; }
+      else if(st==='active'){ bcls='is-on'; btext='all '+c.total; }
+      else if(st==='none'){ bcls='is-off'; btext='none of '+c.total; }
+      else { bcls='is-part'; btext=c.on+' of '+c.total; }
     }
+    d.appendChild(mk('span','badge '+bcls, btext));
+
+    // A row that OPENS says so. Nothing previously distinguished a row that
+    // toggles from a row that navigates.
+    const go=mk('span','row__go'+(leaf?' row__go--spacer':''));
+    go.innerHTML = CHEV;
+    d.appendChild(go);
     d.addEventListener('click',()=>{ sel=i; activate(); });
     d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); showDetail(); });
     host.appendChild(d);
@@ -329,6 +336,15 @@ function render(){
   const ap=document.getElementById('btnApply');
   ap.disabled = nP===0;
   ap.textContent = nP ? ('Apply '+nP+' change'+(nP===1?'':'s')) : 'Apply';
+  // Play the direction cue, then clear it so a re-render for an unrelated reason
+  // (staging a change, applying) does not slide the pane sideways for no reason.
+  if(navDir){
+    const pane=document.querySelector('.pane');
+    pane.classList.remove('is-fwd','is-back');
+    void pane.offsetWidth;                       // restart the animation
+    pane.classList.add(navDir==='fwd'?'is-fwd':'is-back');
+    navDir='';
+  }
   showDetail();
 }
 function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList) d.classList.toggle('sel', i===sel); }); }
@@ -344,7 +360,7 @@ function toast(m){ const det=document.getElementById('detail'); det.textContent=
 function activate(){
   const path=rowsCache[sel]; if(!path) return;
   if(isLeaf(nodeAt(path))) toggleLeaf(path.join('/'));
-  else { nav=path.slice(); sel=0; }
+  else { navDir='fwd'; nav=path.slice(); sel=0; }   // going deeper
   render();
 }
 function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%rowsCache.length; paintSel(); showDetail(); }
@@ -361,7 +377,7 @@ document.addEventListener('keydown',e=>{
        && document.activeElement.closest('.topbar,.actionbar,.bulk,.rail')) return;
     activate(); e.preventDefault();
   }
-  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>1){ nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>1){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }
   else if(e.key==='a'||e.key==='A'){ runApply(); }
   else if(e.key==='q'||e.key==='Q'){ doQuit(); }
 });
