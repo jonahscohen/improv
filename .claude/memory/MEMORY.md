@@ -176,11 +176,8 @@
 - [** ACTIVE ** Discoverability and reachability outrank internal quality on the scoreboard - a capability nothing can invoke scores ZERO; imag…](decision_discoverability_outranks_internal_quality.md)
 - [** ACTIVE ** Claims brought to the scoreboard that were rejected or rewritten - a claimed model-currency WIN had no opponent position (LOCALPROJECTX has n…](decision_scorekeeper_rejected_claims.md)
 - [** ACTIVE ** Scoreboard handoff - tally WIN 12/LOSS 12/TIE 1/UNMEASURED 5 is STALE vs the current script (regen never finished); OUT OF SCOPE verdict nev…](session_2026-07-29_scoreboard-handoff.md)
-- [Idle reaping is opt-in](session_2026-08-01_idle-reaping-is-opt-in.md) - a torn-down team is maximally idle by design, so the idle rule deleted teams precisely when managed well
-- [Installer GUI on marketing tokens](session_2026-08-01_installer-gui-marketing-tokens.md) - brand tokens lifted verbatim, four wayfinding layers, and the craft floor caught contradicting its own detector
-- [Installer GUI rebuilt as a dashboard](session_2026-08-01_installer-gui-dashboard-redesign.md) - full bleed, persistent rail, the real and-dev mark instead of one I invented, and a theme toggle
-- [Installer taste audit](session_2026-08-01_installer-taste-audit.md) - rendered lenses found two measured contrast failures and the ban sweep found icon provenance I had stripped
-- [Installer slop removed](session_2026-08-01_installer-slop-removed.md) - a card stack passed every audit because the genericity checker is a keyword grep; rebuilt as a preferences list with switches
-- [Installer redundancy pass](session_2026-08-01_installer-redundancy-pass.md) - one fact per place, and a rail that stopped drawing controls it does not have
-- [The side-stripe I painted around the ban](session_2026-08-01_side-stripe-dodge.md) - inset box-shadow makes the banned stripe without a border-left, so the checker never saw it; also fixes it flagging 1px hairlines
-- [Badges, chevrons, directional motion](session_2026-08-01_badges-chevrons-directional-motion.md) - the switch promised a directness the staged model lacks; also an animation that hid the pane for nine seconds
+- [** ACTIVE ** Two-sentence descriptions for all 71 installer hooks - 69 of 71 hook_desc entries were one sentence; nine were factually WRONG (sid…](session_2026-08-01_installer-hook-descriptions.md)
+- [The status badge became the checkbox and the row grew a second line - hooks had rendered blank because manifest.py never forwarded hook_desc](session_2026-08-01_badge-becomes-the-checkbox.md)
+- [All 107 installer descriptions rewritten for a developer outside this team - the first draft was accurate and defined every unknown with another unknown](session_2026-08-01_descriptions-written-for-outsiders.md)
+- [Codex found two real badge defects - Enter navigated instead of toggling, and a mixed-staged group rendered as fully checked; fixing the first exposed a dead keyboard path](session_2026-08-01_codex-caught-two-badge-bugs.md)
+- [verify-manual.sh's header claimed it clears the verification flag on any user message - it has never done that, and the claim made a safety gate look weaker than it is](session_2026-08-01_verify-manual-header-lied.md)

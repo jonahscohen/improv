@@ -93,6 +93,7 @@ syncThemeLabel();
 
 // ---- tree + install state, populated from the live manifest ----
 let T = {};
+let HOOK_DESC = {};
 const installed = {}, pending = {};
 
 function walkMembers(members, out) {
@@ -101,7 +102,10 @@ function walkMembers(members, out) {
       out[mem.key] = { tag: mem.tag || '', desc: mem.desc || '' };
     } else if (mem.kind === 'hooks') {
       const kids = {};
-      for (const h of (mem.hooks || [])) kids[h] = { tag: '', desc: '' };
+      // Hooks carry the same explanations everything else does. They were the
+      // one component type rendered with an empty description, which made the
+      // most cryptic names on the whole list the least explained.
+      for (const h of (mem.hooks || [])) kids[h] = { tag: '', desc: HOOK_DESC[h] || '' };
       out[mem.key] = { folder: 1, hooks: 1, tag: mem.tag || '', desc: mem.desc || '', children: kids };
     } else if (mem.members) {
       const kids = {};
@@ -111,6 +115,7 @@ function walkMembers(members, out) {
   }
 }
 function buildTreeFromManifest(m) {
+  HOOK_DESC = m.hook_desc || {};
   const tree = {};
   for (const b of m.buckets) {
     // A bucket with no members is itself a leaf (e.g. tilt-lab, lotus) so its
@@ -153,6 +158,11 @@ function stateOf(path){ const n=nodeAt(path); if(isLeaf(n)) return installed[pat
   const c=counts(path); return c.on===0?'none':(c.on===c.total?'active':'partial'); }
 function toggleLeaf(p){ const t=installed[p]?'uninstall':'install'; if(pending[p]===t) delete pending[p]; else pending[p]=t; }
 function stageAll(path,a){ leafPaths(path).forEach(p=>{ const want=a==='install'; if(installed[p]===want) delete pending[p]; else pending[p]=a; }); }
+// Projected state: what will be true after Apply, which is what a checked box
+// claims. A staged change wins over the current disk state; anything unstaged
+// keeps it.
+function willBeOn(p){ return pending[p] ? pending[p]==='install' : !!installed[p]; }
+function willAllBeOn(path){ const L=leafPaths(path); return L.length>0 && L.every(willBeOn); }
 function pendUnder(path){ const L=leafPaths(path); return {ins:L.filter(p=>pending[p]==='install').length, un:L.filter(p=>pending[p]==='uninstall').length}; }
 function pendingCount(){ return Object.keys(pending).length; }
 
@@ -207,6 +217,10 @@ function mk(tag,cls,text){ const e=document.createElement(tag); if(cls)e.classNa
 
 // ---- navigation: nav[0] is the RAIL selection, deeper entries drill in -------
 let nav=[], sel=0, rowsCache=[];
+// Paths copied byte-for-byte from the local lucide checkout, icons/square-check.svg
+// and icons/square.svg. The data-icon-source marker is what makes that checkable.
+const BOX_ON  = '<svg data-icon-source="lucide:square-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="m9 12 2 2 4-4" /></svg>';
+const BOX_OFF = '<svg data-icon-source="lucide:square" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /></svg>';
 const CHEV = '<svg data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 // Which way the next render moved through the tree, so the pane can say so.
 let navDir='';
@@ -288,38 +302,65 @@ function render(){
   rowsCache.forEach((path,i)=>{
     const key=path[path.length-1], node=nodeAt(path), st=stateOf(path), leaf=isLeaf(node);
     const c=counts(path);
-    const d=mk('button','row'+(i===sel?' sel':'')); d.type='button';
-    const txt=mk('span','row__text');
-    txt.appendChild(mk('span','row__name', key));
-    const dsc=node.desc || node.tag || '';
-    if(dsc) txt.appendChild(mk('span','row__desc', dsc));
-    d.appendChild(txt);
-    // STATUS BADGE. One shape, and the colour is the whole reading: quiet when a
-    // thing is as expected, coloured only when it is not. A pending change
-    // overrides it as a dashed outline, because nothing has happened yet.
+    const d=mk('div','row'+(i===sel?' sel':''));
+    d.appendChild(mk('span','row__name', key));
+
+    // THE BADGE IS THE CONTROL. It reads the state AND it is what you press to
+    // change it, so there is one thing on the row to look at and one thing to
+    // operate. A checked box means "this will be on the machine after Apply" -
+    // which is why a staged install reads as checked before anything has run.
     const stagedAct = leaf ? (pending[path.join('/')]||'') : '';
-    let bcls, btext;
+    const und = leaf ? {ins:0,un:0} : pendUnder(path);
+    let bcls, btext, on;
     if(stagedAct){
       bcls = 'is-staged ' + (stagedAct==='install' ? 'will-install' : 'will-remove');
       btext = stagedAct==='install' ? 'will install' : 'will remove';
+      on = stagedAct==='install';
     } else if(leaf){
       bcls = st==='active' ? 'is-on' : 'is-off';
       btext = st==='active' ? 'installed' : 'not installed';
-    } else {
-      const {ins,un}=pendUnder(path);
-      if(ins||un){ bcls='is-staged '+(ins?'will-install':'will-remove');
-        btext=(ins?'+'+ins:'')+(ins&&un?' ':'')+(un?'−'+un:'')+' staged'; }
-      else if(st==='active'){ bcls='is-on'; btext='all '+c.total; }
-      else if(st==='none'){ bcls='is-off'; btext='none of '+c.total; }
-      else { bcls='is-part'; btext=c.on+' of '+c.total; }
+      on = st==='active';
+    } else if(und.ins||und.un){
+      bcls='is-staged '+(und.ins?'will-install':'will-remove');
+      btext=(und.ins?'+'+und.ins:'')+(und.ins&&und.un?' ':'')+(und.un?'−'+und.un:'')+' staged';
+      // The box asks "will EVERY child be installed after Apply", not "is there
+      // an install staged". A group staging one install and one removal is still
+      // partial afterwards, so it must not read as checked.
+      on = willAllBeOn(path);
     }
-    d.appendChild(mk('span','badge '+bcls, btext));
+    else if(st==='active'){ bcls='is-on'; btext='all '+c.total; on=true; }
+    else if(st==='none'){ bcls='is-off'; btext='none of '+c.total; on=false; }
+    else { bcls='is-part'; btext=c.on+' of '+c.total; on=false; }
+
+    const chk=mk('button','check '+bcls+(on?' is-checked':'')); chk.type='button';
+    chk.setAttribute('aria-pressed', on?'true':'false');
+    chk.setAttribute('aria-label', (on?'Deselect ':'Select ')+key+' for install');
+    chk.innerHTML = on ? BOX_ON : BOX_OFF;
+    chk.appendChild(mk('span','check__t', btext));
+    // Pressing the box on a GROUP acts on everything under it, which is the
+    // same bulk action the section header offers, reached from the group itself.
+    const toggle=()=>{ sel=i;
+      if(leaf) toggleLeaf(path.join('/')); else stageAll(path, on?'uninstall':'install');
+      render(); };
+    chk.addEventListener('click',e=>{ e.stopPropagation(); toggle(); });
+    // Space activates natively, Enter did not reach this button. Drive Enter
+    // explicitly and suppress both the native activation and the global key
+    // handler, so it fires exactly once and never falls through to navigation.
+    chk.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); toggle(); }
+    });
+    d.appendChild(chk);
 
     // A row that OPENS says so. Nothing previously distinguished a row that
     // toggles from a row that navigates.
     const go=mk('span','row__go'+(leaf?' row__go--spacer':''));
     go.innerHTML = CHEV;
     d.appendChild(go);
+
+    // The description gets its own line rather than an ellipsis. These run to
+    // two sentences, and a truncated explanation explains nothing.
+    const dsc=node.desc || node.tag || '';
+    if(dsc) d.appendChild(mk('span','row__desc', dsc));
     d.addEventListener('click',()=>{ sel=i; activate(); });
     d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); showDetail(); });
     host.appendChild(d);
@@ -372,9 +413,10 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowDown'){move(1);e.preventDefault();}
   else if(e.key==='ArrowUp'){move(-1);e.preventDefault();}
   else if(e.key==='Enter'||e.key==='ArrowRight'){
-    // Let a focused control do its own job rather than hijacking the key.
-    if(document.activeElement && document.activeElement.tagName==='BUTTON'
-       && document.activeElement.closest('.topbar,.actionbar,.bulk,.rail')) return;
+    // Let a focused control do its own job rather than hijacking the key. This
+    // used to name specific regions, which missed the row badge - tabbing to one
+    // and pressing Enter both toggled it AND drilled into the group.
+    if(document.activeElement && document.activeElement.tagName==='BUTTON') return;
     activate(); e.preventDefault();
   }
   else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>1){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }

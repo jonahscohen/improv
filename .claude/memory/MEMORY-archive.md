@@ -1378,3 +1378,13 @@
 - [Installer duplicate-hook reconciliation](session_2026-07-31_installer-duplicate-hook-reconciliation.md) - the dedupe check only scanned one matcher group while absent/empty/star are the same bucke…
 - [Stale-deploy detection in the browser](session_2026-07-31_stale-deploy-detection.md) - symlinked components cannot go stale, but a copied build bundle can and did; content comparison never mtime
 - [The justify preset](session_2026-08-01_justify-preset.md) - justify plus safety, verification, grounding and beats; and a wrong fix the component-browser test caught
+
+<!-- archived 2026-08-01 (moved from MEMORY.md to stay under load budget) -->
+- [Installer GUI on marketing tokens](session_2026-08-01_installer-gui-marketing-tokens.md) - brand tokens lifted verbatim, four wayfinding layers, and the craft floor caught contradicting its own de…
+- [Installer GUI rebuilt as a dashboard](session_2026-08-01_installer-gui-dashboard-redesign.md) - full bleed, persistent rail, the real and-dev mark instead of one I invented, and a theme toggle
+- [Installer taste audit](session_2026-08-01_installer-taste-audit.md) - rendered lenses found two measured contrast failures and the ban sweep found icon provenance I had stripped
+- [Installer slop removed](session_2026-08-01_installer-slop-removed.md) - a card stack passed every audit because the genericity checker is a keyword grep; rebuilt as a preferences list with switches
+- [Installer redundancy pass](session_2026-08-01_installer-redundancy-pass.md) - one fact per place, and a rail that stopped drawing controls it does not have
+- [The side-stripe I painted around the ban](session_2026-08-01_side-stripe-dodge.md) - inset box-shadow makes the banned stripe without a border-left, so the checker never saw it; also fixes it flag…
+- [Badges, chevrons, directional motion](session_2026-08-01_badges-chevrons-directional-motion.md) - the switch promised a directness the staged model lacks; also an animation that hid the pane for n…
+- [Idle reaping is opt-in](session_2026-08-01_idle-reaping-is-opt-in.md) - a torn-down team is maximally idle by design, so the idle rule deleted teams precisely when managed well

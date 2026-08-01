@@ -268,6 +268,49 @@ assert_row_has() {
   fi
 }
 
+# assert_row_flow_has <file> <rowkey> <needle> <label> - the row naming <rowkey> TOGETHER
+# WITH its continuation lines (everything up to the next numbered row) carries <needle>,
+# whitespace-normalized.
+#
+# WHY THIS EXISTS (2026-08-01): hook descriptions became TWO SENTENCES, ~220 chars. They no
+# longer fit the row's ~52-col description column, so the renderer wraps them onto their own
+# lines beneath the row. assert_row_has is same-LINE only and can no longer see them - it
+# went red on all 7 Beats hooks for a layout that is in fact correct.
+#
+# The naive fix would be assert_in_flow on the whole capture, but that discards the PER-ROW
+# binding, which is the entire distinction assert_row_has exists to make ("this row says X"
+# vs "X is somewhere on screen"). This keeps the binding and only widens it from one line to
+# one row BLOCK. A row block ends at the next `N)` line, so a needle cannot leak in from a
+# neighbouring hook.
+_row_flow_has() {
+  python3 - "$1" "$2" "$3" <<'PYX'
+import re, sys
+path, rowkey, needle = sys.argv[1], sys.argv[2], sys.argv[3]
+lines = open(path).read().split("\n")
+row_re = re.compile(r"^\s*\d+\)")          # the numbered-menu row shape
+want = re.sub(r"\s+", " ", needle)
+# A screen can be captured more than once in a run (before and after a toggle), so every
+# matching row block is tried; one hit is enough.
+for i, line in enumerate(lines):
+    if row_re.match(line) and rowkey in line:
+        block = [line]
+        for nxt in lines[i + 1:]:
+            if row_re.match(nxt):
+                break
+            block.append(nxt)
+        if want in re.sub(r"\s+", " ", " ".join(block)):
+            sys.exit(0)
+sys.exit(1)
+PYX
+}
+
+assert_row_flow_has() {
+  local f="$1" rowkey="$2" needle="$3" label="$4"
+  if _row_flow_has "$f" "$rowkey" "$needle"; then pass "$label"; else
+    fail "$label  (row '$rowkey' and its wrap lines lack '$needle' in $f)"
+  fi
+}
+
 # --- key emitters ------------------------------------------------------------
 # Text path: one line per menu choice. Paced so each read lands on its own screen.
 _keys_text() {
@@ -389,14 +432,20 @@ F="$OUT_PREFIX-text-beats-hooks.txt"
   assert_in "$F" "+ Enable all hooks..." "Enable all hooks action (folder named Hooks)"
   assert_in "$F" "- Disable all hooks..." "Disable all hooks action"
 
-  # All 7 Beats hooks, each WITH its description on the same row at the harness width.
-  assert_row_has "$F" "memory-approve"        "Guards writes to your beats files."             "hook+desc: memory-approve"
-  assert_row_has "$F" "memory-nudge"          "Reminds you to write a beat after each change." "hook+desc: memory-nudge"
-  assert_row_has "$F" "memory-compact"        "Keeps the beats index under its load budget."   "hook+desc: memory-compact"
-  assert_row_has "$F" "consolidate-nudge"     "Flags beat clusters worth consolidating."       "hook+desc: consolidate-nudge"
-  assert_row_has "$F" "beats-rebuild"         "Recompiles the beats search index"              "hook+desc: beats-rebuild"
-  assert_row_has "$F" "beats-staleness-guard" "Verifies the beats index at session start."     "hook+desc: beats-staleness-guard"
-  assert_row_has "$F" "reflect-nudge"         "Suggests a reflect pass when new beats pile up." "hook+desc: reflect-nudge"
+  # All 7 Beats hooks, each WITH its description bound to its own row block. Descriptions are
+  # two sentences now and wrap beneath the row rather than sharing it, so this uses
+  # assert_row_flow_has (row + its continuation lines) instead of assert_row_has (same line).
+  #
+  # The needle is deliberately each description's SECOND sentence. A first-sentence needle
+  # would still pass on a row that lost its second sentence to truncation, which is the exact
+  # regression worth catching now that every description carries two.
+  assert_row_flow_has "$F" "memory-approve"        "It only ever grants permission: the write-time content checks still run and can still reject the file." "hook+desc: memory-approve"
+  assert_row_flow_has "$F" "memory-nudge"          "Read-only commands like git status leave the flag alone; sed -i sets it." "hook+desc: memory-nudge"
+  assert_row_flow_has "$F" "memory-compact"        "It ignores every other file and rewrites only when something actually changed." "hook+desc: memory-compact"
+  assert_row_flow_has "$F" "consolidate-nudge"     "Advisory only: it never edits or deletes a note, and it waits before raising the same group again." "hook+desc: consolidate-nudge"
+  assert_row_flow_has "$F" "beats-rebuild"         "It runs detached and swallows every error, so it can never block or slow your session." "hook+desc: beats-rebuild"
+  assert_row_flow_has "$F" "beats-staleness-guard" "Silent when it is fresh, and it never fails the session start." "hook+desc: beats-staleness-guard"
+  assert_row_flow_has "$F" "reflect-nudge"         "The first run only records the timestamp, so a fresh machine is never nagged on day one." "hook+desc: reflect-nudge"
 
   # The 2 PINNED hooks render as always-on and are NOT offered as a toggle.
   assert_row_has "$F" "beats-rebuild"         "always on" "pinned renders always-on: beats-rebuild"
@@ -542,7 +591,7 @@ fi
 # These captures prove a user can READ every description at each width, and that nothing
 # is ever cut mid-word.
 printf '\n%s[7] width matrix: descriptions readable at 60 / 80 / 100 / 120%s\n' "$YELLOW" "$NC"
-LONGEST_DESC="Recompiles the beats search index in the background."
+LONGEST_DESC="Auto-approves Write, Edit and MultiEdit into any .claude/memory directory, so saving a session note never stalls on a permission prompt. It only ever grants permission: the write-time content checks still run and can still reject the file."
 for width in 60 80 100 120; do
   # 3=Beats, 6=Hooks, 4=TOGGLE memory-approve, 0=back, 0=root, 0=quit->warn, 2=discard.
   #
@@ -556,9 +605,9 @@ for width in 60 80 100 120; do
     # THE REQUIREMENT: a user can READ what each hook does at this width. Flow-normalized,
     # because at the narrowest widths a description correctly wraps across lines.
     assert_in_flow "$F" "$LONGEST_DESC" "w$width: longest hook description readable in full"
-    assert_in_flow "$F" "Guards writes to your beats files." "w$width: memory-approve description readable"
-    assert_in_flow "$F" "Suggests a reflect pass when new beats pile up." "w$width: reflect-nudge description readable"
-    assert_in_flow "$F" "Verifies the beats index at session start." "w$width: beats-staleness-guard description readable"
+    assert_in_flow "$F" "Auto-approves Write, Edit and MultiEdit into any .claude/memory directory, so saving a session note never stalls on a permission prompt. It only ever grants permission: the write-time content checks still run and can still reject the file." "w$width: memory-approve description readable"
+    assert_in_flow "$F" "Counts the session notes written since your last review and suggests running one when the count passes REFLECT_THRESHOLD, default 15. The first run only records the timestamp, so a fresh machine is never nagged on day one." "w$width: reflect-nudge description readable"
+    assert_in_flow "$F" "Checks the session-notes index at startup and acts on the result: a stale index is rebuilt on the spot rather than trusted, a corrupt one raises a loud warning. Silent when it is fresh, and it never fails the session start." "w$width: beats-staleness-guard description readable"
     assert_row_has "$F" "beats-rebuild" "always on" "w$width: pinned still reads always-on"
     # POSITIVE: a bare assert_not_in "rules, settin " passes vacuously if the tag never
     # rendered at all. At >=80 the root name column shrinks to fit "Design Tools" (12),

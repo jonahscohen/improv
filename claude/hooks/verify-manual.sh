@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# UserPromptSubmit hook: catches "verified" or "looks good" to clear verification flag.
-# Also clears on any user message if they interrupted to manually verify.
+# UserPromptSubmit hook: clears the verification flag on an explicit all-clear from the user.
+# ONLY the exact phrases in the case list below clear it, and only as the WHOLE message - an
+# ordinary message does not, and neither does one of these phrases used mid-sentence. The
+# header claimed "clears on any user message" until 2026-08-01; the code has never done that,
+# and believing it would badly misread how much this gate actually holds.
 
 prompt="$(cat)"
 

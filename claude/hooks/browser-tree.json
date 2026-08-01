@@ -9,27 +9,32 @@
         {
           "key": "brain",
           "kind": "leaf",
-          "tag": "CLAUDE.md team rules"
+          "tag": "CLAUDE.md team rules",
+          "desc": "Appends the team rules and shared workflow into ~/.claude/CLAUDE.md inside a pair of marker comments, leaving anything you already wrote above and below untouched. Removing this item deletes only the text between those markers."
         },
         {
           "key": "config",
           "kind": "leaf",
-          "tag": "settings.json core (core-only)"
+          "tag": "settings.json core (core-only)",
+          "desc": "Adds our permissions, plugins and status-line entry to ~/.claude/settings.json without replacing your own, and copies startup-check.sh and hud.sh into ~/.claude. It never changes your model or permission mode; the guards are separate items."
         },
         {
           "key": "statusline",
           "kind": "leaf",
-          "tag": "custom status line"
+          "tag": "custom status line",
+          "desc": "Points ~/.claude/statusline-command.sh at the script that draws the Improv prompt bar: project and directory, git branch with lines added and removed, model, and context used. Untick it and Claude Code falls back to its built-in bar."
         },
         {
           "key": "ampersand",
           "kind": "leaf",
-          "tag": "re-run installer shortcut"
+          "tag": "re-run installer shortcut",
+          "desc": "Adds an 'ampersand' function to ~/.zshrc so you can re-run this installer by typing one word from any directory. 'ampersand --pull' updates the repo first, and every other flag is passed straight through. Needs a new terminal, zsh only."
         },
         {
           "key": "nvm",
           "kind": "leaf",
-          "tag": "node version auto-activate"
+          "tag": "node version auto-activate",
+          "desc": "Adds one line to ~/.zshrc that activates your default Node version, so claude, node and npm are found in a brand new terminal. It is skipped with a warning if your ~/.zshrc does not already load nvm, and applies only to terminals opened after."
         }
       ]
     },
@@ -37,19 +42,19 @@
       "key": "Beats",
       "section": "core",
       "tag": "the beats memory system",
-      "desc": "Beats is your cross-session memory - the engine, the reflection tool, and the hooks that keep it fresh.",
+      "desc": "Beats is the session-note system that carries context between sessions and machines - the note-keeping rules added to your CLAUDE.md, the /reflect and /consolidate commands, and the checks that keep the notes current. Each part is optional.",
       "members": [
         {
           "key": "memory",
           "kind": "leaf",
           "tag": "the beats memory engine",
-          "desc": "The beats memory engine - stores and retrieves your context across sessions and machines."
+          "desc": "Adds the note-keeping rules to ~/.claude/CLAUDE.md, links ~/.claude/startup-check.sh so past notes load at session start, and installs /consolidate for merging related notes. The rules block is rewritten on each install, so edit it in the repo."
         },
         {
           "key": "reflect",
           "kind": "leaf",
           "tag": "reflection over your beats",
-          "desc": "Reflect runs multi-agent analysis across your accumulated beats to surface patterns and gaps."
+          "desc": "Installs /reflect, which reads your accumulated session notes and reports the patterns across them, plus a weekly version and a macOS launch agent in ~/Library/LaunchAgents. That agent is placed but never started, so nothing runs on its own."
         },
         {
           "key": "Hooks",
@@ -73,13 +78,13 @@
       "label": "Sidecoach",
       "section": "core",
       "tag": "design orchestration",
-      "desc": "Sidecoach is the design orchestration system - 26 flows covering every design and QA task.",
+      "desc": "Sidecoach is the design assistant: 26 flows reached by command words such as audit, critique, polish and craft. This group installs the skill, the word lists that match those commands in a prompt, a 'sidecoach' terminal command, and its checks.",
       "members": [
         {
           "key": "sidecoach",
           "kind": "leaf",
           "tag": "the design orchestration skill",
-          "desc": "The Sidecoach skill and the verb and lane registries its hooks read.",
+          "desc": "Builds Sidecoach from the repo and installs the /sidecoach command, the word lists it matches prompts against, and 'sidecoach' plus 'sidecoach-monitor' in ~/.local/bin. Node and npm must be present or the build fails and it is not installed.",
           "label": "Sidecoach"
         },
         {
@@ -105,13 +110,13 @@
       "label": "Justify",
       "section": "core",
       "tag": "in-browser visual tweaks",
-      "desc": "Justify is the in-browser micro-adjustment tool.",
+      "desc": "Justify lets you click an element in your running site and nudge its spacing, type and colour in the browser, then writes the result back into your source. This group installs its server, the /justify command, its terminal tools and its checks.",
       "members": [
         {
           "key": "justify",
           "kind": "leaf",
           "tag": "the Justify server + skill",
-          "desc": "The Justify server, its in-browser core, the /justify skill, and the justify-* command line tools.",
+          "desc": "Builds Justify into ~/.claude/justify, adds /justify, registers its tools with Claude Code in ~/.claude.json, and puts eight justify-* commands in ~/.local/bin. Restart Claude Code once after installing so those tools load.",
           "label": "Justify"
         },
         {
@@ -134,7 +139,7 @@
       "section": "core",
       "kind": "leaf",
       "tag": "visual-effects playground",
-      "desc": "Tilt-lab is the shader and visual-effects workbench - audition, stack, and export animated backgrounds. (no hooks)"
+      "desc": "Installs the dependencies for the tilt-lab effects workbench inside this repo and puts a 'tilt-lab' command in ~/.local/bin. Nothing runs during install - type 'tilt-lab' to open it at http://localhost:5180 and browse, stack and export effects."
     },
     {
       "key": "lotus",
@@ -142,55 +147,64 @@
       "section": "core",
       "kind": "leaf",
       "tag": "Figma plugin + MCP bridge",
-      "desc": "Lotus is the AI Figma plugin and MCP bridge that lets Claude Code drive Figma directly. (no hooks)"
+      "desc": "Builds the Lotus Figma plugin and its bridge inside this repo, adds /lotus, and registers its tools with Claude Code in ~/.claude.json so Claude can edit a Figma file directly. Restart Claude Code, then load lotus/manifest.json once in Figma."
     },
     {
       "key": "Design Tools",
       "section": "more",
       "tag": "design skills + Figma",
-      "desc": "Supporting design tooling - the design skills and the Figma fidelity guard.",
+      "desc": "Reference material Claude can pull in while building an interface - typography, motion, icons, components, platform sizes - plus a check that holds work as unfinished until it matches the Figma file it came from. Each one is optional.",
       "members": [
         {
           "key": "Skills",
           "kind": "group",
           "tag": "9 design skills",
-          "desc": "The design skills the model can select for UI work - type, motion, icons, references, components, and more.",
+          "desc": "Nine reference documents installed under ~/.claude/skills/. Claude opens the relevant one when a task calls for it; they sit dormant otherwise, and each can be installed alone or all together as the 'skills' item.",
           "members": [
             {
               "key": "tactical-polish",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs the 16-point checklist for interface detail - optical alignment, hover and focus states, shadow and radius, tabular numbers - plus a companion for reviewing animation. Six files under ~/.claude/skills/tactical-polish/."
             },
             {
               "key": "component-gallery",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs a reference that sends Claude to component.gallery to see how established design systems build and name a component before writing a new one. One file under ~/.claude/skills/, and it reads the site only when a task needs it."
             },
             {
               "key": "fontshare",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs a reference so typeface choices start from fontshare.com's curated catalogue rather than defaulting to Google Fonts. One file under ~/.claude/skills/; it recommends fonts and never downloads or installs any."
             },
             {
               "key": "motion",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs the working patterns for animation with GSAP and Lenis - scroll-driven effects, page transitions, staggered reveals - and the mistakes that break them. Reference only: your project still has to install GSAP itself."
             },
             {
               "key": "curate",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs /curate and creates ~/.claude/design-references/, your own catalogue of interfaces worth copying. A short wizard files each one by category and feel so it can be found later; removing this item keeps the catalogue."
             },
             {
               "key": "social-media",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs the sizes, safe zones and content rules for 13 platforms, from Instagram and TikTok to Product Hunt and Substack. It tells Claude what a post must fit inside rather than designing one, so it constrains the work instead of doing it."
             },
             {
               "key": "design-team",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs a way to run a design sprint with 16 named roles across four rounds: research, build, creative-director review, revise. Worth it for a whole page or campaign, and heavy for one component since each role is a separate agent."
             },
             {
               "key": "visual-effects",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs 35 files of ready shader and effect source - 14 animated backgrounds, 25 effects applied to images or elements, 17 post-processing passes. All the code ships with it, so nothing is downloaded when Claude reaches for one."
             },
             {
               "key": "icon-source",
-              "kind": "leaf"
+              "kind": "leaf",
+              "desc": "Installs the rules for taking icons from eight approved sets (Heroicons, Lucide, Tabler, Phosphor, Material Symbols and more) by copying their exact shape data instead of drawing one. Pick one set per project, before the first icon goes in."
             }
           ]
         },
@@ -210,7 +224,7 @@
       "key": "Guardrails",
       "section": "more",
       "tag": "safety hooks & QA",
-      "desc": "Hooks that catch mistakes before they ship - the QA clusters plus targeted guards.",
+      "desc": "Checks that run automatically and stop a mistake before it lands: blocked shell commands, unverified UI claimed as finished, plain-text questions, unsourced assertions, plus browser, Codex and Figma checks. A few are pinned always on.",
       "members": [
         {
           "key": "safety",
@@ -360,28 +374,30 @@
       "key": "Voice & chat",
       "section": "more",
       "tag": "talk & Discord",
-      "desc": "Speak to Claude and reply from Discord.",
+      "desc": "Claude speaking its replies aloud, transcribing voice memos you send it, and answering from a Discord channel. Voice output needs your own OpenAI key in the macOS Keychain; the other two work offline once installed.",
       "members": [
         {
           "key": "discord",
           "kind": "leaf",
-          "tag": "Discord chat launcher"
+          "tag": "Discord chat launcher",
+          "desc": "Puts three Discord scripts in ~/.claude and adds one line to ~/.zshrc, so typing 'claude' offers to connect the session to your Discord bot and you can talk to it from your phone. zsh only, and the bot token is stored in the macOS Keychain."
         },
         {
           "key": "voice-input",
           "kind": "leaf",
-          "tag": "whisper transcription"
+          "tag": "whisper transcription",
+          "desc": "Installs whisper-cpp and ffmpeg through Homebrew and downloads a 150 MB speech model to ~/.cache/whisper, so Claude can read a voice memo you send it. Runs entirely on your machine with no API key and no audio leaving it."
         },
         {
           "key": "voice-output",
           "tag": "spoken replies (TTS)",
-          "desc": "Voice-output speaks Claude's replies aloud.",
+          "desc": "Claude speaks a one or two sentence summary of each reply out loud, using OpenAI's text-to-speech. This group installs the speech server and the checks that decide when speaking is allowed and track whether you have muted it.",
           "members": [
             {
               "key": "voice-output",
               "kind": "leaf",
               "tag": "the voice-output engine",
-              "desc": "The voice-output engine - the TTS pipeline that speaks Claude's replies aloud."
+              "desc": "Installs the speech server in ~/.claude/voice-output, registers it with Claude Code, and adds 'voice-on' and 'voice-off' commands to your shell. It arrives MUTED and stays silent until you add your own OpenAI key to the macOS Keychain."
             },
             {
               "key": "Hooks",
@@ -402,18 +418,18 @@
       "key": "Dev surface",
       "section": "more",
       "tag": "cmux, tasks, ClickUp",
-      "desc": "Your working surface - the cmux browser pane, the task list, and the ClickUp integration.",
+      "desc": "Where the work happens - the cmux terminal with the browser pane Claude checks your UI in, a /task-list command for what is next, and a guard on writes to ClickUp. The cmux app itself is a separate download, not installed here.",
       "members": [
         {
           "key": "cmux",
           "tag": "browser pane + teams",
-          "desc": "cmux is the browser pane and multi-agent surface.",
+          "desc": "cmux is a split-pane terminal with a built-in browser pane, which is how Claude takes screenshots of your work, and it can show each helper agent in its own pane. This group configures it; the app itself is downloaded separately.",
           "members": [
             {
               "key": "cmux",
               "kind": "leaf",
               "tag": "the cmux settings link",
-              "desc": "The cmux settings file this installer symlinks into place. The cmux binary itself is external and is not installed here."
+              "desc": "Points ~/.config/cmux/settings.json at this repo's cmux settings, adds a launcher line to ~/.zshrc, and installs ~/.claude/toggle-resume.sh for turning session auto-resume on and off. Auto-resume starts off, and cmux is a separate download."
             },
             {
               "key": "Hooks",
@@ -436,7 +452,8 @@
         {
           "key": "task-list",
           "kind": "leaf",
-          "tag": "/task-list + TASKS.md"
+          "tag": "/task-list + TASKS.md",
+          "desc": "Installs /task-list, a plain TASKS.md of what is coming next, with add, list, done, edit, remove, block, unblock and show. It follows the repo you are in and uses that project's TASKS.md, falling back to the shared list outside a project."
         },
         {
           "key": "clickup",
@@ -454,93 +471,95 @@
       "section": "more",
       "personal": true,
       "tag": "machine styling",
-      "desc": "Personal machine styling (only shown with --personal).",
+      "desc": "One person's terminal appearance, shown only when the installer is run with --personal. None of it affects Claude Code or your projects; it is Ghostty colours, font and screen effects, so skipping it changes nothing about how sessions behave.",
       "members": [
         {
           "key": "ghostty",
           "kind": "leaf",
-          "tag": "terminal look"
+          "tag": "terminal look",
+          "desc": "Writes the Ghostty terminal appearance (font, 256-colour palette, transparency, blur) into both Ghostty's own settings folder and the copy cmux uses. It is written as a copy, so re-run the installer after editing it, then restart Ghostty."
         },
         {
           "key": "shaders",
           "kind": "leaf",
-          "tag": "terminal shaders"
+          "tag": "terminal shaders",
+          "desc": "Clones a community library of Ghostty screen effects to ~/Documents/Github/ghostty-shaders, or updates it if already there. The three effects actually switched on - CRT curve, pixel grid, cursor trail - load from this repo, so it must stay put."
         }
       ]
     }
   ],
   "hook_desc": {
-    "memory-approve": "Guards writes to your beats files.",
-    "memory-nudge": "Reminds you to write a beat after each change.",
-    "memory-compact": "Keeps the beats index under its load budget.",
-    "consolidate-nudge": "Flags beat clusters worth consolidating.",
-    "beats-rebuild": "Recompiles the beats search index in the background.",
-    "beats-staleness-guard": "Verifies the beats index at session start.",
-    "reflect-nudge": "Suggests a reflect pass when new beats pile up.",
-    "sidecoach-keyword": "Watches for design intent and nudges sidecoach.",
-    "sidecoach-sessionstart": "Loads sidecoach context at session start.",
-    "justify-source-guard": "Blocks edits to generated justify artifacts.",
-    "justify-watch-guard": "Keeps the justify watch loop alive.",
-    "justify-watch-standing-by": "Corrects the false \"finished\" line when the watch parks.",
-    "justify-queue-drain-stop": "Blocks ending the session while Justify prompts sit unanswered in the queue.",
-    "agent-teams-guard": "Gates the Agent tool inside cmux team sessions.",
-    "node-shim-heal": "Re-plants the cmux node preload shim.",
-    "cmux-close-guard": "Protects cmux panes from an accidental close.",
-    "cmux-teammate-shim-heal": "Restores the cmux teammate tmux shim.",
-    "team-reaper": "Cleans up dead agent-team state dirs.",
-    "resume-guard": "Blocks cmux auto-resume when you opt out.",
-    "voice-gate": "Gates the voice speak tool.",
-    "block-clickup-writes": "Blocks ClickUp writes unless confirmed.",
-    "visualizer-guard": "Gates the show_widget tool for quality + surface.",
-    "codex-failure-watcher": "Detects codex CLI failures and flags them.",
-    "codex-rescue-guard": "Governs codex-rescue agent spawns.",
-    "chrome-tabgroup-track": "Records the Chrome tab groups you open.",
-    "chrome-tabgroup-clear": "Clears the record when you close a group.",
-    "chrome-tabgroup-stop": "Nudges you to close tab groups before quitting.",
-    "figma-fidelity-stop": "Blocks \"done\" until Figma parity is proven.",
-    "figma-fidelity-arm": "Arms the Figma parity gate on a Figma pull.",
-    "fable-orchestrator-guard": "Makes Fable orchestrator-only (cost control).",
-    "bash-guard": "Blocks forbidden shell patterns and force-pushes.",
-    "content-guard": "Blocks banned content in writes (emojis, dashes, attribution).",
-    "content-guard-stop": "Re-checks written content at stop time.",
-    "destructive-ops-guard": "Warns before destructive file operations.",
-    "destructive-confirm-detect": "Detects unconfirmed destructive actions.",
-    "verify-before-done": "Blocks \"done\" until verification is shown.",
-    "verify-before-done-stop": "Enforces verification at stop time.",
-    "verify-clear": "Clears the verification flag once met.",
-    "verify-manual": "Lets you mark manual verification done.",
-    "screenshot-open-mandate": "Requires reading a screenshot after capture.",
-    "screenshot-open-clear": "Clears the screenshot-pending flag on read.",
-    "second-fix-gate": "Warns on a second fix before the first is verified.",
-    "validation-guard": "Blocks DOM-introspection shortcuts during validation.",
-    "multiple-choice-detect-stop": "Flags plain-text questions at stop time.",
-    "multiple-choice-inject-prompt": "Injects the ask-through-the-tool reminder.",
-    "grounding-gate": "Requires grounding claims in real evidence.",
-    "grounding-guard": "Checks claims against real sources.",
-    "task-loop-mandate": "Re-injects the rule to finish the task list you were handed.",
-    "justify-queue-mandate": "Re-injects the rule to finish every prompt queued in Justify.",
+    "memory-approve": "Auto-approves Write, Edit and MultiEdit into any .claude/memory directory, so saving a session note never stalls on a permission prompt. It only ever grants permission: the write-time content checks still run and can still reject the file.",
+    "memory-nudge": "Sets a flag when you change a project file and clears it once you save a session note, which is what lets the shell guard hold your commit until the note exists. Read-only commands like git status leave the flag alone; sed -i sets it.",
+    "memory-compact": "Shrinks the session-notes index right after you edit it, so it cannot outgrow the roughly 24KB loaded into context each session. It ignores every other file and rewrites only when something actually changed.",
+    "consolidate-nudge": "Counts session notes whose filenames share a topic word and names the largest group once it crosses the threshold, so you can merge them. Advisory only: it never edits or deletes a note, and it waits before raising the same group again.",
+    "beats-rebuild": "Fires when you save a session note under this repo's .claude/memory and rebuilds the searchable index of those notes in the background. It runs detached and swallows every error, so it can never block or slow your session.",
+    "beats-staleness-guard": "Checks the session-notes index at startup and acts on the result: a stale index is rebuilt on the spot rather than trusted, a corrupt one raises a loud warning. Silent when it is fresh, and it never fails the session start.",
+    "reflect-nudge": "Counts the session notes written since your last review and suggests running one when the count passes REFLECT_THRESHOLD, default 15. The first run only records the timestamp, so a fresh machine is never nagged on day one.",
+    "sidecoach-keyword": "Matches design command words such as audit or polish in your prompt and injects routing for the matching Sidecoach flow. It sanitises first, so one inside a code fence or URL, or a phrase like how do I polish, never fires.",
+    "sidecoach-sessionstart": "Starts the Sidecoach daemon in the background and writes ~/.claude/.sidecoach-state, which the two sidecoach-post hooks in this list read. It loads no PRODUCT.md or DESIGN.md itself; sidecoach-preamble is what does that.",
+    "justify-source-guard": "Blocks edits and builds aimed at the installed copy of Justify under ~/.claude/justify, so you change the source in this repo instead. Rebuilding from that stale copy once cut the bundle it serves from 543KB to 291KB.",
+    "justify-watch-guard": "Prints one informational line at startup when the Justify background watcher is running. It relaunches nothing and never stops you ending a session; the old auto-relaunch caused the very failure it was supposed to prevent.",
+    "justify-watch-standing-by": "Corrects the misleading finished label the terminal shows when the Justify watcher is simply parked and waiting. It also drops the watcher's routine idle ping, so Claude does not spend a whole turn answering it.",
+    "justify-queue-drain-stop": "Stops a session ending while Justify still holds prompts nobody answered. Saying the work is done in chat does not close a prompt, only the justify-done script does, and every other situation lets the session end normally.",
+    "agent-teams-guard": "Rejects the ways of starting a sub-agent that can never show up as a visible terminal pane: one with no name, one asked to run in the background, and the Workflow tool. It does nothing outside a split-pane team session.",
+    "node-shim-heal": "Restores the small Node startup file that cmux points NODE_OPTIONS at, which macOS periodically deletes from its temp folder. Once it is missing every node and npx command fails to start, so this replaces it from a permanent copy.",
+    "cmux-close-guard": "Refuses to close a terminal pane unless nothing is running inside it and you named the exact pane you meant. It was added after a pane closed on a hunch turned out to hold a live worker, killing it and stalling queued work.",
+    "cmux-teammate-shim-heal": "Replaces the tmux helper that cmux rewrites on every launch with a corrected version. The stock one cannot start a sub-agent pane, because the launch line begins with cd, which it tries to run as a program and fails.",
+    "team-reaper": "Deletes leftover team and task folders under ~/.claude at session start and end, so finished sub-agent groups stop appearing as open workspaces. It skips any group with a process still alive and never touches your notes.",
+    "resume-guard": "Deletes the saved session files under ~/.nyx/agent-sessions when a session ends, so reopening a terminal tile starts Claude fresh instead of restoring the old conversation. It acts only while ~/.claude/.no-auto-resume exists.",
+    "voice-gate": "Refuses every text-to-speech call while spoken output is muted, which is whenever ~/.claude/.voice-enabled is missing. Without it a muted session still loads and calls the speak tool, then wastes the turn on a refusal.",
+    "block-clickup-writes": "Refuses every ClickUp call that would change something: create, update, delete, move, comment and time tracking. There is no way to confirm past it, and read-only calls such as get, list and search go through untouched.",
+    "visualizer-guard": "Refuses chart or widget code that hardcodes a color inside var(), names a style variable that does not exist such as --text-100, wraps itself in CDATA, or sets font-weight above 500. Each of those once shipped text invisible in dark mode.",
+    "codex-failure-watcher": "Reads the output of a finished codex command for a capacity or connection error and tells you to retry rather than quietly skip the second-model review. It cannot spot a codex run that hangs, only one that finished badly.",
+    "codex-rescue-guard": "Refuses two ways of asking the codex helper for a review that fail silently: a named one, which cannot send its findings back, and a review request, which quietly falls back to reviewing its own work. Fix requests still work.",
+    "chrome-tabgroup-track": "Records that this session has browser tabs open and updates the timestamp on every browser call, so a later check can tell how long ago you used them. Closing a tab is handled elsewhere and deliberately skipped here.",
+    "chrome-tabgroup-clear": "Watches the result of closing a browser tab and forgets the group only once it reports itself empty, keeping the record while tabs remain. If the result cannot be read it keeps it, since one extra reminder beats leaked tabs.",
+    "chrome-tabgroup-stop": "Stops the session ending once when browser tabs are still open and the browser has been idle for 90 seconds. A shell script cannot close a browser tab itself, so it buys one more turn in which Claude closes them.",
+    "figma-fidelity-stop": "Blocks \"done\" until a build made from a Figma design is proven to match it. Each design element needs an entry in .figma-fidelity.json where the Figma value, the shipped code and a value read from the live page all agree.",
+    "figma-fidelity-arm": "Switches the Figma match check on the moment a build pulls a design out of Figma, and records which element it pulled. There is no way to opt out: only a matching entry in .figma-fidelity.json turns it off again.",
+    "fable-orchestrator-guard": "Blocks file writing and shell commands while the expensive Fable model is running the session, so the actual building is handed to a cheaper sub-agent. On every other model it does nothing, leaving your choice untouched.",
+    "bash-guard": "Blocks forbidden shell patterns: attribution in a commit, force-push to main, rm against .claude/memory, and legacy model IDs. It also holds your commit when a session note is owed, a screenshot is unread, or work is unverified.",
+    "content-guard": "Blocks emojis, long dashes, AI attribution lines and outdated model names from being written into any file. It also refuses edits to .figma-fidelity.pending, matched by real location so a symlink cannot get around it.",
+    "content-guard-stop": "Checks Claude's last chat message, rather than a file, for emojis and long dashes and makes it send the message again cleanly. Chat text is not a file write, so nothing else inspects it before it reaches you.",
+    "destructive-ops-guard": "Refuses dangerous infrastructure commands outright: deploying to production, copying one environment's database over another, and merging a pull request. Words inside quotes are ignored, so a commit message naming one is safe.",
+    "destructive-confirm-detect": "Watches for you typing a confirmation word and turns a previously refused dangerous command into a single-use approval. It is the only thing that grants that approval and reacts only to you, so Claude cannot approve itself.",
+    "verify-before-done": "Arms a verification flag on any code change and clears it only on real proof: a screenshot, a localhost curl, a test run, or reading a probe log. The shell guard reads that same flag to hold your commit until proof exists.",
+    "verify-before-done-stop": "Stops Claude declaring a visual change finished before it has actually looked at a screenshot. Loading the page, running tests, or fetching a URL do not count; it interrupts once per turn so it can never trap a session.",
+    "verify-clear": "Counts work as visually checked only after a genuine browser screenshot. Simply loading a page, reading its text, or running a script inside it no longer clears the requirement, a gap that once let a broken UI ship.",
+    "verify-manual": "Clears this session's outstanding check when you type verified, looks good, lgtm, or bypass verification. The phrase must be your entire message, and it applies only to this session so it cannot excuse another one.",
+    "screenshot-open-mandate": "Notes the file path each time a screenshot is saved to disk and requires Claude to actually open it. A screenshot that is never opened never appears in your conversation, so describing one only captured is an empty claim.",
+    "screenshot-open-clear": "Ticks a screenshot off this session's outstanding list the moment Claude opens it, which is the only way that requirement is ever met. The list belongs to one session, so opening a file elsewhere cannot excuse it.",
+    "second-fix-gate": "Warns when a second edit hits the same file within ten minutes while an earlier change is still unchecked, the pattern that once turned one bug into a worse one. Edits that only add to existing text are ignored.",
+    "validation-guard": "Blocks JavaScript that fakes real interaction: getComputedStyle, textContent, element.click, dispatchEvent and similar. Feature detection such as CSS.supports still passes, and the same blocklist is enforced for shell commands.",
+    "multiple-choice-detect-stop": "Notices when Claude asked you a question as plain text instead of a proper selectable prompt, and records it so the next turn gets a reminder. A plain yes or no counts, since that is simply a two-option question.",
+    "multiple-choice-inject-prompt": "Delivers that reminder at the start of your next message, before any reply is composed. Nothing can intercept a response before you see it, so correcting the following turn is the only enforcement available.",
+    "grounding-gate": "Detects a question about why a build behaves as it does, such as why the panel is not showing, and injects a rule to read the code and past session notes first. It also arms the flag that blocks probing the running app before then.",
+    "grounding-guard": "Refuses screenshot and click tools until Claude has actually opened or searched a file in the same turn. Added after a question about a UI bug was answered by photographing the app rather than reading the line that caused it.",
+    "task-loop-mandate": "Reminds Claude to finish the whole list of work you gave it instead of stopping partway or asking permission to start something you already approved. It repeats each message, because one reminder at startup fades.",
+    "justify-queue-mandate": "Re-injects the rule to finish every prompt queued in Justify, the visual review tool. It repeats at session start and briefly on each prompt, and it names the idle heartbeat explicitly so a routine ping is never mistaken for real work.",
     "concise-mandate": "Injects the concise-response ruleset each session so replies stay brief. On by default; say \"concise off\" to stop.",
-    "concise-toggle": "Turns brevity on or off at runtime - reacts to \"concise on\", \"concise off\", \"verbose\", and \"concise status\".",
-    "concise-detect-stop": "Checks the finished response and blocks once when it tacks a new subject on after the closing line or runs a list past five items.",
-    "api-drift-detector": "Detects drifted or renamed API calls.",
-    "api-drift-stop": "Enforces the API-drift check at stop.",
-    "api-drift-ack": "Records your acknowledgement of a drift.",
-    "plan-consistency-lint": "Checks a plan against the current commit.",
-    "push-ahead-check": "Guards against pushing ahead of review.",
-    "claude-surface": "Detects the Claude Code surface (rich vs text).",
-    "surface-visual-gate": "Nudges visual output on rich surfaces.",
-    "model-router-guard": "Routes behavior by the session model.",
-    "route-intent": "Reads each prompt's work shape and names one cheaper roster agent that could field it - advisory only, never dispatches.",
-    "resume-toggle": "Flips cmux auto-resume from a chat command.",
-    "teammate-relay-stop": "Stops a teammate idling with an unsent report.",
-    "sidecoach-preamble": "Injects PRODUCT.md + DESIGN.md into every session.",
-    "sidecoach-postuserp": "Sends your prompt to the sidecoach daemon.",
-    "sidecoach-taste-gate": "Reviews .html/.css the moment they are written, but only inside a project that has a DESIGN.md; the taste validator runs on .html, the anti-pattern ban sweep on both.",
-    "sidecoach-craft-floor": "Loads the standing craft floor before a UI file is written or edited: 15 rules with concrete values and 10 banned patterns each carrying what to do instead, every entry naming its in-repo source. Fires regardless of which verb ran, or none, and stays silent on non-UI paths. At most once per 15 minutes per project.",
-    "sidecoach-postresponse": "Folds sidecoach daemon results into the reply.",
-    "sidecoach-detect": "Scans each UI file you write with the real detect engine and reports findings - advisory, never blocks, and off by default (opt-in; the per-edit browser scan adds a few seconds).",
-    "voice-mandate": "Decides each session whether the speak tool is allowed, based on install and mute state.",
-    "voice-toggle": "Turns voice on or off when you say so mid-session."
+    "concise-toggle": "Turns brevity on or off at runtime - reacts to \"concise on\", \"concise off\", \"verbose\", and \"concise status\". The command must be your whole message, so those words never fire mid-prose.",
+    "concise-detect-stop": "Checks the finished response and blocks once when it tacks a new subject on after the closing line or runs a list past five items. It never gates on word count, which would false-fire on every legitimate deep dive.",
+    "api-drift-detector": "Watches tool results for signs an API changed underneath you: deprecated, removed, unknown parameter, or a validation error. Editing a hook, settings.json or a launcher script counts as handling it and clears the warning.",
+    "api-drift-stop": "Stops the session ending while such an API change is still unhandled. It interrupts only once per turn, skips sub-agents, and clears when you either adjust the affected file or type drift handled.",
+    "api-drift-ack": "Clears that pending API warning when you type drift handled. It is the manual way out of a false alarm, or of a change you already dealt with by hand.",
+    "plan-consistency-lint": "Checks a written plan that splits work into sections for contradictions inside itself: a file a section claims but its instructions never mention, or a step marked blocked yet told to start now. It compares the document to itself.",
+    "push-ahead-check": "Tells you at startup when the current branch has commits you never pushed, naming the branch and how many. It only reports: it never pushes, never blocks, and says nothing outside a git repo or on a branch with no remote.",
+    "claude-surface": "Works out whether this session can display rich visuals or only text, then tells Claude how to present results. Desktop, web and VS Code get charts and tables; a plain terminal or phone gets clean markdown instead.",
+    "surface-visual-gate": "On a display that can render visuals, interrupts once when the reply dumps a large table as plain text and asks for a chart instead. Plain terminals are skipped, because a markdown table is the right answer there.",
+    "model-router-guard": "Stops Claude quietly moving your work to a different model, blocking model override flags, model environment variables and per-sub-agent model settings. There is no override: the model you picked is the one that runs.",
+    "route-intent": "Reads what kind of work your message asks for and names one cheaper specialist agent that could handle it. It is a suggestion only: it never sends the work anywhere, costs nothing to run, and stays quiet on short messages.",
+    "resume-toggle": "Turns terminal auto-resume on or off when you type resume on, resume off, resume toggle or resume status. It only writes the flag at ~/.claude/.no-auto-resume; a separate entry in this list clears the saved sessions.",
+    "teammate-relay-stop": "Stops a sub-agent finishing quietly when it was told to send its report back and never did. It reads only real instructions, so a tool result that merely prints the word SendMessage cannot set it off.",
+    "sidecoach-preamble": "Injects your PRODUCT.md and DESIGN.md into context at session start and whenever the conversation is compacted, so design constraints hold even when you never ask for a review. Each file must exceed 200 chars and carry no TODO marker.",
+    "sidecoach-postuserp": "Passes your message to the Sidecoach background service. It exits immediately when that service is not running, and gives up after one second, so a stalled service can never hold up your turn.",
+    "sidecoach-taste-gate": "Scans every .html or .css file you save inside a project that has a DESIGN.md, checking for banned visual patterns and, on HTML, a wider quality pass. It cannot catch anything needing the page rendered, such as low contrast.",
+    "sidecoach-craft-floor": "Loads a standing UI quality baseline before any interface file is written or edited: 15 rules with concrete values and 10 banned patterns, each naming what to do instead. Fires on any UI edit, at most once every 15 minutes per project.",
+    "sidecoach-postresponse": "Prints the newest result from the Sidecoach background service at the end of a reply. A failed or inconclusive review is shown rather than hidden, and the result file is removed once it has been displayed.",
+    "sidecoach-detect": "Runs the full interface defect scanner over each UI file you save and reports what it finds. It only advises, never blocks, is off unless you turn it on, and a scan that could not run says so instead of reporting clean.",
+    "voice-mandate": "Decides at the start of each session whether spoken output may be used, based on whether it is installed and whether you muted it. It says one of three things: allowed, muted, or nothing at all when it is not installed.",
+    "voice-toggle": "Switches spoken output on or off when you type voice on, voice off, voice toggle or voice status. It writes the flag at ~/.claude/.voice-enabled, which the other two voice entries in this list read to decide what is allowed."
   },
   "hook_owner": {
     "memory-approve": "memory",

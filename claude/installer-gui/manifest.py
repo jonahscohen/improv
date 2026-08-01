@@ -31,6 +31,9 @@ def main():
 
     print(json.dumps({
         "buckets": buckets,
+        # Hook explanations live in the tree beside the ownership map. They were
+        # assembled but never forwarded, so every hook row rendered blank.
+        "hook_desc": tree.get("hook_desc", {}),
         "components": payload.get("components", {}),
         "state": payload.get("state", {}),
         "meta": {"personal": personal},

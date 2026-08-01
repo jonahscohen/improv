@@ -8,6 +8,10 @@
     --red-subtle:rgba(220,38,24,0.08); --red-border:rgba(220,38,24,0.28);
     --ok:#1F6F4A; --ok-bg:rgba(31,111,74,0.10);
     --part:#8A5E0F; --part-bg:rgba(138,94,15,0.10);
+    /* Foreground for a SOLID status fill. The status hues invert between themes
+       (dark green here, pale green in dark), so the text on them has to invert
+       too or one of the two themes ships unreadable. */
+    --on-solid:#FAF7EE;
     --off-bg:rgba(2,39,43,0.05);
   }
   :root[data-theme="dark"]{
@@ -19,6 +23,7 @@
     --red-subtle:rgba(232,85,63,0.12); --red-border:rgba(232,85,63,0.36);
     --ok:#7FD0A6; --ok-bg:rgba(127,208,166,0.14);
     --part:#E0B45E; --part-bg:rgba(224,180,94,0.14);
+    --on-solid:#02272B;
     --off-bg:rgba(244,239,228,0.07);
   }
   :root{
@@ -74,7 +79,7 @@
 
   .theme-toggle{
     flex:0 0 auto; display:grid; place-items:center;
-    width:34px; height:34px; padding:0; cursor:pointer;
+    width:44px; height:44px; padding:0; cursor:pointer;
     background:var(--alt); color:var(--text-secondary);
     border:1px solid var(--border-firm); border-radius:var(--r-md);
     transition:background 120ms var(--ease), color 120ms var(--ease), scale 150ms ease-out;
@@ -152,6 +157,7 @@
   .btn{
     font:inherit; font-size:var(--sm); cursor:pointer;
     padding:var(--s2) var(--s4); border-radius:var(--r-md);
+    min-height:44px;   /* the touch-target floor for buttons; they measured 39 */
     border:1px solid var(--border-firm); background:var(--raised); color:var(--text-primary);
     transition:background 120ms var(--ease), border-color 120ms var(--ease), scale 150ms ease-out;
   }
@@ -179,14 +185,23 @@
      the banned "same-size cards as page structure" shape, and it is what this
      was. A preferences list is a list: hairline separators, one shared plane,
      and the eye running down a single edge instead of over five containers. */
+  /* Two lines: the name and its status on the first, the explanation on the
+     second. The description used to be truncated to one ellipsised line, which
+     is useless for text that runs to two sentences. It wraps now, and the box
+     and chevron span both lines so the row still reads as one object. */
   .row{
     display:grid;
     grid-template-columns:minmax(0,1fr) auto auto;
-    align-items:center; gap:var(--s4);
+    grid-template-areas:
+      "name check go"
+      "desc desc  go";
+    /* The description runs UNDER the badge rather than beside it. Confined to
+       the name column it wrapped to four and five lines; given the full width
+       two sentences settle into two or three. */
+    align-items:center; column-gap:var(--s4); row-gap:3px;
     padding:var(--s3) var(--s2);
-    background:none; border:0; border-bottom:1px solid var(--border-soft);
-    border-radius:0; cursor:pointer; text-align:left; width:100%;
-    font:inherit; color:var(--text-primary);
+    border-bottom:1px solid var(--border-soft);
+    cursor:pointer; color:var(--text-primary);
     transition:background 120ms var(--ease);
   }
   .row:last-child{border-bottom:0;}
@@ -194,46 +209,55 @@
   .row.sel{background:var(--alt);}
   .row.sel .row__name{color:var(--text-primary); font-weight:var(--weight-semibold);}
   .row.sel .row__desc{color:var(--text-secondary);}
-  .row__text{display:flex; flex-direction:column; gap:2px; min-width:0;}
   .row__name{
-    font-family:var(--font-mono); font-size:var(--sm);
+    grid-area:name; font-family:var(--font-mono); font-size:var(--sm);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .row__desc{
-    font-size:var(--xs); color:var(--text-secondary); line-height:1.45;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    grid-area:desc; font-size:var(--xs); color:var(--text-secondary);
+    line-height:1.5; max-width:74ch;
   }
 
-  /* STATUS IS A BADGE, not a switch. A switch implies flipping it takes effect;
-     this installer stages and then applies, so the control was promising a
-     directness the model does not have. A badge states what is true and gets out
-     of the way. One shape, three readings, so the language is learnable at a
-     glance: quiet when a thing is as expected, coloured only when it is not. */
-  .badge{
-    display:inline-flex; align-items:center; gap:var(--s2);
-    font-family:var(--font-mono); font-size:var(--xs); white-space:nowrap;
-    padding:3px var(--s3); border-radius:var(--r-full);
-    border:1px solid transparent; justify-self:end;
+  /* THE BADGE IS THE CHECKBOX. Status and control were two separate ideas on
+     this row; now they are one thing, so what you read is what you press.
+     Filled means it will be on the machine after Apply, hollow means it will
+     not - and because a staged install reads as filled immediately, pressing it
+     answers itself. Small and set in caps so a column of them scans as a column
+     rather than as a stack of labels competing with the names. */
+  .check{
+    grid-area:check; justify-self:end; align-self:center;
+    display:inline-flex; align-items:center; gap:5px;
+    font-family:var(--font-mono); font-size:10px; letter-spacing:0.07em;
+    font-weight:var(--weight-semibold); text-transform:uppercase;
+    white-space:nowrap; padding:2px 7px 2px 5px; border-radius:var(--r-full);
+    border:1px solid transparent; cursor:pointer; position:relative;
+    transition:filter 120ms var(--ease), background 120ms var(--ease);
   }
-  .badge::before{
-    content:""; width:6px; height:6px; border-radius:var(--r-full);
-    background:currentColor; flex:0 0 auto;
-  }
-  /* The norm. Most things are installed, so this is the quietest reading - it
-     confirms without competing. */
-  .badge.is-on{color:var(--ok); background:var(--ok-bg);}
+  /* The pill is deliberately tiny, which would make a 19px-tall click target.
+     This extends the HIT area to a comfortable height without inflating the
+     badge - the thing you aim at is bigger than the thing you read. */
+  .check::after{content:""; position:absolute; inset:-11px -4px;}
+  .check svg{width:13px; height:13px; display:block; flex:0 0 auto;}
+  .check:hover{filter:brightness(1.06);}
+  /* The global ring assumes a small radius; this control is a pill. */
+  .check:focus-visible{border-radius:var(--r-full);}
+  /* Installed, and staged-to-install: the emphatic reading, because this is the
+     state the button is claiming responsibility for. */
+  .check.is-on{background:var(--ok); color:var(--on-solid); border-color:var(--ok);}
   /* Absent, and unremarkable: an add-on you never wanted is not a problem. */
-  .badge.is-off{color:var(--text-tertiary); background:var(--off-bg);}
+  .check.is-off{background:var(--off-bg); color:var(--text-secondary); border-color:var(--border-firm);}
   /* The one that wants attention: a group half-installed is usually not intended. */
-  .badge.is-part{color:var(--part); background:var(--part-bg);}
-  /* Pending. An outline rather than a fill, because nothing has happened yet. */
-  .badge.is-staged{background:none; border-style:dashed;}
-  .badge.is-staged.will-install{color:var(--ok); border-color:var(--ok);}
-  .badge.is-staged.will-remove{color:var(--red); border-color:var(--red);}
+  .check.is-part{background:var(--part); color:var(--on-solid); border-color:var(--part);}
+  /* Pending. Dashed, because nothing has happened yet - but tinted and coloured
+     hard, because a staged change is the most consequential thing on screen. */
+  .check.is-staged{border-style:dashed;}
+  .check.is-staged.will-install{background:var(--ok-bg); color:var(--ok); border-color:var(--ok);}
+  .check.is-staged.will-remove{background:var(--red-subtle); color:var(--red); border-color:var(--red);}
 
   /* A row that opens says so. This was the single worst omission: nothing
      distinguished a row that toggles from a row that navigates. */
   .row__go{
+    grid-area:go; align-self:center;
     display:grid; place-items:center; width:20px; height:20px;
     color:var(--text-tertiary); flex:0 0 auto;
     transition:translate 140ms var(--ease), color 140ms var(--ease);
@@ -289,8 +313,9 @@
   .rail__item{width:auto; grid-template-columns:auto auto; flex:0 0 auto;}
     .rail__count{display:none;}
     .pane{padding:var(--s5);}
-    .row{grid-template-columns:minmax(0,1fr) auto;}
-    .row__right{display:none;}
+    /* The row keeps all three columns when narrow - the description wraps to as
+       many lines as it needs, which is what the second grid row is for. */
+    .row{column-gap:var(--s3);}
   }
 
 /* ── directional motion ───────────────────────────────────────────────────────
