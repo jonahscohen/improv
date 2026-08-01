@@ -3,69 +3,330 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ampersand - bucket browser prototype</title>
+<title>Improv &mdash; Setup</title>
 <style>
+  /* ==========================================================================
+     TOKENS - lifted verbatim from the marketing site (improv-site/styles.css).
+     Jonah, 2026-08-01: "lift the tokens specifically, nothing else". So the
+     values below are copied, not reinterpreted, and nothing here invents a new
+     brand colour. The two ADDITIONS are called out where they appear: the
+     installer has to express install STATE, and the marketing palette has no
+     semantic status colours because a marketing page never needed them.
+     ========================================================================== */
   :root{
-    --bg:#16161e; --chrome:#20212e; --line:#2a2b3a; --dim:#565f89;
-    --fg:#a9b1d6; --bright:#c0caf5; --sel:#283457; --selborder:#7aa2f7;
-    --green:#9ece6a; --amber:#e0af68; --cyan:#7dcfff; --red:#f7768e; --hookc:#bb9af7; --folder:#7dcfff;
+    color-scheme:light;
+    /* colors.brand */
+    --color-red:#DC2618;
+    --color-ink:#02272B;
+    --color-cream:#F4EFE4;
+    --color-paper:#FAF7EE;
+
+    /* colors.text */
+    --text-primary:#02272B;
+    --text-secondary:#54564F;
+    --text-tertiary:#8B8A82;
+    --text-inverse:#F4EFE4;
+
+    /* colors.surface */
+    --surface-canvas:#F4EFE4;
+    --surface-raised:#FAF7EE;
+    --surface-inverse:#02272B;
+    --surface-alt:#ECE5D4;
+
+    /* colors.border */
+    --border-soft:rgba(2,39,43,0.08);
+    --border-firm:rgba(2,39,43,0.16);
+    --border-inverse:rgba(244,239,228,0.12);
+
+    /* colors.accent */
+    --accent-red-subtle:rgba(220,38,24,0.08);
+    --accent-red-border:rgba(220,38,24,0.24);
+
+    /* typography */
+    --font-display:'MADE Awelier','Iowan Old Style',Charter,Cambria,Georgia,serif;
+    --font-body:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+
+    --size-xs:0.78rem; --size-sm:0.88rem; --size-base:1rem;
+    --size-lg:1.18rem; --size-xl:1.5rem;
+    --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
+
+    /* rounded */
+    --radius-sm:4px; --radius-md:8px; --radius-lg:12px; --radius-full:9999px;
+
+    /* spacing - 4pt grid */
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
+
+    /* elevation */
+    --shadow-sm:0 1px 2px rgba(2,39,43,0.04),0 1px 1px rgba(2,39,43,0.06);
+    --shadow-md:0 2px 8px rgba(2,39,43,0.06),0 1px 2px rgba(2,39,43,0.08);
+    --shadow-lg:0 8px 24px rgba(2,39,43,0.08),0 2px 6px rgba(2,39,43,0.06);
+
+    /* motion */
+    --ease-out:cubic-bezier(0.2,0,0,1);
+    --duration-instant:100ms; --duration-fast:180ms;
+
+    /* ---- ADDITION 1: semantic status ------------------------------------
+       Install state is the whole subject of this screen and the marketing
+       palette has no status colours. These are derived to live in the same
+       world rather than pulled from a generic UI kit: the green carries the
+       ink's green undertone, the ochre sits with the cream. Kept deliberately
+       distinct from --color-red, which stays reserved for the brand mark and
+       for destructive intent, so "installed" can never read as "danger". */
+    --status-active:#1F6F4A;
+    --status-active-bg:rgba(31,111,74,0.10);
+    --status-partial:#9A6B12;
+    --status-partial-bg:rgba(154,107,18,0.10);
+    --status-none:var(--text-tertiary);
+    --status-none-bg:rgba(2,39,43,0.05);
   }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --surface-canvas:#02272B; --surface-raised:#0A3036; --surface-alt:#073035;
+    --surface-inverse:#F4EFE4;
+    --text-primary:#F4EFE4; --text-secondary:rgba(244,239,228,0.72);
+    --text-tertiary:rgba(244,239,228,0.52); --text-inverse:#02272B;
+    --border-soft:rgba(244,239,228,0.10); --border-firm:rgba(244,239,228,0.20);
+    --status-active:#6FC79B; --status-active-bg:rgba(111,199,155,0.14);
+    --status-partial:#D9A94E; --status-partial-bg:rgba(217,169,78,0.14);
+    --status-none-bg:rgba(244,239,228,0.07);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --surface-canvas:#02272B; --surface-raised:#0A3036; --surface-alt:#073035;
+      --surface-inverse:#F4EFE4;
+      --text-primary:#F4EFE4; --text-secondary:rgba(244,239,228,0.72);
+      --text-tertiary:rgba(244,239,228,0.52); --text-inverse:#02272B;
+      --border-soft:rgba(244,239,228,0.10); --border-firm:rgba(244,239,228,0.20);
+      --status-active:#6FC79B; --status-active-bg:rgba(111,199,155,0.14);
+      --status-partial:#D9A94E; --status-partial-bg:rgba(217,169,78,0.14);
+      --status-none-bg:rgba(244,239,228,0.07);
+    }
+  }
+
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;}
-  body{background:#0d0d12;color:var(--fg);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
-  .win{width:100%;max-width:900px;background:var(--bg);border:1px solid var(--line);
-    border-radius:12px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);}
-  .titlebar{background:var(--chrome);padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);}
-  .dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
-  .dot.r{background:#ff5f56;} .dot.y{background:#ffbd2e;} .dot.g{background:#27c93f;}
-  .titletext{margin-left:8px;color:var(--dim);font-size:12.5px;}
-  .titletext .path{color:var(--bright);}
-  .screen{padding:15px 18px 6px;min-height:392px;}
-  .crumb{color:var(--dim);font-size:12.5px;margin-bottom:5px;}
-  .crumb b{color:var(--cyan);font-weight:normal;}
-  .lead{color:var(--fg);font-size:13px;margin:0 0 12px;line-height:1.5;}
-  .lead .meta{color:var(--dim);}
-  .seclabel{color:var(--dim);font-size:10.5px;letter-spacing:.14em;margin:10px 2px 3px;}
+  body{
+    background:var(--surface-canvas); color:var(--text-primary);
+    font-family:var(--font-body); font-size:var(--size-base); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:var(--space-6);
+  }
+
+  /* ---- the shell -------------------------------------------------------
+     Was a fake terminal window with traffic-light dots. Those read as a
+     screenshot of a tool rather than the tool, which is the opposite of the
+     "sturdy" ask - so the chrome is now a real application panel: a raised
+     paper plane on the cream canvas, with a firm border that holds its edges. */
+  .win{
+    width:100%; max-width:940px; background:var(--surface-raised);
+    border:1px solid var(--border-firm); border-radius:var(--radius-lg);
+    overflow:hidden; box-shadow:var(--shadow-lg);
+    display:flex; flex-direction:column; max-height:calc(100vh - var(--space-10));
+  }
+
+  /* ---- header: WAYFINDING LAYER 1, "what am I in" ---------------------- */
+  .titlebar{
+    background:var(--surface-alt); border-bottom:1px solid var(--border-firm);
+    padding:var(--space-3) var(--space-5);
+    display:flex; align-items:baseline; gap:var(--space-3); flex-wrap:wrap;
+  }
+  .wordmark{
+    font-family:var(--font-display); font-size:var(--size-lg);
+    font-weight:var(--weight-regular); color:var(--text-primary);
+    letter-spacing:-.01em; line-height:1;
+  }
+  .wordmark .amp{color:var(--color-red);}   /* the one place red is spent */
+  .titletext{
+    font-family:var(--font-mono); font-size:var(--size-xs);
+    color:var(--text-tertiary); letter-spacing:.02em;
+  }
+  .titletext .path{color:var(--text-secondary);}
+  /* The old traffic-light dots are gone; the rule keeps any stray markup from
+     re-introducing them if this file is ever partially reverted. */
+  .dot{display:none;}
+
+  /* ---- body ------------------------------------------------------------- */
+  .screen{padding:var(--space-5) var(--space-5) var(--space-3); overflow-y:auto; flex:1 1 auto;}
+
+  /* ---- WAYFINDING LAYER 2: the trail --------------------------------------
+     A breadcrumb only helps if it reads as a PATH. The separators are now
+     spaced and tinted, and the final segment is the one that carries weight,
+     so "where am I" is answerable at a glance instead of by reading. */
+  .crumb{
+    font-family:var(--font-mono); font-size:var(--size-xs);
+    color:var(--text-tertiary); margin-bottom:var(--space-2);
+    display:flex; align-items:center; gap:var(--space-1); flex-wrap:wrap;
+  }
+  .crumb b{
+    color:var(--text-primary); font-weight:var(--weight-medium);
+    background:var(--surface-alt); border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm); padding:1px var(--space-2);
+  }
+  .lead{
+    color:var(--text-secondary); font-size:var(--size-sm);
+    margin:0 0 var(--space-4); max-width:70ch;
+    text-wrap:balance; overflow-wrap:anywhere;
+  }
+  .lead .meta{
+    font-family:var(--font-mono); font-size:var(--size-xs);
+    color:var(--text-tertiary); white-space:nowrap;
+  }
+
+  /* ---- WAYFINDING LAYER 3: section landmarks ---------------------------
+     Was a dim letterspaced string floating over the rows. Now it is a real
+     landmark with a rule running off it, so the two groups read as separate
+     places rather than one long list. */
+  .seclabel{
+    display:flex; align-items:center; gap:var(--space-3);
+    font-family:var(--font-mono); font-size:var(--size-xs);
+    letter-spacing:.12em; color:var(--text-tertiary);
+    margin:var(--space-5) 0 var(--space-2);
+  }
   .seclabel:first-child{margin-top:0;}
-  .rows{font-size:13.5px;line-height:1.55;}
-  .row{display:flex;align-items:center;padding:3px 10px;border-radius:6px;cursor:pointer;
-    white-space:pre;border:1px solid transparent;user-select:none;}
-  .row:hover{background:#1e2030;}
-  .row.sel{background:var(--sel);border-color:var(--selborder);}
-  .row .caret{flex:0 0 2ch;color:var(--dim);}
-  .row .glyph{flex:0 0 2ch;}
-  .row .name{flex:0 0 auto;min-width:22ch;padding-right:2ch;color:var(--fg);}
-  .row.feat .name{color:var(--cyan);}
-  .row.hook .name{color:var(--hookc);}
-  .row.folder .name{color:var(--folder);}
-  .row.sel .name{color:var(--bright);}
-  .row .tag{flex:1 1 auto;min-width:0;color:var(--dim);overflow:hidden;text-overflow:ellipsis;}
-  .row .stat{flex:0 0 14ch;color:var(--dim);}
-  .row .count{flex:0 0 6ch;text-align:right;color:var(--dim);}
-  .row .pend{flex:0 0 13ch;text-align:right;}
-  .g-active{color:var(--green);} .g-partial{color:var(--amber);} .g-none{color:var(--dim);}
-  .action .name{color:var(--cyan);min-width:0;}
-  .action.sel .name{color:#c2f0ff;}
-  .danger .name{color:var(--red);}
-  .sep{border-top:1px solid var(--line);margin:7px 4px;}
-  .plus{color:var(--green);} .minus{color:var(--red);}
-  .detail{border-top:1px solid var(--line);padding:8px 18px;color:var(--dim);font-size:12px;min-height:34px;background:#191922;}
-  .detail b{color:var(--fg);font-weight:normal;}
-  #log{margin:0;padding:10px 18px;max-height:180px;overflow:auto;background:#0b0b10;color:var(--fg);
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;
-    white-space:pre-wrap;border-top:1px solid var(--line);}
-  .footer{border-top:1px solid var(--line);padding:8px 18px;color:var(--dim);font-size:12px;
-    background:var(--chrome);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-  .footer .keys span{color:var(--cyan);}
+  .seclabel::after{content:""; flex:1 1 auto; height:1px; background:var(--border-soft);}
+
+  /* ---- rows: the sturdiness ---------------------------------------------
+     Was flex with ch-width columns and white-space:pre, so columns drifted
+     whenever a name ran long. A grid makes the columns actually line up down
+     the whole list, which is most of what "sturdy" means on a screen like this. */
+  .rows{display:flex; flex-direction:column; gap:1px;}
+  .row{
+    display:grid;
+    /* The description column gets the slack. Fixed columns to its right used to
+       crush it to "rules, settin..." on a 940px panel, which loses the one piece
+       of text that explains what the component IS. stat/count/pend now size to
+       their content instead of reserving space they rarely use. */
+    grid-template-columns:1.4rem 1.4rem minmax(8rem,13rem) minmax(0,1fr) auto 3.5rem auto;
+    align-items:center; gap:var(--space-2);
+    padding:var(--space-2) var(--space-3);
+    border:1px solid transparent; border-radius:var(--radius-md);
+    cursor:pointer; user-select:none;
+    transition-property:background,border-color,scale;
+    transition-duration:var(--duration-instant);
+    transition-timing-function:var(--ease-out);
+  }
+  .row:hover{background:var(--surface-alt);}
+  /* A row is a control: it is clicked, and the arrow keys drive it. It had
+     default/hover/selected and nothing for the press, so a click produced no
+     physical confirmation at all. */
+  .row:active{scale:0.994; background:var(--surface-alt); border-color:var(--border-firm);}
+  .row:focus-visible{outline:2px solid var(--color-red); outline-offset:-1px;}
+  .row[aria-disabled="true"],.row.is-disabled{cursor:default;}
+  .row.sel{
+    background:var(--surface-alt); border-color:var(--accent-red-border);
+    box-shadow:inset 3px 0 0 var(--color-red);   /* the selected marker */
+  }
+  .row .caret{color:var(--text-tertiary); font-size:var(--size-xs); text-align:center;}
+  .row .glyph{text-align:center; font-size:var(--size-sm);}
+  .row .name{
+    font-family:var(--font-mono); font-size:var(--size-sm);
+    color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .row.feat .name{font-weight:var(--weight-semibold);}
+  .row.folder .name,.row.hook .name{color:var(--text-secondary);}
+  .row .tag{
+    font-size:var(--size-xs); color:var(--text-tertiary);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  /* ---- WAYFINDING LAYER 4: state as a shape, not just a colour ----------
+     The status was a coloured word, so it depended on hue alone. It is now a
+     pill: a shape difference readable before the colour is, which also keeps
+     it legible for anyone who does not separate the green from the ochre. */
+  .row .stat{
+    justify-self:start;
+    font-family:var(--font-mono); font-size:var(--size-xs); letter-spacing:.02em;
+    padding:2px var(--space-2); border-radius:var(--radius-full);
+    white-space:nowrap; color:var(--status-none); background:var(--status-none-bg);
+  }
+  .row .count{
+    font-family:var(--font-mono); font-size:var(--size-xs);
+    color:var(--text-tertiary); text-align:right; font-variant-numeric:tabular-nums;
+  }
+  .row .pend{
+    font-family:var(--font-mono); font-size:var(--size-xs);
+    text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; min-width:1rem;
+  }
+
+  /* Status colours reach the pill through the glyph class the JS already sets,
+     so no JS change is needed to colour the row's state. */
+  .g-active{color:var(--status-active);}
+  .g-partial{color:var(--status-partial);}
+  .g-none{color:var(--text-tertiary);}
+  .row:has(.g-active) .stat{color:var(--status-active); background:var(--status-active-bg);}
+  .row:has(.g-partial) .stat{color:var(--status-partial); background:var(--status-partial-bg);}
+
+  .action .name{color:var(--text-primary); font-family:var(--font-body); font-weight:var(--weight-medium);}
+  /* Apply / Quit / Back / Install-all are buttons, so they take the standard
+     press: scale 0.96 with an ease-out. A full-width ITEM row keeps the subtle
+     0.994 above - 0.96 across 900px is 36px of travel and reads as a glitch,
+     which is the rule's geometry not holding rather than the rule being wrong. */
+  .action{transition-property:background,border-color,scale; transition-duration:150ms; transition-timing-function:ease-out;}
+  .action:active{scale:0.96;}
+  .action{grid-template-columns:1.4rem 1.4rem 1fr;}
+  .danger .name{color:var(--color-red);}
+  .sep{height:1px; background:var(--border-soft); margin:var(--space-3) var(--space-1);}
+  .plus{color:var(--status-active);}
+  .minus{color:var(--color-red);}
+
+  /* ---- detail: the standing explanation --------------------------------- */
+  .detail{
+    overflow-wrap:anywhere;
+    border-top:1px solid var(--border-soft);
+    padding:var(--space-3) var(--space-5);
+    color:var(--text-secondary); font-size:var(--size-sm);
+    min-height:2.75rem; background:var(--surface-alt); flex:0 0 auto;
+  }
+  .detail b{
+    font-family:var(--font-mono); color:var(--text-primary);
+    font-weight:var(--weight-medium);
+  }
+
+  #log{
+    margin:0; padding:var(--space-4) var(--space-5); max-height:180px; overflow:auto;
+    background:var(--surface-inverse); color:var(--text-inverse);
+    font-family:var(--font-mono); font-size:var(--size-xs); line-height:1.6;
+    white-space:pre-wrap; border-top:1px solid var(--border-firm); flex:0 0 auto;
+  }
+
+  /* ---- footer: the keyboard contract ------------------------------------ */
+  .footer{
+    border-top:1px solid var(--border-firm);
+    padding:var(--space-3) var(--space-5);
+    background:var(--surface-alt); color:var(--text-tertiary); font-size:var(--size-xs);
+    display:flex; justify-content:space-between; align-items:center;
+    gap:var(--space-4); flex-wrap:wrap; flex:0 0 auto;
+  }
+  .footer .keys{display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap;}
+  /* Keys were plain coloured text, indistinguishable from the labels beside
+     them. As chips they read as things you PRESS. */
+  .footer .keys span{
+    font-family:var(--font-mono); font-size:0.72rem; color:var(--text-secondary);
+    background:var(--surface-raised); border:1px solid var(--border-firm);
+    border-bottom-width:2px; border-radius:var(--radius-sm);
+    padding:1px var(--space-2); white-space:nowrap;
+  }
+  #pendfoot{
+    font-family:var(--font-mono); color:var(--text-secondary); white-space:nowrap;
+  }
+
+  :focus-visible{outline:2px solid var(--color-red); outline-offset:2px; border-radius:var(--radius-sm);}
+  @media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important;}}
+  @media (max-width:720px){
+    .row{grid-template-columns:1.4rem 1.4rem minmax(8rem,auto) 1fr; }
+    .row .tag,.row .count{display:none;}
+  }
 </style>
 </head>
 <body>
-  <div class="win" role="application" aria-label="ampersand bucket browser prototype">
+  <div class="win" role="application" aria-label="Improv installer">
     <div class="titlebar">
-      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-      <span class="titletext">ampersand &mdash; <span class="path" id="titlepath">setup</span></span>
+      <span class="wordmark">Improv<span class="amp">&amp;</span></span>
+      <span class="titletext">You are here: <span class="path" id="titlepath">setup</span></span>
     </div>
     <div class="screen">
       <div class="crumb" id="crumb"></div>
@@ -75,7 +336,7 @@
     <pre id="log" style="display:none"></pre>
     <div class="detail" id="detail"></div>
     <div class="footer">
-      <span class="keys"><span>&#8593;&#8595;</span> move &nbsp; <span>&#8594;/enter</span> open&middot;toggle &nbsp; <span>&#8592;/esc</span> back &nbsp; <span>a</span> apply &nbsp; <span>q</span> quit</span>
+      <span class="keys"><span>&#8593;&#8595;</span> move <span>&#8594;</span> open <span>enter</span> toggle <span>&#8592;</span> back <span>a</span> apply <span>q</span> quit</span>
       <span id="pendfoot"></span>
     </div>
   </div>
@@ -147,7 +408,7 @@ function leafPaths(path){ const n=nodeAt(path); if(isLeaf(n)) return [path.join(
 
 // ---- state ----
 const GLYPH={active:'●',partial:'◐',none:'○'}, CLS={active:'g-active',partial:'g-partial',none:'g-none'};
-const LABEL={active:'active',partial:'partial',none:'not installed'};
+const LABEL={active:'installed',partial:'partial',none:'not installed'};
 function counts(path){ const L=leafPaths(path); return {on:L.filter(p=>installed[p]).length,total:L.length}; }
 function stateOf(path){ const n=nodeAt(path); if(isLeaf(n)) return installed[path.join('/')]?'active':'none';
   const c=counts(path); return c.on===0?'none':(c.on===c.total?'active':'partial'); }
@@ -247,8 +508,8 @@ let rowsCache=[];
 function selectable(){ return rowsCache.map((r,i)=>(r.type!=='sep'&&r.type!=='label')?i:-1).filter(i=>i>=0); }
 function render(){
   const crumb=document.getElementById('crumb'); crumb.textContent='';
-  crumb.appendChild(mk('span',null,'ampersand'));
-  nav.forEach((seg,i)=>{ crumb.appendChild(document.createTextNode('  ›  ')); crumb.appendChild(i===nav.length-1?mk('b',null,seg):mk('span',null,seg)); });
+  crumb.appendChild(mk('span',null,'Setup'));
+  nav.forEach((seg,i)=>{ crumb.appendChild(document.createTextNode('›')); crumb.appendChild(i===nav.length-1?mk('b',null,seg):mk('span',null,seg)); });
   const lead=document.getElementById('lead'); lead.textContent='';
   if(nav.length===0){ lead.appendChild(document.createTextNode('Choose what runs on this machine. Open a group, toggle items to stage changes, then apply.')); document.getElementById('titlepath').textContent='setup'; }
   else { const n=nodeAt(nav), c=counts(nav);
@@ -284,6 +545,7 @@ function render(){
   });
   const pf=document.getElementById('pendfoot'); pf.textContent='';
   if(pendingCount()){ const L=Object.values(pending); pendNodes(L.filter(a=>a==='install').length,L.filter(a=>a==='uninstall').length).forEach(x=>pf.appendChild(x)); pf.appendChild(document.createTextNode(' staged')); }
+  else { pf.appendChild(document.createTextNode('nothing staged')); }
   showDetail();
 }
 function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList.contains('sep')||d.classList.contains('seclabel'))return; d.classList.toggle('sel', i===sel); }); }

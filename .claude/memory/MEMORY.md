@@ -177,3 +177,4 @@
 - [** ACTIVE ** Claims brought to the scoreboard that were rejected or rewritten - a claimed model-currency WIN had no opponent position (LOCALPROJECTX has n…](decision_scorekeeper_rejected_claims.md)
 - [** ACTIVE ** Scoreboard handoff - tally WIN 12/LOSS 12/TIE 1/UNMEASURED 5 is STALE vs the current script (regen never finished); OUT OF SCOPE verdict nev…](session_2026-07-29_scoreboard-handoff.md)
 - [Idle reaping is opt-in](session_2026-08-01_idle-reaping-is-opt-in.md) - a torn-down team is maximally idle by design, so the idle rule deleted teams precisely when managed well
+- [Installer GUI on marketing tokens](session_2026-08-01_installer-gui-marketing-tokens.md) - brand tokens lifted verbatim, four wayfinding layers, and the craft floor caught contradicting its own detector

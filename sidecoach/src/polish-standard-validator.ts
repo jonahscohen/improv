@@ -67,7 +67,15 @@ export interface PolishValidationReport {
 // ============================================================================
 export const joinCssRules = (ctx: PolishCheckContext): string => (ctx.cssRules || []).join('\n');
 
-export const hasScaleOnPress = (css: string): boolean => css.includes('scale(0.96)');
+// Accepts BOTH the legacy function form and the standalone property.
+// The craft floor teaches the property form - ".button:active { scale: 0.96; }"
+// with "transition-property: scale" - so a page built exactly to the floor used
+// to FAIL this rule, which taught one thing and enforced another (found while
+// redesigning the installer GUI, 2026-08-01). The range is 0.90-0.99 because a
+// press is a small compression; anything below 0.90 is an animation, not a press.
+export const hasScaleOnPress = (css: string): boolean =>
+  css.includes('scale(0.96)')
+  || /(?:^|[^-\w])scale\s*:\s*0?\.9[0-9]\b/.test(css);
 export const hasCompoundIconTransition = (css: string): boolean => css.includes('opacity') && css.includes('scale');
 export const hasImageOutlineRule = (css: string): boolean =>
   /img\s*\{[^}]*(?:outline|border)[^}]*rgba\s*\(\s*0\s*,\s*0\s*,\s*0/i.test(css)
