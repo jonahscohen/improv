@@ -7831,7 +7831,7 @@ picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh 
 picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-detect.sh
 picked fable        && install_app_hooks fable-orchestrator-guard.sh
 picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
-picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
+picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-mandate.sh justify-queue-drain-stop.sh
 picked clickup      && install_app_hooks block-clickup-writes.sh
 picked visualizer   && install_app_hooks visualizer-guard.sh
 picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh

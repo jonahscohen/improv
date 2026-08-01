@@ -231,6 +231,22 @@
    }
   }
  ],
+ "justify-queue-mandate.sh": [
+  {
+   "event": "SessionStart",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-queue-mandate.sh"
+   }
+  },
+  {
+   "event": "UserPromptSubmit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-queue-mandate.sh turn"
+   }
+  }
+ ],
  "justify-queue-drain-stop.sh": [
   {
    "event": "Stop",
