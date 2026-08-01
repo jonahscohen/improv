@@ -177,3 +177,4 @@
 - [** ACTIVE ** Claims brought to the scoreboard that were rejected or rewritten - a claimed model-currency WIN had no opponent position (LOCALPROJECTX has n…](decision_scorekeeper_rejected_claims.md)
 - [** ACTIVE ** Scoreboard handoff - tally WIN 12/LOSS 12/TIE 1/UNMEASURED 5 is STALE vs the current script (regen never finished); OUT OF SCOPE verdict nev…](session_2026-07-29_scoreboard-handoff.md)
 - [Concise gate measured and widened](session_2026-07-31_concise-gate-measured-and-widened.md) - fired on 13 of 232 real responses; volume gate added behind the depth override, and a single-paragraph wall of any length was exempt by construction
+- [Duplicate hook registrations removed](session_2026-07-31_duplicate-hook-registrations-removed.md) - 11 hooks ran twice per event in live settings; repo copy was clean, so it was local drift
