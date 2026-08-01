@@ -12,10 +12,6 @@
        (dark green here, pale green in dark), so the text on them has to invert
        too or one of the two themes ships unreadable. */
     --on-solid:#FAF7EE;
-    /* The log is a CONSOLE and should read as one in both themes. It used to
-       take --inverse, which flips to cream in dark mode - a bright slab in a
-       dark UI, which is the opposite of the terminal look intended. */
-    --console:#02272B; --on-console:#F4EFE4;
     --off-bg:rgba(2,39,43,0.05);
   }
   :root[data-theme="dark"]{
@@ -28,7 +24,6 @@
     --ok:#7FD0A6; --ok-bg:rgba(127,208,166,0.14);
     --part:#E0B45E; --part-bg:rgba(224,180,94,0.14);
     --on-solid:#02272B;
-    --console:#011A1D; --on-console:#F4EFE4;
     --off-bg:rgba(244,239,228,0.07);
   }
   :root{
@@ -286,9 +281,40 @@
      viewport, so it always sits directly above it whatever height the bar is. */
   .toasts{
     position:absolute; bottom:100%; left:0; right:0;
-    display:flex; flex-direction:column; align-items:center; gap:var(--s2);
+    display:flex; flex-direction:column; align-items:center;
     padding:0 var(--s5) var(--s4);
-    pointer-events:none;   /* the bar underneath stays clickable between toasts */
+    /* Nothing here closes on a timer, so the column can grow. It scrolls rather
+       than climbing off the top of the screen, and disappears entirely when
+       empty so it never sits over the bar as an invisible click target. */
+    max-height:64vh; overflow-y:auto;
+  }
+  .toasts:empty{display:none;}
+
+  /* THE SLOT is what animates the stack. It opens from zero height, so the
+     toasts already on screen are PUSHED up by a growing row rather than
+     jumping to a new position. Keyframes rather than a transition, and with no
+     fill-mode: if the animation never runs the slot sits at its normal open
+     size, so a toast can never be stuck invisible. That failure has happened
+     here before, with a pane that stayed blank for nine seconds. */
+  .t-slot{
+    display:grid; grid-template-rows:1fr; justify-items:center;
+    width:100%; animation:slot-open 240ms var(--ease);
+  }
+  .t-slot > .toast{min-height:0;}
+  @keyframes slot-open{
+    from{grid-template-rows:0fr; padding-top:0;}
+    to{grid-template-rows:1fr; padding-top:var(--s2);}
+  }
+  .t-slot{padding-top:var(--s2);}
+  /* Leaving is a transition, because unlike arriving it has to HOLD its end
+     state until the element is removed a frame later. */
+  .t-slot.is-out{
+    grid-template-rows:0fr; padding-top:0;
+    transition:grid-template-rows 220ms var(--ease), padding-top 220ms var(--ease);
+  }
+  .t-slot.is-out > .toast{
+    opacity:0; scale:0.96;
+    transition:opacity 200ms var(--ease), scale 200ms var(--ease);
   }
   .toast{
     pointer-events:auto;
@@ -301,10 +327,19 @@
     font-size:var(--sm); line-height:1.45;
     box-shadow:0 8px 24px rgba(2,39,43,0.16), 0 1px 2px rgba(2,39,43,0.10);
   }
-  /* State reads as a TINT plus an icon, never an edge stripe. */
-  .toast--success{background:var(--ok-bg); border-color:var(--ok);}
+  /* State reads as a TINT plus an icon, never an edge stripe. The tints are rgba,
+     so they are layered OVER the opaque surface rather than replacing it - set
+     alone they let whatever sits behind the toast read straight through it, and
+     the toast most often sits over the log it is describing. */
+  .toast--success{
+    background:linear-gradient(var(--ok-bg),var(--ok-bg)) var(--raised);
+    border-color:var(--ok);
+  }
   .toast--success .toast__icon{color:var(--ok);}
-  .toast--error{background:var(--red-subtle); border-color:var(--red);}
+  .toast--error{
+    background:linear-gradient(var(--red-subtle),var(--red-subtle)) var(--raised);
+    border-color:var(--red);
+  }
   .toast--error .toast__icon{color:var(--red);}
   .toast--info .toast__icon{color:var(--text-secondary);}
   .toast__icon{display:grid; place-items:center; width:18px; height:18px; margin-top:1px;}
@@ -322,15 +357,15 @@
   /* Small mark, comfortable target - same trick the row badge uses. */
   .toast__x::after{content:""; position:absolute; inset:-12px;}
 
-  /* Transform only on the way in. An opacity keyframe here would risk the same
-     failure the pane animation had, where a non-advancing animation held the
-     from-state and hid the content. */
-  @keyframes toast-in{ from{transform:translateY(10px);} to{transform:none;} }
-  .toast{animation:toast-in 160ms var(--ease);}
-  .toast.is-leaving{opacity:0; transition:opacity 180ms var(--ease);}
+  /* Fade and grow into place. The opacity keyframe is safe HERE only because
+     there is no fill-mode: the moment the animation is not advancing the toast
+     sits at its normal, fully visible state. */
+  @keyframes toast-in{ from{opacity:0; scale:0.94;} to{opacity:1; scale:1;} }
+  .toast{animation:toast-in 200ms var(--ease);}
   @media (prefers-reduced-motion: reduce){
     .toast{animation:none;}
-    .toast.is-leaving{transition:none;}
+    .t-slot{animation:none;}
+    .t-slot.is-out, .t-slot.is-out > .toast{transition:none;}
   }
   .staged{
     font-family:var(--font-mono); font-size:var(--xs); color:var(--text-primary);
@@ -348,13 +383,6 @@
     font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary);
     background:var(--canvas); border:1px solid var(--border-firm); border-bottom-width:2px;
     border-radius:var(--r-sm); padding:1px var(--s2);
-  }
-
-  #log{
-    margin:0; padding:var(--s4) var(--s6); max-height:34vh; overflow:auto;
-    background:var(--console); color:var(--on-console);
-    font-family:var(--font-mono); font-size:var(--xs); line-height:1.6;
-    white-space:pre-wrap; border-top:1px solid var(--border-firm);
   }
 
   :focus-visible{outline:2px solid var(--red); outline-offset:2px; border-radius:var(--r-sm);}

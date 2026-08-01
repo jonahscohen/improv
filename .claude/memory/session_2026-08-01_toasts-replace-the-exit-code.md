@@ -3,6 +3,7 @@ name: The installer said "[exit 0]" to a human, and its status messages were wri
 description: The closing line is now a sentence, and it is still the exact signal the client matches. Status moved into a real toast anchored above the action bar. Also fixed the log panel, which took an inverting token and turned into a bright cream slab in dark mode.
 type: project
 relates_to: [session_2026-08-01_badge-becomes-the-checkbox.md]
+superseded_by: session_2026-08-01_log-block-became-toasts.md
 author_human: Jonah
 author_model: claude-opus-5[1m]
 source: session
@@ -75,6 +76,27 @@ polled for it and caught "One change applied." with the singular grammar correct
     objective    0 (rendered)
     subjective   0 (rendered)
     static-check 0 blocking, 2 warnings
+
+## The error toast, and the defect that only showed once it was on screen
+
+Jonah asked to see the error state. Faking one would prove nothing, so it was triggered through a
+real documented failure: apply exit code 4, "the install log could not be created; nothing
+executed". Pointing the server's `TMPDIR` at a directory that does not exist reaches it without
+touching a single component, which is the point of that code existing as a distinct value.
+
+The whole chain behaved: the log carried the real mktemp error and the closing status line, the
+toast said what to do about it, `sidecoach-detect` stayed staged as WILL INSTALL, and Apply stayed
+armed. Confirmed afterwards that nothing had changed on disk and no stray directory was created.
+
+**And the screenshot caught a defect nothing else would have.** The state tints are rgba, and
+setting `background:var(--red-subtle)` REPLACES the opaque surface rather than layering over it -
+so the toast was translucent, and the log text it was describing read straight through the middle
+of the message. Toasts nearly always sit over that log, so the one place this shows is the one
+place it always happens.
+
+Fixed by layering the tint over the surface, `linear-gradient(tint,tint) var(--raised)`, which
+keeps the tint honest and the backdrop opaque. It cannot be seen in a static markup review and no
+lens measures it - only rendering the failure and looking at it.
 
 ## Files touched
 

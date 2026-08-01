@@ -57,8 +57,6 @@
     </main>
   </div>
 
-  <pre id="log" style="display:none"></pre>
-
   <footer class="actionbar">
     <!-- Anchored to the action bar rather than to the viewport, so it always sits
          directly above it whatever height the bar happens to be. -->
@@ -174,21 +172,64 @@ function stagedPlan() {
   for (const [p, a] of Object.entries(pending)) (a === 'install' ? install : uninstall).push(p);
   return { install, uninstall };
 }
+// The installer speaks shell. Nobody reading a setup screen should have to.
+// Each rule turns one line of that output into a sentence about what happened
+// and what it means for them. Order matters: first match wins.
+const nameOf = s => String(s).split('/').pop().replace(/,/g, ', ');
+const APPLY_RULES = [
+  { re: /INVARIANT VIOLATION/,
+    kind: 'error',
+    say: () => 'The installer refused this plan because one component was listed to be both added and removed. Nothing was changed.' },
+  { re: /could not create the install log in (.+?) - nothing was applied/,
+    kind: 'error',
+    say: m => `The installer could not write its temporary files to ${m[1]}, so nothing was changed. Check that the folder exists and the disk is not full.` },
+  { re: /install pass FAILED \(exit \d+\) for --only (.+)/,
+    kind: 'error',
+    say: m => `Adding ${nameOf(m[1])} failed, so nothing was removed either.` },
+  { re: /deactivate FAILED \(exit \d+\) for component (\S+)/,
+    kind: 'error',
+    say: m => `Removing ${nameOf(m[1])} failed.` },
+  { re: /WARNING - (\S+) was deactivated but recording its inactive state FAILED/,
+    kind: 'info',
+    say: m => `${nameOf(m[1])} was removed, but the installer could not update its own record of it. Reopen the installer if the list looks out of date.` },
+  { re: /the pull did not happen/,
+    kind: 'error',
+    say: () => 'Could not download the latest version, so nothing was re-installed. Check your network, or resolve the repository by hand.' },
+];
+
 let applying = false;
 async function runApply() {
   if (applying) return;                                     // guard: never fire /apply twice concurrently
   if (pendingCount() === 0) { toast('Nothing staged to apply.','info'); return; }
   applying = true;
   const plan = stagedPlan();                                // snapshot the exact plan we post
-  const log = document.getElementById('log');
-  log.style.display = 'block'; log.textContent = 'Applying...\n';
-  let out = '';                                             // capture the stream to read its exit code
+  const n = plan.install.length + plan.uninstall.length;
+  // The only toast the code ever closes on your behalf, because it describes
+  // something in progress and stops being true the moment the run ends.
+  const working = toast(n === 1 ? 'Applying one change...' : `Applying ${n} changes...`, 'info');
+  let out = '', buf = '', explained = 0;
+  const unexplained = [];                                   // kept so a failure is never silent
+  // Translate whole lines only - a chunk boundary can split one in half.
+  const feed = chunk => {
+    buf += chunk;
+    const lines = buf.split('\n'); buf = lines.pop();
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line || /^All changes applied successfully\.$/.test(line)) continue;
+      const rule = APPLY_RULES.find(r => r.re.test(line));
+      if (rule) { toast(rule.say(line.match(rule.re)), rule.kind); explained++; }
+      else unexplained.push(line);
+    }
+  };
   try {
     const res = await api('/apply', { method:'POST', body: JSON.stringify(plan) });
     const reader = res.body.getReader(); const dec = new TextDecoder();
-    for (;;) { const { value, done } = await reader.read(); if (done) break; const c = dec.decode(value, { stream:true }); out += c; log.textContent += c; log.scrollTop = log.scrollHeight; }
-    const tail = dec.decode(); out += tail; log.textContent += tail; log.scrollTop = log.scrollHeight;   // flush trailing multibyte bytes
-    const m = await api('/manifest').then(r => r.json());    // refresh REAL state either way
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      const c = dec.decode(value, { stream:true }); out += c; feed(c);
+    }
+    const tail = dec.decode(); out += tail; feed(tail + '\n');   // flush trailing multibyte bytes
+    const m = await api('/manifest').then(r => r.json());        // refresh REAL state either way
     buildTreeFromManifest(m);
     // Only treat the apply as done - and clear the staged plan - if the installer
     // reported success. apply_pending is fail-loud (a rejected/pinned/failed plan
@@ -196,17 +237,22 @@ async function runApply() {
     // user's staged changes. This string is written by server.py's closing line;
     // the two must change together.
     const ok = res.ok && /All changes applied successfully\.\s*$/.test(out);
+    working();
     render();
     if (ok) {
       for (const p of plan.install.concat(plan.uninstall)) delete pending[p];   // clear only a clean apply
       render();
-      const n = plan.install.length + plan.uninstall.length;
       toast(n === 1 ? 'One change applied.' : `All ${n} changes applied.`, 'success');
     } else {
-      toast('Some changes did not apply. Nothing was discarded - your selection is still staged, and the log above says what stopped.', 'error');
+      toast('Nothing was applied and nothing was discarded - your selection is still staged.', 'error');
+      // A failure this code has no sentence for must still reach the user. Better
+      // one raw line they can quote than a reassuring message hiding it.
+      if (!explained && unexplained.length) {
+        toast('The installer said: ' + unexplained[unexplained.length - 1], 'error');
+      }
     }
   } catch (e) {
-    log.textContent += '\nThe connection to the installer was lost: ' + e + '\n';
+    working();
     toast('Lost contact with the installer. Your selection is still staged.', 'error');
   } finally {
     applying = false;
@@ -406,7 +452,10 @@ const T_X = '<svg data-icon-source="lucide:x" xmlns="http://www.w3.org/2000/svg"
 function toast(m, kind){
   kind = T_ICON[kind] ? kind : 'info';
   const host = document.getElementById('toasts');
-  while (host.children.length >= 3) host.firstElementChild.remove();  // never stack a wall
+  // Each toast lives in a SLOT that opens from zero height. That is what makes
+  // the ones already on screen slide up as this one arrives - they are being
+  // pushed by a row that is growing, rather than jumping to a new position.
+  const slot = mk('div','t-slot');
   const t = mk('div','toast toast--'+kind);
   // An error interrupts; anything else is announced politely when the reader is free.
   t.setAttribute('role', kind==='error' ? 'alert' : 'status');
@@ -415,18 +464,24 @@ function toast(m, kind){
   const x = mk('button','toast__x'); x.type='button';
   x.setAttribute('aria-label','Dismiss this message'); x.innerHTML = T_X;
   t.appendChild(x);
-  host.appendChild(t);
+  slot.appendChild(t);
+  host.appendChild(slot);
   let gone = false;
   const close = () => {
     if (gone) return; gone = true;
-    t.classList.add('is-leaving');
+    // Fade and shrink, and collapse the slot so the column closes up behind it
+    // rather than leaving a hole.
+    slot.classList.add('is-out');
     // Removal is on a timer, never on transitionend: a dropped event would leave
     // the toast on screen for the rest of the session.
-    setTimeout(() => t.remove(), 200);
+    setTimeout(() => slot.remove(), 240);
   };
   x.addEventListener('click', close);
-  // Something that went wrong is worth reading twice; a confirmation is not.
-  setTimeout(close, kind==='error' ? 10000 : 5000);
+  // NOTHING CLOSES ITSELF. A message about what happened to your machine waits
+  // until you have read it and dismissed it. The single exception is a progress
+  // toast, which the caller retires when the work finishes - leaving "Applying
+  // ..." on screen after it has stopped applying would be a lie, not patience.
+  return close;
 }
 
 function activate(){
