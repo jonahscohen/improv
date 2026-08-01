@@ -181,3 +181,4 @@
 - [All 107 installer descriptions rewritten for a developer outside this team - the first draft was accurate and defined every unknown with another unknown](session_2026-08-01_descriptions-written-for-outsiders.md)
 - [Codex found two real badge defects - Enter navigated instead of toggling, and a mixed-staged group rendered as fully checked; fixing the first exposed a dead keyboard path](session_2026-08-01_codex-caught-two-badge-bugs.md)
 - [verify-manual.sh's header claimed it clears the verification flag on any user message - it has never done that, and the claim made a safety gate look weaker than it is](session_2026-08-01_verify-manual-header-lied.md)
+- [Two-sentence descriptions for all 36 installable components - 19 had no description at all; five described behaviour install.sh does not have (sidecoach daemon, task-list scope, config hooks, cmux, ghostty paths)](session_2026-08-01_installer-component-descriptions.md)

@@ -16,13 +16,13 @@
           "key": "config",
           "kind": "leaf",
           "tag": "settings.json core (core-only)",
-          "desc": "Adds our permissions, plugins and status-line entry to ~/.claude/settings.json without replacing your own, and copies startup-check.sh and hud.sh into ~/.claude. It never changes your model or permission mode; the guards are separate items."
+          "desc": "Adds our permissions, plugins and status-line entry to ~/.claude/settings.json without replacing your own, and puts startup-check.sh, hud.sh and one PATH-repair hook in ~/.claude. It never changes your model or permission mode."
         },
         {
           "key": "statusline",
           "kind": "leaf",
           "tag": "custom status line",
-          "desc": "Points ~/.claude/statusline-command.sh at the script that draws the Improv prompt bar: project and directory, git branch with lines added and removed, model, and context used. Untick it and Claude Code falls back to its built-in bar."
+          "desc": "Points ~/.claude/statusline-command.sh at the script that draws the Improv prompt bar: project and directory, git branch with lines changed, model, and context used. It needs jq installed, or the bar just says so and tells you the brew command."
         },
         {
           "key": "ampersand",
@@ -84,7 +84,7 @@
           "key": "sidecoach",
           "kind": "leaf",
           "tag": "the design orchestration skill",
-          "desc": "Builds Sidecoach from the repo and installs the /sidecoach command, the word lists it matches prompts against, and 'sidecoach' plus 'sidecoach-monitor' in ~/.local/bin. Node and npm must be present or the build fails and it is not installed.",
+          "desc": "Builds Sidecoach from the repo and installs the /sidecoach command, the word lists it matches prompts against, and 'sidecoach' plus 'sidecoach-monitor' in ~/.local/bin. Without Node and npm the build fails and the flows will not run.",
           "label": "Sidecoach"
         },
         {
@@ -116,7 +116,7 @@
           "key": "justify",
           "kind": "leaf",
           "tag": "the Justify server + skill",
-          "desc": "Builds Justify into ~/.claude/justify, adds /justify, registers its tools with Claude Code in ~/.claude.json, and puts eight justify-* commands in ~/.local/bin. Restart Claude Code once after installing so those tools load.",
+          "desc": "Builds Justify into ~/.claude/justify, adds /justify, registers its tools with Claude Code in ~/.claude.json, and puts eight justify-* commands on your PATH. Needs Node and npm, and a restart of Claude Code before the tools load.",
           "label": "Justify"
         },
         {
@@ -159,7 +159,7 @@
           "key": "Skills",
           "kind": "group",
           "tag": "9 design skills",
-          "desc": "Nine reference documents installed under ~/.claude/skills/. Claude opens the relevant one when a task calls for it; they sit dormant otherwise, and each can be installed alone or all together as the 'skills' item.",
+          "desc": "Nine reference documents installed under ~/.claude/skills/. Claude opens the relevant one when a task calls for it; they sit dormant otherwise, and each can be installed on its own or in one go with the 'skills' item.",
           "members": [
             {
               "key": "tactical-polish",
@@ -199,7 +199,7 @@
             {
               "key": "visual-effects",
               "kind": "leaf",
-              "desc": "Installs 35 files of ready shader and effect source - 14 animated backgrounds, 25 effects applied to images or elements, 17 post-processing passes. All the code ships with it, so nothing is downloaded when Claude reaches for one."
+              "desc": "Installs 35 files of ready shader and effect source - 14 animated backgrounds, 26 effects applied to images or elements, 17 post-processing passes. All the code ships with it, so nothing is downloaded when Claude reaches for one."
             },
             {
               "key": "icon-source",
@@ -224,7 +224,7 @@
       "key": "Guardrails",
       "section": "more",
       "tag": "safety hooks & QA",
-      "desc": "Checks that run automatically and stop a mistake before it lands: blocked shell commands, unverified UI claimed as finished, plain-text questions, unsourced assertions, plus browser, Codex and Figma checks. A few are pinned always on.",
+      "desc": "Checks that run automatically and stop a mistake before it lands: blocked shell commands, unverified UI claimed as finished, plain-text questions, unsourced assertions, plus browser, Codex and widget checks. A few are pinned always on.",
       "members": [
         {
           "key": "safety",
@@ -374,7 +374,7 @@
       "key": "Voice & chat",
       "section": "more",
       "tag": "talk & Discord",
-      "desc": "Claude speaking its replies aloud, transcribing voice memos you send it, and answering from a Discord channel. Voice output needs your own OpenAI key in the macOS Keychain; the other two work offline once installed.",
+      "desc": "Claude speaking its replies aloud, transcribing voice memos you send it, and answering from a Discord channel. Speaking needs your own OpenAI key in the macOS Keychain, Discord needs a bot you own, and transcription runs offline.",
       "members": [
         {
           "key": "discord",
@@ -397,7 +397,7 @@
               "key": "voice-output",
               "kind": "leaf",
               "tag": "the voice-output engine",
-              "desc": "Installs the speech server in ~/.claude/voice-output, registers it with Claude Code, and adds 'voice-on' and 'voice-off' commands to your shell. It arrives MUTED and stays silent until you add your own OpenAI key to the macOS Keychain."
+              "desc": "Installs the speech server in ~/.claude/voice-output, registers it with Claude Code, and adds 'voice-on' and 'voice-off' commands to your shell. It arrives muted: run 'voice-on' AND add your own OpenAI key to the Keychain before it speaks."
             },
             {
               "key": "Hooks",
@@ -453,7 +453,7 @@
           "key": "task-list",
           "kind": "leaf",
           "tag": "/task-list + TASKS.md",
-          "desc": "Installs /task-list, a plain TASKS.md of what is coming next, with add, list, done, edit, remove, block, unblock and show. It follows the repo you are in and uses that project's TASKS.md, falling back to the shared list outside a project."
+          "desc": "Installs /task-list, which keeps a plain TASKS.md of what is coming next, with add, list, done, edit, remove, block, unblock and show. It follows the repo you are in and uses that project's file, falling back to a shared list outside one."
         },
         {
           "key": "clickup",
@@ -483,7 +483,7 @@
           "key": "shaders",
           "kind": "leaf",
           "tag": "terminal shaders",
-          "desc": "Clones a community library of Ghostty screen effects to ~/Documents/Github/ghostty-shaders, or updates it if already there. The three effects actually switched on - CRT curve, pixel grid, cursor trail - load from this repo, so it must stay put."
+          "desc": "Clones a community library of Ghostty screen effects to ~/Documents/Github/ghostty-shaders, or updates it if already there. Only the cursor-trail effect is switched on in the config; the CRT and pixel-grid lines are there but commented out."
         }
       ]
     }

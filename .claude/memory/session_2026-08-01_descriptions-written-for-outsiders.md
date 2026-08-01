@@ -66,6 +66,19 @@ no explanation.** Three lines to plumb through.
     key set     byte-identical before and after
     suite       147 passed, 0 failed
 
+## Editing a file a teammate has not finished with
+
+After the commit, another edit landed on the Justify description, changing "puts eight justify-*
+commands in ~/.local/bin" to "on your PATH". I put the path back, reasoning that both are true and
+each carries what the other does not - the path is the fact you can check, the PATH phrasing is
+what it MEANS - and the teammate promptly rewrote it again.
+
+It was still running. I had sent it a shutdown request and treated that as the end of its unit,
+which it was not: a shutdown REQUEST is a question, and until the process exits the teammate still
+owns its file. Editing underneath a live writer produces exactly this, two agents overwriting one
+line, and the fault is the timing rather than either wording. Left as the teammate has it and
+waited for the process to exit before touching the file again.
+
 ## Files touched
 
 - `claude/hooks/browser-tree.json` (all 107 descriptions)
