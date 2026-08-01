@@ -1,0 +1,247 @@
+  /* ── tokens: lifted from improv-site/styles.css ─────────────────────────── */
+  :root[data-theme="light"]{
+    color-scheme:light;
+    --red:#DC2618; --logo-ink:#082525;
+    --text-primary:#02272B; --text-secondary:#54564F; --text-tertiary:#8B8A82;
+    --canvas:#F4EFE4; --raised:#FAF7EE; --alt:#ECE5D4; --inverse:#02272B; --on-inverse:#F4EFE4;
+    --border-soft:rgba(2,39,43,0.08); --border-firm:rgba(2,39,43,0.16);
+    --red-subtle:rgba(220,38,24,0.08); --red-border:rgba(220,38,24,0.28);
+    --ok:#1F6F4A; --ok-bg:rgba(31,111,74,0.10);
+    --part:#8A5E0F; --part-bg:rgba(138,94,15,0.10);
+    --off-bg:rgba(2,39,43,0.05);
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --red:#E8553F; --logo-ink:#F4EFE4;
+    --text-primary:#F4EFE4; --text-secondary:rgba(244,239,228,0.76); --text-tertiary:rgba(244,239,228,0.56);
+    --canvas:#02272B; --raised:#0A3036; --alt:#073035; --inverse:#F4EFE4; --on-inverse:#02272B;
+    --border-soft:rgba(244,239,228,0.10); --border-firm:rgba(244,239,228,0.22);
+    --red-subtle:rgba(232,85,63,0.12); --red-border:rgba(232,85,63,0.36);
+    --ok:#7FD0A6; --ok-bg:rgba(127,208,166,0.14);
+    --part:#E0B45E; --part-bg:rgba(224,180,94,0.14);
+    --off-bg:rgba(244,239,228,0.07);
+  }
+  :root{
+    --font-display:'MADE Awelier','Iowan Old Style',Charter,Georgia,serif;
+    --font-body:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    --xs:0.78rem; --sm:0.88rem; --base:1rem; --lg:1.18rem; --xl:1.5rem;
+    --r-sm:4px; --r-md:8px; --r-full:9999px;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px;
+    --ease:cubic-bezier(0.2,0,0,1);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--canvas); color:var(--text-primary);
+    font-family:var(--font-body); font-size:var(--base); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    /* FULL BLEED. The previous build centred a bordered, rounded, shadowed panel
+       in the viewport, which read as a window inside a window. This IS the
+       application, so it occupies the application. */
+    display:grid; grid-template-rows:auto 1fr auto; height:100vh; overflow:hidden;
+  }
+
+  /* ── top bar ────────────────────────────────────────────────────────────── */
+  .topbar{
+    display:flex; align-items:center; gap:var(--s5);
+    padding:var(--s4) var(--s6);
+    border-bottom:1px solid var(--border-firm); background:var(--raised);
+  }
+  .logo{display:flex; align-items:center; flex:0 0 auto;}
+  .logo svg{height:28px; width:auto; display:block;}
+  .logo .cls-0{fill:var(--logo-ink); transition:fill 180ms var(--ease);}
+  .logo .cls-1{fill:var(--red);}
+  .topbar__sep{width:1px; height:24px; background:var(--border-firm); flex:0 0 auto;}
+
+  .crumb{
+    display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap;
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
+    flex:1 1 auto; min-width:0;
+  }
+  .crumb button{
+    font:inherit; color:var(--text-secondary); background:none; border:0;
+    padding:2px var(--s2); border-radius:var(--r-sm); cursor:pointer;
+  }
+  .crumb button:hover{background:var(--alt); color:var(--text-primary);}
+  .crumb b{
+    color:var(--text-primary); font-weight:500;
+    background:var(--alt); border:1px solid var(--border-soft);
+    border-radius:var(--r-sm); padding:2px var(--s2);
+  }
+  .crumb .chev{opacity:.55;}
+
+  .theme-toggle{
+    flex:0 0 auto; display:grid; place-items:center;
+    width:34px; height:34px; padding:0; cursor:pointer;
+    background:var(--alt); color:var(--text-secondary);
+    border:1px solid var(--border-firm); border-radius:var(--r-md);
+    transition:background 120ms var(--ease), color 120ms var(--ease), scale 150ms ease-out;
+  }
+  .theme-toggle:hover{background:var(--canvas); color:var(--text-primary);}
+  .theme-toggle:active{scale:0.96;}
+  .theme-toggle svg{width:17px; height:17px;}
+  :root[data-theme="dark"] .theme-toggle .i-sun{display:none;}
+  :root[data-theme="light"] .theme-toggle .i-moon{display:none;}
+
+  /* ── body: rail + pane ──────────────────────────────────────────────────── */
+  .body{display:grid; grid-template-columns:268px 1fr; min-height:0;}
+
+  /* THE WORKFLOW CHANGE. The previous build was a drill-down stack: opening a
+     group replaced the entire screen, so you lost sight of everything else and
+     had to walk back up to compare two components. A preferences dashboard keeps
+     its sections in view. The rail is permanent; only the pane changes. */
+  .rail{
+    border-right:1px solid var(--border-firm); background:var(--raised);
+    overflow-y:auto; padding:var(--s3) var(--s3) var(--s5);
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .rail__label{
+    font-family:var(--font-mono); font-size:0.68rem; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--text-tertiary);
+    padding:var(--s4) var(--s3) var(--s2);
+  }
+  .rail__item{
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--s3);
+    padding:var(--s2) var(--s3); border-radius:var(--r-md); cursor:pointer;
+    border:1px solid transparent; text-align:left; width:100%;
+    background:none; font:inherit; color:var(--text-primary);
+    transition:background 120ms var(--ease), border-color 120ms var(--ease);
+  }
+  .rail__item:hover{background:var(--alt);}
+  .rail__item[aria-current="true"]{
+    background:var(--red-subtle); border-color:var(--red-border);
+    box-shadow:inset 3px 0 0 var(--red);
+  }
+  .rail__name{
+    font-family:var(--font-mono); font-size:var(--sm);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .rail__count{
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
+    font-variant-numeric:tabular-nums;
+  }
+
+  .pane{overflow-y:auto; padding:var(--s6) var(--s8);}
+  .pane__head{margin-bottom:var(--s5); max-width:72ch;}
+  .pane__title{
+    font-family:var(--font-display); font-size:var(--xl); line-height:1.15;
+    margin:0 0 var(--s2); text-wrap:balance; letter-spacing:-.01em; font-weight:400;
+  }
+  .pane__desc{color:var(--text-secondary); font-size:var(--sm); margin:0; overflow-wrap:anywhere;}
+  .pane__meta{
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
+    margin-top:var(--s2); display:block;
+  }
+
+  .bulk{display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap;}
+  .btn{
+    font:inherit; font-size:var(--sm); cursor:pointer;
+    padding:var(--s2) var(--s4); border-radius:var(--r-md);
+    border:1px solid var(--border-firm); background:var(--raised); color:var(--text-primary);
+    transition:background 120ms var(--ease), border-color 120ms var(--ease), scale 150ms ease-out;
+  }
+  .btn:hover{background:var(--alt);}
+  .btn:active{scale:0.96;}
+  .btn--primary{background:var(--red); border-color:var(--red); color:#FFF; font-weight:600;}
+  .btn--primary:hover{background:var(--red); filter:brightness(1.08);}
+  /* Disabled is signalled by the SURFACE dropping out of the brand red and by
+     the cursor, not by dimming the label - a dimmed label measured 2.76:1, and
+     an unreadable control is not a clearer disabled state, just a worse one. */
+  .btn--primary[disabled]{
+    background:var(--alt); border-color:var(--border-firm);
+    color:var(--text-secondary); cursor:default; font-weight:400; filter:none;
+  }
+  .btn--primary[disabled]:hover{background:var(--alt);}
+  .btn--primary[disabled]:active{scale:1;}
+  .btn--quiet{background:none;}
+
+  /* ── the list ───────────────────────────────────────────────────────────── */
+  .rows{display:flex; flex-direction:column; gap:var(--s1);}
+  .row{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto auto;
+    align-items:center; gap:var(--s4);
+    padding:var(--s3) var(--s4);
+    background:var(--raised); border:1px solid var(--border-soft); border-radius:var(--r-md);
+    cursor:pointer; text-align:left; width:100%; font:inherit; color:var(--text-primary);
+    transition-property:background,border-color,scale;
+    transition-duration:120ms; transition-timing-function:var(--ease);
+  }
+  .row:hover{background:var(--alt); border-color:var(--border-firm);}
+  .row:active{scale:0.996;}
+  .row.sel{border-color:var(--red-border); box-shadow:inset 3px 0 0 var(--red);}
+  .row__glyph{font-size:var(--sm); line-height:1;}
+  /* Label over helper text. Both get the full column, so neither truncates. */
+  .row__text{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .row__name{
+    font-family:var(--font-mono); font-size:var(--sm);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .row__desc{
+    font-size:var(--xs); color:var(--text-tertiary); line-height:1.45;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .row__stat{
+    font-family:var(--font-mono); font-size:var(--xs); white-space:nowrap;
+    padding:2px var(--s3); border-radius:var(--r-full);
+    color:var(--text-tertiary); background:var(--off-bg);
+  }
+  .row__stat.is-on{color:var(--ok); background:var(--ok-bg);}
+  .row__stat.is-part{color:var(--part); background:var(--part-bg);}
+  .row__right{
+    font-family:var(--font-mono); font-size:var(--xs); text-align:right;
+    white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--text-tertiary);
+    min-width:5rem;
+  }
+  .plus{color:var(--ok);} .minus{color:var(--red);}
+  .g-active{color:var(--ok);} .g-partial{color:var(--part);} .g-none{color:var(--text-tertiary);}
+  .empty{color:var(--text-tertiary); font-size:var(--sm); padding:var(--s6) 0; overflow-wrap:anywhere;}
+
+  /* ── action bar ─────────────────────────────────────────────────────────── */
+  .actionbar{
+    display:flex; align-items:center; gap:var(--s4); flex-wrap:wrap;
+    padding:var(--s3) var(--s6);
+    border-top:1px solid var(--border-firm); background:var(--raised);
+  }
+  .staged{
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-secondary);
+    display:flex; align-items:center; gap:var(--s1); white-space:nowrap;
+  }
+  .hint{
+    flex:1 1 16rem; min-width:0; color:var(--text-secondary); font-size:var(--xs);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .hint b{font-family:var(--font-mono); color:var(--text-secondary); font-weight:500;}
+  /* Measured 3.24:1 on --raised as tertiary. These are labels you read, not
+     decoration, so they take secondary ink. */
+  .keys{display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; color:var(--text-secondary); font-size:var(--xs);}
+  .keys kbd{
+    font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary);
+    background:var(--canvas); border:1px solid var(--border-firm); border-bottom-width:2px;
+    border-radius:var(--r-sm); padding:1px var(--s2);
+  }
+
+  #log{
+    margin:0; padding:var(--s4) var(--s6); max-height:34vh; overflow:auto;
+    background:var(--inverse); color:var(--on-inverse);
+    font-family:var(--font-mono); font-size:var(--xs); line-height:1.6;
+    white-space:pre-wrap; border-top:1px solid var(--border-firm);
+  }
+
+  :focus-visible{outline:2px solid var(--red); outline-offset:2px; border-radius:var(--r-sm);}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important;}}
+  @media (max-width:880px){
+    .body{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+    .rail{
+      border-right:0; border-bottom:1px solid var(--border-firm);
+      flex-direction:row; overflow-x:auto; gap:var(--s2); padding:var(--s3);
+    }
+    .rail__label{display:none;}
+    .rail__item{width:auto; grid-template-columns:auto auto; flex:0 0 auto;}
+    .rail__count{display:none;}
+    .pane{padding:var(--s5);}
+    .row{grid-template-columns:auto minmax(0,1fr) auto;}
+    .row__right{display:none;}
+  }

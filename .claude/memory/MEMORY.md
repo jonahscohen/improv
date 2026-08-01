@@ -179,3 +179,4 @@
 - [Idle reaping is opt-in](session_2026-08-01_idle-reaping-is-opt-in.md) - a torn-down team is maximally idle by design, so the idle rule deleted teams precisely when managed well
 - [Installer GUI on marketing tokens](session_2026-08-01_installer-gui-marketing-tokens.md) - brand tokens lifted verbatim, four wayfinding layers, and the craft floor caught contradicting its own detector
 - [Installer GUI rebuilt as a dashboard](session_2026-08-01_installer-gui-dashboard-redesign.md) - full bleed, persistent rail, the real and-dev mark instead of one I invented, and a theme toggle
+- [Installer taste audit](session_2026-08-01_installer-taste-audit.md) - rendered lenses found two measured contrast failures and the ban sweep found icon provenance I had stripped

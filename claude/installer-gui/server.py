@@ -85,6 +85,19 @@ class H(BaseHTTPRequestHandler):
             else:
                 self._ok(PLACEHOLDER_HTML, "text/html; charset=utf-8")
             return
+        if u.path == "/styles.css":
+            # Fixed path, no user input in it, so no traversal surface. Served
+            # before the auth gate for the same reason "/" is: the browser fetches
+            # a stylesheet without the page nonce, and a 403 here would leave the
+            # installer unstyled rather than unusable, which is worse - it would
+            # look broken while still being operable.
+            sheet = os.path.join(HERE, "styles.css")
+            if os.path.isfile(sheet):
+                with open(sheet, "rb") as f:
+                    self._ok(f.read(), "text/css; charset=utf-8")
+            else:
+                self._deny(404)
+            return
         if u.path == "/health":
             self._ok(json.dumps({"bind": State.host, "ok": True})); return
         if not (self._origin_ok() and self._auth(q)):
