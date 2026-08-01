@@ -2485,16 +2485,28 @@ p='$SETTINGS_JSON'; wp='$REPO_DIR/claude/hooks/app-wirings.json'
 okh=set(os.environ['OKH'].split())
 d=json.load(open(p)); hooks=d.setdefault('hooks',{})
 wir=json.load(open(wp)) if os.path.exists(wp) else {}
+def _norm(m):
+    # Claude Code treats an ABSENT matcher, '' and '*' as the same thing. This
+    # function used to bucket them separately, so a hook already registered in an
+    # equivalent sibling group was invisible to the duplicate check below and got
+    # appended again. Jonah's live settings had accumulated 14 double-registered
+    # hooks that way (2026-07-31), five of them firing on every Stop.
+    return '*' if m in (None, '', '*') else m
 def add(event, matcher, hookobj):
     groups=hooks.setdefault(event,[])
+    want=_norm(matcher); cmd=hookobj.get('command')
+    # Look across EVERY semantically-equivalent group, not just the one we are
+    # about to write into.
+    if any(h.get('command')==cmd for x in groups if _norm(x.get('matcher'))==want
+                                 for h in x.get('hooks',[])):
+        return
     if matcher is not None:
-        g=next((x for x in groups if x.get('matcher')==matcher),None)
+        g=next((x for x in groups if _norm(x.get('matcher'))==want),None)
         if g is None: g={'matcher':matcher,'hooks':[]}; groups.append(g)
     else:
-        g=next((x for x in groups if 'matcher' not in x),None)
+        g=next((x for x in groups if _norm(x.get('matcher'))=='*'),None)
         if g is None: g={}; groups.append(g)
-    hl=g.setdefault('hooks',[])
-    if not any(x.get('command')==hookobj.get('command') for x in hl): hl.append(hookobj)
+    g.setdefault('hooks',[]).append(hookobj)
 for s,entries in wir.items():
     if s in okh:
         for e in entries: add(e['event'], e.get('matcher'), e['hook'])
@@ -7719,19 +7731,26 @@ eff = set(os.environ['EFF'].split())
 with open(p) as f: d = json.load(f)
 hooks = d.setdefault('hooks', {})
 with open(wp) as f: wir = json.load(f)
+def _norm(m):
+    # See install_app_hooks: absent matcher, '' and '*' are the same thing to Claude
+    # Code, and bucketing them separately hid already-registered hooks from the
+    # duplicate check. Same bug, second copy of the same function.
+    return '*' if m in (None, '', '*') else m
 def add(event, matcher, hookobj):
     groups = hooks.setdefault(event, [])
+    want = _norm(matcher); cmd = hookobj.get('command')
+    if any(h.get('command') == cmd for x in groups if _norm(x.get('matcher')) == want
+                                   for h in x.get('hooks', [])):
+        return
     if matcher is not None:
-        g = next((x for x in groups if x.get('matcher') == matcher), None)
+        g = next((x for x in groups if _norm(x.get('matcher')) == want), None)
         if g is None:
             g = {'matcher': matcher, 'hooks': []}; groups.append(g)
     else:
-        g = next((x for x in groups if 'matcher' not in x), None)
+        g = next((x for x in groups if _norm(x.get('matcher')) == '*'), None)
         if g is None:
             g = {}; groups.append(g)
-    hl = g.setdefault('hooks', [])
-    if not any(h.get('command') == hookobj.get('command') for h in hl):
-        hl.append(hookobj)
+    g.setdefault('hooks', []).append(hookobj)
 for script, entries in wir.items():
     if script in eff:
         for e in entries:
@@ -7856,6 +7875,76 @@ if picked tilt-lab; then
 fi
 
 # ============================================================
+# ============================================================
+# Reconcile duplicate hook registrations
+# ============================================================
+# The per-component `add()` helpers now refuse to append a command that is already
+# wired under an equivalent matcher, but that only protects THIS run. Settings that
+# already drifted stay drifted, and hooks land from paths this installer does not
+# own (hand edits, older installer versions, other tools). So reconcile at the end
+# of every run, whatever wired what.
+#
+# Found 2026-07-31: Jonah's live settings held 102 hook entries of which 88 were
+# unique - 14 hooks registered twice, five of them firing on every single Stop. It
+# was invisible because the Stop guards each claim a flag with `set -o noclobber`,
+# so a duplicate registration produced wasted work rather than a duplicate block.
+#
+# Semantics, not string equality: Claude Code treats an ABSENT matcher, '' and '*'
+# as the same thing, so `{"matcher":"*"}` and `{}` are the same bucket even though
+# they do not compare equal. Everything else is compared exactly, because
+# `Bash` and `Write|Edit` are genuinely different registrations of the same script
+# and BOTH are wanted.
+reconcile_hook_duplicates() {
+  [ -f "$SETTINGS_JSON" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  local removed
+  removed=$(python3 - "$SETTINGS_JSON" 2>/dev/null <<'PYEOF'
+import json, sys, collections, os
+p = sys.argv[1]
+try:
+    d = json.load(open(p), object_pairs_hook=collections.OrderedDict)
+except Exception:
+    sys.exit(0)                      # unreadable settings is not ours to repair
+if not isinstance(d.get('hooks'), dict):
+    print(0); sys.exit(0)
+def norm(g):
+    m = g.get('matcher', None)
+    return '*' if m in (None, '', '*') else m
+removed = 0
+for ev, arr in list(d['hooks'].items()):
+    if not isinstance(arr, list):
+        continue
+    seen = set()
+    for g in arr:
+        if not isinstance(g, dict):
+            continue
+        kept = []
+        for h in g.get('hooks', []) or []:
+            key = (norm(g), (h or {}).get('command', ''))
+            if key in seen:
+                removed += 1
+                continue
+            seen.add(key)
+            kept.append(h)
+        g['hooks'] = kept
+    # A group emptied by the sweep is noise; drop it. Never drop the event itself.
+    d['hooks'][ev] = [g for g in arr if isinstance(g, dict) and g.get('hooks')]
+if removed:
+    tmp = p + '.reconcile.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(d, f, indent=2); f.write('\n')
+    os.replace(tmp, p)               # temp-write-then-rename, same as safe_cp
+print(removed)
+PYEOF
+)
+  case "$removed" in
+    ''|*[!0-9]*) return 0 ;;
+    0) return 0 ;;
+  esac
+  info "Reconciled $removed duplicate hook registration(s) in settings.json"
+}
+reconcile_hook_duplicates
+
 # Summary
 # ============================================================
 # Suppress when invoked recursively from the returning-flow action loop -

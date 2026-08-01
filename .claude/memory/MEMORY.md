@@ -178,3 +178,4 @@
 - [** ACTIVE ** Scoreboard handoff - tally WIN 12/LOSS 12/TIE 1/UNMEASURED 5 is STALE vs the current script (regen never finished); OUT OF SCOPE verdict nev…](session_2026-07-29_scoreboard-handoff.md)
 - [Concise gate measured and widened](session_2026-07-31_concise-gate-measured-and-widened.md) - fired on 13 of 232 real responses; volume gate added behind the depth override, and a single-paragraph wall of any length was exempt by construction
 - [Duplicate hook registrations removed](session_2026-07-31_duplicate-hook-registrations-removed.md) - 11 hooks ran twice per event in live settings; repo copy was clean, so it was local drift
+- [Installer duplicate-hook reconciliation](session_2026-07-31_installer-duplicate-hook-reconciliation.md) - the dedupe check only scanned one matcher group while absent/empty/star are the same bucket; both add() copies fixed plus an end-of-run reconcile
