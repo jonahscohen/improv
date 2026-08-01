@@ -107,7 +107,7 @@
   .sw--sm.is-on::after{translate:11px 0;}
   .sw--sm.is-part::after{translate:5px 0;}
   .rail__item{
-    display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--s3);
+    display:grid; grid-template-columns:1fr auto; align-items:center; gap:var(--s3);
     padding:var(--s2) var(--s3); border-radius:var(--r-md); cursor:pointer;
     border:1px solid transparent; text-align:left; width:100%;
     background:none; font:inherit; color:var(--text-primary);
@@ -122,16 +122,26 @@
     font-family:var(--font-mono); font-size:var(--sm);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
+  /* Only an incomplete group shows a number, and it is the one thing in the rail
+     that is allowed to be coloured - so the eye lands on what is unfinished. */
   .rail__count{
     font-family:var(--font-mono); font-size:var(--xs); color:var(--part);
     font-variant-numeric:tabular-nums;
   }
 
   .pane{overflow-y:auto; padding:var(--s6) var(--s8);}
-  .pane__head{margin-bottom:var(--s5); max-width:72ch;}
+  .pane__head{margin-bottom:var(--s5);}
+  /* Section actions sit ON the section header, against the thing they act on,
+     rather than floating between the heading and the list and pushing the
+     content down. */
+  .pane__headline{
+    display:flex; align-items:baseline; justify-content:space-between;
+    gap:var(--s5); flex-wrap:wrap; margin-bottom:var(--s2);
+  }
+  .pane__desc{max-width:72ch;}
   .pane__title{
-    font-family:var(--font-display); font-size:var(--xl); line-height:1.15;
-    margin:0 0 var(--s2); text-wrap:balance; letter-spacing:-.01em; font-weight:400;
+    margin:0; font-family:var(--font-display); font-size:var(--xl); line-height:1.15;
+    text-wrap:balance; letter-spacing:-.01em; font-weight:400;
   }
   .pane__desc{color:var(--text-secondary); font-size:var(--sm); margin:0; overflow-wrap:anywhere;}
   .pane__meta{
@@ -139,7 +149,8 @@
     margin-top:var(--s2); display:block;
   }
 
-  .bulk{display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap;}
+  .bulk{display:flex; gap:var(--s2); flex-wrap:wrap; flex:0 0 auto;}
+  .bulk .btn{font-size:var(--xs); padding:var(--s1) var(--s3);}
   .btn{
     font:inherit; font-size:var(--sm); cursor:pointer;
     padding:var(--s2) var(--s4); border-radius:var(--r-md);
@@ -160,6 +171,9 @@
   .btn--primary[disabled]:hover{background:var(--alt);}
   .btn--primary[disabled]:active{scale:1;}
   .btn--quiet{background:none;}
+  /* Removing things should not look like adding them. */
+  .btn--danger{background:none; color:var(--red); border-color:var(--red-border);}
+  .btn--danger:hover{background:var(--red-subtle);}
 
   /* ── the list ───────────────────────────────────────────────────────────── */
   .rows{display:flex; flex-direction:column;}
@@ -232,7 +246,7 @@
     border-top:1px solid var(--border-firm); background:var(--raised);
   }
   .staged{
-    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-secondary);
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-primary);
     display:flex; align-items:center; gap:var(--s1); white-space:nowrap;
   }
   .hint{
@@ -242,7 +256,7 @@
   .hint b{font-family:var(--font-mono); color:var(--text-secondary); font-weight:500;}
   /* Measured 3.24:1 on --raised as tertiary. These are labels you read, not
      decoration, so they take secondary ink. */
-  .actions{display:flex; gap:var(--s2); flex:0 0 auto; margin-left:auto;}
+  .actions{display:flex; gap:var(--s2); flex:0 0 auto; margin-left:auto; padding-left:var(--s5); border-left:1px solid var(--border-soft);}
   .keys{display:flex; flex:0 0 auto; gap:var(--s2); align-items:center; flex-wrap:wrap; color:var(--text-secondary); font-size:var(--xs);}
   .keys kbd{
     font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary);

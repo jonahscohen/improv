@@ -181,3 +181,4 @@
 - [Installer GUI rebuilt as a dashboard](session_2026-08-01_installer-gui-dashboard-redesign.md) - full bleed, persistent rail, the real and-dev mark instead of one I invented, and a theme toggle
 - [Installer taste audit](session_2026-08-01_installer-taste-audit.md) - rendered lenses found two measured contrast failures and the ban sweep found icon provenance I had stripped
 - [Installer slop removed](session_2026-08-01_installer-slop-removed.md) - a card stack passed every audit because the genericity checker is a keyword grep; rebuilt as a preferences list with switches
+- [Installer redundancy pass](session_2026-08-01_installer-redundancy-pass.md) - one fact per place, and a rail that stopped drawing controls it does not have
