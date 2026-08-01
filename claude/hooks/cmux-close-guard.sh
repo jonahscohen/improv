@@ -18,6 +18,21 @@
 #                  ("my agents are gone, so this must be theirs"), which is not
 #                  identification at all.
 #
+# WHEN COOPERATIVE SHUTDOWN FAILS (verified again 2026-08-01): a teammate whose
+# shutdown_request never took - it kept emitting idle notifications - is NOT torn
+# down by closing "the other general-purpose pane". The justify-watch daemon also
+# renders as an unnamed `general-purpose` pane, and pane titles carry the agent
+# TYPE, not its name. Identify POSITIVELY by name instead:
+#     ps -Ao pid,command | grep 'claude.exe --agent-id'   # names every live agent
+# find YOUR teammate's line (`--agent-id <name>@session`), confirm its PID is NOT a
+# justify one, kill that PID, verify it is dead and justify-watch is still alive;
+# cmux then closes the now-dead pane on its own (or, now dead AND positively
+# identified, CMUX_CLOSE_CONFIRM=surface:<N> cmux close-surface --surface
+# surface:<N>). This guard makes that the ONLY path: the LIVENESS gate below
+# hard-blocks closing any live agent (justify-watch matches PROTECTED_RE) with no
+# override, and OWNERSHIP refuses any close it cannot positively resolve. Full
+# operator recipe lives in CLAUDE.md "Teammate Teardown", step 4.
+#
 # A close is allowed only when BOTH hold, for every surface it would close:
 #   (a) LIVENESS: no live agent / protected / busy process backs the surface.
 #       HARD gate, NO override. The ownership assertion can only unlock an
