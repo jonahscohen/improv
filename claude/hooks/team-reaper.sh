@@ -139,6 +139,10 @@ MAX_AGE_HOURS = _env_float("TEAM_REAP_MAX_AGE_HOURS", 12.0, 0.0, _YEAR_HOURS)
 # reaper, and a 30m inbox-idle window reaped the ACTIVE lead team mid-run twice
 # (long executor units send no inbox traffic while working). Age-gc still GCs.
 IDLE_MINUTES  = _env_float("TEAM_REAP_IDLE_MINUTES", 240.0, 0.0, _YEAR_MINUTES)
+# IDLE REAPING IS OPT-IN SINCE 2026-08-01 (Jonah). See the idle branch for why.
+# TEAM_REAP_IDLE=1 restores the old behaviour; the window tunable above is still
+# honoured when it does.
+IDLE_REAP_ENABLED = os.environ.get("TEAM_REAP_IDLE", "") == "1"
 # Bounded grace window on the lead session transcript (see LIVE-LEAD GUARD).
 # 0 is a valid setting and disables the transcript signal; negative is a typo.
 LEAD_TRANSCRIPT_MINUTES = _env_float(
@@ -388,8 +392,29 @@ for name in os.listdir(teams_dir):
         elif created_ms and age_h >= MAX_AGE_HOURS:
             should, reason = True, "age-gc(%.1fh)" % age_h
         else:
+            # QUIET IS NOT DEATH (Jonah, 2026-08-01).
+            #
+            # newest_inbox_mtime measures TEAMMATE CHATTER. The teardown rule in
+            # CLAUDE.md requires standing every teammate down once its unit is
+            # accepted, and that stops all inbox writes by design - so a team
+            # looks maximally idle exactly when it has been managed WELL. Nothing
+            # else can see the lead either: once the teammates are gone, no live
+            # process carries the team name in argv OR environment (measured), so
+            # the only remaining guard is leadSessionId, and a team whose lead id
+            # has no transcript on this machine - the compaction/resume case - has
+            # no guard at all.
+            #
+            # That is how session-55c0bc13 was deleted under a running lead on
+            # 2026-08-01 after a five-agent teardown, and Jonah reports it several
+            # times before. The lead only finds out when it next tries to spawn,
+            # and by then a named spawn fails "team file not found" and an unnamed
+            # one is refused by agent-teams-guard: no parallel work at all.
+            #
+            # Abandonment is still collected by the signals that mean abandonment
+            # rather than quiet - age-gc above, and the config-less orphan sweep.
+            # A team costs a few KB; a destroyed one costs the session.
             idle_min = (now - newest_inbox_mtime(team_path)) / 60.0
-            if idle_min >= IDLE_MINUTES:
+            if IDLE_REAP_ENABLED and idle_min >= IDLE_MINUTES:
                 should, reason = True, "idle(%.0fm)" % idle_min
 
     if should:

@@ -176,9 +176,4 @@
 - [** ACTIVE ** Discoverability and reachability outrank internal quality on the scoreboard - a capability nothing can invoke scores ZERO; imag…](decision_discoverability_outranks_internal_quality.md)
 - [** ACTIVE ** Claims brought to the scoreboard that were rejected or rewritten - a claimed model-currency WIN had no opponent position (LOCALPROJECTX has n…](decision_scorekeeper_rejected_claims.md)
 - [** ACTIVE ** Scoreboard handoff - tally WIN 12/LOSS 12/TIE 1/UNMEASURED 5 is STALE vs the current script (regen never finished); OUT OF SCOPE verdict nev…](session_2026-07-29_scoreboard-handoff.md)
-- [Concise gate measured and widened](session_2026-07-31_concise-gate-measured-and-widened.md) - fired on 13 of 232 real responses; volume gate added behind the depth override, and a single-paragraph wall of any length was exempt by construction
-- [Duplicate hook registrations removed](session_2026-07-31_duplicate-hook-registrations-removed.md) - 11 hooks ran twice per event in live settings; repo copy was clean, so it was local drift
-- [Installer duplicate-hook reconciliation](session_2026-07-31_installer-duplicate-hook-reconciliation.md) - the dedupe check only scanned one matcher group while absent/empty/star are the same bucket; both add() copies fixed plus an end-of-run reconcile
-- [Stale-deploy detection in the browser](session_2026-07-31_stale-deploy-detection.md) - symlinked components cannot go stale, but a copied build bundle can and did; content comparison never mtime
-- [Justify-only install measured](session_2026-08-01_justify-only-install-measured.md) - --only justify already works and is self-contained; the queue-mandate hook shipped nowhere and is now wired
-- [The justify preset](session_2026-08-01_justify-preset.md) - justify plus safety, verification, grounding and beats; and a wrong fix the component-browser test caught
+- [Idle reaping is opt-in](session_2026-08-01_idle-reaping-is-opt-in.md) - a torn-down team is maximally idle by design, so the idle rule deleted teams precisely when managed well

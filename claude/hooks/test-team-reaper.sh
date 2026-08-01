@@ -16,6 +16,10 @@ export HOME="$SANDBOX"
 # Pin the idle threshold so the reap-logic assertions are independent of the
 # shipped default (TEAM_REAP_IDLE_MINUTES; production default is 240). The idle
 # fixtures below sit at 60m, comfortably past this 30m test threshold.
+# Idle reaping became OPT-IN on 2026-08-01 (quiet is not death - a torn-down
+# team is maximally idle). This suite exercises the idle MECHANICS, so it opts
+# in explicitly; the default-off behaviour has its own cases at the end.
+export TEAM_REAP_IDLE=1
 export TEAM_REAP_IDLE_MINUTES=30
 # Same reason for the lead-transcript grace window (production default 240):
 # the "fresh" transcript fixtures below are 0m old and the "stale" ones 60m.
@@ -449,5 +453,61 @@ exists owned2 && ok "TEAM_REAP_DISABLE=1 skips reaping" || bad "disable switch i
 [ "$disrc" -eq 0 ] && [ "$disout" = "{}" ] && ok "disable switch exits 0 and emits {}" || bad "disable switch rc=$disrc out='$disout'"
 
 echo ""
+
+# ---------------------------------------------------------------------------
+# QUIET IS NOT DEATH: idle reaping is OPT-IN (Jonah, 2026-08-01)
+#
+# The suite exports TEAM_REAP_IDLE=1 at the top to exercise idle mechanics. These
+# cases run WITHOUT it, which is what a real machine does, and assert the shipped
+# default: a team that has simply gone quiet survives.
+#
+# This is the defect these cases exist for. A five-agent teardown - which the
+# teardown rule REQUIRES - stops every inbox write, so the team looks maximally
+# idle exactly when it was managed well. session-55c0bc13 was deleted that way on
+# 2026-08-01 under a running lead, which could then spawn nothing at all.
+# ---------------------------------------------------------------------------
+echo "--- idle reaping is opt-in ---"
+rm -rf "$TEAMS"/* "$TASKS"/*
+
+# A torn-down team: old inbox (nothing has written since the last teammate died),
+# recently created, lead has no resolvable transcript. Exactly the reaped shape.
+mk_team torn_down SESS_GONE "$fresh_ms" 7200      # 120m idle, well past the 30m window
+
+run_env "TEAM_REAP_IDLE=" session-start SESS_OTHER SessionStart
+exists torn_down \
+  && ok "a torn-down team SURVIVES an unrelated session start (the reported bug)" \
+  || bad "a torn-down team SURVIVES an unrelated session start (the reported bug)"
+
+# The mechanism still works when an operator asks for it.
+run_env "TEAM_REAP_IDLE=1" session-start SESS_OTHER SessionStart
+exists torn_down \
+  && bad "TEAM_REAP_IDLE=1 still reaps an idle team" \
+  || ok "TEAM_REAP_IDLE=1 still reaps an idle team"
+
+# Age-gc must NOT be weakened by any of this - genuine abandonment is still
+# collected, which is what makes the opt-in safe to ship.
+rm -rf "$TEAMS"/* "$TASKS"/*
+mk_team ancient_quiet SESS_GONE "$old_ms" 7200
+run_env "TEAM_REAP_IDLE=" session-start SESS_OTHER SessionStart
+exists ancient_quiet \
+  && bad "age-gc still reaps an ancient team with idle disabled" \
+  || ok "age-gc still reaps an ancient team with idle disabled"
+
+# A config-less orphan is still swept with idle off, for the same reason.
+rm -rf "$TEAMS"/* "$TASKS"/*
+mkdir -p "$TEAMS/orphan_noconfig/inboxes"
+run_env "TEAM_REAP_IDLE=" session-start SESS_OTHER SessionStart
+exists orphan_noconfig \
+  && bad "config-less orphan still swept with idle disabled" \
+  || ok "config-less orphan still swept with idle disabled"
+
+# And a live member still protects a team regardless of the switch.
+rm -rf "$TEAMS"/* "$TASKS"/*
+mk_team held SESS_GONE "$fresh_ms" 7200
+PS_OVERRIDE="$(mktemp)"; printf 'claude.exe --agent-id worker@held --team-name held\n' > "$PS_OVERRIDE"
+run_env "TEAM_REAP_IDLE=1" session-start SESS_OTHER SessionStart
+exists held && ok "a live member still protects the team" || bad "a live member still protects the team"
+rm -f "$PS_OVERRIDE"; PS_OVERRIDE=""
+
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
