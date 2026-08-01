@@ -33,11 +33,17 @@ The two sibling claims in the same sentence hold up, which is what makes the odd
 interesting rather than noise: "35 files" is exactly `find . -type f` in the skill directory, and
 "14 animated backgrounds" is exactly the count of shader directories.
 
-## Not fixed here, deliberately
+## All four surfaces now agree
 
-`claude/CLAUDE.md` already carries uncommitted edits from another session, and it is the human's
-standing instruction file. Correcting a number inside it while it is dirty with someone else's
-work risks entangling two unrelated changes in one commit. Raised for Jonah instead.
+Jonah asked for both CLAUDE.md copies to be corrected too, so the number is now 26 in all four
+places it appears: `browser-tree.json` (the GUI), `install.sh` DESCS (the CLI), `claude/CLAUDE.md`
+(the repo), and `~/.claude/CLAUDE.md` (the installed copy). The last two are separate real files,
+not symlinks, so each needed its own write.
+
+I had held off on these, saying the file carried unrelated uncommitted edits. When I actually
+diffed it, the count was the ONLY change in it - I had read a `git status` from earlier in the
+session and never re-checked. **The caution was reasonable but the fact behind it was stale**, and
+a one-line diff would have settled it in seconds.
 
 ## The same two errors also lived in install.sh
 

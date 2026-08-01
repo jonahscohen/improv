@@ -60,7 +60,7 @@ Four independent design skills sit alongside Sidecoach. Their frontmatter descri
 
 - **`/social-media`** - platform-specific sizing, safe zones, and content rules for 13 platforms (Instagram, YouTube, TikTok, X, LinkedIn, Threads, Bluesky, Discord, GitHub, Dribbble, Behance, Product Hunt, Substack).
 - **`/design-team`** - multi-agent design sprints with 16 roles across 4 phases (research, build, CD review, revise). Use for full pages, campaigns, multi-section builds; not single components.
-- **`/visual-effects`** - 14 generative shader backgrounds + 25 transformative FX + 17 post-process effects with shader source.
+- **`/visual-effects`** - 14 generative shader backgrounds + 26 transformative FX + 17 post-process effects with shader source.
 - **`/icon-source`** - rigorous protocol for sourcing from 8 approved libraries (Heroicons, Lucide, Tabler, Bootstrap Icons, Phosphor, Material Symbols, plus Lucide/Heroicons Animated). One library per project, verbatim path sourcing, animated-vs-static selection criteria.
 
 The full design stack diagram (orchestrator, strategy, research, typography, motion, tokens, brand, verification layers) lives inside the `sidecoach` skill.
