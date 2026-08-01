@@ -181,3 +181,4 @@
 - [Installer duplicate-hook reconciliation](session_2026-07-31_installer-duplicate-hook-reconciliation.md) - the dedupe check only scanned one matcher group while absent/empty/star are the same bucket; both add() copies fixed plus an end-of-run reconcile
 - [Stale-deploy detection in the browser](session_2026-07-31_stale-deploy-detection.md) - symlinked components cannot go stale, but a copied build bundle can and did; content comparison never mtime
 - [Justify-only install measured](session_2026-08-01_justify-only-install-measured.md) - --only justify already works and is self-contained; the queue-mandate hook shipped nowhere and is now wired
+- [The justify preset](session_2026-08-01_justify-preset.md) - justify plus safety, verification, grounding and beats; and a wrong fix the component-browser test caught

@@ -21,7 +21,7 @@ set -euo pipefail
 # Flags:
 #   --yes              non-interactive, pick all components
 #   --only KEYS        non-interactive, pick comma-separated keys (e.g. brain,config,memory)
-#   --preset NAME      non-interactive preset: all | minimal | none
+#   --preset NAME      non-interactive preset: all | minimal | justify | none
 #                      minimal = brain + config + memory + skills + nvm
 #   --browser          interactive bucket browser (groups -> members -> hooks)
 #   --dry-run          print picks and exit; touches no files
@@ -2599,7 +2599,30 @@ apply_preset() {
     all)     set_all 1 ;;
     none)    set_all 0 ;;
     minimal) set_all 0; set_pick brain 1; set_pick config 1; set_pick memory 1; set_pick skills 1; set_pick nvm 1; set_pick reflect 1 ;;
-    *)       err "Unknown preset: $1 (valid: all, minimal, none)"; exit 2 ;;
+    # Justify on its own, plus only the supporting cast that makes it trustworthy.
+    #
+    # Routed through apply_only rather than a list of set_pick calls, deliberately: a
+    # preset that names a key the installer no longer has then fails LOUDLY through
+    # apply_only's own "Unknown component" path, instead of silently installing less
+    # than it promised. A preset can never drift from what --only can actually do.
+    #
+    # WHY THESE FIVE (Jonah, 2026-08-01). `--only justify` was already complete and
+    # self-contained - measured under a redirected HOME, exit 0, 3499 files, nothing
+    # escaping. What it could not express is "Justify plus what makes it good":
+    #
+    #   justify       the tool, its hooks, MCP server, skill and CLI shims
+    #   memory        beats - the change-by-change record of what the worker changed
+    #   safety        bash-guard, content-guard, destructive-ops. The worker is a real
+    #                 headless Claude running with bypassPermissions against someone's
+    #                 repo, so this is the floor rather than a nicety
+    #   verification  verify-before-done, second-fix-gate, screenshot mandate - stops
+    #                 "done" being claimed without proof
+    #   grounding     read the code before probing the running app
+    #
+    # Sidecoach is deliberately ABSENT until it is ready to be the taste layer. Shipping
+    # it early would put a second unfamiliar system in front of someone on day one.
+    justify) apply_only "justify,memory,safety,verification,grounding" ;;
+    *)       err "Unknown preset: $1 (valid: all, minimal, justify, none)"; exit 2 ;;
   esac
 }
 
@@ -2714,7 +2737,7 @@ Usage:
   ./install.sh                  Bucket browser: drill into groups, toggle any
                                 component or individual hook, apply in one pass
   ./install.sh --yes            Non-interactive, install everything
-  ./install.sh --preset NAME    Non-interactive preset: all | minimal | none
+  ./install.sh --preset NAME    Non-interactive preset: all | minimal | justify | none
   ./install.sh --only KEYS      Non-interactive, comma-separated keys
   ./install.sh --browser        Same as no flags (the browser is the default entry)
   ./install.sh --dry-run        Print resolved picks and exit
@@ -7831,7 +7854,7 @@ picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh 
 picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-detect.sh
 picked fable        && install_app_hooks fable-orchestrator-guard.sh
 picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
-picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-mandate.sh justify-queue-drain-stop.sh
+picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
 picked clickup      && install_app_hooks block-clickup-writes.sh
 picked visualizer   && install_app_hooks visualizer-guard.sh
 picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh
