@@ -102,6 +102,10 @@
     text-transform:uppercase; color:var(--text-tertiary);
     padding:var(--s4) var(--s3) var(--s2);
   }
+  .sw--sm{width:26px; height:15px;}
+  .sw--sm::after{width:11px; height:11px; top:1px; left:1px;}
+  .sw--sm.is-on::after{translate:11px 0;}
+  .sw--sm.is-part::after{translate:5px 0;}
   .rail__item{
     display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--s3);
     padding:var(--s2) var(--s3); border-radius:var(--r-md); cursor:pointer;
@@ -119,7 +123,7 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .rail__count{
-    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--part);
     font-variant-numeric:tabular-nums;
   }
 
@@ -158,50 +162,72 @@
   .btn--quiet{background:none;}
 
   /* ── the list ───────────────────────────────────────────────────────────── */
-  .rows{display:flex; flex-direction:column; gap:var(--s1);}
+  .rows{display:flex; flex-direction:column;}
+  /* NOT CARDS. Five identical rounded rectangles with icon + heading + text is
+     the banned "same-size cards as page structure" shape, and it is what this
+     was. A preferences list is a list: hairline separators, one shared plane,
+     and the eye running down a single edge instead of over five containers. */
   .row{
     display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto auto;
+    grid-template-columns:minmax(0,1fr) auto auto;
     align-items:center; gap:var(--s4);
-    padding:var(--s3) var(--s4);
-    background:var(--raised); border:1px solid var(--border-soft); border-radius:var(--r-md);
-    cursor:pointer; text-align:left; width:100%; font:inherit; color:var(--text-primary);
-    transition-property:background,border-color,scale;
-    transition-duration:120ms; transition-timing-function:var(--ease);
+    padding:var(--s3) var(--s2);
+    background:none; border:0; border-bottom:1px solid var(--border-soft);
+    border-radius:0; cursor:pointer; text-align:left; width:100%;
+    font:inherit; color:var(--text-primary);
+    transition:background 120ms var(--ease);
   }
-  .row:hover{background:var(--alt); border-color:var(--border-firm);}
-  .row:active{scale:0.996;}
-  .row.sel{border-color:var(--red-border); box-shadow:inset 3px 0 0 var(--red);}
-  .row__glyph{font-size:var(--sm); line-height:1;}
-  /* Label over helper text. Both get the full column, so neither truncates. */
+  .row:last-child{border-bottom:0;}
+  .row:hover{background:var(--alt);}
+  .row.sel{background:var(--alt); box-shadow:inset 2px 0 0 var(--red);}
   .row__text{display:flex; flex-direction:column; gap:2px; min-width:0;}
   .row__name{
     font-family:var(--font-mono); font-size:var(--sm);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .row__desc{
-    font-size:var(--xs); color:var(--text-tertiary); line-height:1.45;
+    font-size:var(--xs); color:var(--text-secondary); line-height:1.45;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .row__stat{
-    font-family:var(--font-mono); font-size:var(--xs); white-space:nowrap;
-    padding:2px var(--s3); border-radius:var(--r-full);
-    color:var(--text-tertiary); background:var(--off-bg);
+
+  /* STATE IS SHOWN ONCE. It used to be a coloured dot AND a coloured pill saying
+     the same thing, and the pill read "installed" on four rows out of five -
+     badging the majority state is decoration. This is a switch: the control you
+     are actually operating, unambiguous at a glance, and silent when nothing is
+     unusual. */
+  .sw{
+    justify-self:end;
+    width:34px; height:20px; border-radius:var(--r-full); flex:0 0 auto;
+    background:var(--off-bg); border:1px solid var(--border-firm);
+    position:relative; transition:background 140ms var(--ease), border-color 140ms var(--ease);
   }
-  .row__stat.is-on{color:var(--ok); background:var(--ok-bg);}
-  .row__stat.is-part{color:var(--part); background:var(--part-bg);}
+  .sw::after{
+    content:""; position:absolute; top:2px; left:2px;
+    width:14px; height:14px; border-radius:var(--r-full);
+    background:var(--text-tertiary);
+    transition:translate 140ms var(--ease), background 140ms var(--ease);
+  }
+  .sw.is-on{background:var(--ok-bg); border-color:var(--ok);}
+  .sw.is-on::after{translate:14px 0; background:var(--ok);}
+  .sw.is-part{background:var(--part-bg); border-color:var(--part);}
+  /* A staged switch is dashed: it has moved to where it WILL be, and the dash
+     says that has not happened yet. */
+  .sw.is-staged{border-style:dashed; border-width:1.5px;}
+  .sw.is-part::after{translate:7px 0; background:var(--part);}
+
+  /* Only the exception speaks. A group that is fully on says nothing; one that is
+     partial says how far. */
   .row__right{
     font-family:var(--font-mono); font-size:var(--xs); text-align:right;
-    white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--text-tertiary);
-    min-width:5rem;
+    white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--text-secondary);
+    min-width:4.5rem;
   }
   .plus{color:var(--ok);} .minus{color:var(--red);}
-  .g-active{color:var(--ok);} .g-partial{color:var(--part);} .g-none{color:var(--text-tertiary);}
   .empty{color:var(--text-tertiary); font-size:var(--sm); padding:var(--s6) 0; overflow-wrap:anywhere;}
 
   /* ── action bar ─────────────────────────────────────────────────────────── */
   .actionbar{
-    display:flex; align-items:center; gap:var(--s4); flex-wrap:wrap;
+    display:flex; align-items:center; gap:var(--s4); flex-wrap:nowrap;
     padding:var(--s3) var(--s6);
     border-top:1px solid var(--border-firm); background:var(--raised);
   }
@@ -210,13 +236,14 @@
     display:flex; align-items:center; gap:var(--s1); white-space:nowrap;
   }
   .hint{
-    flex:1 1 16rem; min-width:0; color:var(--text-secondary); font-size:var(--xs);
+    flex:1 1 0; min-width:0; color:var(--text-secondary); font-size:var(--xs);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .hint b{font-family:var(--font-mono); color:var(--text-secondary); font-weight:500;}
   /* Measured 3.24:1 on --raised as tertiary. These are labels you read, not
      decoration, so they take secondary ink. */
-  .keys{display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; color:var(--text-secondary); font-size:var(--xs);}
+  .actions{display:flex; gap:var(--s2); flex:0 0 auto; margin-left:auto;}
+  .keys{display:flex; flex:0 0 auto; gap:var(--s2); align-items:center; flex-wrap:wrap; color:var(--text-secondary); font-size:var(--xs);}
   .keys kbd{
     font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary);
     background:var(--canvas); border:1px solid var(--border-firm); border-bottom-width:2px;
@@ -232,16 +259,21 @@
 
   :focus-visible{outline:2px solid var(--red); outline-offset:2px; border-radius:var(--r-sm);}
   @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important;}}
-  @media (max-width:880px){
+  @media (max-width:720px){
+    .keys{display:none;}
     .body{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
     .rail{
       border-right:0; border-bottom:1px solid var(--border-firm);
       flex-direction:row; overflow-x:auto; gap:var(--s2); padding:var(--s3);
     }
     .rail__label{display:none;}
-    .rail__item{width:auto; grid-template-columns:auto auto; flex:0 0 auto;}
+    .sw--sm{width:26px; height:15px;}
+  .sw--sm::after{width:11px; height:11px; top:1px; left:1px;}
+  .sw--sm.is-on::after{translate:11px 0;}
+  .sw--sm.is-part::after{translate:5px 0;}
+  .rail__item{width:auto; grid-template-columns:auto auto; flex:0 0 auto;}
     .rail__count{display:none;}
     .pane{padding:var(--s5);}
-    .row{grid-template-columns:auto minmax(0,1fr) auto;}
+    .row{grid-template-columns:minmax(0,1fr) auto;}
     .row__right{display:none;}
   }
