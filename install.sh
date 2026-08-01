@@ -4892,6 +4892,12 @@ _browser_update_refresh() {
   if out="$(update_status)"; then :; else out="unknown"; fi
   BR_UPD="${out%%$'\n'*}"
   if [ "$out" = "$BR_UPD" ]; then BR_UPD_INFO=""; else BR_UPD_INFO="${out#*$'\n'}"; fi
+  # A DEPLOYED build artifact behind what the repo already built is a different
+  # question from the repo being behind origin, and the two are independent: this
+  # checkout can be perfectly current while the bundle actually being served is not.
+  # Empty when everything matches, so the row only appears when there is something
+  # to act on.
+  BR_STALE="$(stale_deploy_summary 2>/dev/null || true)"
   return 0
 }
 
@@ -5029,6 +5035,13 @@ build_rows() {
         # design.md: no remote or offline -> say so rather than failing silently.
         _br_rows_add "? Update check unavailable - remote unreachable" "updunknown" "" ;;
     esac
+
+    # Only rendered when something is actually behind, so a clean machine sees no
+    # extra row. Separate from the update row above because the fix is different:
+    # that one pulls from origin, this one re-runs the component's own deploy.
+    if [ -n "${BR_STALE:-}" ]; then
+      _br_rows_add "↻ Deployed build is behind the repo ($BR_STALE) - reinstall to sync" "staledeploy" ""
+    fi
 
     _br_rows_add "CORE COMPONENTS" "label" ""
     while IFS= read -r b; do

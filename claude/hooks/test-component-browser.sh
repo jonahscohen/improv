@@ -1110,5 +1110,53 @@ rm -f "$_ua_run" "$_ua_args" "$_ua_none" "$_ua_self"
 unset -f check_updates apply_update detect_component _strict_rc
 unset KEYS
 
+
+# ---------------------------------------------------------------------------
+# stale_deploys: a DEPLOYED build artifact behind what the repo built.
+#
+# Everything else the installer places is a symlink and cannot go stale. A compiled
+# bundle is copied, and on 2026-07-31 ~/.claude/justify/dist was three days behind a
+# fix that was already built and committed. Nothing in the browser showed it.
+# Content comparison, never mtime - see the note on stale_deploys.
+# ---------------------------------------------------------------------------
+_sd() { REPO_DIR="$1" CLAUDE_DIR="$2" bash -c 'source '"$REPO_DIR"'/claude/hooks/browser-lib.sh 2>/dev/null; stale_deploys'; }
+_sds() { REPO_DIR="$1" CLAUDE_DIR="$2" bash -c 'source '"$REPO_DIR"'/claude/hooks/browser-lib.sh 2>/dev/null; stale_deploy_summary'; }
+
+SDT="$(mktemp -d)"; mkdir -p "$SDT/repo/justify/dist" "$SDT/home/justify/dist"
+
+[ -z "$(_sd "$SDT/repo" "$SDT/home")" ] \
+  && ok "nothing deployed -> silent (component simply not installed)" \
+  || bad "nothing deployed -> silent"
+
+printf 'BUILT-A\n' > "$SDT/repo/justify/dist/justify-core.js"
+printf 'BUILT-A\n' > "$SDT/home/justify/dist/justify-core.js"
+[ "$(_sd "$SDT/repo" "$SDT/home")" = "justify|current" ] \
+  && ok "deployed matches the repo build -> current" || bad "deployed matches the repo build -> current"
+[ -z "$(_sds "$SDT/repo" "$SDT/home")" ] \
+  && ok "current -> summary empty, so no row is drawn" || bad "current -> summary empty"
+
+printf 'BUILT-B-with-the-fix\n' > "$SDT/repo/justify/dist/justify-core.js"
+[ "$(_sd "$SDT/repo" "$SDT/home")" = "justify|stale" ] \
+  && ok "repo rebuilt but not deployed -> stale (the 2026-07-31 failure)" \
+  || bad "repo rebuilt but not deployed -> stale"
+[ "$(_sds "$SDT/repo" "$SDT/home")" = "justify" ] \
+  && ok "stale -> summary names the component for the row" || bad "stale -> summary names the component"
+
+rm -f "$SDT/repo/justify/dist/justify-core.js"
+[ "$(_sd "$SDT/repo" "$SDT/home")" = "justify|unknown" ] \
+  && ok "source side unreadable -> unknown, never 'current'" || bad "source side unreadable -> unknown"
+[ -z "$(_sds "$SDT/repo" "$SDT/home")" ] \
+  && ok "unknown does not raise the row (no false alarm)" || bad "unknown does not raise the row"
+
+# mtime must NOT be the signal: identical content, newer timestamp, still current.
+printf 'SAME\n' > "$SDT/repo/justify/dist/justify-core.js"
+printf 'SAME\n' > "$SDT/home/justify/dist/justify-core.js"
+touch "$SDT/repo/justify/dist/justify-core.js"
+[ "$(_sd "$SDT/repo" "$SDT/home")" = "justify|current" ] \
+  && ok "a touched source with identical content stays current (no mtime false fire)" \
+  || bad "a touched source with identical content stays current"
+
+rm -rf "$SDT"
+
 echo "== $pass passed, $fail failed =="
 [ "$fail" = 0 ]

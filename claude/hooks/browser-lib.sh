@@ -891,6 +891,65 @@ EOF
 # SET -E NOTE (load-bearing): check_updates returning 1 is an EXPECTED, handled case,
 # not an error. The call is wrapped in `if` so errexit cannot abort the caller on the
 # offline path - see the same note on apply_pending.
+# stale_deploys - deployed BUILD ARTIFACTS that no longer match what the repo built.
+#
+# Why this exists and why it is narrow (2026-07-31). Almost everything this installer
+# places is a SYMLINK into the repo - all 84 hooks, every installed skill file - and a
+# symlink cannot go stale. The exception is a compiled bundle, which is COPIED:
+# ~/.claude/justify/dist holds 73 real files. On 2026-07-31 that copy was three days
+# old and served a bundle missing a fix that had already been built and committed. It
+# was caught by hand, and nothing in the browser would have shown it.
+#
+# CONTENT comparison, deliberately, NOT mtime. A file's mtime moves when it is touched,
+# restored, or checked out, none of which change what it contains - at the moment this
+# was written one justify source file was already "newer" than the built bundle with
+# identical content. An mtime signal would have fired on that, and a status row that
+# cries stale on an unchanged tree is the false-fire class this repo has been burned by
+# before. cmp answers the only question that matters: is the thing being SERVED the
+# thing that was BUILT.
+#
+# CONTRACT (mirrors update_status: never guess, unknown is a real answer):
+#   prints one line per artifact, "<label>|<state>", state one of stale|current|unknown
+#   unknown  = one side is missing or unreadable. Never reported as current.
+#   no output at all = nothing deployable to check on this machine.
+stale_deploys() {
+  local repo="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+  local home_dir="${CLAUDE_DIR:-$HOME/.claude}"
+  local label src dst
+  # label:repo-relative source:installed destination
+  for spec in "justify:justify/dist/justify-core.js:$home_dir/justify/dist/justify-core.js"; do
+    label="${spec%%:*}"; local rest="${spec#*:}"
+    src="$repo/${rest%%:*}"; dst="${rest#*:}"
+    # Nothing deployed means this component simply is not installed here - not a fault.
+    [ -e "$dst" ] || continue
+    if [ ! -f "$src" ] || [ ! -r "$src" ] || [ ! -r "$dst" ]; then
+      printf '%s|unknown\n' "$label"; continue
+    fi
+    if cmp -s "$src" "$dst"; then
+      printf '%s|current\n' "$label"
+    else
+      printf '%s|stale\n' "$label"
+    fi
+  done
+}
+
+# stale_deploy_summary - one line for the browser row: "" when everything is current
+# or unknown, else a comma-joined list of the stale labels.
+stale_deploy_summary() {
+  local out line names=""
+  out="$(stale_deploys 2>/dev/null)" || return 0
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      *"|stale") names="${names:+$names, }${line%%|*}" ;;
+    esac
+  done <<EOF
+$out
+EOF
+  [ -n "$names" ] && printf '%s\n' "$names"
+  return 0
+}
+
 update_status() {
   local out rc count line subjects detail=""
 
