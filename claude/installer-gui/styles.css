@@ -335,8 +335,13 @@
   }
   button.row__go{cursor:pointer;}
   .row__go svg{width:16px; height:16px; display:block;}
-  .row:hover .row__go{color:var(--text-secondary); translate:2px 0;}
-  .row__go--spacer{visibility:hidden;}
+  /* Sliding on hover means "press to go forward" - true of the chevron button,
+     not of the dot, which is a status echo and does nothing when pressed. */
+  .row:hover button.row__go{color:var(--text-secondary); translate:2px 0;}
+  /* Same on/off colours the badge already uses, so the two readings of the
+     same state never disagree. */
+  .row__dot.is-on{color:var(--ok);}
+  .row__dot.is-off{color:var(--text-tertiary);}
   .empty{color:var(--text-tertiary); font-size:var(--sm); padding:var(--s6) 0; overflow-wrap:anywhere;}
 
   /* ── action bar ─────────────────────────────────────────────────────────── */

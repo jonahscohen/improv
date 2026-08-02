@@ -308,6 +308,11 @@ const BOX_OFF = '<svg data-icon-source="lucide:square" xmlns="http://www.w3.org/
 // mostly off-canvas curve that happened to intersect the visible pill.
 const ANTS_RING = '<svg class="ants-ring" width="100%" height="100%" aria-hidden="true" focusable="false"><rect style="x:0;y:0;width:100%;height:100%;rx:9.5px;ry:9.5px;" /></svg>';
 const CHEV = '<svg data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+// The row's-end echo of the badge's own on/off - a circle rather than the
+// badge's square-check, so it reads as a second SHAPE, not a second copy of
+// the same glyph.
+const DOT_ON  = '<svg data-icon-source="lucide:circle-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>';
+const DOT_OFF = '<svg data-icon-source="lucide:circle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /></svg>';
 // Which way the next render moved through the tree, so the pane can say so.
 let navDir='';
 
@@ -464,9 +469,27 @@ function render(){
     // becomes a real, separately-focusable button for exactly that action,
     // rather than nesting it inside the check button (two controls stacked
     // in one element is invalid and no more reachable than none at all).
-    const go=mk(leaf?'span':'button','row__go'+(leaf?' row__go--spacer':''));
-    go.innerHTML = CHEV;
-    if(!leaf){
+    const go=mk(leaf?'span':'button','row__go');
+    if(leaf){
+      // A second, purely visual echo of the SAME `on` the badge already
+      // reads - not a second control. The row's own click/Enter handling is
+      // untouched; this never gets a handler of its own, and aria-hidden
+      // keeps a screen reader from meeting it as if it were one. Redundant by
+      // design: a circle at the row's end answers "is this a toggle, and
+      // which way" at a glance, the same fact the badge states in words.
+      go.classList.add('row__dot', on?'is-on':'is-off');
+      go.setAttribute('aria-hidden','true');
+      go.innerHTML = on ? DOT_ON : DOT_OFF;
+    } else {
+      // A row that OPENS says so. Nothing previously distinguished a row that
+      // toggles from a row that navigates - and for a keyboard or screen-reader
+      // user, the row itself (a plain div) was never reachable at all: Tab only
+      // ever visited the check button, which stages a bulk install, so there was
+      // NO way to actually drill into a group without a mouse. The chevron
+      // becomes a real, separately-focusable button for exactly that action,
+      // rather than nesting it inside the check button (two controls stacked
+      // in one element is invalid and no more reachable than none at all).
+      go.innerHTML = CHEV;
       go.type='button';
       go.setAttribute('aria-label','Open '+disp);
       go.addEventListener('click',e=>{ e.stopPropagation();

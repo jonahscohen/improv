@@ -182,3 +182,4 @@
 - [Real WCAG 2.1 AA / Section 508 audit via axe-core: 4 contrast failures fixed with new --red-text/--red-solid tokens, plus a real keyboard-focus-loss bug found and fixed](session_2026-08-02_wcag-aa-508-audit.md)
 - [Rail shows a count for every group now, not just incomplete ones - amber stays reserved for groups that actually need attention](session_2026-08-02_rail-counts-for-every-group.md)
 - [Screen-reader audit found the real gap axe cannot see - drilling into a group had zero keyboard path; fixing it exposed a false positive in sidecoach's own hit-area check](session_2026-08-02_screenreader-aria-audit.md)
+- [A circular checkbox now sits at the end of every toggleable row - deliberate visual redundancy with the pill badge, purely decorative and aria-hidden](session_2026-08-02_row-end-circular-dot.md)
