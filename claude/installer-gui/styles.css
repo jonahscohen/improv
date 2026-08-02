@@ -2,7 +2,21 @@
   :root[data-theme="light"]{
     color-scheme:light;
     --red:#DC2618; --logo-ink:#082525;
-    --text-primary:#02272B; --text-secondary:#54564F; --text-tertiary:#8B8A82;
+    /* --red itself measured 4.22:1 as small text (.btn--danger) and 3.45:1
+       against the staged-badge composite - both under the 4.5:1 AA floor,
+       even though the SAME red clears the looser 3:1 a border or ring needs.
+       A darker variant for anywhere red renders as readable text; --red
+       stays exactly as-is for borders, rings and fills. */
+    --red-text:#AF1D0F;
+    /* The solid fill behind Apply's white label. --red already clears 4.5:1
+       here, so this is identical to --red in light - it only diverges in
+       dark, where --red is deliberately lighter for legibility as TEXT and
+       is too light to hold white text on top of it as a FILL. */
+    --red-solid:var(--red);
+    --text-primary:#02272B; --text-secondary:#54564F;
+    /* Was #8B8A82 - axe-core measured 3.23:1 on --raised (rail section labels),
+       against the AA text floor of 4.5:1. Darkened until it cleared. */
+    --text-tertiary:#6E6C63;
     --canvas:#F4EFE4; --raised:#FAF7EE; --alt:#ECE5D4; --inverse:#02272B; --on-inverse:#F4EFE4;
     --border-soft:rgba(2,39,43,0.08); --border-firm:rgba(2,39,43,0.16);
     --red-subtle:rgba(220,38,24,0.08); --red-border:rgba(220,38,24,0.28);
@@ -17,6 +31,16 @@
   :root[data-theme="dark"]{
     color-scheme:dark;
     --red:#E8553F; --logo-ink:#F4EFE4;
+    /* Dark theme needs the OPPOSITE correction - lighter, not darker, since
+       text has to stand out from a dark ground. --red measured 4.37:1 and
+       3.59:1 here, both under 4.5:1. */
+    --red-text:#FF8B73;
+    /* --red as a FILL fails the opposite way: white-on-#E8553F measured
+       3.61:1. A button surface isn't read as small text against its own
+       ground the way a label is, so it gets its own darker solid instead of
+       reusing --red-text (which is calibrated for text ON the canvas, not
+       for holding white text on top of itself). */
+    --red-solid:#C23D2A;
     --text-primary:#F4EFE4; --text-secondary:rgba(244,239,228,0.76); --text-tertiary:rgba(244,239,228,0.56);
     --canvas:#02272B; --raised:#0A3036; --alt:#073035; --inverse:#F4EFE4; --on-inverse:#02272B;
     --border-soft:rgba(244,239,228,0.10); --border-firm:rgba(244,239,228,0.22);
@@ -163,8 +187,8 @@
   }
   .btn:hover{background:var(--alt);}
   .btn:active{scale:0.96;}
-  .btn--primary{background:var(--red); border-color:var(--red); color:#FFF; font-weight:600;}
-  .btn--primary:hover{background:var(--red); filter:brightness(1.08);}
+  .btn--primary{background:var(--red-solid); border-color:var(--red-solid); color:#FFF; font-weight:600;}
+  .btn--primary:hover{background:var(--red-solid); filter:brightness(1.08);}
   /* Disabled is signalled by the SURFACE dropping out of the brand red and by
      the cursor, not by dimming the label - a dimmed label measured 2.76:1, and
      an unreadable control is not a clearer disabled state, just a worse one. */
@@ -176,7 +200,7 @@
   .btn--primary[disabled]:active{scale:1;}
   .btn--quiet{background:none;}
   /* Removing things should not look like adding them. */
-  .btn--danger{background:none; color:var(--red); border-color:var(--red-border);}
+  .btn--danger{background:none; color:var(--red-text); border-color:var(--red-border);}
   .btn--danger:hover{background:var(--red-subtle);}
 
   /* ── the list ───────────────────────────────────────────────────────────── */
@@ -255,7 +279,7 @@
   /* Pending. Dashed, because nothing has happened yet - but tinted and coloured
      hard, because a staged change is the most consequential thing on screen. */
   .check.is-staged{border-style:dashed;}
-  .check.is-staged.will-remove{background:var(--red-subtle); color:var(--red); border-color:var(--red);}
+  .check.is-staged.will-remove{background:var(--red-subtle); color:var(--red-text); border-color:var(--red);}
 
   /* WILL INSTALL gets actual motion - it is the one reading that asks you to
      notice it before Apply runs. Two earlier attempts are worth naming so the

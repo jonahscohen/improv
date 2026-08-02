@@ -366,9 +366,13 @@ function render(){
   if(n && !isLeaf(n)){
     const inHooks=!!n.hooks;
     const bi=mk('button','btn', inHooks?'Enable all':'Install all'); bi.type='button';
-    bi.addEventListener('click',()=>{ stageAll(nav,'install'); render(); });
+    // The whole bulk bar is rebuilt on every render(), same as the row list -
+    // without refocusing, pressing this from the keyboard strands you at body.
+    bi.addEventListener('click',()=>{ stageAll(nav,'install'); render();
+      const b=document.querySelector('#bulk .btn:not(.btn--danger)'); if(b) b.focus(); });
     const bu=mk('button','btn btn--danger', inHooks?'Disable all':'Remove all'); bu.type='button';
-    bu.addEventListener('click',()=>{ stageAll(nav,'uninstall'); render(); });
+    bu.addEventListener('click',()=>{ stageAll(nav,'uninstall'); render();
+      const b=document.querySelector('#bulk .btn--danger'); if(b) b.focus(); });
     bulk.appendChild(bi); bulk.appendChild(bu);
     if(nav.length>1){
       const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
@@ -434,7 +438,7 @@ function render(){
     // same bulk action the section header offers, reached from the group itself.
     const toggle=()=>{ sel=i;
       if(leaf) toggleLeaf(path.join('/')); else stageAll(path, on?'uninstall':'install');
-      render(); };
+      render(); refocusCheck(i); };
     chk.addEventListener('click',e=>{ e.stopPropagation(); toggle(); });
     // Space activates natively, Enter did not reach this button. Drive Enter
     // explicitly and suppress both the native activation and the global key
@@ -481,6 +485,17 @@ function render(){
   }
 }
 function paintSel(){ [...document.getElementById('rows').children].forEach((d,i)=>{ if(d.classList) d.classList.toggle('sel', i===sel); }); }
+// render() wipes and rebuilds #rows on every toggle, which destroys whatever
+// had focus - a keyboard user pressing Enter on a checkbox otherwise loses
+// their place and lands on <body>, forced to re-Tab from the top of the page
+// to do anything else. Toggling never changes the row count or order, so the
+// SAME index after the rebuild is still the same logical row; refocusing it
+// there is what keeps a keyboard user's position across their own action.
+function refocusCheck(i){
+  const row = document.getElementById('rows').children[i];
+  const c = row && row.querySelector('.check');
+  if(c) c.focus();
+}
 // STATUS SPEAKS IN ONE PLACE, AND STAYS PUT. This used to write into a span in
 // the action bar that the next row hover overwrote, so a message about a failed
 // apply could disappear before it had been read. A toast owns its own lifetime.
