@@ -186,3 +186,4 @@
 - [The installer said "[exit 0]" to a human, and its status span was erased by the next hover - now a sentence that doubles as the machine signal, and a real toast](session_2026-08-01_toasts-replace-the-exit-code.md)
 - [The bottom log slab is gone - shell output is translated into plain English toasts that stack, grow in, slide the others up, and wait for the X](session_2026-08-01_log-block-became-toasts.md)
 - [Badges sit flush next to the title with no letter-spacing, counts read N/N and 0/N, and lotus/tilt-lab had no toggle at all - the rail lost that job in an earlier redesign](session_2026-08-01_flush-badges-slash-counts-dead-leaf-toggle.md)
+- [The WILL INSTALL badge's marching ants took three tries - two techniques that could not trace a curved pill, then a stray .check svg{width:13px} rule masking the working fix for three iterations](session_2026-08-02_marching-ants-three-attempts.md)

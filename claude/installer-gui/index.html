@@ -272,6 +272,23 @@ let nav=[], sel=0, rowsCache=[];
 // and icons/square.svg. The data-icon-source marker is what makes that checkable.
 const BOX_ON  = '<svg data-icon-source="lucide:square-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="m9 12 2 2 4-4" /></svg>';
 const BOX_OFF = '<svg data-icon-source="lucide:square" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /></svg>';
+// A generative shape, not an icon - a plain traced rectangle, not iconography,
+// so it carries no data-icon-source. rx and ry canNOT both be percentages here:
+// SVG resolves an rx percentage against the rect's WIDTH and an ry percentage
+// against its HEIGHT independently, and on a pill far wider than it is tall
+// that clamps the two corners to wildly different radii - the first attempt
+// at this drew a lopsided arc bunched at one end rather than a capsule. The
+// badge's height is a fixed 19px across every instance (padding and font-size
+// never vary, only the text width does), so rx and ry are the SAME absolute
+// value here - half of the 17px the 1px inset leaves - which is what actually
+// produces a stadium shape regardless of how wide the text makes the pill.
+// width/height:100% as real XML attributes, not just the CSS class - a plain
+// CSS override of an <svg>'s intrinsic size does not reliably establish the
+// viewport the child rect's OWN percentages resolve against. Without them the
+// rect measured itself against the default 300x150 intrinsic box instead of
+// the badge's real ~104x17, so it only drew the piece of a much larger,
+// mostly off-canvas curve that happened to intersect the visible pill.
+const ANTS_RING = '<svg class="ants-ring" width="100%" height="100%" aria-hidden="true" focusable="false"><rect style="x:1px;y:1px;width:calc(100% - 2px);height:calc(100% - 2px);rx:8.5px;ry:8.5px;" /></svg>';
 const CHEV = '<svg data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 // Which way the next render moved through the tree, so the pane can say so.
 let navDir='';
@@ -395,6 +412,9 @@ function render(){
     chk.setAttribute('aria-pressed', on?'true':'false');
     chk.setAttribute('aria-label', (on?'Deselect ':'Select ')+key+' for install');
     chk.innerHTML = on ? BOX_ON : BOX_OFF;
+    // The one state that has not happened yet gets the moving ring - it is
+    // the reading asking you to notice it before Apply runs.
+    if(bcls.indexOf('will-install')>-1) chk.insertAdjacentHTML('beforeend', ANTS_RING);
     chk.appendChild(mk('span','check__t', btext));
     // Pressing the box on a GROUP acts on everything under it, which is the
     // same bulk action the section header offers, reached from the group itself.

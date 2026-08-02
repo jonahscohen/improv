@@ -255,8 +255,39 @@
   /* Pending. Dashed, because nothing has happened yet - but tinted and coloured
      hard, because a staged change is the most consequential thing on screen. */
   .check.is-staged{border-style:dashed;}
-  .check.is-staged.will-install{background:var(--ok-bg); color:var(--ok); border-color:var(--ok);}
   .check.is-staged.will-remove{background:var(--red-subtle); color:var(--red); border-color:var(--red);}
+
+  /* WILL INSTALL gets actual motion - it is the one reading that asks you to
+     notice it before Apply runs. Two earlier attempts are worth naming so the
+     next person does not retry them: a diagonal stripe under a rounded mask
+     clipped badly on the pill's curved ends, and four sliding backgrounds
+     traced a rectangle correctly but only by giving up the pill shape (real
+     edges to walk along, but no more caps) and read as visually heavy at this
+     size. Neither can trace a genuinely curved outline while staying thin,
+     because a background is a flat plane, not a path.
+     A real path is what an SVG stroke is. The ring is a <rect> with rx/ry:50%
+     (built in JS as ANTS_RING, appended only to a will-install badge), thin
+     stroke-dasharray, animated stroke-dashoffset. Percentage rx/ry means one
+     rect traces a correct capsule at any width with no per-instance sizing. */
+  .check.is-staged.will-install{
+    background:var(--ok-bg); color:var(--ok); border-color:transparent;
+  }
+  /* .check svg{width:13px;height:13px} - written for the check/box icon glyphs
+     - matches this ring too, since it is also an svg inside .check, and beats
+     .ants-ring alone on specificity. That silently shrank the ring to 13x13
+     through three different geometry rewrites before it was ever spotted;
+     the tiny arc surviving each attempt was that box, not the pill's outline.
+     The extra .check qualifier here brings the specificity above it. */
+  .check svg.ants-ring{
+    position:absolute; inset:0; width:100%; height:100%;
+    overflow:visible; pointer-events:none;
+  }
+  .ants-ring rect{
+    fill:none; stroke:var(--ok); stroke-width:1px; stroke-dasharray:2.5 2.5;
+    animation:ants-march 450ms linear infinite;
+  }
+  /* One full dash-pair (2.5 + 2.5), so the loop restarts with no visible jump. */
+  @keyframes ants-march{ to{ stroke-dashoffset:-5; } }
 
   /* A row that opens says so. This was the single worst omission: nothing
      distinguished a row that toggles from a row that navigates. */
