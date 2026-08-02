@@ -178,3 +178,4 @@
 - [** ACTIVE ** Scoreboard handoff - tally WIN 12/LOSS 12/TIE 1/UNMEASURED 5 is STALE vs the current script (regen never finished); OUT OF SCOPE verdict nev…](session_2026-07-29_scoreboard-handoff.md)
 - [** ACTIVE ** Two-sentence descriptions for all 71 installer hooks - 69 of 71 hook_desc entries were one sentence; nine were factually WRONG (sid…](session_2026-08-01_installer-hook-descriptions.md)
 - [Lotus/tilt-lab's header just echoed their own row - added a distinct product-level intro field, the way Beats' header already differs from "memory"'s row](session_2026-08-02_intro-vs-install-text-split.md)
+- [Sidecoach/Justify/Lotus/Tiltlab now display styled - the label field was already in the data, manifest.py already forwarded it, nothing ever read it](session_2026-08-02_display-labels-vs-install-keys.md)

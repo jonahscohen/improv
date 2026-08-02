@@ -120,7 +120,11 @@ function buildTreeFromManifest(m) {
   for (const b of m.buckets) {
     // A bucket with no members is itself a leaf (e.g. tilt-lab, lotus) so its
     // single state key stays reachable via leafPaths - do NOT give it children.
-    const node = { tag: b.tag || '', desc: b.desc || '', intro: b.intro || '', featured: (b.section === 'core') };
+    // label is a DISPLAY override; the key underneath stays lowercase and
+    // hyphenated because it is also the install path (pending/installed state,
+    // --only flags) and must never change to avoid breaking that. Most buckets
+    // have no override at all - their key already reads fine as a heading.
+    const node = { tag: b.tag || '', desc: b.desc || '', intro: b.intro || '', label: b.label || '', featured: (b.section === 'core') };
     if (b.members && b.members.length) {
       node.children = {};
       walkMembers(b.members, node.children);
@@ -145,6 +149,11 @@ async function boot() {
 
 // ---- tree helpers ----
 function nodeAt(path){ let n={children:T}; for(const s of path) n=n.children[s]; return n; }
+// What a human reads, versus the key underneath - the one place that split
+// matters. label exists only on the few top buckets whose install key is not
+// already a fine heading (sidecoach, justify, tilt-lab, lotus); everything
+// else falls back to its own key, unchanged.
+function labelFor(path){ const n=nodeAt(path); return (n && n.label) || path[path.length-1]; }
 function isLeaf(n){ return !n.children; }
 function leafPaths(path){ const n=nodeAt(path); if(isLeaf(n)) return [path.join('/')];
   return Object.keys(n.children).flatMap(k=>leafPaths(path.concat(k))); }
@@ -308,7 +317,7 @@ function renderRail(){
       if(nav[0]===k) b.setAttribute('aria-current','true');
       // No control here: a rail row navigates, it does not toggle. Progress is
       // carried by the count below, and by the current-item highlight.
-      b.appendChild(mk('span','rail__name', k));
+      b.appendChild(mk('span','rail__name', labelFor([k])));
       // A count that reads 9/9 says 'all', which the state already says.
       b.appendChild(mk('span','rail__count', (c.total>1 && c.on<c.total)?(c.on+'/'+c.total):''));
       // Lateral: switching between siblings is not forward or backward, so no cue.
@@ -330,8 +339,9 @@ function renderCrumb(){
   c.appendChild(home);
   nav.forEach((seg,i)=>{
     c.appendChild(mk('span','chev','›'));
-    if(i===nav.length-1){ c.appendChild(mk('b',null,seg)); }
-    else { const b=mk('button',null,seg); b.type='button';
+    const text = labelFor(nav.slice(0,i+1));
+    if(i===nav.length-1){ c.appendChild(mk('b',null,text)); }
+    else { const b=mk('button',null,text); b.type='button';
       b.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,i+1); sel=0; render(); }); c.appendChild(b); }
   });
 }
@@ -339,7 +349,7 @@ function renderCrumb(){
 function render(){
   renderRail(); renderCrumb();
   const n = nav.length ? nodeAt(nav) : null;
-  document.getElementById('paneTitle').textContent = nav[nav.length-1] || 'Setup';
+  document.getElementById('paneTitle').textContent = nav.length ? labelFor(nav) : 'Setup';
   // The pane header is what this thing IS; the row below it is what installing
   // it DOES. For a group those are naturally two different pieces of text
   // (Beats' own blurb vs "memory"'s row). A single-component bucket has only
@@ -379,10 +389,11 @@ function render(){
   }
   if(sel>=rowsCache.length) sel=Math.max(0,rowsCache.length-1);
   rowsCache.forEach((path,i)=>{
-    const key=path[path.length-1], node=nodeAt(path), st=stateOf(path), leaf=isLeaf(node);
+    const node=nodeAt(path), st=stateOf(path), leaf=isLeaf(node);
+    const disp = labelFor(path);
     const c=counts(path);
     const d=mk('div','row'+(i===sel?' sel':''));
-    d.appendChild(mk('span','row__name', key));
+    d.appendChild(mk('span','row__name', disp));
 
     // THE BADGE IS THE CONTROL. It reads the state AND it is what you press to
     // change it, so there is one thing on the row to look at and one thing to
@@ -413,7 +424,7 @@ function render(){
 
     const chk=mk('button','check '+bcls+(on?' is-checked':'')); chk.type='button';
     chk.setAttribute('aria-pressed', on?'true':'false');
-    chk.setAttribute('aria-label', (on?'Deselect ':'Select ')+key+' for install');
+    chk.setAttribute('aria-label', (on?'Deselect ':'Select ')+disp+' for install');
     chk.innerHTML = on ? BOX_ON : BOX_OFF;
     // The one state that has not happened yet gets the moving ring - it is
     // the reading asking you to notice it before Apply runs.
