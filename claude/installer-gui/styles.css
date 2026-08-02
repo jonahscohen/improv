@@ -498,6 +498,16 @@
    coming out of a tree. */
 .pane.is-fwd{animation:pane-in-fwd 190ms var(--ease);}
 .pane.is-back{animation:pane-in-back 190ms var(--ease);}
+
+/* Switching rail sections is lateral, not forward or backward - direct order:
+   fade rather than the slide above. This is the one place opacity is used for
+   a pane transition despite the rule just above it, and it is safe for the
+   reason that rule cares about: no fill-mode, so a moment where the animation
+   is not advancing leaves the pane at its own normal opacity (1), the same
+   value the animation ends on - never stuck invisible, unlike the earlier
+   bug's fill-mode:both which held the FROM state open-endedly. */
+@keyframes pane-in-fade{ from{opacity:0;} to{opacity:1;} }
+.pane.is-lateral{animation:pane-in-fade 160ms var(--ease);}
 @media (prefers-reduced-motion: reduce){
-  .pane.is-fwd,.pane.is-back{animation:none;}
+  .pane.is-fwd,.pane.is-back,.pane.is-lateral{animation:none;}
 }

@@ -333,8 +333,10 @@ function renderRail(){
       // every count now, but only an incomplete one gets the coloured class,
       // so the eye still lands on what is unfinished rather than everything.
       b.appendChild(mk('span','rail__count'+(c.on<c.total?' is-part':''), c.on+'/'+c.total));
-      // Lateral: switching between siblings is not forward or backward, so no cue.
-      b.addEventListener('click',()=>{ nav=[k]; sel=0; render(); focusPaneTitle(); });
+      // Lateral: switching between siblings is not forward or backward, so the
+      // cue is a fade rather than the slide those get - direct order, in place
+      // of the "instant" swap this used to be.
+      b.addEventListener('click',()=>{ navDir='lateral'; nav=[k]; sel=0; render(); focusPaneTitle(); });
       rail.appendChild(b);
     }
   }
@@ -521,9 +523,9 @@ function render(){
   // (staging a change, applying) does not slide the pane sideways for no reason.
   if(navDir){
     const pane=document.querySelector('.pane');
-    pane.classList.remove('is-fwd','is-back');
+    pane.classList.remove('is-fwd','is-back','is-lateral');
     void pane.offsetWidth;                       // restart the animation
-    pane.classList.add(navDir==='fwd'?'is-fwd':'is-back');
+    pane.classList.add(navDir==='fwd' ? 'is-fwd' : navDir==='back' ? 'is-back' : 'is-lateral');
     navDir='';
   }
 }
