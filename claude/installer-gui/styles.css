@@ -178,10 +178,22 @@
   }
   .pane__back{display:flex;}
   .pane__desc{max-width:72ch;}
+  /* Only ever sits above the Home hero title - collapses to nothing (:empty)
+     on every other page, where the title stands on its own as it always has. */
+  .pane__eyebrow{
+    display:block; font-family:var(--font-mono); font-size:var(--xs);
+    letter-spacing:.14em; text-transform:uppercase; color:var(--text-tertiary);
+    margin-bottom:var(--s2);
+  }
+  .pane__eyebrow:empty{display:none; margin-bottom:0;}
   .pane__title{
     margin:0 0 var(--s2); font-family:var(--font-display); font-size:var(--xl); line-height:1.15;
     text-wrap:balance; letter-spacing:-.01em; font-weight:400;
   }
+  /* The one hero moment in the whole installer - direct order. Every other
+     title in the tree describes what a page IS; this one welcomes you to the
+     thing as a whole, so it gets the scale to say so. */
+  .pane__title.is-home{font-size:90px;}
   .pane__desc{color:var(--text-secondary); font-size:var(--sm); margin:0; overflow-wrap:anywhere;}
   .pane__meta{
     font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
@@ -235,7 +247,7 @@
        the name column it wrapped to four and five lines; given the full width
        two sentences settle into two or three. */
     align-items:center; column-gap:var(--s3); row-gap:3px;
-    padding:var(--s3) var(--s2);
+    padding:var(--s3) var(--s2) var(--s3) 0;
     border-bottom:1px solid var(--border-soft);
     cursor:pointer; color:var(--text-primary);
     transition:background 120ms var(--ease);
@@ -464,6 +476,10 @@
     font-family:var(--font-mono); font-size:var(--xs); color:var(--text-primary);
     display:flex; align-items:center; gap:var(--s1); white-space:nowrap;
   }
+  /* Same install/remove colors the row badges use, so a mixed staged count
+     reads at a glance without parsing the sign. */
+  .staged .plus{color:var(--ok);}
+  .staged .minus{color:var(--red-text);}
   /* The status span that used to sit here is gone - messages are toasts now. It
      was also the flex spacer, so the keys and actions take that job explicitly
      rather than inheriting it from an element whose real purpose was text. */
@@ -488,6 +504,9 @@
       flex-direction:row; overflow-x:auto; gap:var(--s2); padding:var(--s3);
     }
     .rail__label{display:none;}
+    /* 90px reads as a hero on a real window; on a narrow one it would wrap
+       into two or three lines and crowd everything below it. */
+    .pane__title.is-home{font-size:48px;}
     .sw--sm{width:26px; height:15px;}
   .rail__item{width:auto; grid-template-columns:auto auto; flex:0 0 auto;}
     .rail__count{display:none;}

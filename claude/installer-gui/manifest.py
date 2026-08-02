@@ -39,6 +39,10 @@ def main():
         # Hook explanations live in the tree beside the ownership map. They were
         # assembled but never forwarded, so every hook row rendered blank.
         "hook_desc": tree.get("hook_desc", {}),
+        # Pinned hooks are always-on and excluded from --apply-plan's own allowlist -
+        # the browser needs the same list so it never stages one, rather than staging
+        # it and having Apply reject the whole plan later.
+        "pinned_hooks": tree.get("pinned_hooks", []),
         "components": payload.get("components", {}),
         "state": payload.get("state", {}),
         "meta": {"personal": personal},

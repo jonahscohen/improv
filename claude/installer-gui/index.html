@@ -61,6 +61,7 @@
              toggling - without it every navigation (rail, breadcrumb, back,
              drilling into a group) drops a keyboard/screen-reader user's
              focus to <body>, same as an untouched toggle used to. -->
+        <span class="pane__eyebrow" id="paneEyebrow"></span>
         <h1 class="pane__title" id="paneTitle" tabindex="-1">Setup</h1>
         <p class="pane__desc" id="paneDesc"></p>
         <span class="pane__meta" id="paneMeta"></span>
@@ -106,6 +107,7 @@ syncThemeLabel();
 // ---- tree + install state, populated from the live manifest ----
 let T = {};
 let HOOK_DESC = {};
+let PINNED = new Set();
 const installed = {}, pending = {};
 
 function walkMembers(members, out) {
@@ -128,6 +130,7 @@ function walkMembers(members, out) {
 }
 function buildTreeFromManifest(m) {
   HOOK_DESC = m.hook_desc || {};
+  PINNED = new Set(m.pinned_hooks || []);
   const tree = {};
   for (const b of m.buckets) {
     // A bucket with no members is itself a leaf (e.g. tilt-lab, lotus) so its
@@ -152,7 +155,9 @@ async function boot() {
   try {
     const m = await api('/manifest').then(r => r.json());
     buildTreeFromManifest(m);
-    if (!nav.length) { const first = Object.keys(T)[0]; if (first) nav = [first]; }
+    // nav starts empty and STAYS empty here - that is Home, the dashboard the
+    // installer now opens to every time, not a stand-in for "no bucket picked
+    // yet". Every bucket is reached by drilling in from it.
     render();
   } catch (e) {
     document.getElementById('paneDesc').textContent = 'Could not load the installer manifest: ' + e;
@@ -169,6 +174,16 @@ function labelFor(path){ const n=nodeAt(path); return (n && n.label) || path[pat
 function isLeaf(n){ return !n.children; }
 function leafPaths(path){ const n=nodeAt(path); if(isLeaf(n)) return [path.join('/')];
   return Object.keys(n.children).flatMap(k=>leafPaths(path.concat(k))); }
+// Pinned hooks (project-scoped, always-on) are excluded from --apply-plan's own
+// allowlist - install.sh rejects the whole plan if one slips in. Mirrors the same
+// two-part test install.sh uses: the key is a pinned hook name AND its parent is
+// actually a hooks folder, not some unrelated leaf that happens to share a name.
+function isPinnedLeaf(joined){
+  const segs = joined.split('/');
+  if (segs.length < 2 || !PINNED.has(segs[segs.length-1])) return false;
+  const parent = nodeAt(segs.slice(0,-1));
+  return !!(parent && parent.hooks);
+}
 
 // ---- state ----
 const GLYPH={active:'●',partial:'◐',none:'○'}, CLS={active:'g-active',partial:'g-partial',none:'g-none'};
@@ -177,8 +192,15 @@ const STATCLS={active:'is-on',partial:'is-part',none:''};
 function counts(path){ const L=leafPaths(path); return {on:L.filter(p=>installed[p]).length,total:L.length}; }
 function stateOf(path){ const n=nodeAt(path); if(isLeaf(n)) return installed[path.join('/')]?'active':'none';
   const c=counts(path); return c.on===0?'none':(c.on===c.total?'active':'partial'); }
-function toggleLeaf(p){ const t=installed[p]?'uninstall':'install'; if(pending[p]===t) delete pending[p]; else pending[p]=t; }
-function stageAll(path,a){ leafPaths(path).forEach(p=>{ const want=a==='install'; if(installed[p]===want) delete pending[p]; else pending[p]=a; }); }
+// Matches the terminal browser exactly: a pinned leaf's own row is not
+// toggleable at all (a toast says why, nothing is staged), and a bulk action
+// quietly leaves pinned leaves out of the batch rather than failing the whole
+// Apply on them later.
+function toggleLeaf(p){
+  if (isPinnedLeaf(p)) { toast(p.split('/').pop() + ' is always on - it is project-scoped and cannot be toggled here.', 'info'); return; }
+  const t=installed[p]?'uninstall':'install'; if(pending[p]===t) delete pending[p]; else pending[p]=t;
+}
+function stageAll(path,a){ leafPaths(path).forEach(p=>{ if(isPinnedLeaf(p)) return; const want=a==='install'; if(installed[p]===want) delete pending[p]; else pending[p]=a; }); }
 // Projected state: what will be true after Apply, which is what a checked box
 // claims. A staged change wins over the current disk state; anything unstaged
 // keeps it.
@@ -324,6 +346,13 @@ let navDir='';
 
 function renderRail(){
   const rail=document.getElementById('rail'); rail.textContent='';
+  // Home sits above both sections, not inside either - it is the dashboard
+  // every other page here is a child of, not one more bucket among them.
+  const home=mk('button','rail__item'); home.type='button';
+  if(!nav.length) home.setAttribute('aria-current','true');
+  home.appendChild(mk('span','rail__name','Home'));
+  home.addEventListener('click',()=>{ navDir='lateral'; nav=[]; sel=0; render(); focusPaneTitle(); });
+  rail.appendChild(home);
   for(const [label,pred] of [['The suite',k=>T[k].featured],['Add-ons',k=>!T[k].featured]]){
     const keys=Object.keys(T).filter(pred);
     if(!keys.length) continue;
@@ -350,13 +379,13 @@ function renderRail(){
 
 function renderCrumb(){
   const c=document.getElementById('crumb'); c.textContent='';
-  // Nothing to retrace at the top level: the rail shows where you are and the
-  // heading names it. The trail appears when you actually go deeper.
+  // Nothing to retrace ON Home itself - the trail appears once you have
+  // actually gone somewhere, starting from the bucket it opened from.
   const sep=document.getElementById('topsep');
-  if(nav.length<2){ if(sep) sep.style.display='none'; return; }
+  if(nav.length<1){ if(sep) sep.style.display='none'; return; }
   if(sep) sep.style.display='';
-  const home=mk('button',null,'Setup'); home.type='button';
-  home.addEventListener('click',()=>{ const f=Object.keys(T)[0]; nav=f?[f]:[]; sel=0; render(); focusPaneTitle(); });
+  const home=mk('button',null,'Home'); home.type='button';
+  home.addEventListener('click',()=>{ navDir='back'; nav=[]; sel=0; render(); focusPaneTitle(); });
   c.appendChild(home);
   nav.forEach((seg,i)=>{
     c.appendChild(mk('span','chev','›'));
@@ -369,14 +398,29 @@ function renderCrumb(){
 
 function render(){
   renderRail(); renderCrumb();
-  const n = nav.length ? nodeAt(nav) : null;
-  document.getElementById('paneTitle').textContent = nav.length ? labelFor(nav) : 'Setup';
+  // nodeAt([]) already resolves to {children:T} - the whole tree as one
+  // node - so Home needs no separate branch here: it is simply the node one
+  // level above every bucket, exactly like any other group is one level
+  // above its own children.
+  const n = nodeAt(nav);
+  const paneTitle = document.getElementById('paneTitle');
+  paneTitle.textContent = nav.length ? labelFor(nav) : 'Improv';
+  paneTitle.classList.toggle('is-home', !nav.length);
+  // The eyebrow only ever says one thing, and only above the one title it
+  // introduces - every other page's title stands on its own the way it always
+  // has.
+  document.getElementById('paneEyebrow').textContent = nav.length ? '' : 'Welcome to';
   // The pane header is what this thing IS; the row below it is what installing
   // it DOES. For a group those are naturally two different pieces of text
   // (Beats' own blurb vs "memory"'s row). A single-component bucket has only
   // one piece of data unless intro exists, so intro wins here when present -
-  // it is what stops the header from just echoing the row underneath it.
-  document.getElementById('paneDesc').textContent = n ? (n.intro || n.desc || n.tag || '') : '';
+  // it is what stops the header from just echoing the row underneath it. Home
+  // has no desc of its own (T is the tree, not a node with a desc field), so
+  // it gets a welcome line instead - what this is and how to use it, not a
+  // number the rail already shows per bucket.
+  document.getElementById('paneDesc').textContent = nav.length
+    ? (n.intro || n.desc || n.tag || '')
+    : "Improv is the Yes& Claude Code stack - discipline, memory, design, and workflow tooling for Claude Code, organized into the buckets below. Open one to see what is inside, use the badge on any row to stage it for install or removal, then press Apply when you are ready to make it real.";
   const meta=document.getElementById('paneMeta');
   // The rail already carries the count for every group, scannable side by side.
   // Repeating it here was the same fact in a second place.
@@ -398,14 +442,17 @@ function render(){
     bulk.appendChild(bi); bulk.appendChild(bu);
   }
   const paneBack=document.getElementById('paneBack'); paneBack.textContent='';
-  if(n && !isLeaf(n) && nav.length>1){
+  // Every bucket is a child of Home now, leaf-only ones (tilt-lab, lotus)
+  // included, so Back shows anywhere nav has actually gone somewhere. Home
+  // itself (nav.length 0) is the one place with nothing to go back to.
+  if(nav.length>0){
     const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
     bb.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); });
     paneBack.appendChild(bb);
   }
-  // Nothing on either side (a top-level bucket with no back, or a leaf
-  // self-row with no bulk actions) - the row disappears rather than sitting
-  // there as empty space above the title.
+  // Nothing on either side (Home with bulk actions off, or a leaf self-row
+  // with no bulk actions and no Back) - the row disappears rather than
+  // sitting there as empty space above the title.
   document.getElementById('toolbar').style.display =
     (bulk.children.length || paneBack.children.length) ? '' : 'none';
 
@@ -414,7 +461,9 @@ function render(){
   // switch-that-lies fix - so its own text was pointing at a control that did
   // not exist. It renders as a single-row list of itself instead, reusing the
   // exact badge/checkbox the child rows use everywhere else.
-  rowsCache = n ? (isLeaf(n) ? [nav.slice()] : Object.keys(n.children).map(k=>nav.concat(k))) : [];
+  // At Home, n.children IS T - the bucket list - so this same line that lists
+  // any group's children lists every top-level bucket with no separate path.
+  rowsCache = isLeaf(n) ? [nav.slice()] : Object.keys(n.children).map(k=>nav.concat(k));
   const host=document.getElementById('rows'); host.textContent='';
   if(!rowsCache.length){
     host.appendChild(mk('div','empty','Nothing to configure here.'));
@@ -431,10 +480,16 @@ function render(){
     // change it, so there is one thing on the row to look at and one thing to
     // operate. A checked box means "this will be on the machine after Apply" -
     // which is why a staged install reads as checked before anything has run.
-    const stagedAct = leaf ? (pending[path.join('/')]||'') : '';
+    const leafKey = leaf ? path.join('/') : '';
+    const pinned = leaf && isPinnedLeaf(leafKey);
+    const stagedAct = leaf ? (pending[leafKey]||'') : '';
     const und = leaf ? {ins:0,un:0} : pendUnder(path);
     let bcls, btext, on;
-    if(stagedAct){
+    // Pinned hooks are always-on and not toggleable here at all - say so plainly
+    // rather than letting the row read like an ordinary install anyone can flip.
+    if(pinned){
+      bcls = 'is-on'; btext = 'always on'; on = true;
+    } else if(stagedAct){
       bcls = 'is-staged ' + (stagedAct==='install' ? 'will-install' : 'will-remove');
       btext = stagedAct==='install' ? 'will install' : 'will remove';
       on = stagedAct==='install';
@@ -452,11 +507,13 @@ function render(){
     }
     else if(st==='active'){ bcls='is-on'; btext=c.total+'/'+c.total; on=true; }
     else if(st==='none'){ bcls='is-off'; btext='0/'+c.total; on=false; }
-    else { bcls='is-part'; btext=c.on+' of '+c.total; on=false; }
+    else { bcls='is-part'; btext=c.on+'/'+c.total; on=false; }
 
     const chk=mk('button','check '+bcls+(on?' is-checked':'')); chk.type='button';
     chk.setAttribute('aria-pressed', on?'true':'false');
-    chk.setAttribute('aria-label', (on?'Deselect ':'Select ')+disp+' for install');
+    chk.setAttribute('aria-label', pinned
+      ? disp+' is always on and cannot be toggled here'
+      : (on?'Deselect ':'Select ')+disp+' for install');
     chk.innerHTML = on ? BOX_ON : BOX_OFF;
     // Anything staged - not yet applied, either direction - gets the moving
     // ring. It is a currentColor stroke, so it reads green on will-install and
@@ -626,7 +683,7 @@ document.addEventListener('keydown',e=>{
     if(document.activeElement && document.activeElement.tagName==='BUTTON') return;
     activate(); e.preventDefault();
   }
-  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>1){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); } e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>0){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); } e.preventDefault(); }
   else if(e.key==='a'||e.key==='A'){ runApply(); }
   else if(e.key==='q'||e.key==='Q'){ doQuit(); }
 });
