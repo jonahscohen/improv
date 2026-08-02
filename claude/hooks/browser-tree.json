@@ -139,7 +139,8 @@
       "section": "core",
       "kind": "leaf",
       "tag": "visual-effects playground",
-      "desc": "Installs the dependencies for the tilt-lab effects workbench inside this repo and puts a 'tilt-lab' command in ~/.local/bin. Nothing runs during install - type 'tilt-lab' to open it at http://localhost:5180 and browse, stack and export effects."
+      "desc": "Installs the dependencies for the tilt-lab effects workbench inside this repo and puts a 'tilt-lab' command in ~/.local/bin. Nothing runs during install - type 'tilt-lab' to open it at http://localhost:5180 and browse, stack and export effects.",
+      "intro": "tilt-lab is the local visual-effects workbench in this repo: browse roughly 25 shader and post-processing effects across four roles (background, midground, pointer, post), stack and tune them live against a real preview, then export the exact stack as a self-contained package. It is the capability Sidecoach reaches for whenever a hero or section wants an animated backdrop."
     },
     {
       "key": "lotus",
@@ -147,7 +148,8 @@
       "section": "core",
       "kind": "leaf",
       "tag": "Figma plugin + MCP bridge",
-      "desc": "Builds the Lotus Figma plugin and its bridge inside this repo, adds /lotus, and registers its tools with Claude Code in ~/.claude.json so Claude can edit a Figma file directly. Restart Claude Code, then load lotus/manifest.json once in Figma."
+      "desc": "Builds the Lotus Figma plugin and its bridge inside this repo, adds /lotus, and registers its tools with Claude Code in ~/.claude.json so Claude can edit a Figma file directly. Restart Claude Code, then load lotus/manifest.json once in Figma.",
+      "intro": "Lotus is an AI Figma plugin that works directly on the canvas across seven modes - generate, modify, style transfer, components, code export, accessibility audit, and design critique - using whichever AI provider you supply a key for. Its MCP bridge also lets Claude Code read and edit a file's design system in place."
     },
     {
       "key": "Design Tools",

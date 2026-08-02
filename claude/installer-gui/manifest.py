@@ -25,6 +25,11 @@ def main():
             "label": b.get("label", b["key"]),
             "tag": b.get("tag", ""),
             "desc": b.get("desc", ""),
+            # A product-level blurb, distinct from desc's install mechanics. Only
+            # a single-component bucket needs it: a group's own desc already
+            # reads as this intro, since its members carry the install-specific
+            # text separately (see Beats vs "memory").
+            "intro": b.get("intro", ""),
             "section": b.get("section", ""),
             "members": b.get("members", []),
         })

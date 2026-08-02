@@ -1388,3 +1388,16 @@
 - [The side-stripe I painted around the ban](session_2026-08-01_side-stripe-dodge.md) - inset box-shadow makes the banned stripe without a border-left, so the checker never saw it; also fixes it flag…
 - [Badges, chevrons, directional motion](session_2026-08-01_badges-chevrons-directional-motion.md) - the switch promised a directness the staged model lacks; also an animation that hid the pane for n…
 - [Idle reaping is opt-in](session_2026-08-01_idle-reaping-is-opt-in.md) - a torn-down team is maximally idle by design, so the idle rule deleted teams precisely when managed well
+
+<!-- archived 2026-08-02 (moved from MEMORY.md to stay under load budget) -->
+- [The status badge became the checkbox and the row grew a second line - hooks had rendered blank because manifest.py never forwarded hook_desc](session_2026-08-01_badge-becomes-the-checkbox.md)
+- [All 107 installer descriptions rewritten for a developer outside this team - the first draft was accurate and defined every unknown with…](session_2026-08-01_descriptions-written-for-outsiders.md)
+- [Codex found two real badge defects - Enter navigated instead of toggling, and a mixed-staged group rendered as fully checked; fixing the first e…](session_2026-08-01_codex-caught-two-badge-bugs.md)
+- [verify-manual.sh's header claimed it clears the verification flag on any user message - it has never done that, and the claim made a safety gate l…](session_2026-08-01_verify-manual-header-lied.md)
+- [Two-sentence descriptions for all 36 installable components - 19 had no description at all; five described behaviour install.sh does not ha…](session_2026-08-01_installer-component-descriptions.md)
+- [Ghostty advertised three shader effects while two were commented out, and the transformative-FX count had been stale at 25 for months - both…](session_2026-08-01_visual-effects-count-off-by-one.md)
+- [The installer said "[exit 0]" to a human, and its status span was erased by the next hover - now a sentence that doubles as the machine signal,…](session_2026-08-01_toasts-replace-the-exit-code.md)
+- [The bottom log slab is gone - shell output is translated into plain English toasts that stack, grow in, slide the others up, and wait for the X](session_2026-08-01_log-block-became-toasts.md)
+- [Badges sit flush next to the title with no letter-spacing, counts read N/N and 0/N, and lotus/tilt-lab had no toggle at all - the…](session_2026-08-01_flush-badges-slash-counts-dead-leaf-toggle.md)
+- [The WILL INSTALL badge's marching ants took three tries - two techniques that could not trace a curved pill, then a stray .check svg{width:13px…](session_2026-08-02_marching-ants-three-attempts.md)
+- [The leaf self-row's name/desc suppression was wrong - restored to match how "memory" inside Beats shows its own name/desc](session_2026-08-02_leaf-row-name-desc-restored.md)

@@ -3,6 +3,7 @@ name: Badges sit flush next to the name now, counts read N/N and 0/N, and lotus/
 description: Three direct orders plus one real bug found along the way. The badge moved out of the far-right column to sit beside the title with no letter-spacing. "ALL 2" and "NONE OF 1" became "2/2" and "0/1". Drilling into a single-component bucket showed text pointing at a rail control that no longer exists.
 type: project
 relates_to: [session_2026-08-01_badge-becomes-the-checkbox.md]
+superseded_by: session_2026-08-02_leaf-row-name-desc-restored.md
 author_human: Jonah
 author_model: claude-sonnet-5
 source: session

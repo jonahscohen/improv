@@ -120,7 +120,7 @@ function buildTreeFromManifest(m) {
   for (const b of m.buckets) {
     // A bucket with no members is itself a leaf (e.g. tilt-lab, lotus) so its
     // single state key stays reachable via leafPaths - do NOT give it children.
-    const node = { tag: b.tag || '', desc: b.desc || '', featured: (b.section === 'core') };
+    const node = { tag: b.tag || '', desc: b.desc || '', intro: b.intro || '', featured: (b.section === 'core') };
     if (b.members && b.members.length) {
       node.children = {};
       walkMembers(b.members, node.children);
@@ -340,7 +340,12 @@ function render(){
   renderRail(); renderCrumb();
   const n = nav.length ? nodeAt(nav) : null;
   document.getElementById('paneTitle').textContent = nav[nav.length-1] || 'Setup';
-  document.getElementById('paneDesc').textContent = n ? (n.desc || n.tag || '') : '';
+  // The pane header is what this thing IS; the row below it is what installing
+  // it DOES. For a group those are naturally two different pieces of text
+  // (Beats' own blurb vs "memory"'s row). A single-component bucket has only
+  // one piece of data unless intro exists, so intro wins here when present -
+  // it is what stops the header from just echoing the row underneath it.
+  document.getElementById('paneDesc').textContent = n ? (n.intro || n.desc || n.tag || '') : '';
   const meta=document.getElementById('paneMeta');
   // The rail already carries the count for every group, scannable side by side.
   // Repeating it here was the same fact in a second place.
@@ -375,14 +380,9 @@ function render(){
   if(sel>=rowsCache.length) sel=Math.max(0,rowsCache.length-1);
   rowsCache.forEach((path,i)=>{
     const key=path[path.length-1], node=nodeAt(path), st=stateOf(path), leaf=isLeaf(node);
-    // Rendering the leaf we have actually drilled into, rather than a child of
-    // whatever we are looking at - the H1 and the description above already
-    // carry this leaf's name and text, so repeating both on the row would be
-    // the exact redundancy the second slop pass removed elsewhere.
-    const selfRow = path.join('/') === nav.join('/');
     const c=counts(path);
     const d=mk('div','row'+(i===sel?' sel':''));
-    if(!selfRow) d.appendChild(mk('span','row__name', key));
+    d.appendChild(mk('span','row__name', key));
 
     // THE BADGE IS THE CONTROL. It reads the state AND it is what you press to
     // change it, so there is one thing on the row to look at and one thing to
@@ -442,7 +442,7 @@ function render(){
     // The description gets its own line rather than an ellipsis. These run to
     // two sentences, and a truncated explanation explains nothing.
     const dsc=node.desc || node.tag || '';
-    if(dsc && !selfRow) d.appendChild(mk('span','row__desc', dsc));
+    if(dsc) d.appendChild(mk('span','row__desc', dsc));
     d.addEventListener('click',()=>{ sel=i; activate(); });
     d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); });
     host.appendChild(d);
