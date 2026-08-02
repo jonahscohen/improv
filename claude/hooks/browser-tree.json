@@ -60,7 +60,7 @@
           "key": "Hooks",
           "kind": "hooks",
           "tag": "the hooks Beats depends on",
-          "desc": "The hooks the beats subsystem installs to keep your memory guarded, compiled, and fresh.",
+          "desc": "Keeps the memory files under .claude/memory guarded, compiled, and fresh as you work. One hook blocks destructive edits to that folder, others compile new entries, warn when they are going stale, and nudge a periodic review.",
           "hooks": [
             "memory-approve",
             "memory-nudge",
@@ -91,7 +91,7 @@
           "key": "Hooks",
           "kind": "hooks",
           "tag": "the hooks Sidecoach depends on",
-          "desc": "The hooks Sidecoach installs to spot design intent, inject your product and design docs, and gate taste.",
+          "desc": "Watches for design and UI work as you type, then brings the right context in automatically. One hook spots design intent in a prompt, another injects your project's product and design docs, and a third gates whether a build meets the taste bar before it ships.",
           "hooks": [
             "sidecoach-sessionstart",
             "sidecoach-preamble",
@@ -123,7 +123,7 @@
           "key": "Hooks",
           "kind": "hooks",
           "tag": "the hooks Justify depends on",
-          "desc": "The hooks Justify installs to guard its source, manage the watch loop, report standing-by state, and hold the session open until the prompt queue is drained.",
+          "desc": "Keeps the Justify visual-editing loop honest while it runs in the background. One hook guards its source files from accidental edits, one manages the watch process, one reports when it is idle and waiting, and one holds the session open until every queued prompt has actually been handled.",
           "hooks": [
             "justify-source-guard",
             "justify-watch-guard",
@@ -214,7 +214,7 @@
           "key": "figma",
           "kind": "hooks",
           "tag": "Figma fidelity guard",
-          "desc": "The 2 hooks figma installs. Toggle any on or off.",
+          "desc": "Holds a Figma-based build to the design it actually came from. The moment a build pulls anything out of Figma, this arms a check that blocks \"done\" until every pulled element genuinely matches on all three counts: Figma's own value, the code that shipped, and what the live page actually renders.",
           "hooks": [
             "figma-fidelity-stop",
             "figma-fidelity-arm"
@@ -232,7 +232,7 @@
           "key": "safety",
           "kind": "hooks",
           "tag": "the 5 safety hooks",
-          "desc": "The 5 hooks in the safety cluster.",
+          "desc": "Blocks the shell and file-write mistakes that are hardest to undo: a force-push to main, deleting your saved session notes, committing with an AI-attribution line or an outdated model name, or running a command flagged as genuinely destructive, such as a production deploy or one environment's database overwriting another. None of it can be talked past by wording a request differently - the checks match the real command, not what you called it.",
           "hooks": [
             "bash-guard",
             "content-guard",
@@ -245,7 +245,7 @@
           "key": "verification",
           "kind": "hooks",
           "tag": "the 8 verification hooks",
-          "desc": "The 8 hooks in the verification cluster.",
+          "desc": "Makes \"done\" mean something was actually looked at, not just built. A code change stays flagged until real proof exists - an opened screenshot, a passing test, a live curl - so a claim that something works can never be taken on faith, and a second edit to the same file within ten minutes gets a warning in case the first fix never really landed.",
           "hooks": [
             "verify-before-done",
             "verify-before-done-stop",
@@ -261,7 +261,7 @@
           "key": "question-discipline",
           "kind": "hooks",
           "tag": "the 2 question-discipline hooks",
-          "desc": "The 2 hooks in the question-discipline cluster.",
+          "desc": "Makes sure a question aimed at you reaches you as a real, selectable choice rather than buried in a paragraph of chat text - even a plain yes-or-no counts as one. If a plain-text question slips through anyway, the very next message opens with a reminder, since nothing can reach back and fix a reply that has already been sent.",
           "hooks": [
             "multiple-choice-detect-stop",
             "multiple-choice-inject-prompt"
@@ -271,7 +271,7 @@
           "key": "grounding",
           "kind": "hooks",
           "tag": "the 7 grounding hooks",
-          "desc": "The 7 hooks in the grounding cluster - always-on behavioral discipline: source-grounding (grounding-gate, grounding-guard), completion discipline (task-loop-mandate, justify-queue-mandate), and response conciseness (concise-mandate, concise-toggle, concise-detect-stop).",
+          "desc": "Always-on behavioral discipline with three jobs. Source-grounding checks claims against the real code instead of assumption, completion discipline keeps a task list or prompt queue running to the end instead of stopping early, and response conciseness keeps replies short unless you ask for more, with a toggle to turn it off.",
           "hooks": [
             "grounding-gate",
             "grounding-guard",
@@ -286,7 +286,7 @@
           "key": "api-drift",
           "kind": "hooks",
           "tag": "the 3 api-drift hooks",
-          "desc": "The 3 hooks in the api-drift cluster.",
+          "desc": "Watches for the tools underneath a session changing without warning - a deprecated flag, a renamed parameter, a service that starts rejecting requests it used to accept. When that happens, it holds the session open until the change has actually been adjusted for, rather than letting things end with a quiet compatibility break nobody noticed.",
           "hooks": [
             "api-drift-detector",
             "api-drift-stop",
@@ -297,7 +297,7 @@
           "key": "planning-git",
           "kind": "hooks",
           "tag": "the 2 planning-git hooks",
-          "desc": "The 2 hooks in the planning-git cluster.",
+          "desc": "Two lightweight sanity checks around planning and git. One reads a written plan against itself and flags outright contradictions, such as a file one section promises that the actual instructions never touch; the other simply reports, at the start of a session, whether the current branch has commits sitting unpushed.",
           "hooks": [
             "plan-consistency-lint",
             "push-ahead-check"
@@ -307,7 +307,7 @@
           "key": "surface",
           "kind": "hooks",
           "tag": "the 2 surface hooks",
-          "desc": "The 2 hooks in the surface cluster.",
+          "desc": "Adapts how results are shown to wherever you are actually reading them. A desktop or web session can render real charts and tables and gets nudged toward using them instead of a wall of text; a plain terminal or phone is told to stick to clean markdown, since nothing fancier would render there anyway.",
           "hooks": [
             "claude-surface",
             "surface-visual-gate"
@@ -317,7 +317,7 @@
           "key": "model-routing",
           "kind": "hooks",
           "tag": "the 1 model-routing hooks",
-          "desc": "The 1 hooks in the model-routing cluster.",
+          "desc": "Keeps whichever model you picked from being quietly swapped out from under you. It blocks model-override flags, environment variables, and any per-agent model setting that would route your work to a different model without asking first.",
           "hooks": [
             "model-router-guard"
           ]
@@ -326,7 +326,7 @@
           "key": "agent-routing",
           "kind": "hooks",
           "tag": "the 1 agent-routing hooks",
-          "desc": "The 1 hooks in the agent-routing cluster.",
+          "desc": "A pure suggestion, never an action: reads what kind of work a message is asking for and names one cheaper specialist agent that could probably handle it. It never actually sends the work anywhere and costs nothing to run, so nothing changes unless you act on the suggestion yourself.",
           "hooks": [
             "route-intent"
           ]
@@ -335,7 +335,7 @@
           "key": "fable",
           "kind": "hooks",
           "tag": "orchestrator-only guard",
-          "desc": "The 1 hooks fable installs. Toggle any on or off.",
+          "desc": "When a session is running on the pricier Fable model, this hands the actual file-writing and shell work to a cheaper sub-agent instead, so Fable stays in an orchestrating role rather than doing the building itself. On every other model it does nothing at all - your model choice is never touched.",
           "hooks": [
             "fable-orchestrator-guard"
           ]
@@ -344,7 +344,7 @@
           "key": "codex",
           "kind": "hooks",
           "tag": "codex integration guards",
-          "desc": "The 2 hooks codex installs. Toggle any on or off.",
+          "desc": "Two checks around the second-model Codex review step. One reads a finished Codex run for a capacity or connection failure and tells you to retry rather than silently skipping the review it was meant to provide; the other refuses review requests that would fail quietly, such as a helper that can't report its findings back or a request that would just end up reviewing its own work.",
           "hooks": [
             "codex-failure-watcher",
             "codex-rescue-guard"
@@ -354,7 +354,7 @@
           "key": "chrome",
           "kind": "hooks",
           "tag": "browser tab-group hygiene",
-          "desc": "The 3 hooks chrome installs. Toggle any on or off.",
+          "desc": "Keeps a Chrome tab group from being silently forgotten about. It tracks when browser tabs were last used, only clears that record once closing them is confirmed to have actually worked, and - since a script cannot close a browser tab by itself - holds the session open once if tabs are still open and idle, buying one more turn to close them.",
           "hooks": [
             "chrome-tabgroup-track",
             "chrome-tabgroup-clear",
@@ -365,7 +365,7 @@
           "key": "visualizer",
           "kind": "hooks",
           "tag": "widget quality guard",
-          "desc": "The 1 hooks visualizer installs. Toggle any on or off.",
+          "desc": "Catches the exact chart and widget mistakes that have shipped invisible text before. Common causes include a hardcoded color where a design token should be, a made-up style variable that does not exist, content wrapped in a tag that breaks rendering, or a font weight heavy enough to look wrong in dark mode.",
           "hooks": [
             "visualizer-guard"
           ]
@@ -405,7 +405,7 @@
               "key": "Hooks",
               "kind": "hooks",
               "tag": "the hooks voice-output depends on",
-              "desc": "The hooks voice-output installs to gate speech, carry the mandate into context, and handle mute toggles.",
+              "desc": "Controls when the assistant is allowed to speak out loud. One hook gates whether speech fires at all, one carries that decision into the assistant's context so it knows the current state, and one handles you switching voice on or off mid-session.",
               "hooks": [
                 "voice-gate",
                 "voice-mandate",
@@ -437,7 +437,7 @@
               "key": "Hooks",
               "kind": "hooks",
               "tag": "the hooks cmux depends on",
-              "desc": "The hooks cmux installs to guard panes, heal shims, reap idle teammates, and relay their results.",
+              "desc": "Keeps cmux's terminal panes and spawned teammates from drifting into a bad state. Hooks here guard against misconfigured panes, heal broken shims automatically, clean up idle teammates that finished their work, and relay a teammate's results back to the session that spawned it.",
               "hooks": [
                 "agent-teams-guard",
                 "node-shim-heal",
@@ -461,7 +461,7 @@
           "key": "clickup",
           "kind": "hooks",
           "tag": "ClickUp write-guard",
-          "desc": "The 1 hooks clickup installs. Toggle any on or off.",
+          "desc": "Refuses every ClickUp action that would actually change something - creating, updating, deleting, moving, commenting, or tracking time - with no way to confirm past it. Read-only calls such as searching or listing tasks still go through untouched.",
           "hooks": [
             "block-clickup-writes"
           ]
