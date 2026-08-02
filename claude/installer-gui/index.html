@@ -445,9 +445,10 @@ function render(){
     chk.setAttribute('aria-pressed', on?'true':'false');
     chk.setAttribute('aria-label', (on?'Deselect ':'Select ')+disp+' for install');
     chk.innerHTML = on ? BOX_ON : BOX_OFF;
-    // The one state that has not happened yet gets the moving ring - it is
-    // the reading asking you to notice it before Apply runs.
-    if(bcls.indexOf('will-install')>-1) chk.insertAdjacentHTML('beforeend', ANTS_RING);
+    // Anything staged - not yet applied, either direction - gets the moving
+    // ring. It is a currentColor stroke, so it reads green on will-install and
+    // red on will-remove automatically, matching whichever this badge is.
+    if(bcls.indexOf('is-staged')>-1) chk.insertAdjacentHTML('beforeend', ANTS_RING);
     chk.appendChild(mk('span','check__t', btext));
     // Pressing the box on a GROUP acts on everything under it, which is the
     // same bulk action the section header offers, reached from the group itself.

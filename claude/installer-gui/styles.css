@@ -282,7 +282,11 @@
   /* Pending. Dashed, because nothing has happened yet - but tinted and coloured
      hard, because a staged change is the most consequential thing on screen. */
   .check.is-staged{border-style:dashed;}
-  .check.is-staged.will-remove{background:var(--red-subtle); color:var(--red-text); border-color:var(--red);}
+  /* border-color:transparent, matching will-install - the ants ring now IS
+     the outline. Leaving the base .is-staged dashed border colored here drew
+     TWO overlapping dashed rings at once, a static one plus the animated one,
+     which is the "looks awful" double-outline this replaces. */
+  .check.is-staged.will-remove{background:var(--red-subtle); color:var(--red-text); border-color:transparent;}
 
   /* WILL INSTALL gets actual motion - it is the one reading that asks you to
      notice it before Apply runs. Two earlier attempts are worth naming so the
@@ -293,7 +297,7 @@
      size. Neither can trace a genuinely curved outline while staying thin,
      because a background is a flat plane, not a path.
      A real path is what an SVG stroke is. The ring is a <rect> with rx/ry:50%
-     (built in JS as ANTS_RING, appended only to a will-install badge), thin
+     (built in JS as ANTS_RING, appended to any staged badge), thin
      stroke-dasharray, animated stroke-dashoffset. Percentage rx/ry means one
      rect traces a correct capsule at any width with no per-instance sizing. */
   .check.is-staged.will-install{
@@ -310,7 +314,10 @@
     overflow:visible; pointer-events:none;
   }
   .ants-ring rect{
-    fill:none; stroke:var(--ok); stroke-width:1px; stroke-dasharray:2.5 2.5;
+    /* currentColor, not a hardcoded --ok, so the SAME ring works for both
+       staged states: green on will-install, red on will-remove, always
+       matching whatever color the badge's own text and icon already use. */
+    fill:none; stroke:currentColor; stroke-width:1px; stroke-dasharray:2.5 2.5;
     animation:ants-march 450ms linear infinite;
   }
   /* One full dash-pair (2.5 + 2.5), so the loop restarts with no visible jump. */
@@ -496,8 +503,8 @@
    blemish rather than an outage.
    Forward enters from the right, back from the left, matching going in and
    coming out of a tree. */
-.pane.is-fwd{animation:pane-in-fwd 190ms var(--ease);}
-.pane.is-back{animation:pane-in-back 190ms var(--ease);}
+.pane.is-fwd{animation:pane-in-fwd 380ms var(--ease);}
+.pane.is-back{animation:pane-in-back 380ms var(--ease);}
 
 /* Switching rail sections is lateral, not forward or backward - direct order:
    fade rather than the slide above. This is the one place opacity is used for
@@ -507,7 +514,7 @@
    value the animation ends on - never stuck invisible, unlike the earlier
    bug's fill-mode:both which held the FROM state open-endedly. */
 @keyframes pane-in-fade{ from{opacity:0;} to{opacity:1;} }
-.pane.is-lateral{animation:pane-in-fade 160ms var(--ease);}
+.pane.is-lateral{animation:pane-in-fade 320ms var(--ease);}
 @media (prefers-reduced-motion: reduce){
   .pane.is-fwd,.pane.is-back,.pane.is-lateral{animation:none;}
 }
