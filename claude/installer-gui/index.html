@@ -318,8 +318,10 @@ function renderRail(){
       // No control here: a rail row navigates, it does not toggle. Progress is
       // carried by the count below, and by the current-item highlight.
       b.appendChild(mk('span','rail__name', labelFor([k])));
-      // A count that reads 9/9 says 'all', which the state already says.
-      b.appendChild(mk('span','rail__count', (c.total>1 && c.on<c.total)?(c.on+'/'+c.total):''));
+      // Amber is reserved for a group that still needs attention - showing
+      // every count now, but only an incomplete one gets the coloured class,
+      // so the eye still lands on what is unfinished rather than everything.
+      b.appendChild(mk('span','rail__count'+(c.on<c.total?' is-part':''), c.on+'/'+c.total));
       // Lateral: switching between siblings is not forward or backward, so no cue.
       b.addEventListener('click',()=>{ nav=[k]; sel=0; render(); });
       rail.appendChild(b);

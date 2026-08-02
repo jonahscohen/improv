@@ -149,12 +149,15 @@
     font-family:var(--font-mono); font-size:var(--sm);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  /* Only an incomplete group shows a number, and it is the one thing in the rail
-     that is allowed to be coloured - so the eye lands on what is unfinished. */
+  /* Every group shows its count now, but colour stays reserved for the one
+     that still needs attention - a complete group's count is quiet, matching
+     everything else in the rail, so the eye still lands on what is unfinished
+     rather than reading every row as equally worth a second look. */
   .rail__count{
-    font-family:var(--font-mono); font-size:var(--xs); color:var(--part);
+    font-family:var(--font-mono); font-size:var(--xs); color:var(--text-tertiary);
     font-variant-numeric:tabular-nums;
   }
+  .rail__count.is-part{color:var(--part);}
 
   .pane{overflow-y:auto; padding:var(--s6) var(--s8);}
   .pane__head{margin-bottom:var(--s5);}

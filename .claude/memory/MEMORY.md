@@ -180,3 +180,4 @@
 - [Lotus/tilt-lab's header just echoed their own row - added a distinct product-level intro field, the way Beats' header already differs from "memory"'s row](session_2026-08-02_intro-vs-install-text-split.md)
 - [Sidecoach/Justify/Lotus/Tiltlab now display styled - the label field was already in the data, manifest.py already forwarded it, nothing ever read it](session_2026-08-02_display-labels-vs-install-keys.md)
 - [Real WCAG 2.1 AA / Section 508 audit via axe-core: 4 contrast failures fixed with new --red-text/--red-solid tokens, plus a real keyboard-focus-loss bug found and fixed](session_2026-08-02_wcag-aa-508-audit.md)
+- [Rail shows a count for every group now, not just incomplete ones - amber stays reserved for groups that actually need attention](session_2026-08-02_rail-counts-for-every-group.md)
