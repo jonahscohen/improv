@@ -342,19 +342,27 @@ function render(){
     }
   }
 
-  rowsCache = (n && !isLeaf(n)) ? Object.keys(n.children).map(k=>nav.concat(k)) : [];
+  // A leaf you have DRILLED INTO (tilt-lab, lotus) used to have no control at
+  // all here - the rail carries navigation only, not toggles, since the
+  // switch-that-lies fix - so its own text was pointing at a control that did
+  // not exist. It renders as a single-row list of itself instead, reusing the
+  // exact badge/checkbox the child rows use everywhere else.
+  rowsCache = n ? (isLeaf(n) ? [nav.slice()] : Object.keys(n.children).map(k=>nav.concat(k))) : [];
   const host=document.getElementById('rows'); host.textContent='';
   if(!rowsCache.length){
-    host.appendChild(mk('div','empty', n && isLeaf(n)
-      ? 'This component installs as a single unit. Use the list on the left to turn it on or off.'
-      : 'Nothing to configure here.'));
+    host.appendChild(mk('div','empty','Nothing to configure here.'));
   }
   if(sel>=rowsCache.length) sel=Math.max(0,rowsCache.length-1);
   rowsCache.forEach((path,i)=>{
     const key=path[path.length-1], node=nodeAt(path), st=stateOf(path), leaf=isLeaf(node);
+    // Rendering the leaf we have actually drilled into, rather than a child of
+    // whatever we are looking at - the H1 and the description above already
+    // carry this leaf's name and text, so repeating both on the row would be
+    // the exact redundancy the second slop pass removed elsewhere.
+    const selfRow = path.join('/') === nav.join('/');
     const c=counts(path);
     const d=mk('div','row'+(i===sel?' sel':''));
-    d.appendChild(mk('span','row__name', key));
+    if(!selfRow) d.appendChild(mk('span','row__name', key));
 
     // THE BADGE IS THE CONTROL. It reads the state AND it is what you press to
     // change it, so there is one thing on the row to look at and one thing to
@@ -379,8 +387,8 @@ function render(){
       // partial afterwards, so it must not read as checked.
       on = willAllBeOn(path);
     }
-    else if(st==='active'){ bcls='is-on'; btext='all '+c.total; on=true; }
-    else if(st==='none'){ bcls='is-off'; btext='none of '+c.total; on=false; }
+    else if(st==='active'){ bcls='is-on'; btext=c.total+'/'+c.total; on=true; }
+    else if(st==='none'){ bcls='is-off'; btext='0/'+c.total; on=false; }
     else { bcls='is-part'; btext=c.on+' of '+c.total; on=false; }
 
     const chk=mk('button','check '+bcls+(on?' is-checked':'')); chk.type='button';
@@ -411,7 +419,7 @@ function render(){
     // The description gets its own line rather than an ellipsis. These run to
     // two sentences, and a truncated explanation explains nothing.
     const dsc=node.desc || node.tag || '';
-    if(dsc) d.appendChild(mk('span','row__desc', dsc));
+    if(dsc && !selfRow) d.appendChild(mk('span','row__desc', dsc));
     d.addEventListener('click',()=>{ sel=i; activate(); });
     d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); });
     host.appendChild(d);

@@ -191,14 +191,14 @@
      and chevron span both lines so the row still reads as one object. */
   .row{
     display:grid;
-    grid-template-columns:minmax(0,1fr) auto auto;
+    grid-template-columns:auto auto minmax(0,1fr) auto;
     grid-template-areas:
-      "name check go"
-      "desc desc  go";
+      "name check .    go"
+      "desc desc desc  go";
     /* The description runs UNDER the badge rather than beside it. Confined to
        the name column it wrapped to four and five lines; given the full width
        two sentences settle into two or three. */
-    align-items:center; column-gap:var(--s4); row-gap:3px;
+    align-items:center; column-gap:var(--s3); row-gap:3px;
     padding:var(--s3) var(--s2);
     border-bottom:1px solid var(--border-soft);
     cursor:pointer; color:var(--text-primary);
@@ -211,6 +211,10 @@
   .row.sel .row__desc{color:var(--text-secondary);}
   .row__name{
     grid-area:name; font-family:var(--font-mono); font-size:var(--sm);
+    /* The column is auto-sized now that the badge sits flush beside it, so this
+       cap is the only thing stopping a pathologically long key from stretching
+       the row on a narrow viewport. Ordinary names never get near it. */
+    max-width:28ch;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .row__desc{
@@ -225,9 +229,9 @@
      answers itself. Small and set in caps so a column of them scans as a column
      rather than as a stack of labels competing with the names. */
   .check{
-    grid-area:check; justify-self:end; align-self:center;
+    grid-area:check; justify-self:start; align-self:center;
     display:inline-flex; align-items:center; gap:5px;
-    font-family:var(--font-mono); font-size:10px; letter-spacing:0.07em;
+    font-family:var(--font-mono); font-size:10px;
     font-weight:var(--weight-semibold); text-transform:uppercase;
     white-space:nowrap; padding:2px 7px 2px 5px; border-radius:var(--r-full);
     border:1px solid transparent; cursor:pointer; position:relative;
