@@ -76,6 +76,16 @@ A single screenshot cannot prove an animation is running, only that a frame look
 screenshots taken 250ms apart, cropped to the identical pixel region with `magick -crop`, and diffed
 with `magick compare -metric AE`: 64.9 differing pixels. A frozen ring would read 0.
 
+## The stroke sat inside the border, not on it
+
+Jonah, after the fix above: "the marching ants border is inset by like...1 pixel and should be
+sitting directly on the actual border of the pill." The rect had a deliberate 1px inset (`x:1px;
+y:1px`) so a 1px stroke centred on the path wouldn't clip at the very edge - but that read as a
+ring floating a pixel inside the badge rather than sitting where a real border does. Removed the
+inset (`x:0; y:0; width/height:100%`) so the stroke centres directly on the badge's own box edge,
+the same place `border:1px solid transparent` sits on every other state. rx/ry moved from 8.5 to
+9.5 to match the un-inset full height (19px / 2) rather than the 17px the inset had left.
+
 ## Files touched
 
 - `claude/installer-gui/index.html` (ANTS_RING constant, appended only to a will-install badge)

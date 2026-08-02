@@ -280,15 +280,18 @@ const BOX_OFF = '<svg data-icon-source="lucide:square" xmlns="http://www.w3.org/
 // at this drew a lopsided arc bunched at one end rather than a capsule. The
 // badge's height is a fixed 19px across every instance (padding and font-size
 // never vary, only the text width does), so rx and ry are the SAME absolute
-// value here - half of the 17px the 1px inset leaves - which is what actually
-// produces a stadium shape regardless of how wide the text makes the pill.
+// value here - half that height - which is what actually produces a stadium
+// shape regardless of how wide the text makes the pill. The rect sits at the
+// box edge (x/y:0, 100% width/height) rather than inset, so the stroke draws
+// centred ON the badge's own border line - the same place a real border sits
+// - instead of reading as a ring floating inside it.
 // width/height:100% as real XML attributes, not just the CSS class - a plain
 // CSS override of an <svg>'s intrinsic size does not reliably establish the
 // viewport the child rect's OWN percentages resolve against. Without them the
 // rect measured itself against the default 300x150 intrinsic box instead of
-// the badge's real ~104x17, so it only drew the piece of a much larger,
+// the badge's real ~104x19, so it only drew the piece of a much larger,
 // mostly off-canvas curve that happened to intersect the visible pill.
-const ANTS_RING = '<svg class="ants-ring" width="100%" height="100%" aria-hidden="true" focusable="false"><rect style="x:1px;y:1px;width:calc(100% - 2px);height:calc(100% - 2px);rx:8.5px;ry:8.5px;" /></svg>';
+const ANTS_RING = '<svg class="ants-ring" width="100%" height="100%" aria-hidden="true" focusable="false"><rect style="x:0;y:0;width:100%;height:100%;rx:9.5px;ry:9.5px;" /></svg>';
 const CHEV = '<svg data-icon-source="lucide:chevron-right" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
 // Which way the next render moved through the tree, so the pane can say so.
 let navDir='';
