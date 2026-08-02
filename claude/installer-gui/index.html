@@ -46,16 +46,22 @@
     <nav class="rail" id="rail" aria-label="Components"></nav>
     <main class="pane">
       <div class="pane__head">
-        <div class="pane__headline">
-          <!-- tabindex=-1: programmatic-focus-only, not a real Tab stop. Moving
-               focus to the new view's own heading after navigation is the
-               standard fix for the same class of bug refocusCheck() fixes for
-               toggling - without it every navigation (rail, breadcrumb, back,
-               drilling into a group) drops a keyboard/screen-reader user's
-               focus to <body>, same as an untouched toggle used to. -->
-          <h1 class="pane__title" id="paneTitle" tabindex="-1">Setup</h1>
+        <!-- Back and the bulk actions get their own row, ABOVE the title -
+             direct order. Both sides render into whichever is empty on a
+             given page (a top-level bucket has bulk actions and no Back; a
+             leaf self-row has neither), so the row hides itself entirely
+             when there is nothing on either side. -->
+        <div class="pane__toolbar" id="toolbar">
+          <div class="pane__back" id="paneBack"></div>
           <div class="bulk" id="bulk"></div>
         </div>
+        <!-- tabindex=-1: programmatic-focus-only, not a real Tab stop. Moving
+             focus to the new view's own heading after navigation is the
+             standard fix for the same class of bug refocusCheck() fixes for
+             toggling - without it every navigation (rail, breadcrumb, back,
+             drilling into a group) drops a keyboard/screen-reader user's
+             focus to <body>, same as an untouched toggle used to. -->
+        <h1 class="pane__title" id="paneTitle" tabindex="-1">Setup</h1>
         <p class="pane__desc" id="paneDesc"></p>
         <span class="pane__meta" id="paneMeta"></span>
       </div>
@@ -376,25 +382,32 @@ function render(){
   // Repeating it here was the same fact in a second place.
   meta.textContent = '';
 
-  // Bulk actions are real buttons now, not rows pretending to be items.
+  // Bulk actions and Back share a row above the title now, one on each side,
+  // rather than sitting together in a single right-aligned group. Rebuilt on
+  // every render() the same as the row list, so both refocus what was just
+  // pressed for the same reason refocusCheck() does.
   const bulk=document.getElementById('bulk'); bulk.textContent='';
   if(n && !isLeaf(n)){
     const inHooks=!!n.hooks;
     const bi=mk('button','btn', inHooks?'Enable all':'Install all'); bi.type='button';
-    // The whole bulk bar is rebuilt on every render(), same as the row list -
-    // without refocusing, pressing this from the keyboard strands you at body.
     bi.addEventListener('click',()=>{ stageAll(nav,'install'); render();
       const b=document.querySelector('#bulk .btn:not(.btn--danger)'); if(b) b.focus(); });
     const bu=mk('button','btn btn--danger', inHooks?'Disable all':'Remove all'); bu.type='button';
     bu.addEventListener('click',()=>{ stageAll(nav,'uninstall'); render();
       const b=document.querySelector('#bulk .btn--danger'); if(b) b.focus(); });
     bulk.appendChild(bi); bulk.appendChild(bu);
-    if(nav.length>1){
-      const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
-      bb.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); });
-      bulk.appendChild(bb);
-    }
   }
+  const paneBack=document.getElementById('paneBack'); paneBack.textContent='';
+  if(n && !isLeaf(n) && nav.length>1){
+    const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
+    bb.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); });
+    paneBack.appendChild(bb);
+  }
+  // Nothing on either side (a top-level bucket with no back, or a leaf
+  // self-row with no bulk actions) - the row disappears rather than sitting
+  // there as empty space above the title.
+  document.getElementById('toolbar').style.display =
+    (bulk.children.length || paneBack.children.length) ? '' : 'none';
 
   // A leaf you have DRILLED INTO (tilt-lab, lotus) used to have no control at
   // all here - the rail carries navigation only, not toggles, since the

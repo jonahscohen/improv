@@ -185,3 +185,4 @@
 - [A circular checkbox now sits at the end of every toggleable row - deliberate visual redundancy with the pill badge, purely decorative and aria-hidden](session_2026-08-02_row-end-circular-dot.md)
 - [Rail clicks now fade to the new page instead of an instant swap - the one deliberate use of opacity in a pane transition, safe because its resting state matches its end state exactly](session_2026-08-02_rail-fade-transition.md)
 - [Transitions doubled in duration to be visible, and WILL REMOVE got the same marching-ants ring - the first attempt drew two overlapping outlines, fixed by removing the badge's own static border](session_2026-08-02_slower-transitions-and-remove-ring.md)
+- [Back and bulk actions moved to their own row above the title with a real divider before the list - the toolbar row hides entirely when neither applies](session_2026-08-02_header-back-toolbar-restructure.md)

@@ -160,17 +160,26 @@
   .rail__count.is-part{color:var(--part);}
 
   .pane{overflow-y:auto; padding:var(--s6) var(--s8);}
-  .pane__head{margin-bottom:var(--s5);}
-  /* Section actions sit ON the section header, against the thing they act on,
-     rather than floating between the heading and the list and pushing the
-     content down. */
-  .pane__headline{
-    display:flex; align-items:baseline; justify-content:space-between;
-    gap:var(--s5); flex-wrap:wrap; margin-bottom:var(--s2);
+  /* The divider that used to be implicit (the header's own margin) is now a
+     real rule, since Back/bulk moving above the title made the header tall
+     enough that "where it ends" needed stating rather than assumed. */
+  .pane__head{
+    margin-bottom:var(--s5); padding-bottom:var(--s5);
+    border-bottom:1px solid var(--border-soft);
   }
+  /* Back and the bulk actions get their own row, one on each side, ABOVE the
+     title - direct order, in place of both sharing a single right-aligned
+     group next to the title. Hidden via JS (not CSS :empty) when both sides
+     are empty, since its two slot DIVS are always present as children even
+     with nothing inside them. */
+  .pane__toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:var(--s4); flex-wrap:wrap; margin-bottom:var(--s4);
+  }
+  .pane__back{display:flex;}
   .pane__desc{max-width:72ch;}
   .pane__title{
-    margin:0; font-family:var(--font-display); font-size:var(--xl); line-height:1.15;
+    margin:0 0 var(--s2); font-family:var(--font-display); font-size:var(--xl); line-height:1.15;
     text-wrap:balance; letter-spacing:-.01em; font-weight:400;
   }
   .pane__desc{color:var(--text-secondary); font-size:var(--sm); margin:0; overflow-wrap:anywhere;}
@@ -180,7 +189,7 @@
   }
 
   .bulk{display:flex; gap:var(--s2); flex-wrap:wrap; flex:0 0 auto;}
-  .bulk .btn{font-size:var(--xs); padding:var(--s1) var(--s3);}
+  .bulk .btn, .pane__back .btn{font-size:var(--xs); padding:var(--s1) var(--s3);}
   .btn{
     font:inherit; font-size:var(--sm); cursor:pointer;
     padding:var(--s2) var(--s4); border-radius:var(--r-md);
