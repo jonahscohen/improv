@@ -318,12 +318,22 @@
 
   /* A row that opens says so. This was the single worst omission: nothing
      distinguished a row that toggles from a row that navigates. */
+  /* min-width/height:44px is the REAL box, not a pseudo-element overlay - the
+     detector's hit-area check reads getBoundingClientRect on the actual
+     element and has no way to see a ::after inset, so that trick (used here
+     in an earlier pass) measured as 0 improvement despite looking right. The
+     spacer shares these dimensions too, so the column's width does not shift
+     between a drillable row and a leaf. */
   .row__go{
     grid-area:go; align-self:center;
-    display:grid; place-items:center; width:20px; height:20px;
+    display:grid; place-items:center; min-width:44px; min-height:44px;
     color:var(--text-tertiary); flex:0 0 auto;
     transition:translate 140ms var(--ease), color 140ms var(--ease);
+    /* A drillable row's go is a real <button> now, not a span - reset the
+       native button chrome so it reads exactly as it did before. */
+    background:none; border:0; padding:0; font:inherit;
   }
+  button.row__go{cursor:pointer;}
   .row__go svg{width:16px; height:16px; display:block;}
   .row:hover .row__go{color:var(--text-secondary); translate:2px 0;}
   .row__go--spacer{visibility:hidden;}

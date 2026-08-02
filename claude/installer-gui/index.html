@@ -47,7 +47,13 @@
     <main class="pane">
       <div class="pane__head">
         <div class="pane__headline">
-          <h1 class="pane__title" id="paneTitle">Setup</h1>
+          <!-- tabindex=-1: programmatic-focus-only, not a real Tab stop. Moving
+               focus to the new view's own heading after navigation is the
+               standard fix for the same class of bug refocusCheck() fixes for
+               toggling - without it every navigation (rail, breadcrumb, back,
+               drilling into a group) drops a keyboard/screen-reader user's
+               focus to <body>, same as an untouched toggle used to. -->
+          <h1 class="pane__title" id="paneTitle" tabindex="-1">Setup</h1>
           <div class="bulk" id="bulk"></div>
         </div>
         <p class="pane__desc" id="paneDesc"></p>
@@ -323,7 +329,7 @@ function renderRail(){
       // so the eye still lands on what is unfinished rather than everything.
       b.appendChild(mk('span','rail__count'+(c.on<c.total?' is-part':''), c.on+'/'+c.total));
       // Lateral: switching between siblings is not forward or backward, so no cue.
-      b.addEventListener('click',()=>{ nav=[k]; sel=0; render(); });
+      b.addEventListener('click',()=>{ nav=[k]; sel=0; render(); focusPaneTitle(); });
       rail.appendChild(b);
     }
   }
@@ -337,14 +343,14 @@ function renderCrumb(){
   if(nav.length<2){ if(sep) sep.style.display='none'; return; }
   if(sep) sep.style.display='';
   const home=mk('button',null,'Setup'); home.type='button';
-  home.addEventListener('click',()=>{ const f=Object.keys(T)[0]; nav=f?[f]:[]; sel=0; render(); });
+  home.addEventListener('click',()=>{ const f=Object.keys(T)[0]; nav=f?[f]:[]; sel=0; render(); focusPaneTitle(); });
   c.appendChild(home);
   nav.forEach((seg,i)=>{
     c.appendChild(mk('span','chev','›'));
     const text = labelFor(nav.slice(0,i+1));
     if(i===nav.length-1){ c.appendChild(mk('b',null,text)); }
     else { const b=mk('button',null,text); b.type='button';
-      b.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,i+1); sel=0; render(); }); c.appendChild(b); }
+      b.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,i+1); sel=0; render(); focusPaneTitle(); }); c.appendChild(b); }
   });
 }
 
@@ -378,7 +384,7 @@ function render(){
     bulk.appendChild(bi); bulk.appendChild(bu);
     if(nav.length>1){
       const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
-      bb.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); });
+      bb.addEventListener('click',()=>{ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); });
       bulk.appendChild(bb);
     }
   }
@@ -451,9 +457,21 @@ function render(){
     d.appendChild(chk);
 
     // A row that OPENS says so. Nothing previously distinguished a row that
-    // toggles from a row that navigates.
-    const go=mk('span','row__go'+(leaf?' row__go--spacer':''));
+    // toggles from a row that navigates - and for a keyboard or screen-reader
+    // user, the row itself (a plain div) was never reachable at all: Tab only
+    // ever visited the check button, which stages a bulk install, so there was
+    // NO way to actually drill into a group without a mouse. The chevron
+    // becomes a real, separately-focusable button for exactly that action,
+    // rather than nesting it inside the check button (two controls stacked
+    // in one element is invalid and no more reachable than none at all).
+    const go=mk(leaf?'span':'button','row__go'+(leaf?' row__go--spacer':''));
     go.innerHTML = CHEV;
+    if(!leaf){
+      go.type='button';
+      go.setAttribute('aria-label','Open '+disp);
+      go.addEventListener('click',e=>{ e.stopPropagation();
+        sel=i; navDir='fwd'; nav=path.slice(); sel=0; render(); focusPaneTitle(); });
+    }
     d.appendChild(go);
 
     // The description gets its own line rather than an ellipsis. These run to
@@ -498,6 +516,11 @@ function refocusCheck(i){
   const c = row && row.querySelector('.check');
   if(c) c.focus();
 }
+// Same problem, the navigation version: rail clicks, breadcrumb clicks, the
+// back button and drilling into a group all replace the ENTIRE pane, not just
+// the row list - focusing the new heading is the standard fix for a route
+// change, and announces where you landed to a screen reader in the process.
+function focusPaneTitle(){ const h=document.getElementById('paneTitle'); if(h) h.focus(); }
 // STATUS SPEAKS IN ONE PLACE, AND STAYS PUT. This used to write into a span in
 // the action bar that the next row hover overwrote, so a message about a failed
 // apply could disappear before it had been read. A toast owns its own lifetime.
@@ -545,9 +568,9 @@ function toast(m, kind){
 
 function activate(){
   const path=rowsCache[sel]; if(!path) return;
-  if(isLeaf(nodeAt(path))) toggleLeaf(path.join('/'));
-  else { navDir='fwd'; nav=path.slice(); sel=0; }   // going deeper
-  render();
+  const i=sel;
+  if(isLeaf(nodeAt(path))){ toggleLeaf(path.join('/')); render(); refocusCheck(i); }
+  else { navDir='fwd'; nav=path.slice(); sel=0; render(); focusPaneTitle(); }   // going deeper
 }
 function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%rowsCache.length; paintSel(); }
 
@@ -564,7 +587,7 @@ document.addEventListener('keydown',e=>{
     if(document.activeElement && document.activeElement.tagName==='BUTTON') return;
     activate(); e.preventDefault();
   }
-  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>1){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); } e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>1){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); } e.preventDefault(); }
   else if(e.key==='a'||e.key==='A'){ runApply(); }
   else if(e.key==='q'||e.key==='Q'){ doQuit(); }
 });
