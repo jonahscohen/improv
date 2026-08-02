@@ -182,3 +182,4 @@
 - [Home dashboard view - every bucket is now a child page of it, hero eyebrow/H1/intro, and a Codex-caught pinned-hook bulk-stage bug fixed](session_2026-08-02_home-dashboard-view.md)
 - [Row left padding removed and partial-group badge switched to slash format (N/N), matching the rest of the page](session_2026-08-02_row-padding-and-partial-badge-format.md)
 - [Boot loader + first-paint stagger reveal - a live user-caught opacity-during-fade bug fixed with a pre-reveal hold, pacing tuned live too](session_2026-08-02_boot-loader-stagger-reveal.md)
+- [Quit moved from footer text button to a topbar power-icon button, no label - shared .icon-btn class with the theme toggle](session_2026-08-02_quit-button-topbar-icon.md)

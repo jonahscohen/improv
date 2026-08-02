@@ -47,11 +47,18 @@
     </span>
     <span class="topbar__sep" id="topsep" aria-hidden="true"></span>
     <nav class="crumb" id="crumb" aria-label="Breadcrumb"></nav>
-    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme">
+    <button class="icon-btn theme-toggle" id="themeToggle" type="button" aria-label="Switch theme">
       <!-- source: lucide "moon" - path verbatim from lucide.dev -->
       <svg class="i-moon lucide-moon" data-icon-source="lucide:moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
       <!-- source: lucide "sun" - paths verbatim from lucide.dev -->
       <svg class="i-sun lucide-sun" data-icon-source="lucide:sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+    </button>
+    <!-- Moved out of the footer action bar - direct order. Icon-only, no
+         label: the power glyph is unambiguous on its own here, next to the
+         theme toggle it already shares its shape with. -->
+    <button class="icon-btn" id="btnQuit" type="button" aria-label="Quit">
+      <!-- source: lucide "power" - path verbatim from lucide.dev -->
+      <svg data-icon-source="lucide:power" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg>
     </button>
   </header>
 
@@ -90,7 +97,6 @@
     <span class="staged" id="pendfoot"></span>
     <span class="keys"><kbd>&#8593;&#8595;</kbd> move <kbd>enter</kbd> toggle <kbd>&#8592;</kbd> back</span>
     <span class="actions">
-      <button class="btn btn--quiet" id="btnQuit" type="button">Quit</button>
       <button class="btn btn--primary" id="btnApply" type="button" disabled>Apply</button>
     </span>
   </footer>

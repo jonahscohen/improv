@@ -163,16 +163,19 @@
   }
   .crumb .chev{opacity:.55;}
 
-  .theme-toggle{
+  /* Shared square icon-button chrome - the theme toggle and Quit are the two
+     icon-only controls that live in the topbar, so they share one shape
+     rather than each defining it separately. */
+  .icon-btn{
     flex:0 0 auto; display:grid; place-items:center;
     width:44px; height:44px; padding:0; cursor:pointer;
     background:var(--alt); color:var(--text-secondary);
     border:1px solid var(--border-firm); border-radius:var(--r-md);
     transition:background 120ms var(--ease), color 120ms var(--ease), scale 150ms ease-out;
   }
-  .theme-toggle:hover{background:var(--canvas); color:var(--text-primary);}
-  .theme-toggle:active{scale:0.96;}
-  .theme-toggle svg{width:17px; height:17px;}
+  .icon-btn:hover{background:var(--canvas); color:var(--text-primary);}
+  .icon-btn:active{scale:0.96;}
+  .icon-btn svg{width:17px; height:17px;}
   :root[data-theme="dark"] .theme-toggle .i-sun{display:none;}
   :root[data-theme="light"] .theme-toggle .i-moon{display:none;}
 
