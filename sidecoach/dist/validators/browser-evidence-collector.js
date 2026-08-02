@@ -133,7 +133,7 @@ async function collectBrowserEvidence(renderUrl, signal, launcher = () => chromi
                 const line = getComputedStyle(el).lineHeight;
                 return line === 'normal' || !Number.isFinite(Number.parseFloat(line)) || Number.parseFloat(line) <= 0;
             }).length;
-            const interactive = Array.from(document.querySelectorAll('button, a[href], input, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="switch"], [role="checkbox"], [tabindex]')).filter(visible);
+            const interactive = Array.from(document.querySelectorAll('button, a[href], input, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="switch"], [role="checkbox"], [tabindex]:not([tabindex="-1"])')).filter(visible);
             let hitFailing = 0;
             let smallestWidth = Number.POSITIVE_INFINITY;
             let smallestHeight = Number.POSITIVE_INFINITY;
