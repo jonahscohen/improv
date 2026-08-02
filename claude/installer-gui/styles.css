@@ -72,6 +72,68 @@
     display:grid; grid-template-rows:auto 1fr auto; height:100vh; overflow:hidden;
   }
 
+  /* ── boot loader ───────────────────────────────────────────────────────────
+     position:fixed takes it out of body's own grid entirely, so it does not
+     become a 4th row in the topbar/pane/actionbar layout below - it just sits
+     on top of whatever that grid renders underneath, opaque, until removed. */
+  .loader{
+    position:fixed; inset:0; z-index:100;
+    display:grid; place-items:center;
+    background:var(--canvas);
+    opacity:1; transition:opacity 360ms var(--ease);
+  }
+  /* pointer-events:none from the moment the fade starts, not just once it
+     finishes: under reduced motion the opacity change is instant (the
+     blanket transition:none!important rule further down cancels it), but
+     the JS timer still waits out the same 360ms before actually removing the
+     element - without this, that gap is an invisible layer still eating
+     every click. */
+  .loader.is-out{opacity:0; pointer-events:none;}
+  .loader__mark{width:56px; height:auto; display:block; color:var(--red);}
+  .loader__mark path{fill:currentColor;}
+  @keyframes loader-pulse{
+    0%,100%{opacity:0.35; transform:scale(0.94);}
+    50%{opacity:1; transform:scale(1);}
+  }
+  .loader__mark{animation:loader-pulse 1100ms var(--ease) infinite;}
+  .sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+
+  /* ── first-paint reveal ────────────────────────────────────────────────────
+     A static hold, not an animation - applied the instant render() first
+     builds this content, while the loader is still fully opaque on top of
+     it. Without this, the content sits at its normal opacity underneath the
+     loader, and the loader's own ~360ms fade-out shows it straight through
+     as the loader becomes transparent - the page would visibly finish
+     loading BEFORE the "reveal" even starts. pre-reveal is what makes "fade
+     out showing nothing, then stagger everything in" literally true instead
+     of only true after the loader is gone. */
+  /* pointer-events:none too: opacity:0 alone still leaves a row's badge and
+     chevron real, focusable, clickable controls - a keyboard user tabbing
+     fast enough could reach and activate one before it has actually
+     appeared. */
+  .pre-reveal{opacity:0; pointer-events:none;}
+  /* Fired once, after the loader is fully gone (see hideLoader/revealContent
+     in index.html) - never wired into an ordinary render(), so navigating or
+     toggling something later never replays this. backwards fill is safe here
+     specifically BECAUSE it only reaches back into the animation's own delay
+     window, never forward past its end - the opposite of the fill-mode:both
+     bug elsewhere in this file that left a pane stuck invisible; this one
+     cannot get stuck since nothing here holds the 0%-frame past a real,
+     unconditional, JS-triggered animation actually finishing. */
+  @keyframes stagger-in{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+  .stagger-in{
+    animation:stagger-in 320ms var(--ease) backwards;
+    animation-delay:calc(var(--i,0) * 30ms);
+  }
+
+  /* No reduced-motion override needed here: the blanket
+     `*{animation:none!important; transition:none!important}` rule further down
+     this file already cancels the pulse, the stagger, and the loader's own
+     fade-out for every element, this pair included. */
+
   /* ── top bar ────────────────────────────────────────────────────────────── */
   .topbar{
     display:flex; align-items:center; gap:var(--s5);
