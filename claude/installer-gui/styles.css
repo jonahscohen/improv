@@ -651,6 +651,48 @@
   }
   .apply-bar.is-open{opacity:1; transform:none; pointer-events:auto;}
   .apply-bar[hidden]{display:none;}
+  .apply-bar__actions{display:flex; align-items:center; gap:var(--s2); flex:0 0 auto;}
+
+  /* ── review changes ────────────────────────────────────────────────────── */
+  .review-section + .review-section{margin-top:var(--s6);}
+  .review-section__title{
+    margin:0 0 var(--s2); font-family:var(--font-mono); font-size:var(--xs);
+    font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-tertiary);
+  }
+  .review-row{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:var(--s4);
+    padding:var(--s3) 0; border-bottom:1px solid var(--border-soft);
+  }
+  .review-row__info{display:flex; flex-direction:column; gap:var(--s1); min-width:0;}
+  /* Same font as a row's own name back in the tree (.row__name) - direct
+     order, so a staged item reads exactly the way it does there. */
+  .review-row__name{
+    font-family:var(--font-mono); font-size:var(--sm);
+    min-width:0; overflow-wrap:anywhere;
+  }
+  .review-row__desc{
+    font-size:var(--xs); color:var(--text-secondary); line-height:1.5; max-width:74ch;
+  }
+  /* Small, matching the scale of the checkmark icons used throughout the
+     tree, not the bold 44px circle this control started as - still a true
+     circle though, and still red always, since unlike the row-end dots
+     elsewhere this control only ever means one thing: take this back out of
+     the staged list. 24px is the floor, not a rounder-looking guess - WCAG
+     2.5.8's minimum target size, and the smallest this can go while still
+     being a real button box rather than a visual-only circle with an
+     invisible ::after hit-area trick (styles.css elsewhere already notes
+     that trick reads as zero improvement to this project's own hit-area
+     check, since it measures the real element box). */
+  .review-row__remove{
+    flex:0 0 auto; display:grid; place-items:center;
+    width:24px; height:24px; padding:0; margin-top:2px; cursor:pointer;
+    background:none; color:var(--red-text);
+    border:1px solid var(--red-border); border-radius:var(--r-full);
+    transition:background 120ms var(--ease);
+  }
+  .review-row__remove:hover{background:var(--red-subtle);}
+  .review-row__remove svg{width:11px; height:11px;}
 
   :focus-visible{outline:2px solid var(--red); outline-offset:2px; border-radius:var(--r-sm);}
   /* #paneTitle has tabindex="-1" - it exists ONLY so focusPaneTitle() can move

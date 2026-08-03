@@ -119,14 +119,17 @@
        .pane would have made the bar (and toasts) jump/resize relative to the
        pane mid-transition instead of staying fixed to the real viewport.
        Toasts stack above the apply bar in normal flex order. -->
-  <div class="pane__foot" id="paneFoot">
+  <div class="pane__foot" id="paneFoot" role="region" aria-label="Staged changes">
     <div class="toasts" id="toasts" aria-live="polite"></div>
     <!-- Direct order: no permanent bottom bar - this shows only when a
          component is staged, fading and sliding up from the bottom of
          the content panel, never over the left-hand nav. -->
     <div class="apply-bar" id="applyBar" hidden>
       <span class="staged" id="pendfoot"></span>
-      <button class="btn btn--primary" id="btnApply" type="button" disabled>Apply</button>
+      <span class="apply-bar__actions">
+        <button class="btn btn--quiet" id="btnReview" type="button">Review changes</button>
+        <button class="btn btn--primary" id="btnApply" type="button" disabled>Apply</button>
+      </span>
     </div>
   </div>
 
@@ -287,6 +290,12 @@ function revealContent(){
 
 // ---- tree helpers ----
 function nodeAt(path){ let n={children:T}; for(const s of path) n=n.children[s]; return n; }
+// Unlike nodeAt, never throws - walks the same path but bails out the moment
+// a segment is missing instead of indexing into undefined. A manifest
+// refresh after a partial-failure apply (runApply's buildTreeFromManifest)
+// can drop a path that pending still references, since pending is
+// deliberately preserved on failure while T is rebuilt fresh.
+function resolvesInTree(path){ let n={children:T}; for(const s of path){ if(!n || !n.children || !(s in n.children)) return false; n=n.children[s]; } return true; }
 // What a human reads, versus the key underneath - the one place that split
 // matters. label exists only on the few top buckets whose install key is not
 // already a fine heading (sidecoach, justify, tilt-lab, lotus); everything
@@ -525,6 +534,16 @@ function mk(tag,cls,text){ const e=document.createElement(tag); if(cls)e.classNa
 
 // ---- navigation: nav[0] is the RAIL selection, deeper entries drill in -------
 let nav=[], sel=0, rowsCache=[];
+// Review Changes is an overlay on top of wherever nav already points, not a
+// real destination in the tree - nav never changes to reach it, so leaving
+// it (Back, or the keyboard) always lands exactly back where you were, with
+// no separate "path before review" to track. Row selection is the one thing
+// nav doesn't cover for us, so selBeforeReview snapshots it separately -
+// otherwise "back to where you came from" would restore the right page but
+// always highlight its first row.
+let reviewMode=false, selBeforeReview=0;
+// Paths copied byte-for-byte from the local lucide checkout, icons/minus.svg.
+const MINUS_ICON = '<svg data-icon-source="lucide:minus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /></svg>';
 // Paths copied byte-for-byte from the local lucide checkout, icons/square-check.svg
 // and icons/square.svg. The data-icon-source marker is what makes that checkable.
 const BOX_ON  = '<svg data-icon-source="lucide:square-check" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="m9 12 2 2 4-4" /></svg>';
@@ -563,9 +582,12 @@ function renderRail(){
   // Home sits above both sections, not inside either - it is the dashboard
   // every other page here is a child of, not one more bucket among them.
   const home=mk('button','rail__item'); home.type='button';
-  if(!nav.length) home.setAttribute('aria-current','true');
+  if(!nav.length && !reviewMode) home.setAttribute('aria-current','true');
   home.appendChild(mk('span','rail__name','Home'));
-  home.addEventListener('click',()=>{ navDir='lateral'; nav=[]; sel=0; render(); focusPaneTitle(); });
+  // The rail stays live and clickable while reviewing - leaving review mode
+  // here too, not just from the page's own Back, or Home would silently do
+  // nothing while reviewMode stayed stuck on.
+  home.addEventListener('click',()=>{ reviewMode=false; navDir='lateral'; nav=[]; sel=0; render(); focusPaneTitle(); });
   rail.appendChild(home);
   for(const [label,pred] of [['The suite',k=>T[k].featured],['Add-ons',k=>!T[k].featured]]){
     const keys=Object.keys(T).filter(pred);
@@ -574,7 +596,7 @@ function renderRail(){
     for(const k of keys){
       const st=stateOf([k]), c=counts([k]);
       const b=mk('button','rail__item'); b.type='button';
-      if(nav[0]===k) b.setAttribute('aria-current','true');
+      if(nav[0]===k && !reviewMode) b.setAttribute('aria-current','true');
       // No control here: a rail row navigates, it does not toggle. Progress is
       // carried by the count below, and by the current-item highlight.
       b.appendChild(mk('span','rail__name', labelFor([k])));
@@ -585,7 +607,9 @@ function renderRail(){
       // Lateral: switching between siblings is not forward or backward, so the
       // cue is a fade rather than the slide those get - direct order, in place
       // of the "instant" swap this used to be.
-      b.addEventListener('click',()=>{ navDir='lateral'; nav=[k]; sel=0; render(); focusPaneTitle(); });
+      // Same fix as Home just above: a rail click while reviewing must leave
+      // review mode too, or the click would silently land nowhere.
+      b.addEventListener('click',()=>{ reviewMode=false; navDir='lateral'; nav=[k]; sel=0; render(); focusPaneTitle(); });
       rail.appendChild(b);
     }
   }
@@ -593,9 +617,24 @@ function renderRail(){
 
 function renderCrumb(){
   const c=document.getElementById('crumb'); c.textContent='';
+  const sep=document.getElementById('topsep');
+  // Review changes is a direct child of Home, not of wherever nav happens to
+  // be sitting - it can list staged items from several buckets at once (see
+  // renderReview()'s own full breadcrumb trail per row), so showing nav's
+  // trail underneath it here would falsely claim it is scoped to one bucket.
+  // nav itself is left untouched - Back and the rail both still need it to
+  // know where "back to where you came from" actually is.
+  if(reviewMode){
+    if(sep) sep.style.display='';
+    const home=mk('button',null,'Home'); home.type='button';
+    home.addEventListener('click',()=>{ reviewMode=false; navDir='back'; nav=[]; sel=0; render(); focusPaneTitle(); });
+    c.appendChild(home);
+    c.appendChild(mk('span','chev','›'));
+    c.appendChild(mk('b',null,'Review changes'));
+    return;
+  }
   // Nothing to retrace ON Home itself - the trail appears once you have
   // actually gone somewhere, starting from the bucket it opened from.
-  const sep=document.getElementById('topsep');
   if(nav.length<1){ if(sep) sep.style.display='none'; return; }
   if(sep) sep.style.display='';
   const home=mk('button',null,'Home'); home.type='button';
@@ -610,8 +649,120 @@ function renderCrumb(){
   });
 }
 
+// Lists every staged leaf across the whole tree, not just the current
+// bucket - staging can span several buckets, and this is the one place that
+// has to show all of it in one list, each with its own way back out.
+function renderReview(){
+  // A manifest refresh mid-session (buildTreeFromManifest, called after
+  // every apply attempt including failed ones) can drop a path pending
+  // still references. Resolving it later in buildRow would throw and take
+  // the whole page down with it - purge it from pending itself here, before
+  // anything below reads pendingCount() or Object.entries(pending), so a
+  // dead entry stops being counted anywhere, not just skipped in this render.
+  for(const p of Object.keys(pending)){
+    if(!resolvesInTree(p.split('/'))) delete pending[p];
+  }
+  document.getElementById('paneEyebrow').textContent = '';
+  const paneTitle = document.getElementById('paneTitle');
+  paneTitle.textContent = 'Review changes';
+  paneTitle.classList.remove('is-home');
+  const n = pendingCount();
+  document.getElementById('paneDesc').textContent = n
+    ? `${n} change${n===1?'':'s'} staged. Remove any you did not mean to make, then Apply when ready.`
+    : 'Nothing is staged right now.';
+  document.getElementById('paneMeta').textContent = '';
+
+  // No bulk actions here - "install/remove everything currently staged" is
+  // not a coherent action against a list that already IS everything staged.
+  document.getElementById('bulk').textContent = '';
+  const paneBack=document.getElementById('paneBack'); paneBack.textContent='';
+  const bb=mk('button','btn btn--quiet','‹ Back'); bb.type='button';
+  // Exits review mode without touching nav at all - nav never moved to get
+  // here, so there is nothing to slice off, just the flag to clear. sel is
+  // restored, not zeroed, so the row you had selected is still selected -
+  // nav being unchanged means the row list underneath is unchanged too.
+  bb.addEventListener('click',()=>{ reviewMode=false; navDir='back'; sel=selBeforeReview; render(); focusPaneTitle(); });
+  paneBack.appendChild(bb);
+  document.getElementById('toolbar').style.display = '';
+
+  const host=document.getElementById('rows'); host.textContent='';
+  const entries = Object.entries(pending);
+  if(!entries.length){
+    host.appendChild(mk('div','empty','Nothing staged.'));
+    return;
+  }
+
+  // No badge here anymore - which section a row sits under already says
+  // "will install" or "will remove" the way the badge used to.
+  const buildRow = (p, idx, group) => {
+    const path = p.split('/');
+    // Full breadcrumb trail, not just the leaf's own name - staged items can
+    // come from anywhere in the tree, so "ampersand" alone would not say
+    // which bucket it is even in.
+    const trail = path.map((seg,j)=>labelFor(path.slice(0,j+1))).join(' / ');
+    const node = nodeAt(path);
+    const dsc = (node && (node.desc || node.tag)) || '';
+    const row = mk('div','review-row');
+    const info = mk('div','review-row__info');
+    info.appendChild(mk('span','review-row__name', trail));
+    if(dsc) info.appendChild(mk('span','review-row__desc', dsc));
+    row.appendChild(info);
+    const rm=mk('button','review-row__remove'); rm.type='button';
+    rm.setAttribute('aria-label','Remove '+trail+' from staged changes');
+    rm.innerHTML = MINUS_ICON;
+    // A direct delete, not toggleLeaf(p) - toggleLeaf recomputes its target
+    // from the CURRENT installed[p], which a manifest refresh after a
+    // partial-failure apply can change out from under an already-staged
+    // entry. This button's one job is "take this out of the staged list,"
+    // not "flip it," so it must not depend on installed[p] agreeing with
+    // whatever state it was in when the item was first staged.
+    // The visual list update is not enough on its own for a screen-reader
+    // user - nothing else here is a live region, so without this the removal
+    // is silent to them even though it is obvious to a sighted user.
+    rm.addEventListener('click',()=>{ delete pending[p]; toast(trail+' removed from staged changes.','info'); render(); refocusReviewRemove(group, idx); });
+    row.appendChild(rm);
+    return row;
+  };
+
+  const installs = entries.filter(([,a])=>a==='install');
+  // Precise match, not a catch-all - matches renderTail's own partition of
+  // the same pending object one level up, so the two never disagree if a
+  // third action value is ever added.
+  const removes = entries.filter(([,a])=>a==='uninstall');
+
+  if(installs.length){
+    const section = mk('div','review-section'); section.dataset.group='install';
+    section.appendChild(mk('h2','review-section__title','To be installed'));
+    installs.forEach(([p], idx)=>{ section.appendChild(buildRow(p, idx, 'install')); });
+    host.appendChild(section);
+  }
+  if(removes.length){
+    const section = mk('div','review-section'); section.dataset.group='uninstall';
+    section.appendChild(mk('h2','review-section__title','To be removed'));
+    removes.forEach(([p], idx)=>{ section.appendChild(buildRow(p, idx, 'uninstall')); });
+    host.appendChild(section);
+  }
+}
+// Same problem toggling solves elsewhere (render() rebuilds #rows, which
+// drops real focus to <body>), adapted for a list that is now split across
+// two sections and SHRINKS on each action: focus the remove button now
+// sitting at the same index within the SAME section (install/uninstall) if
+// it still reaches that far, else the other section's first row, else Back
+// once both sections are empty.
+function refocusReviewRemove(group, idx){
+  const rows = document.getElementById('rows');
+  const section = rows.querySelector(`.review-section[data-group="${group}"]`);
+  const items = section ? section.querySelectorAll('.review-row__remove') : [];
+  if(items.length){ items[Math.min(idx, items.length-1)].focus(); return; }
+  const other = rows.querySelector('.review-row__remove');
+  if(other){ other.focus(); return; }
+  const back = document.querySelector('#paneBack .btn');
+  if(back) back.focus();
+}
+
 function render(){
   renderRail(); renderCrumb();
+  if(reviewMode){ renderReview(); renderTail(); return; }
   // nodeAt([]) already resolves to {children:T} - the whole tree as one
   // node - so Home needs no separate branch here: it is simply the node one
   // level above every bucket, exactly like any other group is one level
@@ -793,13 +944,20 @@ function render(){
     host.appendChild(d);
   });
 
+  renderTail();
+}
+// Shared by both render paths (the normal tree view and renderReview()) - the
+// staged-count pill, the Apply button's own label, the apply bar's open
+// state, and the pane transition cue all mean the same thing regardless of
+// which content is currently in #rows.
+function renderTail(){
   const pf=document.getElementById('pendfoot'); pf.textContent='';
   const nP=pendingCount();
   if(nP){ const L=Object.values(pending);
     const ins=L.filter(a=>a==='install').length, un=L.filter(a=>a==='uninstall').length;
     if(ins) pf.appendChild(mk('span','plus','+'+ins));
     if(un){ if(ins) pf.appendChild(document.createTextNode(' ')); pf.appendChild(mk('span','minus','−'+un)); }
-    pf.appendChild(document.createTextNode(' staged'));
+    pf.appendChild(document.createTextNode(nP===1?' change staged':' changes staged'));
   }   // no staged changes -> the bar says nothing at all
   const ap=document.getElementById('btnApply');
   ap.disabled = nP===0;
@@ -887,6 +1045,9 @@ function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%row
 
 document.getElementById('btnApply').addEventListener('click', confirmedApply);
 document.getElementById('btnQuit').addEventListener('click', confirmedQuit);
+document.getElementById('btnReview').addEventListener('click', ()=>{
+  selBeforeReview = sel; reviewMode = true; navDir='fwd'; sel=0; render(); focusPaneTitle();
+});
 
 // ---- apply bar: only ever visible while something is actually staged.
 // Same fade+slide pattern as the shortcuts panel below - a static closed
@@ -956,16 +1117,25 @@ document.addEventListener('click', e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
-  if(e.key==='ArrowDown'){move(1);e.preventDefault();}
-  else if(e.key==='ArrowUp'){move(-1);e.preventDefault();}
-  else if(e.key==='Enter'||e.key==='ArrowRight'){
+  // Review Changes is a real list of its own controls (a remove button per
+  // row, reached by Tab), not the tree's rowsCache/sel/activate() scheme -
+  // rowsCache still holds whatever page was open before review mode started,
+  // so letting these through would move a stale selection index against the
+  // wrong rows.
+  if(e.key==='ArrowDown' && !reviewMode){move(1);e.preventDefault();}
+  else if(e.key==='ArrowUp' && !reviewMode){move(-1);e.preventDefault();}
+  else if((e.key==='Enter'||e.key==='ArrowRight') && !reviewMode){
     // Let a focused control do its own job rather than hijacking the key. This
     // used to name specific regions, which missed the row badge - tabbing to one
     // and pressing Enter both toggled it AND drilled into the group.
     if(document.activeElement && document.activeElement.tagName==='BUTTON') return;
     activate(); e.preventDefault();
   }
-  else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>0){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); } e.preventDefault(); }
+  else if(e.key==='ArrowLeft'||e.key==='Backspace'){
+    if(reviewMode){ reviewMode=false; navDir='back'; sel=selBeforeReview; render(); focusPaneTitle(); }
+    else if(nav.length>0){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); }
+    e.preventDefault();
+  }
   else if(e.key==='a'||e.key==='A'){ confirmedApply(); }
   else if(e.key==='q'||e.key==='Q'){ confirmedQuit(); }
   else if(e.key==='Escape' && !shortcutsPanel.hidden){ setShortcutsOpen(false); shortcutsTrigger.focus(); }
