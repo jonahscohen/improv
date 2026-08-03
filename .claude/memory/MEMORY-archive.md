@@ -1401,3 +1401,31 @@
 - [Badges sit flush next to the title with no letter-spacing, counts read N/N and 0/N, and lotus/tilt-lab had no toggle at all - the…](session_2026-08-01_flush-badges-slash-counts-dead-leaf-toggle.md)
 - [The WILL INSTALL badge's marching ants took three tries - two techniques that could not trace a curved pill, then a stray .check svg{width:13px…](session_2026-08-02_marching-ants-three-attempts.md)
 - [The leaf self-row's name/desc suppression was wrong - restored to match how "memory" inside Beats shows its own name/desc](session_2026-08-02_leaf-row-name-desc-restored.md)
+
+<!-- archived 2026-08-02 (moved from MEMORY.md to stay under load budget) -->
+- [Lotus/tilt-lab's header just echoed their own row - added a distinct product-level intro field, the way Beats' header already differs from "memo…](session_2026-08-02_intro-vs-install-text-split.md)
+- [Sidecoach/Justify/Lotus/Tiltlab now display styled - the label field was already in the data, manifest.py already forwarded it, nothing ever…](session_2026-08-02_display-labels-vs-install-keys.md)
+- [Real WCAG 2.1 AA / Section 508 audit via axe-core: 4 contrast failures fixed with new --red-text/--red-solid tokens, plus a real keyboard-focus-loss bug f…](session_2026-08-02_wcag-aa-508-audit.md)
+- [Rail shows a count for every group now, not just incomplete ones - amber stays reserved for groups that actually need attention](session_2026-08-02_rail-counts-for-every-group.md)
+- [Screen-reader audit found the real gap axe cannot see - drilling into a group had zero keyboard path; fixing it exposed a false positive in sidecoac…](session_2026-08-02_screenreader-aria-audit.md)
+- [A circular checkbox now sits at the end of every toggleable row - deliberate visual redundancy with the pill badge, purely decorative and aria-hidden](session_2026-08-02_row-end-circular-dot.md)
+- [Rail clicks now fade to the new page instead of an instant swap - the one deliberate use of opacity in a pane transition, safe because its resting stat…](session_2026-08-02_rail-fade-transition.md)
+- [Transitions doubled in duration to be visible, and WILL REMOVE got the same marching-ants ring - the first attempt drew two overlapping o…](session_2026-08-02_slower-transitions-and-remove-ring.md)
+- [Back and bulk actions moved to their own row above the title with a real divider before the list - the toolbar row hides entirely when neith…](session_2026-08-02_header-back-toolbar-restructure.md)
+
+<!-- archived 2026-08-03 (moved from MEMORY.md to stay under load budget) -->
+- [14 vague hooks-cluster descriptions rewritten with substance - "Safety"/"the N hooks in the X cluster" placeholders replaced tree-wide with…](session_2026-08-02_guardrails-cluster-descriptions.md)
+- [Staged-count pill "+N -N" colored green/red to match the row badges - .plus/.minus spans existed but had no color rule](session_2026-08-02_staged-count-colors.md)
+- [Home dashboard view - every bucket is now a child page of it, hero eyebrow/H1/intro, and a Codex-caught pinned-hook bulk-stage bug fixed](session_2026-08-02_home-dashboard-view.md)
+- [Row left padding removed and partial-group badge switched to slash format (N/N), matching the rest of the page](session_2026-08-02_row-padding-and-partial-badge-format.md)
+- [Boot loader + first-paint stagger reveal - a live user-caught opacity-during-fade bug fixed with a pre-reveal hold, pacing tuned live too](session_2026-08-02_boot-loader-stagger-reveal.md)
+- [Quit moved from footer text button to a topbar power-icon button, no label - shared .icon-btn class with the theme toggle](session_2026-08-02_quit-button-topbar-icon.md)
+- [Red focus ring on the page title after every navigation removed - tabindex=-1 means it never confirmed anything to a real keyboard user](session_2026-08-02_paneTitle-focus-ring-removed.md)
+- [Forward/back tree navigation slides and fades together now, not fade replacing slide - a misread corrected via AskUserQuestion](session_2026-08-02_tree-nav-slide-plus-fade.md)
+- [Keyboard-shortcuts info panel pinned at the bottom of the left rail - floats above its trigger, 3 close paths, all 5 real shortcuts listed](session_2026-08-02_keyboard-shortcuts-panel.md)
+- [Keyboard-shortcuts panel now fades and slides open/closed via a plain CSS transition, not an instant hidden-attribute cut](session_2026-08-02_shortcuts-panel-fade-slide.md)
+- [Apply and Quit both require confirmation now - one shared modal wired into buttons AND their A/Q keyboard shortcuts, background keys suppressed wh…](session_2026-08-02_apply-quit-confirm-dialog.md)
+- [Permanent bottom footer removed - Apply now lives in a bar that fades/slides up inside the content panel only, fixed positioning after sticky…](session_2026-08-03_apply-bar-in-panel-not-window.md)
+
+<!-- archived 2026-08-03 (moved from MEMORY.md to stay under load budget) -->
+- [SUPERSEDED - Review Changes page built (button, page, real badge reused, circular red minus button)](session_2026-08-03_review-changes-page.md)
