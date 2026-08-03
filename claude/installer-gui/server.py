@@ -30,6 +30,13 @@ class State:
     nonce = ""
     repo = ""
     host = "127.0.0.1"
+    # Set once at startup from the launcher's own --personal (install.sh reads it from
+    # $PWD's argv, this process never sees the original invocation's argv directly - the
+    # launcher has to forward it explicitly). Threaded into every install_sh() call below
+    # so a personal-bucket user does not lose visibility into their own components just
+    # by having asked for the GUI instead of the terminal browser, where --personal has
+    # always worked because it stays in the SAME process.
+    personal = False
 
 def write_private(path, data):
     # Write 0600 (chmod forces it even if a looser file pre-existed): the nonce/url files
@@ -44,6 +51,8 @@ def write_private(path, data):
 
 def install_sh(*args, stdin=None, stream=False):
     cmd = ["bash", os.path.join(State.repo, "install.sh"), *args]
+    if State.personal:
+        cmd.append("--personal")
     if stream:
         return subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, bufsize=1)
@@ -191,8 +200,10 @@ def main():
     ap.add_argument("--repo", required=True)
     ap.add_argument("--print-nonce")
     ap.add_argument("--print-url")
+    ap.add_argument("--personal", action="store_true")
     args = ap.parse_args()
     State.repo = os.path.abspath(args.repo)
+    State.personal = args.personal
     State.nonce = secrets.token_urlsafe(24)
     srv = ThreadingHTTPServer((State.host, args.port), H)
     port = srv.server_address[1]

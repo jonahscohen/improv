@@ -24,6 +24,8 @@
 #      (proves it started server.py and read back its URL).
 #   2. GET /health at the launcher-reported host:port returns HTTP 200.
 #   3. /health JSON reports bind host 127.0.0.1.
+#   4. A BARE invocation (no flags at all) does the same - proves the GUI is now the
+#      default entry, not just reachable via the explicit --gui flag.
 #
 # Exit codes:
 #   0  all assertions passed
@@ -48,18 +50,22 @@ TMPD="$(mktemp -d)"
 STDOUT="$TMPD/launcher.out"
 LAUNCHER_PID=""
 SERVER_PID=""
+LAUNCHER_PID2=""
+SERVER_PID2=""
 
 cleanup() {
   # Kill the child server first so the launcher's `wait` returns, then the launcher itself.
   # Both are re-killed idempotently here so a failure anywhere above never leaks a process.
-  [ -n "$SERVER_PID" ] && kill "$SERVER_PID" >/dev/null 2>&1
-  [ -n "$LAUNCHER_PID" ] && kill "$LAUNCHER_PID" >/dev/null 2>&1
-  # Backstop: any server child still parented to the launcher (covers a missed SERVER_PID).
-  if [ -n "$LAUNCHER_PID" ]; then
-    for _p in $(pgrep -P "$LAUNCHER_PID" 2>/dev/null); do kill "$_p" >/dev/null 2>&1; done
-  fi
-  [ -n "$SERVER_PID" ] && wait "$SERVER_PID" 2>/dev/null
-  [ -n "$LAUNCHER_PID" ] && wait "$LAUNCHER_PID" 2>/dev/null
+  for p in "$SERVER_PID" "$SERVER_PID2" "$LAUNCHER_PID" "$LAUNCHER_PID2"; do
+    [ -n "$p" ] && kill "$p" >/dev/null 2>&1
+  done
+  # Backstop: any server child still parented to a launcher (covers a missed SERVER_PID).
+  for lp in "$LAUNCHER_PID" "$LAUNCHER_PID2"; do
+    [ -n "$lp" ] && for _p in $(pgrep -P "$lp" 2>/dev/null); do kill "$_p" >/dev/null 2>&1; done
+  done
+  for p in "$SERVER_PID" "$SERVER_PID2" "$LAUNCHER_PID" "$LAUNCHER_PID2"; do
+    [ -n "$p" ] && wait "$p" 2>/dev/null
+  done
   rm -rf "$TMPD"
 }
 trap cleanup EXIT INT TERM
@@ -120,6 +126,34 @@ echo "== Assertion 3: /health JSON reports bind host 127.0.0.1 =="
 HEALTH="$(curl -s "$BASE/health")"
 BIND="$(printf '%s' "$HEALTH" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("bind",""))' 2>/dev/null)"
 [ "$BIND" = "127.0.0.1" ] && pass "/health reports bind host 127.0.0.1" || fail "/health bind was '$BIND' (want 127.0.0.1); body: $HEALTH"
+
+# --- start a SECOND launcher, this time with NO flags at all -----------------------------
+# Proves the GUI is the default entry now, not only reachable via --gui explicitly. If this
+# regresses to the old terminal bucket browser, the launcher never prints a GUI URL line and
+# this whole block times out into a SETUP-FAIL instead of a clean pass/fail - loud either way.
+STDOUT2="$TMPD/launcher2.out"
+AMPERSAND_GUI_NO_OPEN=1 bash "$INSTALL" >"$STDOUT2" 2>&1 &
+LAUNCHER_PID2=$!
+
+URL2=""
+for _ in $(seq 1 80); do
+  if grep -aq 'GUI installer running at http://127\.0\.0\.1:' "$STDOUT2"; then
+    URL2="$(grep -a 'GUI installer running at' "$STDOUT2" | head -1 \
+            | grep -o 'http://127\.0\.0\.1:[0-9][0-9]*/[^[:space:]]*')"
+    [ -n "$URL2" ] && break
+  fi
+  kill -0 "$LAUNCHER_PID2" >/dev/null 2>&1 || break
+  sleep 0.1
+done
+
+echo
+echo "== Assertion 4: a BARE invocation (no flags) also starts the GUI server =="
+if [ -n "$URL2" ]; then
+  pass "bare invocation printed URL: $URL2"
+  SERVER_PID2="$(pgrep -P "$LAUNCHER_PID2" -f 'installer-gui/server.py' 2>/dev/null | head -1)"
+else
+  fail "bare invocation never printed a 127.0.0.1 GUI URL - did the default revert to the terminal browser? output: $(cat "$STDOUT2")"
+fi
 
 echo
 echo "TALLY: $PASS passed, $FAIL failed"

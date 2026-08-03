@@ -2635,6 +2635,7 @@ DRY_RUN=0
 RUN_MANIFEST=0
 RUN_APPLY_PLAN=0
 RUN_GUI=0
+FORCE_CLI=0
 
 # _help_components - the body of the "Components (for --only KEYS)" block, GENERATED
 # from claude/hooks/browser-tree.json.
@@ -2734,16 +2735,18 @@ print_help() {
 Improv installer
 
 Usage:
-  ./install.sh                  Bucket browser: drill into groups, toggle any
-                                component or individual hook, apply in one pass
+  ./install.sh                  GUI installer: opens in your browser (localhost only)
+  ./install.sh --cli            Terminal bucket browser instead: drill into groups,
+                                toggle any component or individual hook, apply in
+                                one pass - for staying in the terminal
   ./install.sh --yes            Non-interactive, install everything
   ./install.sh --preset NAME    Non-interactive preset: all | minimal | justify | none
   ./install.sh --only KEYS      Non-interactive, comma-separated keys
-  ./install.sh --browser        Same as no flags (the browser is the default entry)
+  ./install.sh --browser        Same as --cli (the terminal browser's older name)
   ./install.sh --dry-run        Print resolved picks and exit
   ./install.sh --manifest       Print the GUI manifest as JSON and exit
   ./install.sh --apply-plan     Apply a GUI plan JSON from stdin, then exit
-  ./install.sh --gui            Open the browser-based GUI installer (localhost only)
+  ./install.sh --gui            Same as no flags (the GUI is the default entry)
   ./install.sh --prune-skills   List dead repo symlinks under ~/.claude/{skills,hooks} (dry run), then exit
   ./install.sh --prune-skills-apply
                                 Remove those dead skill symlinks (explicit approval)
@@ -2802,13 +2805,19 @@ while [[ $# -gt 0 ]]; do
     --manifest)     RUN_MANIFEST=1; shift ;;
     --apply-plan)   RUN_APPLY_PLAN=1; shift ;;
     --gui)          RUN_GUI=1; shift ;;
-    # --browser: ACCEPTED AND INERT, on purpose. It used to select the browser back when
-    # the browser was an additive seam beside the old TUI; the browser is now the default
-    # interactive entry, so the flag is a synonym for passing nothing. It is kept because
-    # it is documented and in muscle memory, and because rejecting it would be a gratuitous
-    # break. Deliberately sets NO variable: a `BROWSER=1` that nothing reads is worse than
-    # no variable at all - it reads like live wiring and silently is not.
-    --browser)      shift ;;
+    # --cli: the terminal bucket browser, explicitly requested. The GUI installer
+    # is the default interactive entry now (see the promotion right after this
+    # loop); this is how someone who wants to stay in the terminal opts back in.
+    --cli)          FORCE_CLI=1; shift ;;
+    # --browser: an alias for --cli, not a no-op any more. Before the GUI existed,
+    # "the browser" meant this terminal bucket-browser, and --browser was inert
+    # because it was already the default - passing nothing got you the same thing.
+    # Passing nothing now gets you the GUI instead, so --browser has to actively
+    # request the terminal experience to keep meaning what it has always meant.
+    # test-browser-render.sh drives this flag under a PTY expecting exactly that;
+    # kept working rather than repointed, because breaking documented muscle
+    # memory silently is worse than one flag doing double duty as an alias.
+    --browser)      FORCE_CLI=1; shift ;;
     --prune-skills)       PRUNE_SKILLS=dryrun; shift ;;
     --prune-skills-apply) PRUNE_SKILLS=apply;  shift ;;
     # Optional trailing skill names, e.g. `--verify-skills sidecoach tactical-polish`.
@@ -2836,6 +2845,25 @@ while [[ $# -gt 0 ]]; do
     *)              err "Unknown flag: $1"; print_help; exit 2 ;;
   esac
 done
+
+# The GUI installer is now the default interactive entry, not the terminal
+# bucket browser - promote RUN_GUI here rather than duplicating the --gui
+# block's own logic below. Only fires for a genuinely bare/ambiguous
+# invocation: NONINTERACTIVE and DRY_RUN both already gate every unattended
+# path (--yes/--only/--preset/--dry-run) before this is reached, and
+# FORCE_CLI (--cli, or --browser for backward compatibility) is the explicit
+# opt-out for someone who wants to stay in the terminal. Every standalone
+# action above this point (--manifest, --apply-plan, --prune-skills, --help,
+# --verify-skills) exits on its own and never reaches here.
+# _AMPERSAND_APPLY_TEST is excluded on purpose: that seam (further down, before
+# the terminal browser) is invoked as a BARE `bash install.sh` with no flags at
+# all (see test-apply-pending.sh), so without this guard a bare test run would
+# get promoted straight into a real GUI server launch and hang forever instead
+# of ever reaching its own seam - caught by an independent review before this
+# shipped, not by the test suite noticing a hang.
+if [[ "$NONINTERACTIVE" == "0" && "$DRY_RUN" == "0" && "$RUN_GUI" == "0" && "$FORCE_CLI" != "1" && "${_AMPERSAND_APPLY_TEST:-}" != "1" ]]; then
+  RUN_GUI=1
+fi
 
 # Standalone maintenance action: prune dead skill symlinks under ~/.claude/skills
 # and exit, without running the installer. --prune-skills is a DRY RUN (prints only);
@@ -6039,10 +6067,12 @@ EOF
 fi
 
 # --gui: start the localhost GUI server and open the browser. Foreground; Ctrl-C stops.
+# RUN_GUI is now the default too (promoted right after the flag loop for any bare
+# or --gui invocation; --cli/--browser opt back into the terminal path instead).
 # The server (claude/installer-gui/server.py) binds 127.0.0.1 on an ephemeral port, writes
 # its URL (with the one-time nonce) to a temp file, and blocks serving. This handler starts
 # it, waits for the URL, opens the browser, and blocks on the server until interrupted. It
-# owns its own lifecycle and exits - it does NOT fall through to the interactive browser.
+# owns its own lifecycle and exits - it does NOT fall through to the terminal browser.
 # AMPERSAND_GUI_NO_OPEN=1 skips the browser launch (used by the launch test / CI).
 if [ "${RUN_GUI:-0}" = "1" ]; then
   # --dry-run must not launch the GUI. The server is a MUTATING surface: its /apply route
@@ -6055,7 +6085,15 @@ if [ "${RUN_GUI:-0}" = "1" ]; then
   fi
   if ! command -v python3 >/dev/null 2>&1; then err "--gui needs python3"; exit 1; fi
   url_file="$(mktemp)"
-  python3 "$REPO_DIR/claude/installer-gui/server.py" --repo "$REPO_DIR" --print-url "$url_file" &
+  # Forward --personal to the server so its own install.sh --manifest/--apply-plan
+  # subprocess calls see it too - the server runs as a SEPARATE process from this
+  # one, so PERSONAL=1 here would otherwise never reach those calls, and personal
+  # components would silently disappear the moment someone reaches them through
+  # the GUI instead of the terminal browser (where PERSONAL stays in-process).
+  gui_personal_args=()
+  [ "$PERSONAL" -eq 1 ] && gui_personal_args+=(--personal)
+  python3 "$REPO_DIR/claude/installer-gui/server.py" --repo "$REPO_DIR" --print-url "$url_file" \
+    ${gui_personal_args[@]+"${gui_personal_args[@]}"} &
   gui_pid=$!
   trap 'kill $gui_pid 2>/dev/null' INT TERM
   # Wait up to ~5s for the server to bind and write its URL.
@@ -6090,21 +6128,21 @@ if [ "${_AMPERSAND_APPLY_TEST:-}" = "1" ]; then
   if apply_pending; then exit 0; else exit $?; fi
 fi
 
-# --- Interactive entry: the bucket browser ----------------------------------
-# THE browser IS the interactive experience now. There is no fresh-vs-returning
-# branch any more, and that is by design, not by omission: the browser probes every
-# item's status LIVE, so a first-run machine and a drifted one render through the
-# identical code path - one shows everything not-installed, the other does not. The
-# retired returning_flow existed only to answer "which of the two screens do I draw",
-# a question the browser does not have to ask. Retired with it: run_tui_gum,
-# run_tui_fallback, fresh_flow. Nothing calls them; nothing replaces them.
+# --- Interactive entry: the terminal bucket browser (--cli / --browser) ----
+# This USED to be the interactive experience by default; it is now reached only
+# via FORCE_CLI (--cli, or --browser for backward compatibility) - a bare
+# invocation is promoted to RUN_GUI further up and never reaches here at all.
+# There is no fresh-vs-returning branch any more, and that is by design, not by
+# omission: the browser probes every item's status LIVE, so a first-run machine
+# and a drifted one render through the identical code path - one shows
+# everything not-installed, the other does not. The retired returning_flow
+# existed only to answer "which of the two screens do I draw", a question the
+# browser does not have to ask. Retired with it: run_tui_gum, run_tui_fallback,
+# fresh_flow. Nothing calls them; nothing replaces them.
 #
 # The update check survives, but ONLY as the browser's update row (_browser_update_refresh
 # -> update_status). returning_flow ran it as a blocking prologue before you could reach
 # anything else; the row states it and gets out of the way.
-#
-# `--browser` is kept as an explicit synonym for the default entry: it is parsed, sets
-# nothing, and lands here exactly as passing no flags does (see the flag loop).
 #
 # WHY DRY_RUN GATES THIS BLOCK: --dry-run promises "print resolved picks and exit;
 # touches no files". The browser is an interactive applier - entering it under
@@ -6112,7 +6150,7 @@ fi
 # through to the picks summary below, the same precedent --prune-skills-apply already
 # follows ("a global --dry-run overrides an apply request"). This is also why the
 # gate is DRY_RUN and not NONINTERACTIVE: --dry-run alone never set NONINTERACTIVE.
-if [[ "$NONINTERACTIVE" == "0" && "$DRY_RUN" == "0" ]]; then
+if [[ "$NONINTERACTIVE" == "0" && "$DRY_RUN" == "0" && "$FORCE_CLI" == "1" ]]; then
   ensure_gum >/dev/null 2>&1 || true
 
   # If any component is already active on disk but the state file is missing,
