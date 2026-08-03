@@ -560,6 +560,15 @@
   }
 
   :focus-visible{outline:2px solid var(--red); outline-offset:2px; border-radius:var(--r-sm);}
+  /* #paneTitle has tabindex="-1" - it exists ONLY so focusPaneTitle() can move
+     real DOM focus there after every navigation (the fix for keyboard/screen-
+     reader users otherwise losing their place to <body>). tabindex="-1" also
+     means a sighted keyboard user can never Tab there themselves, so a ring
+     confirms nothing to anyone: screen readers announce the new heading from
+     the focus event alone, with no visual styling involved at all. A ring
+     here was pure noise - loudest of all on the Home hero, where it drew a
+     giant box around 90px type on every single page change. */
+  #paneTitle:focus-visible{outline:none;}
   @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important;}}
   @media (max-width:720px){
     .keys{display:none;}

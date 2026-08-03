@@ -183,3 +183,4 @@
 - [Row left padding removed and partial-group badge switched to slash format (N/N), matching the rest of the page](session_2026-08-02_row-padding-and-partial-badge-format.md)
 - [Boot loader + first-paint stagger reveal - a live user-caught opacity-during-fade bug fixed with a pre-reveal hold, pacing tuned live too](session_2026-08-02_boot-loader-stagger-reveal.md)
 - [Quit moved from footer text button to a topbar power-icon button, no label - shared .icon-btn class with the theme toggle](session_2026-08-02_quit-button-topbar-icon.md)
+- [Red focus ring on the page title after every navigation removed - tabindex=-1 means it never confirmed anything to a real keyboard user](session_2026-08-02_paneTitle-focus-ring-removed.md)
