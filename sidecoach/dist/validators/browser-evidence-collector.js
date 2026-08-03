@@ -133,6 +133,11 @@ async function collectBrowserEvidence(renderUrl, signal, launcher = () => chromi
                 const line = getComputedStyle(el).lineHeight;
                 return line === 'normal' || !Number.isFinite(Number.parseFloat(line)) || Number.parseFloat(line) <= 0;
             }).length;
+            // [tabindex] alone also matches tabindex="-1", which means "focusable only by
+            // script, never in the Tab order, never a pointer target" - the exact pattern
+            // used to move focus to a heading after a route change (a real <h1> this
+            // collector then measured as a failing 44x44 tap target it can never be).
+            // Excluding -1 keeps the rule aimed at things a user actually taps or tabs to.
             const interactive = Array.from(document.querySelectorAll('button, a[href], input, select, textarea, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="switch"], [role="checkbox"], [tabindex]:not([tabindex="-1"])')).filter(visible);
             let hitFailing = 0;
             let smallestWidth = Number.POSITIVE_INFINITY;

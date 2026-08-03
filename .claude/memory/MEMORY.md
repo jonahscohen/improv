@@ -182,3 +182,4 @@
 - [** ACTIVE ** Review Changes review findings folded - remove button could flip install into uninstall after a partial apply, stale pending…](session_2026-08-03_review-changes-code-review-folded.md)
 - [** ACTIVE ** GUI installer is now the default entry - --cli (and --browser, aliased) opt back into the terminal bucket browser instead](session_2026-08-03_gui-installer-becomes-default.md)
 - [** ACTIVE ** Independent code review of the Review Changes diff - 2 ship-blockers (reviewMode never cleared by rail/crumb nav; toggleLeaf can fli…](session_2026-08-03_review-changes-code-review.md)
+- [** ACTIVE ** README rewritten plain-language-first (what/install/clusters), real 10-cluster/71-hook structure replacing stale fo…](session_2026-08-03_readme-rewrite-narrative-and-sidecoach-note.md)

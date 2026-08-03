@@ -14,7 +14,20 @@ exports.ANTI_PATTERNS = {
         name: 'Side-stripe borders',
         description: 'Colored left/right borders >1px on cards, callouts, alerts',
         severity: 'critical',
-        checker: (code) => /border-(left|right):\s*\d+px|^[^{]*left:\s*\d+px\s*solid\s*#|border-left-color|border-right-color/.test(code),
+        // ALSO CATCHES THE BOX-SHADOW FORM. `box-shadow: inset 3px 0 0 <color>` paints
+        // exactly the banned side stripe while containing no `border-left` at all, so
+        // the original regex never saw it. Found 2026-08-01: I built that stripe into
+        // the installer GUI twice, ran this checker three times, and it passed - Jonah
+        // caught it by eye and called it "AI slop 101". A ban that only knows one
+        // spelling of a pattern bans the spelling, not the pattern.
+        checker: (code) => 
+        // ABOVE 1px, per the ban's own wording. `\\d+px` matched a legitimate 1px
+        // hairline, so this rule had been firing on ordinary dividers all along.
+        /border-(left|right):\s*(?:[2-9]|\d{2,})\d*px/.test(code)
+            || /^[^{]*left:\s*(?:[2-9]|\d{2,})\d*px\s*solid\s*#/m.test(code)
+            || /border-(left|right)-color/.test(code)
+            || /box-shadow:\s*inset\s+-?[2-9]\d*px\s+0\s+0/.test(code)
+            || /box-shadow:\s*inset\s+0\s+0\s+0\s+\d+px[^;]*,\s*inset\s+-?[2-9]\d*px/.test(code),
     },
     gradient_text: {
         id: 'anti_002',

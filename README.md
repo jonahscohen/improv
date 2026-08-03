@@ -8,26 +8,32 @@
 
 <h1 align="center">Improv</h1>
 
-<p align="center"><i>The Yes& Claude Code stack. The way we think about agentic coding, made installable.</i></p>
+<p align="center"><i>The Yes& Claude Code stack, made installable.</i></p>
 
 <p align="center">
+  <a href="#what-is-this">What is this?</a> ·
   <a href="#install">Install</a> ·
-  <a href="#discipline">Discipline</a> ·
-  <a href="#memory">Memory</a> ·
-  <a href="#design">Design</a> ·
-  <a href="#workflow">Workflow</a> ·
+  <a href="#clusters">Feature clusters</a> ·
+  <a href="#workflow">Daily use</a> ·
   <a href="#reference">Reference</a>
 </p>
 
 ---
 
-**The problem.** Working with Claude is fast. Working with Claude *well* is a discipline problem. The model forgets between sessions, has no opinions of its own, and will cheerfully ship a half-verified fix unless something stops it. Most "AI workflow" advice tries to solve this by adding ceremony, which the model promptly skips under pressure.
+<a id="what-is-this"></a>
 
-**The opinion.** Externalize the discipline into files the harness enforces. Rules in CLAUDE.md, loaded every session. Hooks in settings.json that block bad behavior at the tool boundary. Memory in `.claude/memory/` that persists across machines. A personal catalog that grows from your eye. Reflection that audits the whole system for drift.
+## What is this?
 
-**The system.** Twelve components, one curl, one shortcut. Four houses of thought: **Discipline** (the refusal layer), **Memory** (the persistence layer), **Design** (the 7-layer stack), **Workflow** (how you use it). All additive. All undoable. Pick the houses you want; the rest is a no-op.
+Claude Code is capable, but it starts every conversation with a blank slate: no memory of what you decided last week, no house style until you give it one, no sense of what "done" actually means for your team. Improv is a set of files you copy onto your machine once that closes those gaps - not by teaching Claude anything new, but by giving it habits: things it reads before it starts, checks that run while it works, and a place to write down what happened so the next session doesn't start from zero either.
 
-**The proof.** Built on itself. The reflection skill exists because the corpus needed it. The personal-catalog system exists because public catalogs missed the patterns worth remembering. The second-fix gate evolved from a real same-file regression that shipped before the underlying root cause was found. Nothing in here is a feature in search of a problem.
+Concretely, that means:
+
+- **It remembers.** Every real change gets written down in a plain markdown file, inside the project itself, so it travels with `git pull` and survives longer than any one conversation.
+- **It follows your rules without being reminded.** Team standards live in a file Claude reads at the start of every session, and the ones that matter most are backed by checks that physically block the wrong action instead of just suggesting against it.
+- **It has better default taste.** A design system, a component reference, a personal catalog of interfaces worth learning from, and checks that catch the most common "obviously AI-made" tells before they ship.
+- **It stays honest about whether work is actually finished.** Claiming a UI change works without a screenshot, or a fix works without a test, gets caught and held until the model actually looks.
+
+Everything below is a separate, optional piece. Install all of it, install one piece, or come back for the rest later. Nothing here is destructive - anything it's about to change gets backed up first, and every piece can be turned back off on its own.
 
 ---
 
@@ -39,223 +45,80 @@
 curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash
 ```
 
-One curl. One shortcut installed: `ampersand`. Type it from any terminal to launch the component picker.
+One command. It clones this repo and installs one shortcut: `ampersand`. Type it from any terminal, any time, and a page opens in your browser showing everything on offer.
 
 ```bash
-ampersand                       # interactive TUI
-ampersand --pull                # pull latest, then TUI
-ampersand --preset minimal      # brain + config + memory + skills + nvm
-ampersand --only memory         # just one component
+ampersand                       # opens the installer in your browser
+ampersand --cli                 # the same picker, without leaving the terminal
+ampersand --pull                # pull the latest version first, then open it
+ampersand --preset minimal      # just the essentials, no picker needed
+ampersand --only memory         # a single piece, no picker needed
 ```
 
-Twelve components in the picker, defaults are all on, every component is additive. The four houses below explain what they actually do.
+The browser installer lists every piece as a row you can turn on or off, shows exactly what's staged before anything happens, and applies it all in one pass. `--cli` gives you the identical picker as a terminal menu instead, for anyone who'd rather not leave the keyboard.
+
+Nothing installs anything you didn't choose, nothing overwrites a file you already had without backing it up first, and every piece can be turned back off later without disturbing the rest.
 
 ---
 
-<a id="discipline"></a>
+<a id="clusters"></a>
 
-## Discipline
+## Feature clusters
 
-**Why doesn't Claude ship sloppy work here?** Because the harness refuses, not advises.
+Ten clusters: six in the core suite, four add-ons. Each is independent - turn on all of them, one of them, or come back for more later.
 
-Rules in CLAUDE.md are advisory - the model skips them under pressure. Hooks at the tool boundary are mechanical - they fire before the tool runs and block the call. Eighteen hooks across five roles enforce the disciplines that mattered. Each hook traces back to a specific real failure that drove its creation.
+### The suite
 
-### The five roles
+**Foundation** - the base install everything else builds on: your team's rules appended into Claude's own instructions file (your existing content untouched), the safety and quality hooks, a status line showing project, branch, model, and context used, and the `ampersand` shortcut itself.
 
-**Refusal hooks** intercept and block:
+**Beats** - the memory system. Every real change writes a short note to a plain markdown file inside the project, so the next session - yours tomorrow, or a teammate's next week - starts with full context instead of from scratch. Includes `/reflect`, which reads back over weeks of notes and surfaces patterns no single session would notice on its own.
 
-- `bash-guard` - blocks AI-attribution lines in commits, force-push to `main`/`master`, `rm` against `.claude/memory`, legacy model IDs
-- `content-guard` - blocks the same patterns inside file content, plus emdashes, endashes, emoji
-- `voice-gate` - blocks TTS calls when voice is muted (no wasted OpenAI round-trips)
-- `validation-guard` - blocks DOM shortcut tricks during UI validation (no `.click()`, no synthetic events, no `getComputedStyle` for state inspection)
-- `memory-approve` - auto-approves memory-path writes so they don't need permission prompts
+**Sidecoach** - the design assistant. Twenty-six flows behind commands like `audit`, `critique`, `polish`, and `craft`, plus plain-language detection so you don't have to remember the exact word. It watches for design work as you type and pulls your project's brand and design docs in automatically.
 
-**Gate hooks** block until verification fires. State machines, not refusals:
+> **Honest note: Sidecoach is unfinished.** The detector half is real and measured - `/sidecoach audit` genuinely catches contrast failures, broken heading order, and banned visual patterns, and that engine has been tested against held-out pages with high accuracy. But the half meant to teach Claude how to design *well*, not just flag what's wrong, isn't built yet - most flows return a findings list rather than real design instruction. If you're expecting a mentor, what's here today is a rigorous inspector. This is recognized internally too: the installer's own `justify` preset leaves Sidecoach out on purpose, "until it is ready to be the taste layer." Closing that gap is ongoing work, not a secret.
 
-- `verify-before-done` + `verify-clear` + `verify-manual` - track unverified code edits and gate `git commit` until a screenshot, test run, or external probe clears the flag
-- `screenshot-open-mandate` + `screenshot-open-clear` - force you to actually Read a screenshot before claiming you looked at it
-- `second-fix-gate` (v2) - warns once when a second fix lands on the same file within ten minutes with no verification between. Stays silent on purely-additive sequential edits. Manual override via `touch ~/.claude/.suppress-fix-gate` (30-minute auto-expiring)
+**Justify** - click something in your running site and nudge its spacing, type, or color right in the browser; the change writes back into your actual source file. No copying values back and forth by hand.
 
-**Nudge hooks** advise but don't block:
+**Tiltlab** - a local playground for animated backgrounds and visual effects. Browse roughly 25 shader and post-processing effects, stack and tune them against a live preview, then export the exact stack as a drop-in package.
 
-- `memory-nudge` - reminds Claude after every code change that memory is dirty
-- `reflect-nudge` - surfaces when enough new memories have accumulated to warrant `/reflect`
+**Lotus** - an AI Figma plugin that works directly on the canvas: generate, modify, restyle, export to code, audit accessibility, or get a design critique, using whichever AI provider you supply a key for. Its bridge also lets Claude Code read and edit a Figma file's design system directly.
 
-**Toggle hooks** flip state on chat phrases. "voice on" / "voice off" flip `~/.claude/.voice-enabled`. "auto-resume on" / "off" flip cmux auto-resume policy.
+### Add-ons
 
-**Lifecycle hooks** run on session boundaries. SessionStart loads memory + voice mandate. PreCompact flushes pending memory before context compresses. PostCompact reloads after. SessionEnd `resume-guard` blocks cmux auto-resume so a stale session doesn't surprise you on next launch.
+**Design Tools** - reference material Claude pulls in while building an interface: a sixteen-point tactical-polish checklist, how established design systems build a given component, a curated typeface catalog, GSAP/Lenis motion patterns, your own growing catalog of interfaces worth learning from, platform specs for thirteen social networks, a multi-agent design-sprint mode, ready shader and effect source, a rule for sourcing icons from real libraries instead of inventing them, and a check that holds a Figma-based build to the file it came from. Each piece installs on its own.
 
-### The pattern
+**Guardrails** - the checks that catch a mistake before it ships. Blocked shell commands (force-pushes to main, deleting your own notes, AI-attribution lines in commits), a requirement that a claimed fix was actually verified with a screenshot or a test, real selectable questions instead of buried plain text, source-grounded answers instead of guesses, plus narrower guards around API drift, git hygiene, model routing, cheaper-agent suggestions, Codex review requests, Chrome tab hygiene, and chart/widget quality. Thirteen sub-groups, most of them always on.
 
-This isn't a feature; it's a method. The escalation goes: rule violated → feedback memory written → rule violated again → hook built → violations stop.
+**Voice & chat** - Claude speaking its replies aloud (needs your own OpenAI key, arrives muted), transcribing voice memos you send it (runs fully offline, no key needed), and a Discord launcher so you can talk to a session from your phone.
 
-Several specific lineages in the 2026-05-19 reflection:
+**Dev surface** - the terminal itself: cmux, the split-pane terminal with a built-in browser pane, which is how Claude actually looks at your UI; a `/task-list` command for tracking what's next; and a guard that refuses any ClickUp action that would change something.
 
-- Memory writes failed enough times that `memory-nudge` got built.
-- Screenshots got described-without-Reading often enough that `screenshot-open-mandate` got built.
-- A same-file regression during a WebSocket debugging session shipped before the underlying root cause was found - `second-fix-gate` came out of that.
+There's an eleventh, hidden cluster - **Personal** - that only shows up with `--personal`. It's one person's terminal color scheme and screen effects; skipping it changes nothing about how Claude behaves.
 
-When something fails twice, the next response is a hook.
-
-### Verification protocol
-
-Seven rules in CLAUDE.md gate task completion. UI changes need a screenshot, then an interactive screenshot for clickable elements, then a side-by-side against the design source. Non-UI changes need a `<step> -> verify: <check>` plan before implementation, with runnable verify clauses (not "looks right").
-
-### Permission posture
-
-`defaultMode: bypassPermissions` + `skipDangerousModePermissionPrompt: true`. Every tool call auto-approves. This is on purpose - the friction of per-tool prompts is worse than letting hooks be the gate, and the hooks already block the dangerous patterns. If you want different defaults it's a one-line edit in `claude/settings.json`.
-
-→ [Full hook inventory](#hook-inventory) · [CLAUDE.md walkthrough](#deep-brain)
-
----
-
-<a id="memory"></a>
-
-## Memory
-
-**Why does Claude remember here?** Because we externalize the record into files git carries.
-
-Memory turns Claude Code from a stateless code generator into a colleague who remembers what was decided last week and why. It is the most load-bearing thing in this repo.
-
-### Three layers
-
-**Project root memory** (`<project>/.claude/memory/`) is the canonical record for that project. Session files (`session_YYYY-MM-DD_<topic>.md`), feedback files, reference files, decision files. Indexed by `MEMORY.md`. Committed to git. Read by every collaborator's Claude.
-
-**Global cross-project memory** (`~/.claude/memory/`) is per-machine, durable across all projects. The attribution policy, Yes&-wide feedback, hook verification discipline. Symlinked from the dotfiles by the `memory` component, so every Yes& dev's machine has the same baseline.
-
-**Per-project global memory** (`~/.claude/projects/<project-path>/memory/`) is automatically written by Claude Code for telemetry-style state.
-
-### The lifecycle
-
-Every discrete change writes a memory entry before Claude responds. Not per-feature - per-task. A CSS fix, a copy change, a refactor decision - each lands in `<project>/.claude/memory/session_YYYY-MM-DD_<topic>.md` immediately. Batching is a failure mode the `memory-nudge` hook catches.
-
-Three lifecycle hooks make memory concrete:
-
-- **SessionStart** runs `~/.claude/startup-check.sh` which loads project + global memory into context.
-- **PreCompact** flushes pending memory before context compresses.
-- **PostCompact** reloads memory after compression.
-
-### Reflection
-
-The `/reflect` skill spawns five parallel analysis agents (Pattern Hunter, Tension Detector, Gap Analyst, Drift Tracker, Decision Archaeologist) against the accumulated memory corpus. They surface what's emerging that no single session would notice - contradictions between rules, hooks that misfire, decisions that have gone stale, drift in practice.
-
-A SessionStart `reflect-nudge` hook counts new memories since the last reflection. When the threshold is exceeded (default 15, configurable via `REFLECT_THRESHOLD`), the session opener nudges you. The output saves to `.claude/memory/reflection_YYYY-MM-DD.md` and informs the next round of hooks and rules. The 2026-05-19 reflection itself drove most of the hook layer's maturation.
-
-### Attribution and collaboration
-
-Every memory entry records a `Collaborator:` line derived from `git config user.name`. Alice's Claude tags her name; Bob's tags his. Memory files commit and push like any source file. The next teammate's Claude reads it at session start with attribution baked in.
-
-The assistant is invisible in the output. No AI-attribution lines in commits, no auto-generated credit comments, no AI attribution anywhere. Humans are named; the assistant isn't.
-
-For ironclad enforcement on projects where teammates haven't installed the dotfiles, drop a `CLAUDE.md` at the project root that re-states the rules. Claude Code reads project-root CLAUDE.md regardless of machine config.
-
-→ [Memory file format](#deep-memory-format) · [Project-level CLAUDE.md template](#project-claude-md)
-
----
-
-<a id="design"></a>
-
-## Design
-
-**Why does generated UI look right here?** Because seven layers stack from strategy down to tactical, and you walk them deliberately.
-
-Most AI-generated UI looks the same because most prompts ask for the same vague thing. This repo routes design work through layered references, each addressing a different question:
-
-| Layer | Skill | Question it answers |
-|---|---|---|
-| 1. Strategy | `/sidecoach` skill | Who is this for? What's NOT us? |
-| 2. Research | `component-gallery-reference` | How does the industry build this component? |
-| 3. Typography | `fontshare-reference` | Which typeface? (refuses training-data defaults) |
-| 4. References | `/curate` | What did you see in the wild worth borrowing? |
-| 5. Motion | `motion-reference` | GSAP + Lenis canonical patterns |
-| 6. Tokens | `DESIGN.md` | What are this project's actual values? |
-| 7. Tactical | `tactical-polish` | Exact-value polish at implementation time |
-
-Plus the brand foundation both ends read: **`PRODUCT.md`** at the project root - register, users, anti-references. Strategy reads it before every command, and `DESIGN.md` (layer 6) follows the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec and lints clean before UI ships.
-
-### How the layers stack on a real build
-
-**The stack is deliberate, not automatic** - and that is the one thing worth knowing before
-you use it. **No hook calls the Skill tool.** A hook can inject context or validate output,
-but it cannot invoke a skill; a skill runs when you invoke it or the model chooses to load
-it. So the layers are a checklist you walk, not a pipeline that runs at you.
-
-A "build me a hero section" task walks roughly this order, and every line is something
-**you** do:
-
-1. `/sidecoach shape <feature>` - reads PRODUCT.md, proposes a brand direction. Do this before writing code, not after.
-2. `component-gallery-reference` - if the build maps to a standard component (hero, header, navigation).
-3. `/curate` recall - surfaces captured references matching category / pattern / feel.
-4. `fontshare-reference` - if type decisions are in scope.
-5. `motion-reference` - if the hero has scroll or motion behavior.
-6. `icon-source` (peer skill) - if icons are needed.
-7. `tactical-polish`'s sixteen rules - applied *during* implementation, not bolted on after. The most-skipped layer, because it is the one people most expect to happen by itself.
-8. `/sidecoach audit`, then `critique`, then `polish` last, then the `/tactical-polish` checklist as the final gate item - at QA time. (The rules land during the build in step 7; running the checklist here is the verification that they did.) If you skip the triad, write "QA triad SKIPPED because <reason>" in the session beat; an unrecorded skip is indistinguishable from a gate that passed.
-
-Not every layer applies to every task - skip the ones the work does not need, deliberately.
-
-**What actually is mechanical:** one hook. `sidecoach-taste-gate.sh` runs on `Write` /
-`Edit` / `MultiEdit` when the written target is a `.html` or `.css` file under a directory
-containing `DESIGN.md`: it runs the anti-pattern ban sweep project-wide from that `DESIGN.md`
-root, and for an edited `.html` it also runs the taste validator on that file plus the
-project's `styles.css` when present. That is a subset of `/sidecoach audit`.
-`sidecoach-detect.sh` is a second scanner on the same event but ships default-off, so on a
-stock install the taste gate is the only design coverage you get without choosing it.
-
-**Why the README is emphatic about this.** It used to describe the layers as firing on their
-own, and that description was measurably wrong. Across 417 transcripts and a corpus of 700+
-genuine prompts, `tactical-polish` had 8 genuinely eligible occasions and ran on **none**,
-and `motion-reference` had 7 and ran on **none**. A `/design-build` skill existed specifically
-to run the whole stack as one automatic sequence; it was invoked **zero times in two months**
-and was retired on 2026-07-28, because wrapping steps that nothing invokes inside one more
-step that nothing invokes does not make them run. The stack works - it just works when you
-drive it, which is why the list above is written as instructions to you rather than as
-machinery.
-
-### The personal catalog (Layer 4)
-
-This is the layer that earns its keep over time. `/curate` owns a local catalog at `~/.claude/design-references/` that grows from your eye, in both directions: **capture** (paste a URL or screenshot, walk a 5-step flow - source -> auto-tag proposal -> why-interesting body -> slug -> save) and **recall** (grep the catalog on a UI build and surface what matches). Recall was a separate `design-references` skill until 2026-07-28; it had zero invocations and was merged in, on the reasoning that splitting read from write gave the catalog two chances to not be selected instead of one.
-
-Tagging is hybrid: strict Category from a controlled vocab (`list`, `navigation`, `command-palette`, `inline-edit`, etc. - extensible, and a capture that fits nothing asks before adding a category); free-form Pattern + Feel for the personality words. Public catalogs (component.gallery, fontshare) have no home for "the way Linear's inbox staggers" or "Vercel's deploy log streaming blur" - that's what this layer covers.
-
-`fontshare-reference` also bakes in sidecoach's **reflex-reject list** so the obvious training-data defaults (Inter, Fraunces, Outfit, Instrument Serif, et al.) get refused at type-selection time. Fontshare's own emerging defaults (General Sans, Cabinet Grotesk, Satoshi, Clash Display) get flagged the same way.
-
-### Peer skills
-
-The `skills` component also bundles four peers that aren't part of the strategy-to-tactical pipeline but ship alongside:
-
-- **`social-media`** - platform specs for 13 social platforms (sizes, safe zones, typography rules)
-- **`design-team`** - multi-agent design sprints (16 roles, 4 phases) for full pages or campaigns
-- **`visual-effects`** - actual shader source for generative backgrounds + 17 stackable post-process FX
-- **`icon-source`** - one-library-per-project discipline, eight approved libraries, verbatim path sourcing
-
-→ [Design pipeline tour](#deep-design-stack) · [Curate wizard flow](#deep-curate)
+→ [Every component, by cluster](#component-table) · [Every hook, by cluster](#hook-inventory)
 
 ---
 
 <a id="workflow"></a>
 
-## Workflow
-
-**How do I actually use this every day?** One curl, one shortcut, all-additive.
-
-### Daily commands
+## Daily use
 
 ```bash
-ampersand                       # interactive TUI from any directory
-ampersand --pull                # pull latest, then TUI
+ampersand                       # opens the browser installer from any directory
+ampersand --cli                 # the terminal picker instead
+ampersand --pull                # pull latest, then open the installer
 ampersand --preset minimal      # brain + config + memory + skills + nvm
-ampersand --only memory         # one component
-ampersand --only memory,skills  # multiple components
-ampersand --dry-run             # preview without writing
+ampersand --only memory         # one cluster
+ampersand --only memory,skills  # multiple clusters
+ampersand --dry-run             # preview without writing anything
 ampersand --yes                 # everything, non-interactive
 ```
 
-`ampersand` re-launches the installer from any directory. `ampersand --pull` syncs the dotfiles repo via `git pull --ff-only` first (never silently merges divergent local changes).
+`ampersand` re-launches the installer from any directory. `ampersand --pull` syncs the repo via `git pull --ff-only` first (never silently merges divergent local changes).
 
 ### Custom clone locations
 
-The dotfiles can live anywhere. The Ghostty config uses a `__DOTFILES_DIR__` placeholder that the installer replaces at install time, so cloning to `~/code/dots`, `/opt/dots`, or anywhere else works:
+The dotfiles can live anywhere. The Ghostty config uses a `__DOTFILES_DIR__` placeholder the installer replaces at install time, so cloning to `~/code/dots`, `/opt/dots`, or anywhere else works:
 
 ```bash
 IMPROV_DIR=~/code/dots curl -fsSL .../bootstrap.sh | bash    # env var
@@ -267,8 +130,8 @@ Re-running `install.sh` from a new clone refreshes the `ampersand` function's pa
 ### Onboarding a new Yes& dev
 
 1. `curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash`
-2. TUI defaults or `--preset all`
-3. New terminal or `source ~/.zshrc`
+2. Take the browser installer's defaults, or `--preset all`
+3. New terminal, or `source ~/.zshrc`
 
 Same machine state as everyone else, same disciplines applied, same memory loaded.
 
@@ -297,77 +160,98 @@ Lookup material. You won't read this end to end - you'll grep it when something 
 
 <a id="component-table"></a>
 <details>
-<summary><b>The twelve components</b></summary>
+<summary><b>Every component, by cluster</b></summary>
 
-| Component | What it does | Where it lands |
-|---|---|---|
-| `brain` | Team rules + workflow appended to CLAUDE.md between markers | `~/.claude/CLAUDE.md` (your content preserved) |
-| `config` | Safety hooks + plugins + permissions JSON-merged into settings.json | `~/.claude/settings.json` + `~/.claude/hooks/` |
-| `memory` | Memory discipline rules + 3 lifecycle hooks + startup loader | CLAUDE.md + settings.json + symlinked loader |
-| `skills` | 9 design + peer skills + the personal-catalog seed | `~/.claude/skills/` + `~/.claude/design-references/` |
-| `statusline` | Custom prompt-bar render | symlink at `~/.claude/statusline-command.sh` |
-| `cmux` | Split-pane terminal config (in-app browser preview) | symlink at `~/.config/cmux/settings.json` |
-| `nvm` | "claude: command not found" fix for fresh terminals | marker-guarded line in `~/.zshrc` |
-| `ampersand` | The `ampersand` zsh shortcut | marker-guarded block in `~/.zshrc` |
-| `discord` | Discord chat agent launcher (cold/mid/warm onboarding) | marker-guarded line in `~/.zshrc` + symlinks |
-| `voice-input` | Local voice-to-text (whisper.cpp + ffmpeg) | brews + symlink at `~/.claude/transcribe` |
-| `voice-output` | OpenAI TTS responses (starts muted) | MCP server + zsh aliases |
-| `reflect` | Memory corpus analysis (5-agent skill + nudge hook) | `~/.claude/skills/reflect/` + nudge hook |
+The ten clusters from above, broken into their actual `--only` keys (`claude/hooks/browser-tree.json` is the one source both the browser and terminal picker read, so this list cannot drift from what either shows):
 
-Flags: `--yes` for everything, `--preset minimal/all/none`, `--only csv` for explicit subsets, `--dry-run` to preview.
+| Cluster | `--only` keys |
+|---|---|
+| Foundation | `brain`, `config`, `statusline`, `ampersand`, `nvm` |
+| Beats | `memory`, `reflect` |
+| Sidecoach | `sidecoach` |
+| Justify | `justify` |
+| Tiltlab | `tilt-lab` |
+| Lotus | `lotus` |
+| Design Tools | `tactical-polish`, `component-gallery`, `fontshare`, `motion`, `curate`, `social-media`, `design-team`, `visual-effects`, `icon-source`, `figma` |
+| Guardrails | `safety`, `verification`, `question-discipline`, `grounding`, `api-drift`, `planning-git`, `surface`, `model-routing`, `agent-routing`, `fable`, `codex`, `chrome`, `visualizer` |
+| Voice & chat | `discord`, `voice-input`, `voice-output` |
+| Dev surface | `cmux`, `task-list`, `clickup` |
+| Personal (hidden, `--personal` only) | `ghostty`, `shaders` |
+
+`skills` is also a valid `--only` key on its own: it takes the whole Design Tools skill bundle at once, where the individual keys above take just one (e.g. `--only icon-source`). `config` installs Foundation's CORE only (permissions/plugins/statusline + startup-check + hud). Every Guardrails sub-group is individually `--only`-able down to a single hook, e.g. `--only bash-guard`.
+
+**Presets:**
+
+| Preset | What it turns on |
+|---|---|
+| `all` | Everything |
+| `minimal` | `brain` + `config` + `memory` + `skills` + `nvm` + `reflect` |
+| `justify` | `justify` + `memory` + `safety` + `verification` + `grounding` - the supporting cast that makes running Justify trustworthy, with Sidecoach deliberately left out until it's ready (see the Sidecoach note above) |
+| `none` | Nothing (useful with `--dry-run`) |
 
 </details>
 
 <a id="hook-inventory"></a>
 <details>
-<summary><b>The eighteen hooks (full inventory by role)</b></summary>
+<summary><b>Every hook, by cluster (71 total)</b></summary>
 
-**Refusal hooks** (PreToolUse, hard deny):
+Hooks fall into a few mechanical shapes regardless of which cluster owns them:
 
-| Matcher | Hook | Purpose |
+- **Refusal hooks** intercept and block outright - a forbidden shell command, a banned content pattern, a disallowed tool call.
+- **Gate hooks** are state machines: they arm on one event and won't release until a specific later event clears them (a screenshot actually opened, a test actually run).
+- **Nudge hooks** advise without blocking - a reminder injected into context, never a denial.
+- **Toggle hooks** flip a flag on a chat phrase ("voice on", "resume off").
+- **Lifecycle hooks** run on session boundaries - start, compaction, end.
+
+Counted by which cluster owns them:
+
+| Cluster | Hooks | Sub-groups |
 |---|---|---|
-| `Bash` | `bash-guard.sh` | AI-attribution lines, force-push to main/master, `rm` against `.claude/memory`, legacy model IDs |
-| `Write\|Edit\|MultiEdit` | `content-guard.sh` | Same patterns inside file content + emdashes/endashes + emoji unicode ranges |
-| `Write\|Edit\|MultiEdit` | `memory-approve.sh` | Auto-approves memory-path writes |
-| `mcp__voice-output__speak` | `voice-gate.sh` | Denies speak calls when voice is muted |
-| `mcp__claude-in-chrome__javascript_tool` | `validation-guard.sh` | Blocks DOM shortcut tricks during UI validation |
+| Guardrails | 39 | safety (5), verification (8), question-discipline (2), grounding (7), api-drift (3), planning-git (2), surface (2), model-routing (1), agent-routing (1), fable (1), codex (2), chrome (3), visualizer (1) |
+| Dev surface | 9 | cmux (8), clickup (1) |
+| Sidecoach | 8 | sessionstart, preamble, postuserp, keyword, taste-gate, craft-floor, postresponse, detect |
+| Beats | 7 | memory (6), reflect (1) |
+| Justify | 4 | source-guard, watch-guard, watch-standing-by, queue-drain-stop |
+| Voice & chat | 3 | voice-gate, voice-mandate, voice-toggle |
+| Design Tools | 2 | figma-fidelity-stop, figma-fidelity-arm |
 
-**Gate hooks** (state machines, block until verification):
+Four hooks are pinned always-on regardless of what's installed (`beats-rebuild`, `beats-staleness-guard`, `hook-registry-guard`, `hook-registry-stop`); one ships default-off until you turn it on (`sidecoach-detect`).
 
-| Event | Hook | Purpose |
-|---|---|---|
-| `PostToolUse(Write\|Edit\|MultiEdit)` | `verify-before-done.sh` | Sets `.needs-verification`; clears on screenshot Read, test commands, external curl, `/tmp/*test*.log` Read |
-| `PostToolUse(Read)` | `verify-clear.sh` | Also clears `.needs-verification` on image Read |
-| `UserPromptSubmit` | `verify-manual.sh` | Recognizes "looks good"/"ship it" phrases as manual sign-off |
-| `PostToolUse(Bash\|...computer)` | `screenshot-open-mandate.sh` | Sets `.screenshot-pending` after a screenshot saves; bash-guard blocks further work until cleared |
-| `PostToolUse(Read)` | `screenshot-open-clear.sh` | Clears `.screenshot-pending` on matching `.png` Read |
-| `PostToolUse(Write\|Edit\|MultiEdit)` | `second-fix-gate.sh` (v2) | Warn-once when 2 fixes land on same file in 10 min with verify still pending. Silent on purely-additive edits. Override: `touch ~/.claude/.suppress-fix-gate` |
+The authoritative full inventory - every hook's exact description, which cluster owns it, and the precedence rules between them - lives in `claude/hooks/browser-tree.json` (machine-readable, read by both installer surfaces) and `.claude/memory/decision_hook_system_architecture.md` (prose).
 
-**Nudge hooks** (advisory):
+</details>
 
-| Matcher | Hook | Purpose |
-|---|---|---|
-| `Write\|Edit\|MultiEdit\|Bash` | `memory-nudge.sh` | Dirty-state reminder after non-memory edits |
-| `SessionStart` | `reflect-nudge.sh` | Counts new memories since last `/reflect`; nudges above threshold |
+<a id="deep-memory-system"></a>
+<details>
+<summary><b>The memory system in detail</b></summary>
 
-**Toggle hooks** (UserPromptSubmit, state flips on chat phrases):
+**Why does Claude remember here?** Because the record is externalized into files git carries, not left inside a conversation that ends.
 
-| Phrase | Hook | Effect |
-|---|---|---|
-| "voice on/off", "mute yourself", "unmute" | `voice-toggle.sh` | Toggles `~/.claude/.voice-enabled` |
-| "resume on/off", "auto-resume" | `resume-toggle.sh` | Toggles cmux auto-resume policy |
+### Three layers
 
-**Lifecycle hooks**:
+**Project root memory** (`<project>/.claude/memory/`) is the canonical record for that project. Session files (`session_YYYY-MM-DD_<topic>.md`), feedback files, reference files, decision files. Indexed by `MEMORY.md`. Committed to git. Read by every collaborator's Claude.
 
-| Event | Hook | Purpose |
-|---|---|---|
-| `SessionStart` | `startup-check.sh` | Loads project + global memory |
-| `SessionStart` | `voice-mandate.sh` | Injects active-mandate, muted-notice, or silence based on voice state |
-| `PreCompact` | inline | Flushes pending memory before compression |
-| `PostCompact` | `startup-check.sh` | Reloads memory after compression |
-| `SessionEnd` | `resume-guard.sh` | Blocks cmux auto-resume |
+**Global cross-project memory** (`~/.claude/memory/`) is per-machine, durable across all projects. The attribution policy, Yes&-wide feedback, hook verification discipline. Symlinked from the dotfiles by the `memory` component, so every Yes& dev's machine has the same baseline.
 
-The authoritative version of this inventory + flag-file registry + precedence rules lives in `.claude/memory/decision_hook_system_architecture.md`.
+**Per-project global memory** (`~/.claude/projects/<project-path>/memory/`) is automatically written by Claude Code for telemetry-style state.
+
+### The lifecycle
+
+Every discrete change writes a memory entry before Claude responds - not per-feature, per-task. A CSS fix, a copy change, a refactor decision each lands in `<project>/.claude/memory/session_YYYY-MM-DD_<topic>.md` immediately. Batching is a failure mode the `memory-nudge` hook catches.
+
+Three lifecycle hooks make this concrete: **SessionStart** loads project + global memory into context. **PreCompact** flushes pending memory before context compresses. **PostCompact** reloads it after.
+
+### Reflection
+
+`/reflect` spawns five parallel analysis agents (Pattern Hunter, Tension Detector, Gap Analyst, Drift Tracker, Decision Archaeologist) against the accumulated memory corpus. They surface what's emerging that no single session would notice - contradictions between rules, hooks that misfire, decisions gone stale, drift in practice. A `reflect-nudge` hook counts new memories since the last reflection and nudges above a configurable threshold (default 15).
+
+### Attribution and collaboration
+
+Every memory entry records a `Collaborator:` line derived from `git config user.name`. Alice's Claude tags her name; Bob's tags his. Memory files commit and push like any source file, and the next teammate's Claude reads them at session start with attribution baked in.
+
+The assistant is invisible in the output - no AI-attribution lines in commits, no auto-generated credit comments. Humans are named; the assistant isn't.
+
+For ironclad enforcement on projects where teammates haven't installed the dotfiles, drop a project-root `CLAUDE.md` that re-states the rules ([template below](#project-claude-md)) - Claude Code reads it regardless of machine config.
 
 </details>
 
@@ -383,7 +267,7 @@ The authoritative version of this inventory + flag-file registry + precedence ru
 
 The `memory` component adds a fourth marker block (Memory Discipline rules). All four coexist with whatever you already have.
 
-**Verification Protocol** - seven rules that gate task completion:
+**Verification Protocol** - the rules that gate task completion:
 
 1. **Visual verification** - UI changes need a screenshot. "It renders" isn't verification.
 2. **Interactive verification** - buttons, dropdowns, toggles must be clicked and re-screenshotted.
@@ -405,9 +289,9 @@ The `memory` component adds a fourth marker block (Memory Discipline rules). All
 - Style guides and component libraries fully isolated from app global styles.
 - Each design-system component verified in-browser against the design source before moving on.
 
-**QA gate for UI work** - five steps before "done":
+**QA gate for UI work** - steps before "done":
 
-1. `/sidecoach audit <target>` - 5-dimension scan (a11y, perf, theming, responsive, anti-patterns)
+1. `/sidecoach audit <target>` - the detection engine (a11y, contrast, heading order, anti-patterns)
 2. `/sidecoach critique <target>` - design review via independent sub-agents
 3. `/sidecoach polish <target>` - final design-system alignment pass
 4. `tactical-polish` 16-point checklist - concentric radius, optical alignment, shadows over borders, tabular nums, scale-on-press at 0.96, etc.
@@ -429,6 +313,8 @@ A plugin (`sidecoach`) auto-installed via your `enabledPlugins`. 26 flows behind
 
 The CLAUDE.md hard rule: before any UI work begins, Claude checks for `PRODUCT.md`. Missing or stub triggers `/sidecoach teach`. Missing `DESIGN.md` plus existing code triggers a one-time-per-session nudge to run `/sidecoach document`.
 
+As covered in the [feature-cluster note above](#clusters): the detection half of this layer (`audit`) is real and measured; the coaching half - actual design instruction, not just a findings list - is still being built.
+
 ### 2. Research - component-gallery-reference
 
 A bundled skill that has Claude browse [component.gallery](https://component.gallery) before building any standard UI component. The site catalogs 60 component types across 95 design systems (Polaris, Carbon, Primer, Spectrum, Material) with roughly 2,700 examples.
@@ -447,23 +333,23 @@ The personal-catalog system. `~/.claude/design-references/` holds one folder per
 
 **Capture.** Five-step wizard: source -> auto-tag proposal -> why-interesting body -> slug -> save. Hybrid tagging: strict Category (controlled vocab), free-form Pattern + Feel.
 
-**Recall.** Greps the catalog for matching category/pattern/feel against the task context and against PRODUCT.md voice words, scores the hits, and surfaces the top 0-5 scoring 3 or better. Stays silent if nothing scores - noisy surfacing destroys trust. Reach for it deliberately at the start of a UI build; like every other layer, it does not fire on its own.
+**Recall.** Greps the catalog for matching category/pattern/feel against the task context and against PRODUCT.md voice words, scores the hits, and surfaces the top 0-5 scoring 3 or better. Stays silent if nothing scores - noisy surfacing destroys trust.
 
 ### 5. Motion - motion-reference (GSAP + Lenis)
 
 A bundled skill shipping canonical patterns for the GSAP + Lenis stack. Routes by task: tweens/timelines → `gsap`; scroll-driven → `ScrollTrigger`; smooth-scroll feel → Lenis; layout transitions → `Flip`; SVG path draw → `DrawSVG`; text by word/char → `SplitText`; drag → `Draggable`; SVG morph → `MorphSVG`; path animation → `MotionPath`.
 
-License note baked into the skill: as of Webflow's acquisition of GreenSock, **all formerly-paid GSAP plugins are now free**. The skill ships the 3-line GSAP + ScrollTrigger + Lenis glue snippet, React `useGSAP` hook with scope, `ReactLenis` root provider, and the gotchas that bite (SSR, ScrollTrigger refresh after dynamic content, iOS Safari + Lenis + fixed-position quirks).
+License note baked into the skill: as of Webflow's acquisition of GreenSock, **all formerly-paid GSAP plugins are now free**.
 
 ### 6. Tokens - DESIGN.md
 
-Google's spec for representing a visual identity to coding agents. YAML frontmatter for tokens (colors, typography, rounded, spacing, components with `{path.to.token}` references), markdown body for rationale. Comes with `npx @google/design.md lint` for schema validation, WCAG contrast checks, broken-ref detection.
+Google's spec for representing a visual identity to coding agents. YAML frontmatter for tokens (colors, typography, rounded, spacing, components with `{path.to.token}` references), markdown body for rationale. `npx @google/design.md lint` for schema validation, WCAG contrast checks, broken-ref detection.
 
 CLAUDE.md mandates: conform to the Google spec, run lint after every write, resolve every error or warning. Generated UI references tokens via `{path.to.token}`, not hex literals.
 
 ### 7. Tactical - tactical-polish
 
-An Anthropic Skill carrying sixteen specific rules with exact values. Invoke `/tactical-polish` yourself for substantive detail work - measured across the corpus above it had 8 genuinely eligible occasions and ran on none of them, which makes it the most-skipped layer in the stack:
+An Anthropic Skill carrying sixteen specific rules with exact values. Invoke `/tactical-polish` yourself for substantive detail work:
 
 - Concentric border radius (`outer = inner + padding`)
 - Optical centering (icons need manual nudge past geometric)
@@ -571,21 +457,7 @@ People conflate these. Four different mechanisms, four different config surfaces
 
 The `config` component enables ~20 plugins via `settings.json`: `claude-md-management`, `figma`, `firebase`, `hookify`, `skill-creator`, `sentry`, `supabase`, `swift-lsp`, `superpowers`, `agent-sdk-dev`, `typescript-lsp`, `security-guidance`, `discord`, `feature-dev`, `ralph-loop`, `code-review`, `plugin-developer-toolkit`, `chrome-devtools`.
 
-The `skills` component bundles 9 skills:
-
-| Skill | Source |
-|---|---|
-| `tactical-polish` | npx (jakubkrehel/tactical-polish) |
-| `component-gallery-reference` | bundled |
-| `fontshare-reference` | bundled |
-| `motion-reference` | bundled |
-| `curate` | bundled |
-| `social-media` | bundled |
-| `design-team` | bundled |
-| `visual-effects` | bundled |
-| `icon-source` | bundled |
-
-The `reflect` component adds the `reflect` skill on top of those, plus a SessionStart nudge hook.
+The `skills` component bundles the 9 skills listed under Design Tools above, plus `sidecoach` ships as its own plugin. The `reflect` component adds the `reflect` skill on top, plus a SessionStart nudge hook.
 
 Connectors (ClickUp, Google Drive, etc.) are NOT in the dotfiles - they're account-bound and authorize at claude.ai. MCP servers (Claude in Chrome, etc.) are NOT in the dotfiles either - they need OAuth or per-machine credentials.
 
@@ -610,26 +482,21 @@ IMPROV_DIR=~/code/dots IMPROV_REPO=https://github.com/your-fork/improv.git \
 **Installer flags:**
 
 ```bash
-./install.sh                    # interactive bucket browser (terminal)
-./install.sh --gui              # browser-based GUI installer (localhost only)
+./install.sh                    # opens the browser installer (the default now)
+./install.sh --cli              # terminal bucket browser instead
+./install.sh --browser          # older name for --cli, kept for muscle memory
+./install.sh --gui              # same as no flags - explicit, if you want to be
 ./install.sh --yes              # install everything non-interactively
-./install.sh --preset NAME      # all | minimal | none
+./install.sh --preset NAME      # all | minimal | justify | none
 ./install.sh --only KEYS        # comma-separated subset
+./install.sh --personal         # also show the hidden Personal cluster
 ./install.sh --dry-run          # show resolved picks, touch no files
 ./install.sh --manifest         # print the component manifest as JSON, then exit
 ```
 
-**GUI installer (`--gui`)** - a visual alternative to the terminal picker for teams that would rather not drive a TUI. `./install.sh --gui` (or `ampersand --gui`) starts a small server bound to `127.0.0.1` only, opens your browser to it, and renders the same component tree as clickable rows with a live install log. It is a front-end over the same idempotent installer: nothing runs until you click Apply, the exact plan is validated against the component allowlist before anything is touched, and every request is gated by a one-time token in the URL. Leave the terminal open while you use it; Ctrl-C stops the server.
+**The GUI installer** starts a small server bound to `127.0.0.1` only, opens your browser to it, and renders the component tree as clickable rows with a live install log. It's a front-end over the same idempotent installer: nothing runs until you click Apply, the exact plan is validated against the component allowlist before anything is touched, and every request is gated by a one-time token in the URL. Leave the terminal open while you use it; Ctrl-C stops the server. `--personal` on the launcher carries through to the server automatically, so the hidden cluster shows up there too.
 
-Valid component keys: `brain`, `config`, `memory`, `skills`, `statusline`, `cmux`, `nvm`, `ampersand`, `discord`, `voice-input`, `voice-output`, `reflect`.
-
-**Presets:**
-
-| Preset | Components |
-|---|---|
-| `all` | Everything (same as `--yes`) |
-| `minimal` | `brain` + `config` + `memory` + `skills` + `nvm` |
-| `none` | Nothing (useful with `--dry-run`) |
+Valid `--only` keys are listed in full [above](#component-table).
 
 **Customizing settings.json** - `config` JSON-merges hooks, plugins, and permission patterns into your existing `~/.claude/settings.json`. It does not touch `defaultMode`, model, or other preferences. To add a plugin: edit `enabledPlugins` in `claude/settings.json` in the repo, commit, push, `ampersand --pull`, restart Claude Code.
 
@@ -671,17 +538,19 @@ Valid component keys: `brain`, `config`, `memory`, `skills`, `statusline`, `cmux
 <details>
 <summary><b>Troubleshooting</b></summary>
 
+**The browser installer didn't open** - `--gui` needs `python3` on your PATH; if it's missing the launcher says so and exits. If a browser window still doesn't appear, the URL it printed (`GUI installer running at http://127.0.0.1:...`) opens the same page manually. Or skip the browser entirely with `ampersand --cli`.
+
 **"claude: command not found" in fresh terminals** - Homebrew's nvm sources `nvm.sh` but doesn't activate a default Node version. Fix: tick the `nvm` component. It appends `nvm use default --silent` to `.zshrc`. New terminal or `source ~/.zshrc`.
 
 **`ampersand: command not found` immediately after install** - shell functions defined inside install.sh's child process don't escape into the parent shell. Fix: `source ~/.zshrc` once, or open a new terminal.
 
 **Permission prompts on every markdown write** - should not happen with `defaultMode: bypassPermissions` set. `claude/settings.json` already includes `Write(**/*.md)`, `Edit(**/*.md)`, `MultiEdit(**/*.md)` allow rules. If persisting, restart Claude Code (permissions load at session start).
 
-**gum not installed** - the TUI degrades gracefully to a numbered text menu. Same components, same flags, less polish.
+**gum not installed** - `--cli`'s terminal picker degrades gracefully to a numbered text menu. Same components, same flags, less polish.
 
 **Memory entries from a teammate on a different machine** - pull the project: `git pull`. Memory files are in `<project>/.claude/memory/` like any other source. Claude reads them at session start.
 
-**Fresh install on a new Mac** - `curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash`. Take TUI defaults. New terminal. Done.
+**Fresh install on a new Mac** - `curl -fsSL https://raw.githubusercontent.com/jonahscohen/improv/main/bootstrap.sh | bash`. Take the browser installer's defaults. New terminal. Done.
 
 **Existing Claude Code config I don't want to overwrite** - every component is additive. `ampersand --pull --only brain,config,memory,skills` installs the team rules, hooks/plugins, memory subsystem, and skills - your existing content stays intact.
 
@@ -700,7 +569,7 @@ Valid component keys: `brain`, `config`, `memory`, `skills`, `statusline`, `cmux
 3. If modifying `~/.zshrc`, use a marker-guarded append (see `nvm` or `ampersand` for the pattern, including path-drift self-heal).
 4. If modifying `~/.claude/settings.json` JSON-style, use the python3 stdlib merge pattern from the `memory` component. Marker-detection is mandatory.
 5. Update `--help` valid keys list and the post-install summary.
-6. Update the README component table.
+6. Update the README's [component table](#component-table).
 7. Write a session memory entry. Index in `MEMORY.md`.
 
 **Adding a new skill to the `skills` component** - edit install.sh section 3. Add another `npx --yes skills add <github-repo>` invocation or a file-copy block (for bundled skills). Update the component description.
