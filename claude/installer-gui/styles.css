@@ -591,30 +591,24 @@
   }
 
 /* ── directional motion ───────────────────────────────────────────────────────
-   Moving deeper and moving back are different journeys, and without a direction
-   cue a tree just blinks between unrelated screens. Forward enters from the
-   right, back enters from the left, so the motion matches the mental model of
-   going in and coming out. Short and eased-out: this is a cue, not a show. */
-@keyframes pane-in-fwd{ from{transform:translateX(20px);} to{transform:none;} }
-@keyframes pane-in-back{ from{transform:translateX(-20px);} to{transform:none;} }
-/* MOTION ONLY, NEVER OPACITY. The first version faded from 0 with fill-mode
-   `both`, so any moment the animation was not advancing left the pane at opacity
-   0 - and a stretched test showed it blank for seconds at a time. A directional
-   cue is not worth a state where the content is gone. Animating only the
-   transform means the worst case is content sitting 20px off-centre, which is a
-   blemish rather than an outage.
-   Forward enters from the right, back from the left, matching going in and
-   coming out of a tree. */
+   Direct order: moving up or down the tree (drilling into a group, or coming
+   back out of one) slides AND fades together now - not a fade replacing the
+   slide, both at once. Forward still enters from the right, back from the
+   left, same as before; each keyframe now also animates opacity alongside the
+   transform.
+   NO fill-mode, same reason as always: a moment where the animation is not
+   advancing leaves the pane at its own normal opacity (1) and untransformed
+   position, the same values every one of these animations ends on - never
+   stuck invisible or offset, unlike the earlier bug's fill-mode:both which
+   held the FROM state open-endedly. */
+@keyframes pane-in-fwd{ from{opacity:0; transform:translateX(20px);} to{opacity:1; transform:none;} }
+@keyframes pane-in-back{ from{opacity:0; transform:translateX(-20px);} to{opacity:1; transform:none;} }
 .pane.is-fwd{animation:pane-in-fwd 380ms var(--ease);}
 .pane.is-back{animation:pane-in-back 380ms var(--ease);}
 
-/* Switching rail sections is lateral, not forward or backward - direct order:
-   fade rather than the slide above. This is the one place opacity is used for
-   a pane transition despite the rule just above it, and it is safe for the
-   reason that rule cares about: no fill-mode, so a moment where the animation
-   is not advancing leaves the pane at its own normal opacity (1), the same
-   value the animation ends on - never stuck invisible, unlike the earlier
-   bug's fill-mode:both which held the FROM state open-endedly. */
+/* Switching rail sections is lateral, not forward or backward, so it stays a
+   plain fade with no directional slide - the same treatment it has always
+   had. */
 @keyframes pane-in-fade{ from{opacity:0;} to{opacity:1;} }
 .pane.is-lateral{animation:pane-in-fade 320ms var(--ease);}
 @media (prefers-reduced-motion: reduce){
