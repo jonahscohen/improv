@@ -250,7 +250,14 @@
     box-shadow:0 8px 24px rgba(2,39,43,0.16), 0 1px 2px rgba(2,39,43,0.10);
     padding:var(--s3); display:flex; flex-direction:column; gap:var(--s2);
     z-index:20;
+    /* Closed rest state: faded and dropped slightly toward the trigger it
+       rises from. A plain transition, not a keyframe animation - it always
+       interpolates between two real states, so there is no fill-mode to get
+       wrong and no risk of the earlier stuck-invisible bug class. */
+    opacity:0; transform:translateY(8px); pointer-events:none;
+    transition:opacity 180ms var(--ease), transform 180ms var(--ease);
   }
+  .shortcuts__panel.is-open{opacity:1; transform:none; pointer-events:auto;}
   .shortcuts__panel[hidden]{display:none;}
   .shortcut__row{display:flex; align-items:center; justify-content:space-between; gap:var(--s3);}
   .shortcut__keys{display:flex; gap:var(--s1); flex:0 0 auto;}

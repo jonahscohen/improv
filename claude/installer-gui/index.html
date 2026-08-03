@@ -773,9 +773,28 @@ document.getElementById('btnQuit').addEventListener('click', doQuit);
 // click of the trigger, a click anywhere outside it, or Escape.
 const shortcutsTrigger = document.getElementById('shortcutsTrigger');
 const shortcutsPanel = document.getElementById('shortcutsPanel');
+// Matches .shortcuts__panel's own transition duration in styles.css - keep
+// the two in sync if either changes.
+const SHORTCUTS_ANIM_MS = 180;
 function setShortcutsOpen(open){
-  shortcutsPanel.hidden = !open;
   shortcutsTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if(open){
+    shortcutsPanel.hidden = false;
+    // Forces the browser to register the closed (opacity:0, translateY(8px))
+    // state as a real paint before adding .is-open - otherwise removing
+    // [hidden] and adding .is-open happen in the same frame and there is
+    // nothing for the transition to animate FROM.
+    void shortcutsPanel.offsetWidth;
+    shortcutsPanel.classList.add('is-open');
+  } else {
+    shortcutsPanel.classList.remove('is-open');
+    // On a timer, not 'transitionend' - same reason as hideLoader(): a
+    // dropped event would leave the panel sitting there, invisible but still
+    // exposed to focus and screen readers, forever.
+    setTimeout(()=>{
+      if(!shortcutsPanel.classList.contains('is-open')) shortcutsPanel.hidden = true;
+    }, SHORTCUTS_ANIM_MS);
+  }
 }
 shortcutsTrigger.addEventListener('click', e=>{
   e.stopPropagation();
