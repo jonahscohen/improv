@@ -110,16 +110,25 @@
     </main>
   </div>
 
-  <footer class="actionbar">
-    <!-- Anchored to the action bar rather than to the viewport, so it always sits
-         directly above it whatever height the bar happens to be. -->
+  <!-- Fixed to the viewport, left edge pinned to --rail-w so it lines up with
+       the pane without ever extending over the rail - deliberately a SIBLING
+       of .pane, not nested inside it: .pane gets a real `transform` applied
+       during its own navigation animations (is-fwd/is-back/is-lateral), and
+       any transformed ancestor becomes the containing block for a
+       position:fixed descendant - Codex caught that nesting this inside
+       .pane would have made the bar (and toasts) jump/resize relative to the
+       pane mid-transition instead of staying fixed to the real viewport.
+       Toasts stack above the apply bar in normal flex order. -->
+  <div class="pane__foot" id="paneFoot">
     <div class="toasts" id="toasts" aria-live="polite"></div>
-    <span class="staged" id="pendfoot"></span>
-    <span class="keys"><kbd>&#8593;&#8595;</kbd> move <kbd>enter</kbd> toggle <kbd>&#8592;</kbd> back</span>
-    <span class="actions">
+    <!-- Direct order: no permanent bottom bar - this shows only when a
+         component is staged, fading and sliding up from the bottom of
+         the content panel, never over the left-hand nav. -->
+    <div class="apply-bar" id="applyBar" hidden>
+      <span class="staged" id="pendfoot"></span>
       <button class="btn btn--primary" id="btnApply" type="button" disabled>Apply</button>
-    </span>
-  </footer>
+    </div>
+  </div>
 
   <!-- Generic confirm dialog - shared by Apply and Quit (see confirmAction()),
        not a component either owns. Content is filled in per call. -->
@@ -256,10 +265,13 @@ function revealTargets(){
     document.getElementById('rail'),
     document.querySelector('.pane__head'),
     ...document.getElementById('rows').children,
-    // Codex caught this one: without it, the Quit/Apply footer was never
-    // hidden at all, so it sat at full opacity showing straight through the
-    // loader's own fade - the exact bug this whole mechanism exists to avoid.
-    document.querySelector('.actionbar'),
+    // Codex originally caught this one against the old .actionbar footer:
+    // without including it, that bar sat at full opacity showing straight
+    // through the loader's own fade - the exact bug this whole mechanism
+    // exists to avoid. .pane__foot (toasts + the apply bar) is what replaced
+    // it, and is usually empty/hidden at boot anyway, but including it keeps
+    // the same guarantee if a toast ever fires during the very first load.
+    document.querySelector('.pane__foot'),
   ].filter(Boolean);
 }
 // One-shot, called only from hideLoader() - never from render() itself, so
@@ -792,6 +804,7 @@ function render(){
   const ap=document.getElementById('btnApply');
   ap.disabled = nP===0;
   ap.textContent = nP ? ('Apply '+nP+' change'+(nP===1?'':'s')) : 'Apply';
+  setApplyBarOpen(nP>0);
   // Play the direction cue, then clear it so a re-render for an unrelated reason
   // (staging a change, applying) does not slide the pane sideways for no reason.
   if(navDir){
@@ -874,6 +887,37 @@ function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%row
 
 document.getElementById('btnApply').addEventListener('click', confirmedApply);
 document.getElementById('btnQuit').addEventListener('click', confirmedQuit);
+
+// ---- apply bar: only ever visible while something is actually staged.
+// Same fade+slide pattern as the shortcuts panel below - a static closed
+// state in CSS, JS only toggles when the target open/closed state actually
+// differs from where it already is, so a render() that keeps nP>0 across
+// many re-renders (navigating around with something staged) does not force
+// a redundant reflow or re-touch a class that is already correct.
+const APPLY_BAR_ANIM_MS = 220;
+function setApplyBarOpen(open){
+  const bar = document.getElementById('applyBar');
+  // .pane__foot is fixed now (see styles.css), so it no longer pushes the
+  // scrollable content up the way a real flow element would - this class
+  // reserves the room instead, so the last row never ends up hiding under it.
+  document.querySelector('.pane').classList.toggle('has-apply-bar', open);
+  // Codex caught a real race here: checking bar.hidden (not is-open) meant
+  // unstaging-then-restaging within the 220ms close animation left the bar
+  // silently invisible until the NEXT render() - hidden stays false for the
+  // whole close animation, so "if(bar.hidden)" read a mid-fade-out bar as
+  // "already open" and skipped re-showing it. is-open is the actual source
+  // of visual truth; hidden just lags behind it by up to 220ms.
+  if(open){
+    if(!bar.classList.contains('is-open')){
+      bar.hidden = false;
+      void bar.offsetWidth;   // see the shortcuts panel's identical comment below
+      bar.classList.add('is-open');
+    }
+  } else if(bar.classList.contains('is-open')){
+    bar.classList.remove('is-open');
+    setTimeout(()=>{ if(!bar.classList.contains('is-open')) bar.hidden = true; }, APPLY_BAR_ANIM_MS);
+  }
+}
 
 // ---- keyboard shortcuts panel: a simple toggle, not a full popover library.
 // Floats above its own trigger (see .shortcuts__panel), closes on a second

@@ -58,6 +58,11 @@
     --r-sm:4px; --r-md:8px; --r-full:9999px;
     --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px;
     --ease:cubic-bezier(0.2,0,0,1);
+    /* Single source of truth for the rail's width - .body's own grid column
+       AND the fixed-position pane__foot below both read this, so they can
+       never drift out of sync with each other the way two separately
+       hardcoded 268px literals could. */
+    --rail-w:268px;
   }
 
   *{box-sizing:border-box;}
@@ -68,8 +73,10 @@
     -webkit-font-smoothing:antialiased;
     /* FULL BLEED. The previous build centred a bordered, rounded, shadowed panel
        in the viewport, which read as a window inside a window. This IS the
-       application, so it occupies the application. */
-    display:grid; grid-template-rows:auto 1fr auto; height:100vh; overflow:hidden;
+       application, so it occupies the application. Two rows now, not three -
+       the footer that used to be the third is gone; the apply bar lives
+       inside the pane itself instead of as a body-level sibling. */
+    display:grid; grid-template-rows:auto 1fr; height:100vh; overflow:hidden;
   }
 
   /* ── boot loader ───────────────────────────────────────────────────────────
@@ -180,7 +187,7 @@
   :root[data-theme="light"] .theme-toggle .i-moon{display:none;}
 
   /* ── body: rail + pane ──────────────────────────────────────────────────── */
-  .body{display:grid; grid-template-columns:268px 1fr; min-height:0;}
+  .body{display:grid; grid-template-columns:var(--rail-w) 1fr; min-height:0;}
 
   /* THE WORKFLOW CHANGE. The previous build was a drill-down stack: opening a
      group replaced the entire screen, so you lost sight of everything else and
@@ -268,7 +275,15 @@
   }
   .shortcut__desc{font-size:var(--sm); color:var(--text-secondary); text-align:right;}
 
-  .pane{overflow-y:auto; padding:var(--s6) var(--s8);}
+  .pane{overflow-y:auto; padding:var(--s6) var(--s8); transition:padding-bottom 220ms var(--ease);}
+  /* position:fixed on .pane__foot (see above) means it no longer reserves
+     its own space in flow the way the old sticky version did - without
+     this, the last row or two of content would sit UNDERNEATH the apply
+     bar once it appears, rather than scrolling clear of it. Toggled
+     alongside the bar itself (see setApplyBarOpen), not applied
+     unconditionally, so there is no permanently-reserved gap at the bottom
+     of every page when nothing is staged. */
+  .pane.has-apply-bar{padding-bottom:calc(var(--s6) + 76px);}
   /* The divider that used to be implicit (the header's own margin) is now a
      real rule, since Back/bulk moving above the title made the header tall
      enough that "where it ends" needed stating rather than assumed. */
@@ -481,20 +496,28 @@
   .row__dot.is-off{color:var(--text-tertiary);}
   .empty{color:var(--text-tertiary); font-size:var(--sm); padding:var(--s6) 0; overflow-wrap:anywhere;}
 
-  /* ── action bar ─────────────────────────────────────────────────────────── */
-  .actionbar{
-    display:flex; align-items:center; gap:var(--s4); flex-wrap:nowrap;
-    padding:var(--s3) var(--s6);
-    border-top:1px solid var(--border-firm); background:var(--raised);
-    position:relative;   /* the toast stack anchors to this */
+  /* ── pane foot: toasts + the apply bar, pinned to the viewport's bottom
+     edge but constrained to the PANE's own left/right bounds ──────────────
+     Direct order: no permanent bottom bar spanning the whole window, and it
+     has to adhere to the bottom of the viewport regardless of scroll
+     position or how little content is above it - position:sticky looked
+     right at first but only holds while there is enough content to scroll
+     PAST; a short page (few rows) left it sitting right after the last row
+     with a gap below, not flush with the bottom edge. position:fixed with
+     left pinned to the rail's own width (the shared --rail-w token, not a
+     second hardcoded 268px) solves both: always at the true bottom, and
+     never extending over the rail, independent of scroll or content height. */
+  .pane__foot{
+    position:fixed; left:var(--rail-w); right:0; bottom:0; z-index:10;
+    display:flex; flex-direction:column;
   }
 
-  /* STATUS HAS ITS OWN PLACE NOW. It used to be written into a span in this bar
-     that the next row hover overwrote, so a message about a failed apply could
-     vanish before it was read. Anchored to the action bar rather than to the
-     viewport, so it always sits directly above it whatever height the bar is. */
+  /* STATUS HAS ITS OWN PLACE NOW. It used to be written into a span in the old
+     footer that the next row hover overwrote, so a message about a failed
+     apply could vanish before it was read. Now a plain flex child stacking
+     above the apply bar in document order, rather than absolutely
+     positioned over a bar it does not own the position of. */
   .toasts{
-    position:absolute; bottom:100%; left:0; right:0;
     display:flex; flex-direction:column; align-items:center;
     padding:0 var(--s5) var(--s4);
     /* Nothing here closes on a timer, so the column can grow. It scrolls rather
@@ -612,19 +635,22 @@
      reads at a glance without parsing the sign. */
   .staged .plus{color:var(--ok);}
   .staged .minus{color:var(--red-text);}
-  /* The status span that used to sit here is gone - messages are toasts now. It
-     was also the flex spacer, so the keys and actions take that job explicitly
-     rather than inheriting it from an element whose real purpose was text. */
-  .keys{margin-left:auto;}
-  /* Measured 3.24:1 on --raised as tertiary. These are labels you read, not
-     decoration, so they take secondary ink. */
-  .actions{display:flex; gap:var(--s2); flex:0 0 auto; margin-left:auto; padding-left:var(--s5); border-left:1px solid var(--border-soft);}
-  .keys{display:flex; flex:0 0 auto; gap:var(--s2); align-items:center; flex-wrap:wrap; color:var(--text-secondary); font-size:var(--xs);}
-  .keys kbd{
-    font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary);
-    background:var(--canvas); border:1px solid var(--border-firm); border-bottom-width:2px;
-    border-radius:var(--r-sm); padding:1px var(--s2);
+
+  /* Only ever visible while something is actually staged - direct order,
+     replacing a bar that used to sit there permanently. Fades and slides up
+     from the bottom of the pane, not the whole window. */
+  .apply-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:var(--s4);
+    padding:var(--s3) var(--s6);
+    border-top:1px solid var(--border-firm); background:var(--raised);
+    opacity:0; transform:translateY(12px); pointer-events:none;
+    /* Same reasoning as every other motion in this file: a transition, not a
+       keyframe animation, so there is no fill-mode and no way to end up
+       stuck invisible - whatever state it is actually in is what renders. */
+    transition:opacity 220ms var(--ease), transform 220ms var(--ease);
   }
+  .apply-bar.is-open{opacity:1; transform:none; pointer-events:auto;}
+  .apply-bar[hidden]{display:none;}
 
   :focus-visible{outline:2px solid var(--red); outline-offset:2px; border-radius:var(--r-sm);}
   /* #paneTitle has tabindex="-1" - it exists ONLY so focusPaneTitle() can move
@@ -638,8 +664,10 @@
   #paneTitle:focus-visible{outline:none;}
   @media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important;}}
   @media (max-width:720px){
-    .keys{display:none;}
     .body{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+    /* No side rail at this width - it becomes a horizontal strip ABOVE the
+       pane instead, so the fixed bottom bar spans full width here too. */
+    .pane__foot{left:0;}
     .rail-col{border-right:0; border-bottom:1px solid var(--border-firm);}
     .rail{
       flex-direction:row; overflow-x:auto; gap:var(--s2); padding:var(--s3);
