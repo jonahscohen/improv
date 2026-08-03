@@ -63,7 +63,27 @@
   </header>
 
   <div class="body">
-    <nav class="rail" id="rail" aria-label="Components"></nav>
+    <div class="rail-col">
+      <nav class="rail" id="rail" aria-label="Components"></nav>
+      <!-- Pinned below the (scrolling) rail, not inside it - renderRail()
+           clears and rebuilds #rail on every render(), which would wipe this
+           out too if it lived there. -->
+      <div class="shortcuts">
+        <button class="shortcuts__trigger" id="shortcutsTrigger" type="button"
+                aria-expanded="false" aria-controls="shortcutsPanel">
+          <!-- source: lucide "info" - paths verbatim from lucide.dev -->
+          <svg data-icon-source="lucide:info" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+          <span>Keyboard shortcuts</span>
+        </button>
+        <div class="shortcuts__panel" id="shortcutsPanel" role="dialog" aria-label="Keyboard shortcuts" hidden>
+          <div class="shortcut__row"><span class="shortcut__keys"><kbd>&#8593;</kbd><kbd>&#8595;</kbd></span><span class="shortcut__desc">Move selection</span></div>
+          <div class="shortcut__row"><span class="shortcut__keys"><kbd>Enter</kbd><kbd>&#8594;</kbd></span><span class="shortcut__desc">Open or toggle</span></div>
+          <div class="shortcut__row"><span class="shortcut__keys"><kbd>&#8592;</kbd><kbd>Backspace</kbd></span><span class="shortcut__desc">Back</span></div>
+          <div class="shortcut__row"><span class="shortcut__keys"><kbd>A</kbd></span><span class="shortcut__desc">Apply staged changes</span></div>
+          <div class="shortcut__row"><span class="shortcut__keys"><kbd>Q</kbd></span><span class="shortcut__desc">Quit</span></div>
+        </div>
+      </div>
+    </div>
     <main class="pane">
       <div class="pane__head">
         <!-- Back and the bulk actions get their own row, ABOVE the title -
@@ -747,6 +767,23 @@ function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%row
 
 document.getElementById('btnApply').addEventListener('click', runApply);
 document.getElementById('btnQuit').addEventListener('click', doQuit);
+
+// ---- keyboard shortcuts panel: a simple toggle, not a full popover library.
+// Floats above its own trigger (see .shortcuts__panel), closes on a second
+// click of the trigger, a click anywhere outside it, or Escape.
+const shortcutsTrigger = document.getElementById('shortcutsTrigger');
+const shortcutsPanel = document.getElementById('shortcutsPanel');
+function setShortcutsOpen(open){
+  shortcutsPanel.hidden = !open;
+  shortcutsTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+shortcutsTrigger.addEventListener('click', e=>{
+  e.stopPropagation();
+  setShortcutsOpen(shortcutsPanel.hidden);
+});
+document.addEventListener('click', e=>{
+  if(!shortcutsPanel.hidden && !e.target.closest('.shortcuts')) setShortcutsOpen(false);
+});
 document.addEventListener('keydown',e=>{
   if(e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
   if(e.key==='ArrowDown'){move(1);e.preventDefault();}
@@ -761,6 +798,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>0){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); } e.preventDefault(); }
   else if(e.key==='a'||e.key==='A'){ runApply(); }
   else if(e.key==='q'||e.key==='Q'){ doQuit(); }
+  else if(e.key==='Escape' && !shortcutsPanel.hidden){ setShortcutsOpen(false); shortcutsTrigger.focus(); }
 });
 boot();
 </script>

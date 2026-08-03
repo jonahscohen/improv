@@ -185,3 +185,4 @@
 - [Quit moved from footer text button to a topbar power-icon button, no label - shared .icon-btn class with the theme toggle](session_2026-08-02_quit-button-topbar-icon.md)
 - [Red focus ring on the page title after every navigation removed - tabindex=-1 means it never confirmed anything to a real keyboard user](session_2026-08-02_paneTitle-focus-ring-removed.md)
 - [Forward/back tree navigation slides and fades together now, not fade replacing slide - a misread corrected via AskUserQuestion](session_2026-08-02_tree-nav-slide-plus-fade.md)
+- [Keyboard-shortcuts info panel pinned at the bottom of the left rail - floats above its trigger, 3 close paths, all 5 real shortcuts listed](session_2026-08-02_keyboard-shortcuts-panel.md)

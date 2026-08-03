@@ -186,8 +186,12 @@
      group replaced the entire screen, so you lost sight of everything else and
      had to walk back up to compare two components. A preferences dashboard keeps
      its sections in view. The rail is permanent; only the pane changes. */
+  /* Border and background live here now, not on .rail itself, so they span
+     the whole column - the scrolling bucket list AND the shortcuts trigger
+     pinned below it - rather than stopping short where the list used to end. */
+  .rail-col{display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--border-firm); background:var(--raised);}
   .rail{
-    border-right:1px solid var(--border-firm); background:var(--raised);
+    flex:1 1 auto; min-height:0;
     overflow-y:auto; padding:var(--s3) var(--s3) var(--s5);
     display:flex; flex-direction:column; gap:2px;
   }
@@ -223,6 +227,39 @@
     font-variant-numeric:tabular-nums;
   }
   .rail__count.is-part{color:var(--part);}
+
+  /* ── keyboard shortcuts panel ──────────────────────────────────────────────
+     Pinned at the bottom of the rail column, not inside the scrolling rail
+     itself. position:relative here, position:absolute on the panel, so it
+     floats OVER the rail when open rather than pushing the bucket list up -
+     a disclosure this small shouldn't reflow a scroll region every time it
+     opens. Opens upward (bottom:100%) since the trigger already sits at the
+     very bottom of the viewport - opening down would run off-screen. */
+  .shortcuts{position:relative; flex:0 0 auto; border-top:1px solid var(--border-firm);}
+  .shortcuts__trigger{
+    width:100%; display:flex; align-items:center; gap:var(--s2);
+    padding:var(--s3) var(--s4); cursor:pointer;
+    background:none; border:0; color:var(--text-secondary); font:inherit; font-size:var(--sm);
+    transition:background 120ms var(--ease), color 120ms var(--ease);
+  }
+  .shortcuts__trigger:hover{background:var(--canvas); color:var(--text-primary);}
+  .shortcuts__trigger svg{width:16px; height:16px; flex:0 0 auto;}
+  .shortcuts__panel{
+    position:absolute; left:var(--s3); right:var(--s3); bottom:100%; margin-bottom:var(--s2);
+    background:var(--raised); border:1px solid var(--border-firm); border-radius:var(--r-md);
+    box-shadow:0 8px 24px rgba(2,39,43,0.16), 0 1px 2px rgba(2,39,43,0.10);
+    padding:var(--s3); display:flex; flex-direction:column; gap:var(--s2);
+    z-index:20;
+  }
+  .shortcuts__panel[hidden]{display:none;}
+  .shortcut__row{display:flex; align-items:center; justify-content:space-between; gap:var(--s3);}
+  .shortcut__keys{display:flex; gap:var(--s1); flex:0 0 auto;}
+  .shortcut__keys kbd{
+    font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary);
+    background:var(--canvas); border:1px solid var(--border-firm); border-bottom-width:2px;
+    border-radius:var(--r-sm); padding:1px var(--s2);
+  }
+  .shortcut__desc{font-size:var(--sm); color:var(--text-secondary); text-align:right;}
 
   .pane{overflow-y:auto; padding:var(--s6) var(--s8);}
   /* The divider that used to be implicit (the header's own margin) is now a
@@ -573,8 +610,8 @@
   @media (max-width:720px){
     .keys{display:none;}
     .body{grid-template-columns:1fr; grid-template-rows:auto 1fr;}
+    .rail-col{border-right:0; border-bottom:1px solid var(--border-firm);}
     .rail{
-      border-right:0; border-bottom:1px solid var(--border-firm);
       flex-direction:row; overflow-x:auto; gap:var(--s2); padding:var(--s3);
     }
     .rail__label{display:none;}
