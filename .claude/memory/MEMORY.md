@@ -187,3 +187,4 @@
 - [Forward/back tree navigation slides and fades together now, not fade replacing slide - a misread corrected via AskUserQuestion](session_2026-08-02_tree-nav-slide-plus-fade.md)
 - [Keyboard-shortcuts info panel pinned at the bottom of the left rail - floats above its trigger, 3 close paths, all 5 real shortcuts listed](session_2026-08-02_keyboard-shortcuts-panel.md)
 - [Keyboard-shortcuts panel now fades and slides open/closed via a plain CSS transition, not an instant hidden-attribute cut](session_2026-08-02_shortcuts-panel-fade-slide.md)
+- [Apply and Quit both require confirmation now - one shared modal wired into buttons AND their A/Q keyboard shortcuts, background keys suppressed while open](session_2026-08-02_apply-quit-confirm-dialog.md)

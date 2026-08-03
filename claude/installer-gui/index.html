@@ -121,6 +121,20 @@
     </span>
   </footer>
 
+  <!-- Generic confirm dialog - shared by Apply and Quit (see confirmAction()),
+       not a component either owns. Content is filled in per call. -->
+  <div class="modal" id="confirmModal" hidden>
+    <div class="modal__backdrop" id="confirmBackdrop"></div>
+    <div class="modal__card" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmBody">
+      <h2 class="modal__title" id="confirmTitle"></h2>
+      <p class="modal__body" id="confirmBody"></p>
+      <div class="modal__actions">
+        <button class="btn btn--quiet" id="confirmCancel" type="button">Cancel</button>
+        <button class="btn" id="confirmOk" type="button"></button>
+      </div>
+    </div>
+  </div>
+
 <script>
 // ---- server API (token-scoped; every request carries the page nonce) ----
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
@@ -399,6 +413,99 @@ async function runApply() {
 function doQuit() {
   api('/shutdown', { method:'POST', body:'{}' }).catch(()=>{});
   render(); toast('Installer stopped. You can close this tab.','info');
+}
+
+// ---- confirm dialog: shared by Apply and Quit, one modal, content per call.
+// Resolves true on Confirm, false on Cancel, backdrop click, or Escape - so
+// every call site is just `if (!(await confirmAction({...}))) return;`.
+function confirmAction({title, body, confirmLabel}){
+  return new Promise(resolve=>{
+    const modal = document.getElementById('confirmModal');
+    const backdrop = document.getElementById('confirmBackdrop');
+    const okBtn = document.getElementById('confirmOk');
+    const cancelBtn = document.getElementById('confirmCancel');
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmBody').textContent = body;
+    okBtn.textContent = confirmLabel;
+    // Always the bold solid style, matching the real Apply button itself -
+    // .btn--danger in this codebase is actually the QUIETER outline treatment
+    // (used for "Remove all" sitting next to a bold "Install all", where the
+    // two need to read as different weights side by side). There is only
+    // ever one action button here, so that distinction doesn't apply; the
+    // body text carries the stakes, not the button color.
+    okBtn.className = 'btn btn--primary';
+    const returnFocusTo = document.activeElement;
+    function close(result){
+      modal.hidden = true;
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      backdrop.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKeydown, true);
+      if(returnFocusTo && returnFocusTo.focus) returnFocusTo.focus();
+      resolve(result);
+    }
+    function onOk(){ close(true); }
+    function onCancel(){ close(false); }
+    // Capture phase, so this runs BEFORE the page's own global keydown
+    // handler and can stop background shortcuts (move/toggle/apply/quit)
+    // from firing while a confirmation is on screen - the whole point of
+    // asking is defeated if the keys underneath it still work. Codex caught
+    // the gap this alone leaves: stopPropagation blocks the SHORTCUT branches
+    // but not Tab moving real focus onto a background button, whose own
+    // Enter/Space activation is a browser default action that stopPropagation
+    // never touches - a stray Tab could reach Apply/Quit again and open a
+    // SECOND confirmAction() call sharing these same two DOM buttons. Only
+    // two focusable elements here, so trapping Tab is a plain wrap between
+    // them rather than a general focusable-elements query.
+    function onKeydown(e){
+      if(e.key==='Escape'){ e.preventDefault(); close(false); e.stopPropagation(); return; }
+      if(e.key==='Tab'){
+        e.preventDefault();
+        (e.shiftKey ? (document.activeElement===cancelBtn ? okBtn : cancelBtn)
+                    : (document.activeElement===okBtn ? cancelBtn : okBtn)).focus();
+      }
+      e.stopPropagation();
+    }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    backdrop.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKeydown, true);
+    modal.hidden = false;
+    // Cancel, not Confirm, gets the default focus - the safe option is what
+    // a reflex Enter press should land on, not the one that changes anything.
+    cancelBtn.focus();
+  });
+}
+async function confirmedApply(){
+  // Same guard runApply() itself uses, checked here too - Codex caught that
+  // without it, a second Apply press (or the 'A' shortcut) while one is
+  // already running shows ANOTHER "Apply staged changes?" prompt, whose
+  // eventual OK then silently no-ops against runApply()'s own guard instead
+  // of visibly doing nothing.
+  if (applying) return;
+  if (pendingCount() === 0) { toast('Nothing staged to apply.','info'); return; }
+  const plan = stagedPlan();
+  const ins = plan.install.length, un = plan.uninstall.length;
+  const parts = [];
+  if(ins) parts.push(`${ins} install${ins===1?'':'s'}`);
+  if(un) parts.push(`${un} removal${un===1?'':'s'}`);
+  const ok = await confirmAction({
+    title: 'Apply staged changes?',
+    body: `This makes ${parts.join(' and ')} real on your machine.`,
+    confirmLabel: 'Apply',
+  });
+  if(ok) runApply();
+}
+async function confirmedQuit(){
+  const n = pendingCount();
+  const ok = await confirmAction({
+    title: 'Quit the installer?',
+    body: n
+      ? `${n} staged change${n===1?'':'s'} will be lost - nothing has been installed or removed yet.`
+      : 'You can reopen it anytime with the same command.',
+    confirmLabel: 'Quit',
+  });
+  if(ok) doQuit();
 }
 
 // ---- dom ----
@@ -765,8 +872,8 @@ function activate(){
 }
 function move(d){ if(!rowsCache.length) return; sel=(sel+d+rowsCache.length)%rowsCache.length; paintSel(); }
 
-document.getElementById('btnApply').addEventListener('click', runApply);
-document.getElementById('btnQuit').addEventListener('click', doQuit);
+document.getElementById('btnApply').addEventListener('click', confirmedApply);
+document.getElementById('btnQuit').addEventListener('click', confirmedQuit);
 
 // ---- keyboard shortcuts panel: a simple toggle, not a full popover library.
 // Floats above its own trigger (see .shortcuts__panel), closes on a second
@@ -815,8 +922,8 @@ document.addEventListener('keydown',e=>{
     activate(); e.preventDefault();
   }
   else if(e.key==='ArrowLeft'||e.key==='Backspace'){ if(nav.length>0){ navDir='back'; nav=nav.slice(0,-1); sel=0; render(); focusPaneTitle(); } e.preventDefault(); }
-  else if(e.key==='a'||e.key==='A'){ runApply(); }
-  else if(e.key==='q'||e.key==='Q'){ doQuit(); }
+  else if(e.key==='a'||e.key==='A'){ confirmedApply(); }
+  else if(e.key==='q'||e.key==='Q'){ confirmedQuit(); }
   else if(e.key==='Escape' && !shortcutsPanel.hidden){ setShortcutsOpen(false); shortcutsTrigger.focus(); }
 });
 boot();
