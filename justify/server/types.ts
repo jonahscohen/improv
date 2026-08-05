@@ -45,6 +45,16 @@ export interface AdapterEnrichment {
   props?: Record<string, unknown>;
 }
 
+/** The browser environment a prompt/annotation/manipulation was authored in.
+ *  Mirror of core/environment.ts EnvironmentInfo (core and server are separate
+ *  build targets and duplicate their shared shapes, as with AdapterEnrichment). */
+export interface EnvironmentInfo {
+  viewport: { width: number; height: number; devicePixelRatio: number };
+  browser: { name: string; version: string };
+  os: string;
+  userAgent: string;
+}
+
 export interface StyleChange {
   selector: string;
   property: string;
@@ -100,6 +110,7 @@ export interface Annotation {
   severity: 'blocking' | 'important' | 'suggestion';
   isMultiSelect: boolean;
   elementBoundingBoxes?: { x: number; y: number; width: number; height: number }[];
+  environment?: EnvironmentInfo;
   timestamp: number;
   status: 'pending' | 'acknowledged' | 'resolved';
 }

@@ -54,4 +54,37 @@ describe('formatAnnotations', () => {
     expect(result).toContain('color: rgb(0, 0, 0)');
     expect(result).toContain('background-color: rgb(255, 255, 255)');
   });
+
+  const withEnv = () =>
+    makeAnnotation({
+      environment: {
+        viewport: { width: 1440, height: 900, devicePixelRatio: 2 },
+        browser: { name: 'Chrome', version: '131' },
+        os: 'macOS',
+        userAgent: 'ua',
+      },
+    });
+
+  it('detailed: documents the authoring environment', () => {
+    const result = formatAnnotations([withEnv()], 'detailed');
+    expect(result).toContain('Viewport: 1440x900 @2x');
+    expect(result).toContain('Chrome 131');
+    expect(result).toContain('macOS');
+  });
+
+  it('forensic: documents the environment and labels the element box as such (not "Viewport")', () => {
+    const result = formatAnnotations([withEnv()], 'forensic');
+    expect(result).toContain('**Environment:**');
+    expect(result).toContain('Viewport: 1440x900 @2x');
+    expect(result).toContain('Browser: Chrome 131');
+    expect(result).toContain('OS: macOS');
+    // The element bounding box must not be mislabeled as the viewport.
+    expect(result).toContain('**Element box:** 120x40 at (100, 200)');
+    expect(result).not.toContain('**Viewport:** 120x40');
+  });
+
+  it('omits the environment block when none was captured', () => {
+    const result = formatAnnotations([makeAnnotation()], 'forensic');
+    expect(result).not.toContain('**Environment:**');
+  });
 });

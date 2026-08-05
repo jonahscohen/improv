@@ -58,6 +58,22 @@ describe('formatContext - basic data', () => {
     expect(output).toContain('Viewport: 1440x900');
   });
 
+  it('documents the full environment when captured (viewport DPR, browser, OS)', () => {
+    const data: ContextData = {
+      ...baseData,
+      environment: {
+        viewport: { width: 1440, height: 900, devicePixelRatio: 2 },
+        browser: { name: 'Chrome', version: '131' },
+        os: 'macOS',
+        userAgent: 'ua',
+      },
+    };
+    const output = formatContext(data);
+    expect(output).toContain('Viewport: 1440x900 @2x');
+    expect(output).toContain('Browser: Chrome 131');
+    expect(output).toContain('OS: macOS');
+  });
+
   it('truncates textContent longer than 80 chars', () => {
     const longText = 'a'.repeat(100);
     const data: ContextData = { ...baseData, textContent: longText };

@@ -2,6 +2,7 @@ import { InlinePrompt, clampPromptTop, clampPromptLeft } from './inline-prompt';
 import { currentPalette } from '../toolbar';
 import { enableEventIntercept, disableEventIntercept, getElementAtPoint } from '../event-intercept';
 import { generateSelector, getComputedStylesSubset, getNearbyText, getAccessibilityInfo } from '../element-utils';
+import { captureEnvironment, formatEnvironmentLines } from '../environment';
 import { LassoSelect as Lasso } from '../annotate/lasso';
 import { MultiSelect, SelectedElement } from './multi-select';
 import { createLayerIconSvg } from '../selector/layer-icon';
@@ -19,6 +20,7 @@ interface ElementInfo {
   boundingBox: { x: number; y: number; width: number; height: number };
   pageUrl: string;
   viewport: { width: number; height: number };
+  environment?: import('../environment').EnvironmentInfo;
   adapterData: any[];
   nearbyText: string;
   accessibility: { role: string; label: string };
@@ -61,7 +63,9 @@ export function formatElementInfo(i: ElementInfo): string {
   }
   i.nearbyText && e.push(`Nearby elements: ${i.nearbyText}`);
   e.push(`Page URL: ${i.pageUrl}`);
-  e.push(`Viewport: ${i.viewport.width}x${i.viewport.height}`);
+  // Document the authoring environment (viewport + DPR + browser + OS) so Claude
+  // has that context when translating the prompt's parameters to source changes.
+  for (const line of formatEnvironmentLines(i.environment ?? captureEnvironment())) e.push(line);
   return e.join("\n");
 }
 
@@ -91,6 +95,7 @@ export function buildElementInfo(
       width: window.innerWidth,
       height: window.innerHeight
     },
+    environment: captureEnvironment(),
     adapterData: adapterData,
     nearbyText: nearbyText,
     accessibility: accessibility

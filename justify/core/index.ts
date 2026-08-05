@@ -13,6 +13,7 @@ function markerTint(hex: string, alpha: number): string {
 import { AdapterRegistry } from './adapter-registry';
 import { PreviewEngine } from './preview-engine';
 import { ChangeBuffer } from './change-buffer';
+import { captureEnvironment } from './environment';
 import { ApplyConfirmation } from './apply-confirmation';
 import { ManipulateMode } from './manipulate/index.js';
 import { PromptMode } from './prompt/index.js';
@@ -74,6 +75,45 @@ export class JustifyCore {
   // state the bar had nowhere to go after 'sending' and sat there lying about an
   // in-flight send that had already completed. See mcp-tools.ts `justify_queued`.
   _claudeState: 'none' | 'connected' | 'sending' | 'queued' | 'working' | 'validating' | 'review' | 'review-active' | 'retry' | 'retrying' = 'none';
+  // Ordinal progress of the claudebar state machine, used to make the
+  // receipt-time broadcasts (`justify_queued` / `justify_working`) ADVANCE-ONLY
+  // instead of gated on one single exact prior state.
+  //
+  // Before this table existed, `justify_queued` fired only from `_claudeState
+  // === 'sending'`, and `justify_working` only from `'sending' | 'queued'`.
+  // That is fine on the happy path, but it means the daemon's on-RECEIPT
+  // broadcast is SWALLOWED whenever the browser's in-memory state has already
+  // fallen back to 'connected' or 'none' - which is exactly what a WebSocket
+  // reconnect does (a fresh connection replaces the one that was 'sending',
+  // and the new one has no memory of it). The user then sees "Connected" (or
+  // nothing) forever for a prompt that IS durably queued, and may already be
+  // being worked on - the daemon never failed, but the browser looks dead.
+  // That silent drop is the bug this table exists to close: Jonah, 2026-08-03
+  // - "if Justify received a request it must, without failure, report back
+  // that it's Working. This lets the user keep working without fear the
+  // request died in the background."
+  //
+  // The fix is "advance forward from anything stale, never regress from
+  // anything real": a broadcast may move the bar UP from none/connected/
+  // sending/retry* into queued or working, but the ORIGINAL protection this
+  // replaces - "a late or duplicate broadcast must never drag a bar that has
+  // already reached Working or Review backwards" - still holds exactly,
+  // because working/validating and review/review-active sit at strictly
+  // higher tiers than queued/working and can never be a `target` here.
+  private static _CLAUDE_PROGRESS: Record<string, number> = {
+    none: 0, connected: 0, sending: 0, retry: 0, retrying: 0,
+    queued: 1,
+    working: 2, validating: 2,
+    review: 3, 'review-active': 3,
+  };
+
+  // True when the CURRENT state is strictly behind `target` in the progress
+  // table above - i.e. it is safe (a forward move, never a regression) for a
+  // `target`-advancing broadcast to fire.
+  private _claudeStateBehind(target: 'queued' | 'working'): boolean {
+    const cur = JustifyCore._CLAUDE_PROGRESS[this._claudeState] ?? 0;
+    return cur < JustifyCore._CLAUDE_PROGRESS[target];
+  }
   _pendingResponses: number = 0;
   _lastPromptData: any = null;
   // clientId of the last prompt handed to the outbox. The manual Retry pill
@@ -119,19 +159,24 @@ export class JustifyCore {
     });
 
     // The daemon has the prompt on disk. The send is OVER - stop saying it isn't.
-    // Only advances a bar that is actually mid-send; a late/duplicate broadcast
-    // must never drag a bar that has already reached Working or Review backwards.
+    // ADVANCE-ONLY (see _claudeStateBehind): fires from none/connected/sending/
+    // retry* - covering a browser that reconnected and lost its 'sending'
+    // memory, not just the one exact 'sending' state - but a late/duplicate
+    // broadcast still can never drag a bar that has already reached Working or
+    // Review backwards, because those tiers are never behind 'queued'.
     this.transport.on('justify_queued', () => {
-      if (this._claudeState === 'sending') {
+      if (this._claudeStateBehind('queued')) {
         this._claudeToQueued();
       }
     });
 
-    // An owner picked the batch up. Accepts 'queued' as well as 'sending': in
-    // owner mode the bar now legitimately rests in 'queued' between the ack and
-    // the owner's claim/poll, and that is the state this event exists to end.
+    // An owner picked the batch up. ADVANCE-ONLY from anything behind 'working'
+    // (none/connected/sending/retry*/queued) - not just 'sending'/'queued' - so
+    // a browser that reconnected mid-claim (and so never saw 'sending' or
+    // 'queued' at all) still recovers straight to Working instead of sitting on
+    // "Connected" while the daemon is already applying the change.
     this.transport.on('justify_working', () => {
-      if (this._claudeState === 'sending' || this._claudeState === 'queued') {
+      if (this._claudeStateBehind('working')) {
         this._claudeToWorking();
       }
     });
@@ -965,6 +1010,7 @@ export class JustifyCore {
           oldValue: c.oldValue,
           newValue: c.newValue,
         })),
+        environment: captureEnvironment(),
       });
       this.previewEngine?.clearAll();
       this.toolbar?.setBadge(0);

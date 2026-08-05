@@ -1,4 +1,5 @@
 import { AnnotationData } from '../types.js';
+import { formatEnvironmentLines } from '../environment.js';
 
 export type Verbosity = 'compact' | 'standard' | 'detailed' | 'forensic';
 
@@ -11,13 +12,18 @@ function formatOne(ann: AnnotationData, n: number, verbosity: Verbosity): string
     case 'compact':
       return `${n}. **${ann.elementSelector}** [${ann.intent}/${ann.severity}]: ${ann.comment}`;
 
-    case 'standard':
-      return [
+    case 'standard': {
+      const lines = [
         `### ${n}. ${ann.elementSelector}`,
         `**Location:** ${ann.elementPath}`,
         `**Intent:** ${ann.intent} | **Severity:** ${ann.severity}`,
         `**Feedback:** ${ann.comment}`,
-      ].join('\n');
+      ];
+      if (ann.environment) {
+        lines.push(`**Environment:** ${formatEnvironmentLines(ann.environment).join(' | ')}`);
+      }
+      return lines.join('\n');
+    }
 
     case 'detailed': {
       const bb = ann.boundingBox;
@@ -31,6 +37,9 @@ function formatOne(ann: AnnotationData, n: number, verbosity: Verbosity): string
       if (ann.nearbyText) lines.push(`**Context:** ${ann.nearbyText}`);
       if (ann.accessibility?.role || ann.accessibility?.label) {
         lines.push(`**Accessibility:** role=${ann.accessibility.role} label=${ann.accessibility.label}`);
+      }
+      if (ann.environment) {
+        lines.push(`**Environment:** ${formatEnvironmentLines(ann.environment).join(' | ')}`);
       }
       return lines.join('\n');
     }
@@ -54,7 +63,13 @@ function formatOne(ann: AnnotationData, n: number, verbosity: Verbosity): string
           lines.push(`  ${prop}: ${value}`);
         }
       }
-      lines.push(`**Viewport:** ${bb.width}x${bb.height} at (${bb.x}, ${bb.y})`);
+      lines.push(`**Element box:** ${bb.width}x${bb.height} at (${bb.x}, ${bb.y})`);
+      if (ann.environment) {
+        lines.push('**Environment:**');
+        for (const line of formatEnvironmentLines(ann.environment)) {
+          lines.push(`  ${line}`);
+        }
+      }
       lines.push(`**Timestamp:** ${new Date(ann.timestamp).toISOString()}`);
       return lines.join('\n');
     }

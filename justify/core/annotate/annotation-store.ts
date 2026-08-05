@@ -1,4 +1,4 @@
-import { AnnotationData } from '../types.js';
+import { AnnotationData, EnvironmentInfo } from '../types.js';
 
 export interface AddParams {
   elementSelector: string;
@@ -12,6 +12,7 @@ export interface AddParams {
   accessibility?: { role: string; label: string };
   isMultiSelect?: boolean;
   elementBoundingBoxes?: { x: number; y: number; width: number; height: number }[];
+  environment?: EnvironmentInfo;
 }
 
 interface StoredAnnotation extends AnnotationData {
@@ -37,6 +38,7 @@ export class AnnotationStore {
       accessibility: params.accessibility ?? { role: '', label: '' },
       isMultiSelect: params.isMultiSelect ?? false,
       elementBoundingBoxes: params.elementBoundingBoxes,
+      environment: params.environment,
       timestamp: Date.now(),
       status: 'pending',
     };

@@ -2,6 +2,7 @@ import { AnnotationMarker } from './markers.js';
 import { LassoSelect } from './lasso.js';
 import { TextSelect } from './text-select.js';
 import { AnnotationStore } from './annotation-store.js';
+import { captureEnvironment } from '../environment.js';
 import { Transport } from '../transport.js';
 import { AdapterRegistry } from '../adapter-registry.js';
 import { Overlay } from '../overlay.js';
@@ -245,6 +246,7 @@ export class AnnotateMode {
             return { x: r.x, y: r.y, width: r.width, height: r.height };
           })
         : undefined,
+      environment: captureEnvironment(),
     });
 
     // Place colored marker after submission
@@ -283,6 +285,7 @@ export class AnnotateMode {
         width: rect.width,
         height: rect.height,
       },
+      environment: captureEnvironment(),
     });
 
     this.marker.create(rect, this.store.count(), intent);

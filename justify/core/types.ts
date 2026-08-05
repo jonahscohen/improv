@@ -17,6 +17,16 @@ export interface AdapterEnrichment {
 
 export type JustifyMode = 'manipulate' | 'prompt' | 'annotate' | 'layout';
 
+/** The browser environment a prompt/annotation/manipulation was authored in.
+ *  Mirror of core/environment.ts EnvironmentInfo, kept here so type-only imports
+ *  do not pull the browser-coupled capture module into every consumer. */
+export interface EnvironmentInfo {
+  viewport: { width: number; height: number; devicePixelRatio: number };
+  browser: { name: string; version: string };
+  os: string;
+  userAgent: string;
+}
+
 export interface SelectedElement {
   domNode: HTMLElement;
   selector: string;
@@ -50,6 +60,7 @@ export interface AnnotationData {
   severity: 'blocking' | 'important' | 'suggestion';
   isMultiSelect: boolean;
   elementBoundingBoxes?: { x: number; y: number; width: number; height: number }[];
+  environment?: EnvironmentInfo;
   timestamp: number;
 }
 

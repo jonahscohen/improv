@@ -1253,6 +1253,18 @@ IP.1 = 127.0.0.1
         };
         try { ws.send(JSON.stringify(response)); } catch {}
 
+        // RE-ASSERT current status to THIS client the instant it connects -
+        // fresh tab, or a reconnect after a dropped socket. Without this, a
+        // browser that (re)connects while a prompt is pending had no way to
+        // learn that except the 5s /watch-status poll or the one-shot,
+        // watch-gated _loadClaudeState() fetch chain - both client-side pulls
+        // with a real delay window during which the bar reads "Connected" for
+        // a request that is not dead, just not yet reflected. This makes the
+        // daemon the one to PUSH the truth, on receipt of the connection, with
+        // no polling delay and no dependency on any client timer. See
+        // reassertStatusToClient below.
+        this.reassertStatusToClient(connectionId);
+
         ws.on('message', (data: Buffer | string) => {
           this.handleMessage(ws, connectionId, data.toString());
         });
@@ -1322,6 +1334,55 @@ IP.1 = 127.0.0.1
       params,
     };
     this.manager.broadcast(message);
+  }
+
+  // Same wire shape as broadcastToClients, but targeted at exactly one
+  // connection - used for the on-connect status re-assert below, so a fresh
+  // connection gets the current truth without re-notifying every already-synced
+  // client.
+  sendToClient(connectionId: string, method: string, params?: Record<string, unknown>): void {
+    const conn = this.manager.get(connectionId);
+    if (!conn) return;
+    try {
+      conn.send({ jsonrpc: '2.0', id: 0, method, params });
+    } catch {}
+  }
+
+  // Tell a just-(re)connected client what the daemon actually knows RIGHT NOW,
+  // instead of leaving it to discover that on the next poll. `prompts.json` is
+  // the daemon's own durable truth (not a client-reported label), so this can
+  // never assert something the daemon has not itself observed:
+  //   - no pending prompts at all -> say nothing; 'connected'/'none' is correct.
+  //   - a pending, UNCLAIMED prompt -> justify_queued (durable, no owner yet).
+  //   - a pending, CLAIMED prompt -> justify_working, upgraded to
+  //     justify_validating if the browser's own last-reported label (persisted
+  //     via POST /claude-state) says validating - the daemon has no first-class
+  //     "validating" flag on the prompt record itself, only claimedBy/claimedAt,
+  //     so this is a best-effort refinement, not the source of truth.
+  // The client-side handlers for all three events are advance-only (see
+  // core/index.ts _claudeStateBehind / justify_validating), so this can never
+  // drag a client that is already ahead (mid-review, etc.) backwards.
+  private reassertStatusToClient(connectionId: string): void {
+    const pending = this.readPromptsFile();
+    if (pending.length === 0) return;
+
+    const claimed = pending.some((p) => typeof (p as Record<string, unknown>).claimedBy === 'string');
+    const promptId = pending[0].id;
+
+    if (!claimed) {
+      this.sendToClient(connectionId, 'justify_queued', { promptId, timestamp: Date.now() });
+      return;
+    }
+
+    let method = 'justify_working';
+    try {
+      const statePath = join(this.distDir, 'claude-state.json');
+      if (existsSync(statePath)) {
+        const raw = JSON.parse(readFileSync(statePath, 'utf-8'));
+        if (raw?.state === 'validating') method = 'justify_validating';
+      }
+    } catch {}
+    this.sendToClient(connectionId, method, { promptId, timestamp: Date.now() });
   }
 
   getConnections() {

@@ -1,7 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { WsServer } from './ws-server.js';
-import type { StyleChange, Annotation, LayoutPlacement } from './types.js';
+import type { StyleChange, Annotation, LayoutPlacement, EnvironmentInfo } from './types.js';
+import { formatEnvironmentLines, normalizeEnvironment, environmentsEqual } from './environment.js';
 import { readFileSync, writeFileSync, renameSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -12,6 +13,10 @@ function text(content: string) {
 
 export function registerTools(mcp: McpServer, ws: WsServer): void {
   const pendingChanges: StyleChange[] = [];
+  // The browser environment of the most recent push_changes batch, documented in
+  // justify_apply_changes so Claude knows the viewport/DPR/browser/OS the
+  // manipulation was authored at when translating it to source.
+  let pendingChangesEnv: EnvironmentInfo | null = null;
   const annotations: Annotation[] = [];
   // Honor JUSTIFY_STATE_DIR so the browser's push_prompt writes to the SAME
   // prompts.json the daemon dispatcher reads (production: ~/.claude/justify).
@@ -145,12 +150,33 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   // WebSocket push handlers - browser pushes data into these buffers
   ws.onMessage('push_changes', (_connectionId, params) => {
     const changes = (params?.changes ?? []) as StyleChange[];
+    const wasEmpty = pendingChanges.length === 0;
     pendingChanges.push(...changes);
+    // Keep the documented env honest across accumulated batches. Show it only
+    // when every batch since the last apply/clear agrees; the moment two batches
+    // (e.g. two tabs at different viewports) disagree, or a batch arrives with no
+    // usable env, drop to null so apply omits it rather than attributing one
+    // batch's viewport/DPR/browser to another's changes. Untrusted input is
+    // normalized first so a malformed payload cannot crash the render path.
+    const incoming = normalizeEnvironment(params?.environment);
+    if (wasEmpty) {
+      pendingChangesEnv = incoming;
+    } else if (!environmentsEqual(incoming, pendingChangesEnv)) {
+      pendingChangesEnv = null;
+    }
     return { accepted: changes.length };
   });
 
   ws.onMessage('push_annotations', (_connectionId, params) => {
     const incoming = (params?.annotations ?? []) as Annotation[];
+    // Sanitize the untrusted per-annotation environment to the documented shape
+    // (or drop it) so get_annotations never forwards an oversized or
+    // instruction-bearing userAgent/field verbatim into Claude's context.
+    for (const a of incoming) {
+      const env = normalizeEnvironment(a.environment);
+      if (env) a.environment = env;
+      else delete a.environment;
+    }
     annotations.push(...incoming);
     return { accepted: incoming.length };
   });
@@ -333,6 +359,15 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       }
 
       const lines: string[] = [];
+      // Document the environment the manipulation was authored in, so Claude has
+      // the viewport/DPR/browser/OS context when translating it to source.
+      if (pendingChangesEnv) {
+        lines.push('Environment:');
+        for (const line of formatEnvironmentLines(pendingChangesEnv)) {
+          lines.push(`  ${line}`);
+        }
+        lines.push('');
+      }
       for (const change of pendingChanges) {
         lines.push(change.selector);
         lines.push(`  ${change.property}: ${change.oldValue} -> ${change.newValue}`);
@@ -343,6 +378,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
 
       // Clear buffer
       pendingChanges.length = 0;
+      pendingChangesEnv = null;
 
       // Notify browser
       ws.broadcastToClients('changes_applied', { count });
@@ -387,6 +423,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
           selector: a.elementSelector,
           elementPath: a.elementPath,
           boundingBox: a.boundingBox,
+          environment: a.environment,
           status: a.status,
           timestamp: a.timestamp,
         }));
@@ -594,6 +631,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       };
 
       pendingChanges.length = 0;
+      pendingChangesEnv = null;
       annotations.length = 0;
       writePrompts([]);
       layoutPlacements = [];

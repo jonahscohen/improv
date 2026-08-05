@@ -1,6 +1,7 @@
 import { generateSelector } from '../element-utils.js';
 import { PreviewEngine } from '../preview-engine.js';
 import { ChangeBuffer } from '../change-buffer.js';
+import { captureEnvironment } from '../environment.js';
 import { Overlay } from '../overlay.js';
 import { Transport } from '../transport.js';
 import { Picker } from '../selector/picker.js';
@@ -629,7 +630,7 @@ export class ManipulateMode {
     const changes = this.changeBuffer.flush();
     if (changes.length === 0) return;
 
-    await this.transport.request('push_changes', { changes });
+    await this.transport.request('push_changes', { changes, environment: captureEnvironment() });
     this.preview.clearAll();
   }
 

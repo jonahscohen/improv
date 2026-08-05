@@ -1,3 +1,5 @@
+- [** ACTIVE ** FRONTIER ORCHESTRATOR GUARD - fable-orchestrator-guard expanded to all .5 frontier models + agent-routing gate + user "confirm" ove…](session_2026-08-05_frontier-orchestrator-guard.md)
+- [** ACTIVE ** JUSTIFY ENVIRONMENT METADATA - every annotation/manipulation/prompt carries viewport+DPR+browser+OS as documented context for Clau…](session_2026-08-04_justify-environment-metadata.md)
 - [** ACTIVE ** CRAFT WIRING CROSS-MODEL REVIEW - Codex found a check flow reporting an UNMEASURED domain as "every checked rule passed" (contrast/hit-area…](session_2026-07-29_craft-review-folded.md)
 - [** ACTIVE ** CRAFT ACROSS ALL 26 VERBS + AN UNCONDITIONAL FLOOR - teaching went 1/26 -> 26/26 executed payloads (craft-probe/corpus/laws/flow, 36…](session_2026-07-29_craft-corpus-across-verbs.md)
 - [** ACTIVE ** VOICE CREDENTIAL KEYGUARD - openai-tts-api-key is mechanically fenced to the voice path after two agents billed model calls to it in…](session_2026-07-29_voice-credential-keyguard.md)
@@ -183,3 +185,4 @@
 - [** ACTIVE ** GUI installer is now the default entry - --cli (and --browser, aliased) opt back into the terminal bucket browser instead](session_2026-08-03_gui-installer-becomes-default.md)
 - [** ACTIVE ** Independent code review of the Review Changes diff - 2 ship-blockers (reviewMode never cleared by rail/crumb nav; toggleLeaf can fli…](session_2026-08-03_review-changes-code-review.md)
 - [** ACTIVE ** README rewritten plain-language-first (what/install/clusters), real 10-cluster/71-hook structure replacing stale fo…](session_2026-08-03_readme-rewrite-narrative-and-sidecoach-note.md)
+- [** ACTIVE ** ampersand not working traced to a missing marker block in ~/.zshrc - never installed here, not broken; worked around with a direct…](session_2026-08-04_ampersand-missing-from-zshrc.md)

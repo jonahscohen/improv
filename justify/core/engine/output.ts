@@ -19,6 +19,7 @@
 
 import type { ElementChange, PropertyChange } from "./types.js";
 import { camelToKebab, truncate } from "../inspector/utils.js";
+import { captureEnvironment, formatEnvironmentLines } from "../environment.js";
 
 export type Fidelity = "minimal" | "standard" | "full";
 
@@ -101,10 +102,11 @@ export function formatChanges(changes: ElementChange[], fidelity: Fidelity = "st
   // Header - preamble gives the AI model clear intent + identification
   lines.push("Apply these Justify visual changes to the source code:\n");
 
-  // Environment context
+  // Environment context - viewport + DPR + browser + OS, so the AI has the
+  // authoring environment when translating these changes to source.
   lines.push("**Environment:**");
   lines.push(`- URL: ${window.location.href}`);
-  lines.push(`- Viewport: ${window.innerWidth}x${window.innerHeight}`);
+  for (const line of formatEnvironmentLines(captureEnvironment())) lines.push(`- ${line}`);
   lines.push(`- Timestamp: ${new Date().toISOString()}`);
   lines.push("");
 

@@ -1429,3 +1429,6 @@
 
 <!-- archived 2026-08-03 (moved from MEMORY.md to stay under load budget) -->
 - [SUPERSEDED - Review Changes page built (button, page, real badge reused, circular red minus button)](session_2026-08-03_review-changes-page.md)
+
+<!-- archived 2026-08-05 (moved from MEMORY.md to stay under load budget) -->
+- [** REVERTED ** INSTALLER GUI INTERACTION SOUNDS (cuelume) - built + verified, then fully undone at Jonah's request; kept as history so it is no…](session_2026-08-05_installer-gui-cuelume-sounds.md)

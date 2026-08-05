@@ -48,4 +48,21 @@ describe('AnnotationStore', () => {
     store.clear();
     expect(store.count()).toBe(0);
   });
+
+  it('persists the captured environment on the annotation', () => {
+    const environment = {
+      viewport: { width: 1440, height: 900, devicePixelRatio: 2 },
+      browser: { name: 'Chrome', version: '131' },
+      os: 'macOS',
+      userAgent: 'ua',
+    };
+    store.add({
+      elementSelector: '.btn',
+      comment: 'Button looks off',
+      intent: 'fix',
+      severity: 'important',
+      environment,
+    });
+    expect(store.getAll()[0].environment).toEqual(environment);
+  });
 });

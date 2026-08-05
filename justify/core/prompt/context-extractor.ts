@@ -1,4 +1,5 @@
-import type { AdapterEnrichment } from '../types.js';
+import type { AdapterEnrichment, EnvironmentInfo } from '../types.js';
+import { captureEnvironment, formatEnvironmentLines } from '../environment.js';
 
 export interface ContextData {
   tagName: string;
@@ -9,6 +10,7 @@ export interface ContextData {
   boundingBox: { x: number; y: number; width: number; height: number };
   pageUrl: string;
   viewport: { width: number; height: number };
+  environment?: EnvironmentInfo;
   adapterData: AdapterEnrichment[];
   nearbyText: string;
   accessibility: { role: string; label: string };
@@ -63,7 +65,13 @@ export function formatContext(data: ContextData): string {
   }
 
   lines.push(`Page URL: ${data.pageUrl}`);
-  lines.push(`Viewport: ${data.viewport.width}x${data.viewport.height}`);
+  // Document the authoring environment (viewport + DPR + browser + OS) when
+  // captured; fall back to the bare viewport line for callers that do not supply it.
+  if (data.environment) {
+    for (const line of formatEnvironmentLines(data.environment)) lines.push(line);
+  } else {
+    lines.push(`Viewport: ${data.viewport.width}x${data.viewport.height}`);
+  }
 
   return lines.join('\n');
 }
@@ -95,6 +103,7 @@ export function buildContextFromElement(
       width: window.innerWidth,
       height: window.innerHeight,
     },
+    environment: captureEnvironment(),
     adapterData,
     nearbyText,
     accessibility,
