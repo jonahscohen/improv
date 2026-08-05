@@ -482,5 +482,49 @@ H="$(newhome)"; transcript "$H/t.jsonl" "$THREE_SECTIONS"
 [[ "$(run "$H" "$H/t.jsonl")" == *"bold-led sections"* ]] && ok "section block names the section count" || bad "section block names the section count"
 
 echo
+
+
+# ===========================================================================
+# === ELIAS INTERACTION === (added with the ELIAS-mode feature, 2026-08-05)
+#
+# ELIAS composes with concise. Two interaction edits live in this hook: a volume-cap
+# relaxation (300 -> ELIAS_WORD_CAP, default 400) when ELIAS is on, and a cross-gate
+# deferral so only one of the two Stop gates blocks a shared burst. These five cases lock in
+# both. Case E is the one that catches a mis-placed deferral: if the deferral is inserted
+# ABOVE the clean-stop re-arm instead of below it, E goes red and everything else stays green.
+# ELIAS_PROSE is sized ~354 words: over the 300 cap, under the 400 ELIAS cap, so it
+# discriminates A from B.
+# ===========================================================================
+
+ELIAS_PROSE="The fix is in. $(python3 -c "print('This sentence adds narration the reader did not ask for. '*35)")"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$ELIAS_PROSE"
+fired "$(run "$H" "$H/t.jsonl")" && ok "A. long prose, ELIAS marker absent -> blocks on volume (unchanged)" \
+                                 || bad "A. long prose, ELIAS marker absent -> blocks on volume (unchanged)"
+
+H="$(newhome)"; : > "$H/.claude/.elias-enabled"; transcript "$H/t.jsonl" "$ELIAS_PROSE"
+fired "$(run "$H" "$H/t.jsonl")" && bad "B. same prose, ELIAS on -> silent (400-word ELIAS ceiling applies)" \
+                                 || ok "B. same prose, ELIAS on -> silent (400-word ELIAS ceiling applies)"
+
+H="$(newhome)"; : > "$H/.claude/.elias-enabled"; transcript "$H/t.jsonl" "$ELIAS_PROSE"
+out=$(printf '{"session_id":"%s","transcript_path":"%s","stop_hook_active":false}' "$SID" "$H/t.jsonl" \
+      | HOME="$H" CONCISE_WORD_CAP=200 bash "$HOOK" 2>/dev/null)
+fired "$out" && ok "C. ELIAS on + explicit CONCISE_WORD_CAP=200 -> blocks (explicit cap wins)" \
+             || bad "C. ELIAS on + explicit CONCISE_WORD_CAP=200 -> blocks (explicit cap wins)"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$FIX_TANGENT_REAL"
+: > "$H/.claude/.elias-stop-blocked.$SID"
+fired "$(run "$H" "$H/t.jsonl")" && bad "D. tangent + elias flag pre-set -> silent (cross-gate deferral)" \
+                                 || ok "D. tangent + elias flag pre-set -> silent (cross-gate deferral)"
+
+H="$(newhome)"; transcript "$H/t.jsonl" "$FIX_CLEAN"
+: > "$H/.claude/.elias-stop-blocked.$SID"
+: > "$H/.claude/.concise-stop-blocked.$SID"
+run "$H" "$H/t.jsonl" >/dev/null
+[ ! -f "$H/.claude/.concise-stop-blocked.$SID" ] \
+  && ok "E. clean + elias flag pre-set -> concise flag removed (re-arm runs ahead of deferral)" \
+  || bad "E. clean + elias flag pre-set -> concise flag removed (re-arm runs ahead of deferral)"
+
+echo
 echo "== $pass passed, $fail failed =="
 [ "$fail" -eq 0 ]

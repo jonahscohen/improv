@@ -1,3 +1,6 @@
+- [** ACTIVE ** ELIAS MODE SHIPPED (uncommitted) - "Explain Like I'm A Stakeholder" default-OFF trio built + all Section 11 gates green + Codex-reviewed (3 load-bea…](session_2026-08-05_elias-mode.md)
+- [** ACTIVE DECISION ** ELIAS design D1/D2/D5 - default-off enable marker (inverse of concise), orthogonal composition + cross-gate deferral + ELIAS-wins p…](decision_2026-08-05_elias-mode-design.md)
+- [** ACTIVE ** ELIAS BUILD - "Explain Like I'm A Stakeholder" mode: 8-task hook trio (default-OFF, mirrors concise, inverted marker).…](session_2026-08-05_elias-plan-recovered-and-build-dispatch.md)
 - [** ACTIVE ** FRONTIER ORCHESTRATOR GUARD - fable-orchestrator-guard expanded to all .5 frontier models + agent-routing gate + user "confirm" ove…](session_2026-08-05_frontier-orchestrator-guard.md)
 - [** ACTIVE ** JUSTIFY ENVIRONMENT METADATA - every annotation/manipulation/prompt carries viewport+DPR+browser+OS as documented context for Clau…](session_2026-08-04_justify-environment-metadata.md)
 - [** ACTIVE ** CRAFT WIRING CROSS-MODEL REVIEW - Codex found a check flow reporting an UNMEASURED domain as "every checked rule passed" (contrast/hit-area…](session_2026-07-29_craft-review-folded.md)

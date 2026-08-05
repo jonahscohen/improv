@@ -67,6 +67,14 @@ except Exception:
 # Concise mode off -> this gate has nothing to enforce.
 [ -f "$HOME/.claude/.concise-disabled" ] && exit 0
 
+# ELIAS relaxation. Plain language costs words: a jargon term is one word, its
+# plain-language gloss is a clause. When ELIAS mode is on the volume ceiling rises
+# so the two modes do not pull in opposite directions. An explicitly-set
+# CONCISE_WORD_CAP always wins, so operator tuning is never overridden.
+if [ -f "$HOME/.claude/.elias-enabled" ] && [ -z "${CONCISE_WORD_CAP:-}" ]; then
+  export CONCISE_WORD_CAP="${ELIAS_WORD_CAP:-400}"
+fi
+
 SESSION_KEY=$(printf '%s' "$STDIN_JSON" | python3 -c '
 import json, re, sys
 try:
@@ -366,6 +374,13 @@ if [ -z "$TANGENT" ] && [ "$LIST_COUNT" -eq 0 ] && [ "$WORD_COUNT" -eq 0 ] && [ 
   rm -f "$BLOCKED_FLAG" 2>/dev/null || true
   exit 0
 fi
+
+# Layer 2a: CROSS-GATE DEFERRAL. elias-detect-stop.sh runs at the same Stop event and
+# can block the same response with a contradictory instruction (this gate says "cut
+# it", that one says "rewrite it for the reader"). Whichever gate claims the burst
+# first owns it; the other stays silent. Placed AFTER the clean-stop re-arm above, so
+# a clean response still clears this gate's own flag even while ELIAS holds a block.
+[ -f "$HOME/.claude/.elias-stop-blocked.$SESSION_KEY" ] && exit 0
 
 # Layer 2: a block already landed in this burst. Allow, and keep the flag - the
 # gate stays quiet until a clean stop re-arms it. Never two blocks in a row.

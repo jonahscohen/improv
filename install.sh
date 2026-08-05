@@ -2034,7 +2034,7 @@ FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (8 verification hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 question-discipline hooks)\n~/.claude/settings.json (wiring)"
-  "~/.claude/hooks/ (7 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (10 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 surface hooks)\n~/.claude/settings.json (wiring)"
@@ -2190,7 +2190,7 @@ cluster_hooks() {
     # defect. It probably is, but deduplicating a live Stop-hook detection block is its own
     # unit with its own risk, and a half-written Stop hook takes the machine with it.
     question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh" ;;
-    grounding)           echo "grounding-gate.sh grounding-guard.sh task-loop-mandate.sh justify-queue-mandate.sh concise-mandate.sh concise-toggle.sh concise-detect-stop.sh" ;;
+    grounding)           echo "grounding-gate.sh grounding-guard.sh task-loop-mandate.sh justify-queue-mandate.sh concise-mandate.sh concise-toggle.sh concise-detect-stop.sh elias-mandate.sh elias-toggle.sh elias-detect-stop.sh" ;;
     api-drift)           echo "api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh" ;;
     planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
     surface)             echo "claude-surface.sh surface-visual-gate.sh" ;;

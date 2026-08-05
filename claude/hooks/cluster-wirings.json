@@ -396,6 +396,50 @@
    }
   }
  ],
+ "elias-mandate.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/elias-mandate.sh SessionStart",
+    "timeout": 5,
+    "statusMessage": "Loading stakeholder mode..."
+   }
+  },
+  {
+   "event": "PostCompact",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/elias-mandate.sh PostCompact",
+    "timeout": 5,
+    "statusMessage": "Loading stakeholder mode..."
+   }
+  }
+ ],
+ "elias-toggle.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/elias-toggle.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "elias-detect-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/elias-detect-stop.sh",
+    "timeout": 10
+   }
+  }
+ ],
  "route-intent.sh": [
   {
    "event": "UserPromptSubmit",

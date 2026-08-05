@@ -270,8 +270,8 @@
         {
           "key": "grounding",
           "kind": "hooks",
-          "tag": "the 7 grounding hooks",
-          "desc": "Always-on behavioral discipline with three jobs. Source-grounding checks claims against the real code instead of assumption, completion discipline keeps a task list or prompt queue running to the end instead of stopping early, and response conciseness keeps replies short unless you ask for more, with a toggle to turn it off.",
+          "tag": "the 10 grounding hooks",
+          "desc": "Always-on behavioral discipline with three jobs. Source-grounding checks claims against the real code instead of assumption, completion discipline keeps a task list or prompt queue running to the end instead of stopping early, and response conciseness keeps replies short unless you ask for more, with a toggle to turn it off. A fourth, off by default, rewrites replies for a non-technical stakeholder when you switch it on.",
           "hooks": [
             "grounding-gate",
             "grounding-guard",
@@ -279,7 +279,10 @@
             "justify-queue-mandate",
             "concise-mandate",
             "concise-toggle",
-            "concise-detect-stop"
+            "concise-detect-stop",
+            "elias-mandate",
+            "elias-toggle",
+            "elias-detect-stop"
           ]
         },
         {
@@ -545,6 +548,9 @@
     "concise-mandate": "Injects the concise-response ruleset each session so replies stay brief. On by default; say \"concise off\" to stop.",
     "concise-toggle": "Turns brevity on or off at runtime - reacts to \"concise on\", \"concise off\", \"verbose\", and \"concise status\". The command must be your whole message, so those words never fire mid-prose.",
     "concise-detect-stop": "Checks the finished response and blocks once when it tacks a new subject on after the closing line or runs a list past five items. It never gates on word count, which would false-fire on every legitimate deep dive.",
+    "elias-mandate": "Injects the stakeholder ruleset each session so replies are written for a non-technical reader: outcome first, plain language, timeline and risk stated out loud. Off unless you turn it on by saying \"elias on\".",
+    "elias-toggle": "Turns stakeholder framing on or off at runtime, reacting to \"elias on\", \"elias off\", \"stakeholder mode\", \"technical mode\" and \"elias status\". The command must be your whole message, so those words never fire mid-prose.",
+    "elias-detect-stop": "Checks the finished reply while stakeholder mode is on and blocks once when it still carries a code block, a file path, a command line or code-shaped names. It judges shape, not vocabulary, so ordinary plain-English explanation passes.",
     "api-drift-detector": "Watches tool results for signs an API changed underneath you: deprecated, removed, unknown parameter, or a validation error. Editing a hook, settings.json or a launcher script counts as handling it and clears the warning.",
     "api-drift-stop": "Stops the session ending while such an API change is still unhandled. It interrupts only once per turn, skips sub-agents, and clears when you either adjust the affected file or type drift handled.",
     "api-drift-ack": "Clears that pending API warning when you type drift handled. It is the manual way out of a false alarm, or of a change you already dealt with by hand.",
@@ -603,6 +609,9 @@
     "concise-mandate": "grounding",
     "concise-toggle": "grounding",
     "concise-detect-stop": "grounding",
+    "elias-mandate": "grounding",
+    "elias-toggle": "grounding",
+    "elias-detect-stop": "grounding",
     "api-drift-detector": "api-drift",
     "api-drift-stop": "api-drift",
     "api-drift-ack": "api-drift",

@@ -29,6 +29,19 @@
 # NODE_OPTIONS is absent, already durable, or the canonical copy is missing, it no-ops.
 # The ~/.claude/cmux/node PATH shim is the backstop that covers sessions already running
 # and any cmux release that stops routing launches through this wrapper.
+
+# --- Preferred subagent model (2026-08-05, Jonah) --------------------------------
+# Without this, a spawned teammate/subagent defaults to the NEWEST Opus
+# (claude-opus-5, a frontier model). That breaks the frontier-orchestrator scheme:
+# a frontier session cannot delegate production to a preferred producer because the
+# producer also lands on opus-5, so frontier-orchestrator-guard blocks it and the
+# session death-loops. CLAUDE_CODE_SUBAGENT_MODEL routes ALL subagents to a chosen
+# model unless a per-agent def/alias overrides. Pin it to the preferred Opus so a
+# bare Agent() spawn is claude-opus-4-8. Read at session START, so a running session
+# must be RESTARTED for this to take effect (exported ABOVE every exec path below).
+: "${CLAUDE_CODE_SUBAGENT_MODEL:=claude-opus-4-8}"
+export CLAUDE_CODE_SUBAGENT_MODEL
+
 if [[ -n "${NODE_OPTIONS:-}" && "$NODE_OPTIONS" == *restore-node-options.cjs* ]]; then
   _ccl_canon="$HOME/.claude/node-shims/restore-node-options.cjs"
   # NODE_OPTIONS is whitespace-separated, so a canonical path containing a space (a $HOME
