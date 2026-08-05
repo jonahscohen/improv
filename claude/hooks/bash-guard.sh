@@ -1528,6 +1528,17 @@ if [ -z "$REASON" ]; then
   fi
 fi
 
+# The frontier confirm token (~/.claude/.frontier-confirm) is armed ONLY by the
+# user typing "confirm" (frontier-confirm-arm.sh). It is off-limits to the Bash
+# tool: writing it yourself would forge a confirm and self-lift a frontier-model
+# gate the user never approved. The literal ".frontier-confirm" (leading dot)
+# matches the token, never the frontier-confirm.sh scripts (no dot before the
+# name). Proportionate to the threat model (a lazy self-opt-out, not a determined
+# forger), same as the .fidelity-secret block above.
+if [ -z "$REASON" ] && printf '%s' "$CMD" | grep -qF '.frontier-confirm'; then
+  REASON="BLOCKED: ~/.claude/.frontier-confirm is the frontier-model confirm token and is off-limits to the Bash tool. Writing it would forge the user's 'confirm' and route work onto a frontier model they never approved. Only the user's typed 'confirm' may arm it. If you need a frontier model, ask the user and let them confirm."
+fi
+
 # Legacy model IDs in any command.
 #
 # This used `grep -qP` with a PCRE negative lookahead. BSD grep - which is what

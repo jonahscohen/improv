@@ -1,14 +1,20 @@
 #!/bin/bash
 # PreToolUse hook (matcher: Write|Edit|MultiEdit|NotebookEdit|Bash).
 #
-# When the SESSION model is Fable (claude-fable-5), Fable is orchestrator-only:
-# it may NOT produce or execute on its own. It blocks Fable's file-authoring and
-# shell tools and directs it to delegate production to an Opus teammate and review
-# to Codex. For every other model (Opus/Sonnet/Haiku) this hook is a no-op - the
+# When the SESSION model is a FRONTIER model (claude-fable-5, claude-opus-5,
+# claude-sonnet-5), it is orchestrator-only: it may NOT produce or execute on its
+# own. It blocks the frontier model's file-authoring and shell tools and directs
+# it to delegate production to a PREFERRED model (Opus 4.8 / Sonnet 4.6 / Haiku
+# 4.5) and review to Codex. For every preferred model this hook is a no-op - the
 # user's model choice is honored, per the standing "model choice is the user's"
-# rule. Authorized by Jonah 2026-07-06 (cost control). Paired with the Fable
-# exception in model-router-guard.sh that lets Fable spawn the Opus producer.
+# rule. Originally Fable-only (Jonah 2026-07-06, cost control); expanded to the
+# .5 frontier generation + a user "confirm" override (Jonah 2026-08-05). Paired
+# with the frontier exception in model-router-guard.sh (frontier session may
+# delegate to a preferred producer) and the frontier-confirm.sh token contract.
 # See session_2026-07-06_fable-orchestrator-hook-conflict.md.
+#
+# OVERRIDE: a single user-typed "confirm" (armed by frontier-confirm-arm.sh) lifts
+# this block for exactly one action. The model can never lift it itself.
 
 INPUT=$(cat)
 
@@ -26,8 +32,8 @@ SID=$(printf '%s' "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.st
 MODEL=$("$HOME/.claude/hooks/detect-session-model.sh" "$TP" "$SID")
 
 case "$MODEL" in
-  *fable*) ;;                # Fable session -> enforce orchestrator-only
-  *) echo '{}'; exit 0 ;;    # non-Fable or indeterminate -> allow (fail-open)
+  *fable-5*|*opus-5*|*sonnet-5*) ;;   # frontier session -> enforce orchestrator-only
+  *) echo '{}'; exit 0 ;;             # preferred/indeterminate -> allow (fail-open)
 esac
 
 # Beat/memory carve-out (Jonah, per CLAUDE.md beats discipline): writes to a
@@ -112,6 +118,16 @@ except Exception:
     ;;
 esac
 
-REASON="Fable is in orchestrator-only mode (cost control, Jonah 2026-07-06): direct ${TOOL} calls are blocked. Delegate production to an Opus teammate (Agent tool with model: opus) and review to Codex (codex:codex-rescue agent or /code-review). You may still Read/Grep/Glob, spawn teammates, SendMessage, ask questions, and track tasks. To do this work yourself, switch the session model off Fable (Opus/Sonnet/Haiku)."
+# OVERRIDE: a single user-typed "confirm" lifts the block for THIS one action.
+# Checked AFTER the beats carve-out so a mandated beat write never spends a token,
+# and BEFORE the deny so a confirmed action proceeds. The token is armed only by
+# the user (frontier-confirm-arm.sh), never by the model.
+# shellcheck source=/dev/null
+. "$HOME/.claude/hooks/frontier-confirm.sh" 2>/dev/null || true
+if type frontier_check_confirm >/dev/null 2>&1 && frontier_check_confirm "$MODEL"; then
+  echo '{}'; exit 0
+fi
+
+REASON="This session is on a frontier model (${MODEL:-unknown}); frontier models are orchestrator-only (cost control, Jonah 2026-08-05): direct ${TOOL} calls are blocked. Delegate production to a PREFERRED model (Agent tool with model: opus/sonnet/haiku = the 4.x generation) and review to Codex (codex:codex-rescue agent or /code-review). You may still Read/Grep/Glob, spawn teammates, SendMessage, ask questions, and track tasks. To produce directly this once, reply 'confirm'. To do all work yourself, switch the session model to a preferred one (Opus 4.8 / Sonnet 4.6 / Haiku 4.5)."
 
 python3 -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$REASON"

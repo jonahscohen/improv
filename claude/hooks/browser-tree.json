@@ -334,10 +334,11 @@
         {
           "key": "fable",
           "kind": "hooks",
-          "tag": "orchestrator-only guard",
-          "desc": "When a session is running on the pricier Fable model, this hands the actual file-writing and shell work to a cheaper sub-agent instead, so Fable stays in an orchestrating role rather than doing the building itself. On every other model it does nothing at all - your model choice is never touched.",
+          "tag": "frontier orchestrator-only guard",
+          "desc": "When a session runs on a pricier frontier model (Opus 5, Sonnet 5, or Fable 5), this hands the actual file-writing and shell work to a cheaper preferred model (Opus 4.8 / Sonnet 4.6 / Haiku 4.5) instead, so the frontier model stays in an orchestrating role rather than doing the building itself. It also gates routing a sub-agent onto a frontier model. On the preferred models it does nothing at all - your model choice is never touched. A single typed 'confirm' lifts either gate once.",
           "hooks": [
-            "fable-orchestrator-guard"
+            "frontier-orchestrator-guard",
+            "frontier-confirm-arm"
           ]
         },
         {
@@ -520,7 +521,8 @@
     "chrome-tabgroup-stop": "Stops the session ending once when browser tabs are still open and the browser has been idle for 90 seconds. A shell script cannot close a browser tab itself, so it buys one more turn in which Claude closes them.",
     "figma-fidelity-stop": "Blocks \"done\" until a build made from a Figma design is proven to match it. Each design element needs an entry in .figma-fidelity.json where the Figma value, the shipped code and a value read from the live page all agree.",
     "figma-fidelity-arm": "Switches the Figma match check on the moment a build pulls a design out of Figma, and records which element it pulled. There is no way to opt out: only a matching entry in .figma-fidelity.json turns it off again.",
-    "fable-orchestrator-guard": "Blocks file writing and shell commands while the expensive Fable model is running the session, so the actual building is handed to a cheaper sub-agent. On every other model it does nothing, leaving your choice untouched.",
+    "frontier-orchestrator-guard": "Blocks file writing and shell commands while an expensive frontier model (Opus 5, Sonnet 5, Fable 5) is running the session, so the actual building is handed to a cheaper preferred model. On the preferred models it does nothing, leaving your choice untouched. A typed 'confirm' lets the frontier model produce once.",
+    "frontier-confirm-arm": "Watches for you to type a bare 'confirm' and, when you do, unlocks the very next frontier-model action for about two minutes. It is the only thing that can lift the frontier gates, so the model can never quietly route itself onto a pricier model without your word.",
     "bash-guard": "Blocks forbidden shell patterns: attribution in a commit, force-push to main, rm against .claude/memory, and legacy model IDs. It also holds your commit when a session note is owed, a screenshot is unread, or work is unverified.",
     "content-guard": "Blocks emojis, long dashes, AI attribution lines and outdated model names from being written into any file. It also refuses edits to .figma-fidelity.pending, matched by real location so a symlink cannot get around it.",
     "content-guard-stop": "Checks Claude's last chat message, rather than a file, for emojis and long dashes and makes it send the message again cleanly. Chat text is not a file write, so nothing else inspects it before it reaches you.",
@@ -610,7 +612,8 @@
     "surface-visual-gate": "surface",
     "model-router-guard": "model-routing",
     "route-intent": "agent-routing",
-    "fable-orchestrator-guard": "fable",
+    "frontier-orchestrator-guard": "fable",
+    "frontier-confirm-arm": "fable",
     "codex-failure-watcher": "codex",
     "codex-rescue-guard": "codex",
     "chrome-tabgroup-track": "chrome",

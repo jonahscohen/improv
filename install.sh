@@ -1996,8 +1996,8 @@ PICKS+=(0)
 # + its shared detect-session-model dependency. No repo dir (hook-only).
 KEYS+=(fable)
 TITLES+=("Fable orchestrator-only guard")
-DESCS+=("Installs the fable-orchestrator-guard hook. When your SESSION model is Fable (claude-fable-5), Fable is orchestrator-only: its own Write/Edit/MultiEdit/NotebookEdit/Bash are blocked and it is directed to delegate production to an Opus teammate and review to Codex (cost control, authorized 2026-07-06). A complete no-op for every other model (Opus/Sonnet/Haiku) - your model choice is honored. Opt-in; wires one PreToolUse hook into settings.json and needs detect-session-model.sh (shared with the model-router).")
-FILES+=("~/.claude/hooks/fable-orchestrator-guard.sh\n~/.claude/hooks/detect-session-model.sh\n~/.claude/settings.json (1 PreToolUse hook)")
+DESCS+=("Installs the frontier-orchestrator-guard hook. When your SESSION model is a FRONTIER model (claude-fable-5, claude-opus-5, claude-sonnet-5), it is orchestrator-only: its own Write/Edit/MultiEdit/NotebookEdit/Bash are blocked and it is directed to delegate production to a PREFERRED model (Opus 4.8 / Sonnet 4.6 / Haiku 4.5) and review to Codex (cost control, authorized 2026-07-06, expanded 2026-08-05). It also gates routing a sub-agent onto a frontier model (paired with the model-router). A complete no-op for the preferred models - your model choice is honored. A single typed 'confirm' lifts either gate once. Opt-in; wires a PreToolUse hook + a UserPromptSubmit confirm-arm hook into settings.json and needs detect-session-model.sh + frontier-confirm.sh (shared with the model-router).")
+FILES+=("~/.claude/hooks/frontier-orchestrator-guard.sh\n~/.claude/hooks/frontier-confirm-arm.sh\n~/.claude/hooks/frontier-confirm.sh\n~/.claude/hooks/detect-session-model.sh\n~/.claude/settings.json (1 PreToolUse + 1 UserPromptSubmit hook)")
 DIRS+=("")
 PICKS+=(0)
 
@@ -3608,7 +3608,7 @@ detect_component() {
     tilt-lab)   [ -L "$HOME/.local/bin/tilt-lab" ] && echo active || echo not-installed ;;
     justify)     [ -d "$CLAUDE_DIR/justify" ] && echo active || echo not-installed ;;
     lotus)       [ -f "$CLAUDE_DIR/skills/lotus/SKILL.md" ] && [ -f "$REPO_DIR/lotus/mcp-server/dist/server.js" ] && echo active || echo not-installed ;;
-    fable)      [ -L "$CLAUDE_DIR/hooks/fable-orchestrator-guard.sh" ] && echo active || echo not-installed ;;
+    fable)      [ -L "$CLAUDE_DIR/hooks/frontier-orchestrator-guard.sh" ] && echo active || echo not-installed ;;
     # Design peer skills (a la carte). Each detects its own ~/.claude/skills/ dir.
     tactical-polish)   { [ -d "$CLAUDE_DIR/skills/tactical-polish" ] || compgen -G "$CLAUDE_DIR/skills/*interfaces*" >/dev/null; } && echo active || echo not-installed ;;
     component-gallery) [ -d "$CLAUDE_DIR/skills/component-gallery-reference" ] && echo active || echo not-installed ;;
@@ -4322,22 +4322,37 @@ deactivate_tilt_lab() {
 }
 
 deactivate_fable() {
-  # Remove the guard symlink + its PreToolUse wiring. Leave detect-session-model
-  # (shared with the base model-router-guard).
+  # Remove the session guard symlink (both the current name and the LEGACY
+  # fable-orchestrator-guard.sh name, so upgrading off an old install does not leave
+  # a dangling missing-command hook wired). Leave detect-session-model.sh and
+  # frontier-confirm.sh (both SHARED with the base model-router-guard).
+  rm -f "$CLAUDE_DIR/hooks/frontier-orchestrator-guard.sh"
   rm -f "$CLAUDE_DIR/hooks/fable-orchestrator-guard.sh"
+  # The confirm-arm hook is SHARED with the model-routing surface: only strip it (and
+  # its UserPromptSubmit wiring) when the model-router is not also installed.
+  local _drop_arm=1
+  [ -L "$CLAUDE_DIR/hooks/model-router-guard.sh" ] && _drop_arm=0
+  [ "$_drop_arm" = 1 ] && rm -f "$CLAUDE_DIR/hooks/frontier-confirm-arm.sh"
   # ensure_real_settings guards the write: a repo-pointing settings.json that could not be
   # converted must NOT be edited, because `open(p, "w")` follows the link into the repo.
   if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
-    python3 -c "
-import json
+    DROP_ARM="$_drop_arm" python3 -c "
+import json, os
 p = '$SETTINGS_JSON'
 with open(p) as f: d = json.load(f)
 hooks = d.get('hooks', {})
-for entry in hooks.get('PreToolUse', []):
-    entry['hooks'] = [h for h in entry.get('hooks', []) if 'fable-orchestrator-guard' not in h.get('command', '')]
-if 'PreToolUse' in hooks:
-    hooks['PreToolUse'] = [g for g in hooks['PreToolUse'] if g.get('hooks')]
-    if not hooks['PreToolUse']: del hooks['PreToolUse']
+# Strip the current + legacy PreToolUse guard names always; strip the arm hook's
+# UserPromptSubmit wiring only when the model-router is not keeping it alive.
+rules = [('PreToolUse', 'frontier-orchestrator-guard'), ('PreToolUse', 'fable-orchestrator-guard')]
+if os.environ.get('DROP_ARM') == '1':
+    rules.append(('UserPromptSubmit', 'frontier-confirm-arm'))
+for ev, needle in rules:
+    for entry in hooks.get(ev, []):
+        entry['hooks'] = [h for h in entry.get('hooks', []) if needle not in h.get('command', '')]
+for ev in ('PreToolUse', 'UserPromptSubmit'):
+    if ev in hooks:
+        hooks[ev] = [g for g in hooks[ev] if g.get('hooks')]
+        if not hooks[ev]: del hooks[ev]
 with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 " || settings_write_failed fable "settings.json edit FAILED - its hook entries were NOT removed."
   fi
@@ -6425,7 +6440,7 @@ if picked config; then
   # team-reaper, teammate-relay-stop, cmux-close-guard, cmux-teammate-shim-heal,
   # voice-mandate/voice-toggle, reflect-nudge, sidecoach-*) are wired AND deployed
   # by their own components and are intentionally excluded here. detect-session-model
-  # is a shared library (model-router-guard + fable-orchestrator-guard exec it).
+  # is a shared library (model-router-guard + frontier-orchestrator-guard exec it).
   # Stage 2 dissolved the QA suite into selectable clusters (safety, verification,
   # question-discipline, grounding, api-drift, planning-git, surface, model-routing,
   # agent-routing) - those hooks + detect-session-model now deploy+wire via the
@@ -7714,14 +7729,42 @@ if picked fable; then
   ensure_settings_seed \
     || record_component_failure config "settings.json could not be made safe to write - see above."
 
+  # UPGRADE cleanup: an install from BEFORE the frontier rename left a
+  # fable-orchestrator-guard.sh symlink and a PreToolUse entry pointing at it.
+  # Remove both now so the renamed hook never leaves a dangling missing-command
+  # wiring behind (Codex 2026-08-05). install_app_hooks adds the new name below.
+  rm -f "$CLAUDE_DIR/hooks/fable-orchestrator-guard.sh"
+  if command -v python3 >/dev/null 2>&1 && [ -f "$SETTINGS_JSON" ] && ensure_real_settings; then
+    python3 -c "
+import json
+p = '$SETTINGS_JSON'
+with open(p) as f: d = json.load(f)
+hooks = d.get('hooks', {})
+for entry in hooks.get('PreToolUse', []):
+    entry['hooks'] = [h for h in entry.get('hooks', []) if 'fable-orchestrator-guard' not in h.get('command', '')]
+if 'PreToolUse' in hooks:
+    hooks['PreToolUse'] = [g for g in hooks['PreToolUse'] if g.get('hooks')]
+    if not hooks['PreToolUse']: del hooks['PreToolUse']
+with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
+" 2>/dev/null || warn "could not strip a legacy fable-orchestrator-guard settings entry (harmless if none)"
+  fi
+
   # detect-session-model.sh is a shared DEPENDENCY, not a wired hook of its own (config
   # also deploys it for the model-router, but `--only fable` must be self-sufficient).
   # It has no settings.json entry, so it stays a plain symlink and is NOT off-list-able:
-  # switching fable-orchestrator-guard off must not strip the guard's own dependency.
+  # switching frontier-orchestrator-guard off must not strip the guard's own dependency.
   chmod +x "$REPO_DIR/claude/hooks/detect-session-model.sh"
   make_symlink "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
 
-  # fable-orchestrator-guard deploys + wires via install_app_hooks (see the `picked fable &&`
+  # frontier-confirm.sh is the confirm-token consume helper, SOURCED by the guard
+  # (and by model-router-guard). Same shared-dependency treatment as
+  # detect-session-model.sh: a plain symlink, not off-list-able, so `--only fable`
+  # is self-sufficient. frontier-confirm-ARM.sh (the UserPromptSubmit hook that
+  # writes the token) is wired via install_app_hooks below, not here.
+  chmod +x "$REPO_DIR/claude/hooks/frontier-confirm.sh"
+  make_symlink "$REPO_DIR/claude/hooks/frontier-confirm.sh" "$CLAUDE_DIR/hooks/frontier-confirm.sh"
+
+  # frontier-orchestrator-guard deploys + wires via install_app_hooks (see the `picked fable &&`
   # line in the app-hook pass), so the browser's per-hook toggle actually reaches it.
 
   ok "fable orchestrator-only guard installed"
@@ -7767,6 +7810,10 @@ if [ "$_cluster_any" = 1 ] || [ -n "${HOOK_ON// /}" ]; then
     if [ "$_h" = "model-router-guard.sh" ]; then
       chmod +x "$REPO_DIR/claude/hooks/detect-session-model.sh"
       link_or_copy "$REPO_DIR/claude/hooks/detect-session-model.sh" "$CLAUDE_DIR/hooks/detect-session-model.sh"
+      # model-router-guard also SOURCES frontier-confirm.sh (the confirm-token
+      # consume helper) for the frontier agent-routing gate.
+      chmod +x "$REPO_DIR/claude/hooks/frontier-confirm.sh"
+      link_or_copy "$REPO_DIR/claude/hooks/frontier-confirm.sh" "$CLAUDE_DIR/hooks/frontier-confirm.sh"
     fi
     # Companion lexicons/config for THIS hook (route-intent.json, grounding-intent.json,
     # ...). Table-driven now rather than one special case per hook, because the same
@@ -7890,7 +7937,11 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 picked reflect      && install_app_hooks reflect-nudge.sh
 picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh
 picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-detect.sh
-picked fable        && install_app_hooks fable-orchestrator-guard.sh
+picked fable        && install_app_hooks frontier-orchestrator-guard.sh
+# The confirm-arm hook powers the "confirm" override on BOTH the session-production
+# (fable) and agent-routing (model-routing) surfaces, so wire it if EITHER is picked -
+# otherwise a model-routing-only install can never lift a frontier-route block.
+{ picked fable || picked model-routing; } && install_app_hooks frontier-confirm-arm.sh
 picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
 picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
 picked clickup      && install_app_hooks block-clickup-writes.sh
@@ -8058,7 +8109,7 @@ picked visualizer && echo "  - Visualizer guard: visualizer-guard hook wired int
 picked codex      && echo "  - Codex guards: codex-failure-watcher + codex-rescue-guard hooks wired into settings.json"
 picked chrome     && echo "  - Chrome tab-group hygiene: chrome-tabgroup track/clear/stop hooks wired into settings.json"
 picked figma      && echo "  - Figma fidelity guard: figma-fidelity-stop (Stop) + figma-fidelity-arm (PreToolUse, auto-arms on Figma pulls) wired into settings.json"
-picked fable      && echo "  - Fable orchestrator guard: fable-orchestrator-guard hook wired into settings.json"
+picked fable      && echo "  - Frontier orchestrator guard: frontier-orchestrator-guard + frontier-confirm-arm hooks wired into settings.json"
 picked justify    && echo "  - Justify: server + core + /justify skill + MCP registration + source/watch/standing-by/queue-drain hooks"
 picked ghostty  && echo "  - Ghostty: config.ghostty (copied from repo - re-run install.sh to sync edits)"
 picked shaders  && echo "  - Ghostty shaders: in-repo chain at $REPO_DIR/shaders, plus library at ~/Documents/Github/ghostty-shaders"

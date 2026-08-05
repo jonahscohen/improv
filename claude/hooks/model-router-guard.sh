@@ -12,15 +12,19 @@
 # There is no override flag. If a task seems to need a different model, STOP and
 # ask the user - they decide, never the harness.
 #
-# SCOPED EXCEPTION (Jonah, 2026-07-06, explicit sign-off): when the SESSION model
-# is Fable (claude-fable-5), Fable is a user-mandated orchestrator that delegates
-# production to an Opus teammate. In that ONE case the Agent `model` parameter is
-# allowed (so Fable can spawn the Opus producer). This is still user-directed
-# routing - the user chose Fable-as-orchestrator - so it honors the rule's spirit
-# ("the user decides"). For every other session model the block is unchanged, and
-# the CLI-level routing hacks (fable-router, claude --model, ANTHROPIC_MODEL) stay
-# blocked for ALL models including Fable. See the fable-orchestrator scheme in
-# fable-orchestrator-guard.sh + session_2026-07-06_fable-orchestrator-hook-conflict.md.
+# FRONTIER SCHEME (Jonah 2026-07-06, expanded 2026-08-05): the .5 frontier models
+# (claude-fable-5, claude-opus-5, claude-sonnet-5) are user-mandated orchestrators
+# that delegate production to a PREFERRED model (opus/sonnet/haiku = the 4.x
+# generation). So the Agent `model` parameter is handled as:
+#   - target is a PREFERRED model + session is FRONTIER -> allowed (delegate down).
+#   - target is a FRONTIER model (fable / opus-5 / sonnet-5) -> blocked UNLESS the
+#     user just typed "confirm" (frontier-confirm.sh one-shot token). This is the
+#     "route an agent to sonnet 5 -> confirm" flow.
+#   - target is a PREFERRED model but session is NOT frontier -> blocked, unchanged
+#     (a normal session does not route agents to other models; the user decides).
+# The CLI-level routing hacks (fable-router, claude --model, ANTHROPIC_MODEL) stay
+# blocked for ALL models with NO override. See frontier-orchestrator-guard.sh +
+# frontier-confirm.sh + session_2026-07-06_fable-orchestrator-hook-conflict.md.
 
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_name",""))' 2>/dev/null)
@@ -57,21 +61,29 @@ elif [ "$TOOL" = "Agent" ]; then
   elif echo "$AGENT_MODEL" | grep -qiE 'fable[-_]?router'; then
     REASON="BLOCKED (non-negotiable): fable-router is forbidden as an Agent model value."
   elif [ -n "$AGENT_MODEL" ]; then
-    case "$SESSION_MODEL" in
-      *fable*)
-        # Fable-orchestrator exception (Jonah 2026-07-06): Fable may spawn its
-        # PRODUCER on Opus only. Any other model (incl. sonnet/haiku/fable-router)
-        # stays blocked so the exception cannot be widened into general routing.
-        if echo "$AGENT_MODEL" | grep -qiE 'opus'; then
-          : # Opus producer - allowed.
-        else
-          REASON="BLOCKED: Fable orchestrator may only delegate production to Opus (Agent model must be opus). Got '$AGENT_MODEL'. Ask the user to broaden this if another producer is needed."
-        fi
-        ;;
-      *)
-        REASON="BLOCKED (non-negotiable): the Agent 'model' parameter routes the subagent to another model ($AGENT_MODEL). Omit it - subagents inherit the session model the user chose. If a different model seems needed, ask the user."
-        ;;
-    esac
+    # Is the TARGET a frontier model? fable (=fable-5) or an opus-5 / sonnet-5 id.
+    # A bare opus/sonnet/haiku, or a 4.x id, is a PREFERRED target.
+    if echo "$AGENT_MODEL" | grep -qiE '(^|[^a-z0-9])fable([^a-z0-9]|$)|opus-?5|sonnet-?5'; then
+      # Frontier target -> gated. A single user-typed "confirm" lifts it once.
+      . "$HOME/.claude/hooks/frontier-confirm.sh" 2>/dev/null || true
+      if type frontier_check_confirm >/dev/null 2>&1 && frontier_check_confirm "$AGENT_MODEL"; then
+        : # confirmed by the user - allow this one route.
+      else
+        REASON="BLOCKED: routing an agent to a frontier model ($AGENT_MODEL). Frontier models (Opus 5 / Sonnet 5 / Fable 5) are gated - reply 'confirm' to allow this one route, or target a preferred model (opus/sonnet/haiku = the 4.x generation)."
+      fi
+    else
+      # Preferred target -> allowed only when a frontier session is delegating
+      # production down. A non-frontier session routing an agent to another model
+      # stays blocked (unchanged rule; the user decides model choice).
+      case "$SESSION_MODEL" in
+        *fable-5*|*opus-5*|*sonnet-5*)
+          : # frontier orchestrator delegating to a preferred producer - allowed.
+          ;;
+        *)
+          REASON="BLOCKED (non-negotiable): the Agent 'model' parameter routes the subagent to another model ($AGENT_MODEL). Omit it - subagents inherit the session model the user chose. If a different model seems needed, ask the user."
+          ;;
+      esac
+    fi
   fi
 
 elif [ "$TOOL" = "Workflow" ]; then

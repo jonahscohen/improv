@@ -123,6 +123,12 @@ If you (a different developer, a forked install, a public reuse) want different 
 
 The hook layer stays useful regardless of `defaultMode` - hooks fire BEFORE the permission prompt would, so they continue blocking forbidden patterns even in fully-prompting mode.
 
+## Frontier Model Confirm Token (NEVER write it yourself)
+
+The `.5` frontier models (claude-fable-5, claude-opus-5, claude-sonnet-5) are gated: on a frontier session your own Write/Edit/Bash are blocked (delegate production to a preferred model - Opus 4.8 / Sonnet 4.6 / Haiku 4.5), and routing a sub-agent onto a frontier model is blocked. The ONLY thing that lifts either gate is the USER typing "confirm" (or "confirm <model>"), which the `frontier-confirm-arm.sh` UserPromptSubmit hook turns into a one-shot token at `~/.claude/.frontier-confirm`.
+
+You MUST NEVER write, create, move, copy, or otherwise author `~/.claude/.frontier-confirm` (or any file named `.frontier-confirm`) through the Bash, Write, Edit, MultiEdit, or NotebookEdit tools. Writing it would forge the user's confirm and route work onto a pricier model they never approved - the exact thing the gate exists to prevent. `bash-guard.sh` and `content-guard.sh` block the obvious vectors, but the rule stands regardless: only the user's typed confirm arms it. When you believe a frontier model is warranted, state why and ask the user to confirm; do not reach for the token file. (This does not touch the `frontier-confirm.sh` / `frontier-confirm-arm.sh` HOOK SCRIPTS, which you may edit normally - only the dotfile token is off-limits.)
+
 ## Voice transcription (audio attachments)
 
 When a message arrives with an audio attachment (voice memo, recorded note, dictation), transcribe it BEFORE responding - do not ask the user to retype what they said. Run `~/.claude/transcribe <path-to-audio>` via Bash (handles OGG/Opus, m4a, mp3, flac, wav; transcript on stdout) and use the result as if the user typed it. If it is empty or obviously garbled, tell the user and ask them to retype - never fabricate a guess. Pipeline internals (whisper.cpp + ffmpeg, model override) and install (`ampersand --only voice`) are in `claude/docs/voice-discord-infra.md`.

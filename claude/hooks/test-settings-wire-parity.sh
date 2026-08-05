@@ -80,7 +80,11 @@ bad() { echo "FAIL $1"; fail=$((fail + 1)); }
 UNWIRED_BY_DESIGN_JSON='{
   "detect-session-model.sh": [
     ".claude/hooks/model-router-guard.sh",
-    ".claude/hooks/fable-orchestrator-guard.sh"
+    ".claude/hooks/frontier-orchestrator-guard.sh"
+  ],
+  "frontier-confirm.sh": [
+    ".claude/hooks/model-router-guard.sh",
+    ".claude/hooks/frontier-orchestrator-guard.sh"
   ],
   "beats-reflect-weekly.sh": [
     "Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist"
@@ -91,7 +95,7 @@ UNWIRED_BY_DESIGN_JSON='{
   ]
 }'
 # detect-session-model.sh   shared dependency, exec'd BY model-router-guard.sh and
-#                           fable-orchestrator-guard.sh. Never wired standalone.
+#                           frontier-orchestrator-guard.sh. Never wired standalone.
 # beats-reflect-weekly.sh   launchd-scheduled from
 #                           com.yesand.beats-reflect-weekly.plist, not event-driven.
 # multiple-choice-enforce.sh  NO LONGER LISTED, and its absence is the fix rather than a
@@ -119,6 +123,7 @@ UNWIRED_BY_DESIGN_JSON='{
 #            hide, so it is spelled out rather than blended into the others.
 REACHER_KIND_JSON='{
   "detect-session-model.sh": "exec",
+  "frontier-confirm.sh": "exec",
   "beats-reflect-weekly.sh": "launchd",
   "codex-review.py": "cli"
 }'

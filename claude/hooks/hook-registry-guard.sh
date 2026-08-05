@@ -115,9 +115,14 @@ _is_excluded() {
   # exemption with no reason is just a place to hide an unmanaged hook.
   case "$1" in
     # Shared DEPENDENCY: deployed by install.sh, exec'd BY model-router-guard.sh and
-    # fable-orchestrator-guard.sh. Never wired standalone; off-listing the guard must not
+    # frontier-orchestrator-guard.sh. Never wired standalone; off-listing the guard must not
     # strip the guard's own dependency.
     detect-session-model) return 0 ;;
+    # Shared DEPENDENCY: the frontier confirm-token consume helper, sourced BY
+    # model-router-guard.sh and frontier-orchestrator-guard.sh. Never wired
+    # standalone. (frontier-confirm-ARM.sh, by contrast, IS a wired UserPromptSubmit
+    # hook and is registered in browser-tree.json - it is not exempt here.)
+    frontier-confirm) return 0 ;;
     # LAUNCHD-SCHEDULED, not event-driven: reflect-owned, run from
     # ~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist. Appears in no
     # settings.json event, so there is nothing to wire or toggle. Verified 2026-07-16.

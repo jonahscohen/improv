@@ -59,6 +59,25 @@ if _is_marker:
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: editing .figma-fidelity.pending (or a symlink/hardlink alias of it) is forbidden - opting out of the Figma-fidelity gate is not permitted. Cover the node with a check in .figma-fidelity.json and the Stop gate clears the marker on a pass. For a reference-only look, use get_screenshot."}}))
     sys.exit(0)
 
+# The frontier confirm token (~/.claude/.frontier-confirm) is armed ONLY by the
+# user typing confirm (frontier-confirm-arm.sh). Writing it through Write/Edit/
+# MultiEdit would forge that confirm and self-lift a frontier-model gate the user
+# never approved. Match the token by resolved path or exact basename - never the
+# frontier-confirm.sh scripts (their basename ends in .sh). NO APOSTROPHES here.
+_ffp = str(inp.get("file_path") or "")
+if _ffp:
+    try:
+        _fc = os.path.expanduser(_ffp)
+        if not os.path.isabs(_fc):
+            _fc = os.path.join(os.getcwd(), _fc)
+        _fc = os.path.realpath(_fc)
+        _tok = os.path.realpath(os.path.expanduser(os.environ.get("FRONTIER_CONFIRM_FILE") or "~/.claude/.frontier-confirm"))
+        if _fc == _tok or os.path.basename(_ffp) == ".frontier-confirm":
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: ~/.claude/.frontier-confirm is the frontier-model confirm token and may not be written through Write/Edit/MultiEdit. Doing so would forge the user confirm and route work onto a frontier model they never approved. Only the user typed confirm may arm it - ask the user and let them confirm."}}))
+            sys.exit(0)
+    except OSError:
+        pass
+
 if tool == "Write":
     content = inp.get("content", "")
 elif tool == "Edit":

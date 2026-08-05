@@ -339,14 +339,25 @@
    }
   }
  ],
- "fable-orchestrator-guard.sh": [
+ "frontier-orchestrator-guard.sh": [
   {
    "event": "PreToolUse",
    "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
    "hook": {
     "type": "command",
-    "command": "~/.claude/hooks/fable-orchestrator-guard.sh",
+    "command": "~/.claude/hooks/frontier-orchestrator-guard.sh",
     "timeout": 10
+   }
+  }
+ ],
+ "frontier-confirm-arm.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/frontier-confirm-arm.sh",
+    "timeout": 5
    }
   }
  ],
