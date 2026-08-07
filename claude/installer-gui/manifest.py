@@ -39,6 +39,10 @@ def main():
         # Hook explanations live in the tree beside the ownership map. They were
         # assembled but never forwarded, so every hook row rendered blank.
         "hook_desc": tree.get("hook_desc", {}),
+        # A per-hook advisory note, rendered in red beneath the description for the
+        # few hooks that carry a recommendation (e.g. "Do not activate"). Only the
+        # GUI reads this; the terminal path leaves the plain description untouched.
+        "hook_note": tree.get("hook_note", {}),
         # Pinned hooks are always-on and excluded from --apply-plan's own allowlist -
         # the browser needs the same list so it never stages one, rather than staging
         # it and having Apply reject the whole plan later.

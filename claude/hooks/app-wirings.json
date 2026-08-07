@@ -328,6 +328,26 @@
    }
   }
  ],
+ "cmux-team-config-heal.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/cmux-team-config-heal.sh session-start",
+    "timeout": 5
+   }
+  },
+  {
+   "event": "PostToolUse",
+   "matcher": "Agent",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/cmux-team-config-heal.sh post-tool-use",
+    "timeout": 5
+   }
+  }
+ ],
  "teammate-relay-stop.sh": [
   {
    "event": "Stop",

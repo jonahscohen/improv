@@ -244,8 +244,8 @@
         {
           "key": "verification",
           "kind": "hooks",
-          "tag": "the 8 verification hooks",
-          "desc": "Makes \"done\" mean something was actually looked at, not just built. A code change stays flagged until real proof exists - an opened screenshot, a passing test, a live curl - so a claim that something works can never be taken on faith, and a second edit to the same file within ten minutes gets a warning in case the first fix never really landed.",
+          "tag": "the 11 verification hooks",
+          "desc": "Makes \"done\" mean something was actually looked at, not just built. A code change stays flagged until real proof exists - an opened screenshot, a passing test, a live curl - so a claim that something works can never be taken on faith, and a second edit to the same file within ten minutes gets a warning in case the first fix never really landed. An artifact Claude creates on its own - an image, a page, a document - is held open until it is shown to you.",
           "hooks": [
             "verify-before-done",
             "verify-before-done-stop",
@@ -253,6 +253,9 @@
             "verify-manual",
             "screenshot-open-mandate",
             "screenshot-open-clear",
+            "artifact-open-mandate",
+            "artifact-open-clear",
+            "artifact-open-stop",
             "second-fix-gate",
             "validation-guard"
           ]
@@ -450,6 +453,7 @@
                 "team-reaper",
                 "cmux-close-guard",
                 "cmux-teammate-shim-heal",
+                "cmux-team-config-heal",
                 "teammate-relay-stop"
               ]
             }
@@ -512,6 +516,7 @@
     "node-shim-heal": "Restores the small Node startup file that cmux points NODE_OPTIONS at, which macOS periodically deletes from its temp folder. Once it is missing every node and npx command fails to start, so this replaces it from a permanent copy.",
     "cmux-close-guard": "Refuses to close a terminal pane unless nothing is running inside it and you named the exact pane you meant. It was added after a pane closed on a hunch turned out to hold a live worker, killing it and stalling queued work.",
     "cmux-teammate-shim-heal": "Replaces the tmux helper that cmux rewrites on every launch with a corrected version. The stock one cannot start a sub-agent pane, because the launch line begins with cd, which it tries to run as a program and fails.",
+    "cmux-team-config-heal": "Recreates the per-session team folder under ~/.claude/teams when a resumed or upgraded session inherits a team the harness never re-initialized, which otherwise makes every named sub-agent spawn fail with a team-not-found error. It heals the folder from the inherited team name at session start when available, and always from the spawn error itself, so the retry lands without a restart.",
     "team-reaper": "Deletes leftover team and task folders under ~/.claude at session start and end, so finished sub-agent groups stop appearing as open workspaces. It skips any group with a process still alive and never touches your notes.",
     "resume-guard": "Deletes the saved session files under ~/.nyx/agent-sessions when a session ends, so reopening a terminal tile starts Claude fresh instead of restoring the old conversation. It acts only while ~/.claude/.no-auto-resume exists.",
     "voice-gate": "Refuses every text-to-speech call while spoken output is muted, which is whenever ~/.claude/.voice-enabled is missing. Without it a muted session still loads and calls the speak tool, then wastes the turn on a refusal.",
@@ -537,6 +542,9 @@
     "verify-manual": "Clears this session's outstanding check when you type verified, looks good, lgtm, or bypass verification. The phrase must be your entire message, and it applies only to this session so it cannot excuse another one.",
     "screenshot-open-mandate": "Notes the file path each time a screenshot is saved to disk and requires Claude to actually open it. A screenshot that is never opened never appears in your conversation, so describing one only captured is an empty claim.",
     "screenshot-open-clear": "Ticks a screenshot off this session's outstanding list the moment Claude opens it, which is the only way that requirement is ever met. The list belongs to one session, so opening a file elsewhere cannot excuse it.",
+    "artifact-open-mandate": "Notes the path each time Claude creates an artifact worth showing - an image, a page, or an authored document - and requires it to be surfaced to you before the turn ends. Beats, scratch files, source and config files, and internal repo docs are left alone, so only real deliverables ever get flagged.",
+    "artifact-open-clear": "Ticks an artifact off this session's outstanding list the moment Claude surfaces it, whether by opening it or by publishing it. The list belongs to one session, so surfacing a file elsewhere cannot excuse it.",
+    "artifact-open-stop": "Blocks the end of a turn once while any artifact Claude made this session is still unshown, listing each one and how to surface it. A file that no longer exists is dropped rather than left to wedge the turn, and once everything is shown the turn ends normally.",
     "second-fix-gate": "Warns when a second edit hits the same file within ten minutes while an earlier change is still unchecked, the pattern that once turned one bug into a worse one. Edits that only add to existing text are ignored.",
     "validation-guard": "Blocks JavaScript that fakes real interaction: getComputedStyle, textContent, element.click, dispatchEvent and similar. Feature detection such as CSS.supports still passes, and the same blocklist is enforced for shell commands.",
     "multiple-choice-detect-stop": "Notices when Claude asked you a question as plain text instead of a proper selectable prompt, and records it so the next turn gets a reminder. A plain yes or no counts, since that is simply a two-option question.",
@@ -571,6 +579,9 @@
     "voice-mandate": "Decides at the start of each session whether spoken output may be used, based on whether it is installed and whether you muted it. It says one of three things: allowed, muted, or nothing at all when it is not installed.",
     "voice-toggle": "Switches spoken output on or off when you type voice on, voice off, voice toggle or voice status. It writes the flag at ~/.claude/.voice-enabled, which the other two voice entries in this list read to decide what is allowed."
   },
+  "hook_note": {
+    "model-router-guard": "Recommendation: designed to keep Anthropic from routing away from Fable 5 if erroneously detects unsafe behavior, but prevents Claude from routing agents based on LOE. Do not activate."
+  },
   "hook_owner": {
     "memory-approve": "memory",
     "memory-nudge": "memory",
@@ -598,6 +609,9 @@
     "verify-manual": "verification",
     "screenshot-open-mandate": "verification",
     "screenshot-open-clear": "verification",
+    "artifact-open-mandate": "verification",
+    "artifact-open-clear": "verification",
+    "artifact-open-stop": "verification",
     "second-fix-gate": "verification",
     "validation-guard": "verification",
     "multiple-choice-detect-stop": "question-discipline",
@@ -634,6 +648,7 @@
     "node-shim-heal": "cmux",
     "cmux-close-guard": "cmux",
     "cmux-teammate-shim-heal": "cmux",
+    "cmux-team-config-heal": "cmux",
     "team-reaper": "cmux",
     "resume-guard": "cmux",
     "block-clickup-writes": "clickup",

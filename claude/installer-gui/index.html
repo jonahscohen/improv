@@ -172,6 +172,7 @@ syncThemeLabel();
 // ---- tree + install state, populated from the live manifest ----
 let T = {};
 let HOOK_DESC = {};
+let HOOK_NOTE = {};
 let PINNED = new Set();
 const installed = {}, pending = {};
 
@@ -184,7 +185,7 @@ function walkMembers(members, out) {
       // Hooks carry the same explanations everything else does. They were the
       // one component type rendered with an empty description, which made the
       // most cryptic names on the whole list the least explained.
-      for (const h of (mem.hooks || [])) kids[h] = { tag: '', desc: HOOK_DESC[h] || '' };
+      for (const h of (mem.hooks || [])) kids[h] = { tag: '', desc: HOOK_DESC[h] || '', note: HOOK_NOTE[h] || '' };
       out[mem.key] = { folder: 1, hooks: 1, tag: mem.tag || '', desc: mem.desc || '', children: kids };
     } else if (mem.members) {
       const kids = {};
@@ -195,6 +196,7 @@ function walkMembers(members, out) {
 }
 function buildTreeFromManifest(m) {
   HOOK_DESC = m.hook_desc || {};
+  HOOK_NOTE = m.hook_note || {};
   PINNED = new Set(m.pinned_hooks || []);
   const tree = {};
   for (const b of m.buckets) {
@@ -702,10 +704,15 @@ function renderReview(){
     const trail = path.map((seg,j)=>labelFor(path.slice(0,j+1))).join(' / ');
     const node = nodeAt(path);
     const dsc = (node && (node.desc || node.tag)) || '';
+    const note = (node && node.note) || '';
     const row = mk('div','review-row');
     const info = mk('div','review-row__info');
     info.appendChild(mk('span','review-row__name', trail));
-    if(dsc) info.appendChild(mk('span','review-row__desc', dsc));
+    if(dsc || note){
+      const ds = mk('span','review-row__desc', dsc);
+      if(note) ds.appendChild(mk('span','row__note', note));
+      info.appendChild(ds);
+    }
     row.appendChild(info);
     const rm=mk('button','review-row__remove'); rm.type='button';
     rm.setAttribute('aria-label','Remove '+trail+' from staged changes');
@@ -938,7 +945,16 @@ function render(){
     // The description gets its own line rather than an ellipsis. These run to
     // two sentences, and a truncated explanation explains nothing.
     const dsc=node.desc || node.tag || '';
-    if(dsc) d.appendChild(mk('span','row__desc', dsc));
+    const note=node.note || '';
+    if(dsc || note){
+      // The advisory note rides inside the same desc cell (a block-level child)
+      // so it wraps onto its own line under the description while staying in the
+      // grid's desc area. Rendered red via .row__note; textContent-only, so the
+      // JSON string is never treated as markup.
+      const ds=mk('span','row__desc', dsc);
+      if(note) ds.appendChild(mk('span','row__note', note));
+      d.appendChild(ds);
+    }
     d.addEventListener('click',()=>{ sel=i; activate(); });
     d.addEventListener('mouseenter',()=>{ sel=i; paintSel(); });
     host.appendChild(d);

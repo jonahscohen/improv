@@ -128,6 +128,38 @@
    }
   }
  ],
+ "artifact-open-mandate.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "Write|Artifact|Bash",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/artifact-open-mandate.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "artifact-open-clear.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "Read|Artifact|Bash",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/artifact-open-clear.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "artifact-open-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": "",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/artifact-open-stop.sh"
+   }
+  }
+ ],
  "second-fix-gate.sh": [
   {
    "event": "PostToolUse",

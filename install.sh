@@ -2032,7 +2032,7 @@ DESCS+=(
 )
 FILES+=(
   "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
-  "~/.claude/hooks/ (8 verification hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (11 verification hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 question-discipline hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (10 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
@@ -2162,7 +2162,7 @@ fi
 cluster_hooks() {
   case "$1" in
     safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh" ;;
-    verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh second-fix-gate.sh validation-guard.sh" ;;
+    verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh artifact-open-mandate.sh artifact-open-clear.sh artifact-open-stop.sh second-fix-gate.sh validation-guard.sh" ;;
     # question-enforcement.sh is deliberately NOT in this list. It is a Stop-shaped hook
     # (reads stdin, exits 1 to block) that was never wired to any settings event, so it
     # installed and sat inert on every machine that ever took this cluster. It is
@@ -4143,7 +4143,7 @@ deactivate_cmux() {
   fi
   # Remove cmux hook symlinks + the teammate tmux-shim dir
   local f
-  for f in resume-guard.sh resume-toggle.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh team-reaper.sh teammate-relay-stop.sh; do
+  for f in resume-guard.sh resume-toggle.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh cmux-team-config-heal.sh team-reaper.sh teammate-relay-stop.sh; do
     rm -f "$CLAUDE_DIR/hooks/$f"
   done
   [ -L "$CLAUDE_DIR/toggle-resume.sh" ] && rm -f "$CLAUDE_DIR/toggle-resume.sh"
@@ -4158,7 +4158,7 @@ import json
 p = '$SETTINGS_JSON'
 with open(p) as f: d = json.load(f)
 hooks = d.get('hooks', {})
-NAMES = ['resume-guard.sh', 'resume-toggle.sh', 'cmux-close-guard.sh', 'cmux-teammate-shim-heal.sh', 'team-reaper.sh', 'teammate-relay-stop.sh']
+NAMES = ['resume-guard.sh', 'resume-toggle.sh', 'cmux-close-guard.sh', 'cmux-teammate-shim-heal.sh', 'cmux-team-config-heal.sh', 'team-reaper.sh', 'teammate-relay-stop.sh']
 for ev in list(hooks.keys()):
     for g in hooks.get(ev, []):
         g['hooks'] = [h for h in g.get('hooks', []) if not any(n in h.get('command', '') for n in NAMES)]
@@ -6438,7 +6438,8 @@ if picked config; then
   # one of these by command path, so they must all land on disk or the wired
   # hooks dangle (command-not-found at runtime). App-owned hooks (resume-*,
   # team-reaper, teammate-relay-stop, cmux-close-guard, cmux-teammate-shim-heal,
-  # voice-mandate/voice-toggle, reflect-nudge, sidecoach-*) are wired AND deployed
+  # cmux-team-config-heal, voice-mandate/voice-toggle, reflect-nudge, sidecoach-*)
+  # are wired AND deployed
   # by their own components and are intentionally excluded here. detect-session-model
   # is a shared library (model-router-guard + frontier-orchestrator-guard exec it).
   # Stage 2 dissolved the QA suite into selectable clusters (safety, verification,
@@ -6854,9 +6855,10 @@ if picked cmux; then
   chmod +x "$REPO_DIR/claude/toggle-resume.sh"
   make_symlink "$REPO_DIR/claude/toggle-resume.sh" "$CLAUDE_DIR/toggle-resume.sh"
 
-  # cmux's 6 remaining hooks - team-reaper (SessionStart+SessionEnd), cmux-close-guard
-  # (PreToolUse/Bash), cmux-teammate-shim-heal (SessionStart), teammate-relay-stop (Stop),
-  # resume-guard (SessionEnd), resume-toggle (UserPromptSubmit) - deploy + wire through
+  # cmux's 7 remaining hooks - team-reaper (SessionStart+SessionEnd), cmux-close-guard
+  # (PreToolUse/Bash), cmux-teammate-shim-heal (SessionStart), cmux-team-config-heal
+  # (SessionStart+PostToolUse), teammate-relay-stop (Stop), resume-guard (SessionEnd),
+  # resume-toggle (UserPromptSubmit) - deploy + wire through
   # install_app_hooks, alongside agent-teams-guard/node-shim-heal which already did.
   # See the off-list convergence note on install_app_hooks: the hand-rolled symlink loop
   # and settings-merge that used to live here could not honor HOOK_OFF, so the browser's
@@ -7935,7 +7937,7 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 # improv-only hook on every project. Ruled keep-project-scoped (Jonah 2026-07-15;
 # decision_beats_hooks_stay_project_scoped.md).
 picked reflect      && install_app_hooks reflect-nudge.sh
-picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh teammate-relay-stop.sh
+picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh cmux-team-config-heal.sh teammate-relay-stop.sh
 picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-detect.sh
 picked fable        && install_app_hooks frontier-orchestrator-guard.sh
 # The confirm-arm hook powers the "confirm" override on BOTH the session-production

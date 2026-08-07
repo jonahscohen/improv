@@ -393,6 +393,13 @@
     grid-area:desc; font-size:var(--xs); color:var(--text-secondary);
     line-height:1.5; max-width:74ch;
   }
+  /* A per-hook advisory that rides under the description on its own line. Uses
+     --red-text (the variant calibrated to clear WCAG contrast as small text on
+     the canvas, not the fill --red), so "Do not activate" reads as a warning
+     without failing legibility in either theme. */
+  .row__note{
+    display:block; margin-top:4px; color:var(--red-text); font-weight:500;
+  }
 
   /* THE BADGE IS THE CHECKBOX. Status and control were two separate ideas on
      this row; now they are one thing, so what you read is what you press.

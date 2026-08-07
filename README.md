@@ -193,7 +193,7 @@ The ten clusters from above, broken into their actual `--only` keys (`claude/hoo
 
 <a id="hook-inventory"></a>
 <details>
-<summary><b>Every hook, by cluster (74 total)</b></summary>
+<summary><b>Every hook, by cluster (77 total)</b></summary>
 
 Hooks fall into a few mechanical shapes regardless of which cluster owns them:
 
@@ -207,7 +207,7 @@ Counted by which cluster owns them:
 
 | Cluster | Hooks | Sub-groups |
 |---|---|---|
-| Guardrails | 42 | safety (5), verification (8), question-discipline (2), grounding (10), api-drift (3), planning-git (2), surface (2), model-routing (1), agent-routing (1), fable (1), codex (2), chrome (3), visualizer (1) |
+| Guardrails | 45 | safety (5), verification (11), question-discipline (2), grounding (10), api-drift (3), planning-git (2), surface (2), model-routing (1), agent-routing (1), fable (1), codex (2), chrome (3), visualizer (1) |
 | Dev surface | 9 | cmux (8), clickup (1) |
 | Sidecoach | 8 | sessionstart, preamble, postuserp, keyword, taste-gate, craft-floor, postresponse, detect |
 | Beats | 7 | memory (6), reflect (1) |
