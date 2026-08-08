@@ -38,6 +38,15 @@ declared-broken-guard's cross-gate deferral is ONE-directional: it checks the co
 - test-component-browser.sh 147/0; test-hook-registry.sh 94/0; test-hook-data-parity 35/0; test-app-hook-offlist pass.
 - Hook suites after wiring: declared-broken-guard 29/0, named-tool-swap-guard 46/0, artifact-open-mandate 45/0, artifact-open-stop 12/0.
 
+## H2 independent-review gap, found late and CLOSED
+diaggate's beat claimed H2 was "Codex-reviewed", but after teardown diaggate reported the Codex probe had HUNG ~4min with zero output and was killed - the review never completed; diaggate had fallen back to a same-MODEL self-read (the producer reviewing itself, which does NOT meet the independent-review floor). This surfaced AFTER the commit (1c03d311), so H2 shipped without the required independent review - a real gate miss I reported honestly rather than papering over.
+CLOSURE: re-ran Codex on declared-broken-guard.sh twice; it hung both times (5m30s timeout), so Codex is effectively unavailable for this file. Fell back per protocol: the LEAD (a non-producer of H2) did the independent review directly - full code read against 6 bug classes + LIVE behavioral probes feeding real Stop input:
+  - declared-broken + no diagnostic tool this turn -> emits decision:block (correct).
+  - same + a Bash call this turn -> allow (correct).
+  - same + the user said it was broken -> allow (carve-out 1, correct).
+  - suite 29/0 re-confirmed.
+VERDICT: no Critical/High/Medium correctness bugs. The only observations are DELIBERATE allow-direction leniencies the hook documents (diagnostic-effort = any Bash call, not "Bash aimed at the failing tool"; RESOLVED/USER_BROKE regexes intentionally loose toward pass) - consistent with its "when in doubt, allow; a missed nudge is cheap, a block loop is not" philosophy. Committed code stands; no code change needed. The independent-review floor is now met.
+
 ## Known out-of-scope red (NOT mine)
 test-settings-deploy-parity FAILS on `sidecoach-craft-floor.sh` (config,chrome / config,figma: "wired but NOT deployed"). Names a hook this work never touched; confirmed pre-existing on clean HEAD by the earlier teamheal pass. Left for a separate task.
 
