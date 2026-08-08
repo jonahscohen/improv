@@ -1,3 +1,8 @@
+- [** ACTIVE ** FIELD-REMEDIES INTEGRATION - wired H2 (declared-broken-guard) + H3 (named-tool-swap arm+guard) into the default-ON grounding cluster…](session_2026-08-08_field-remedies-integration.md)
+- [** ACTIVE ** DECLARED-BROKEN-GUARD (H2) - Stop gate blocking once when a reply calls a tool dead without diagnosing it that turn; carve-outs for user-…](session_2026-08-07_declared-broken-guard.md)
+- [** ACTIVE ** NAMED-TOOL-SWAP GUARD (H3) - conservative arm+guard blocking a done-claim when a user-named tool never ran and no sign-off; prefers false…](session_2026-08-07_named-tool-swap-guard.md)
+- [** ACTIVE ** ARTIFACT-OPEN FLOW FIX - Gap A inline-image auto-satisfy (no nag on already-shown) + Gap B superseded-intermediate nudge, in the mandate…](session_2026-08-07_artifact-open-flow-fix.md)
+- [** ACTIVE DECISION ** FRONTIER-CONFIRM-ARM TREE DEDUP - fixed the red installer<->tree self-check by treating arm as a shared frontier DEPEN…](session_2026-08-07_frontier-confirm-arm-tree-dedup.md)
 - [** ACTIVE ** CMUX TEAM-CONFIG HEAL - durable fix (4th recur) for the team-init orphan deadlock: continuation SHORTID is NOT derivable at SessionStart…](session_2026-08-07_cmux-team-config-heal.md)
 - [** ACTIVE ** MODEL-ROUTER-GUARD RED NOTE - added a red "Do not activate" recommendation to the model-router-guard GUI installer card via a new h…](session_2026-08-07_model-router-guard-red-note.md)
 - [** ACTIVE ** ARTIFACT-OPEN BALANCED FOLD - Codex found CLI/Bash images + temp artifacts slipped; folded to Write+Bash visuals (caught in temp),…](session_2026-08-07_artifact-open-balanced-fold.md)

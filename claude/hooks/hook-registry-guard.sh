@@ -110,19 +110,27 @@ _is_excluded() {
     # unpackaged hook, and the durable fix for that is in the SUITE - it should build
     # its fixtures in a sandbox repo copy rather than mutating the live tree.
   esac
-  # NOT EVENT HOOKS. Each lives in claude/hooks/ and ends in .sh, but none is wired to a
-  # Claude Code event, so none has a toggle to own. Each entry states WHY, because an
-  # exemption with no reason is just a place to hide an unmanaged hook.
+  # NOT INDIVIDUALLY TOGGLEABLE. Each lives in claude/hooks/ and ends in .sh. Most are not
+  # wired to a Claude Code event at all, so they have no toggle to own; the one exception is
+  # frontier-confirm-arm (event-wired but a DUAL-OWNED shared dependency - see its entry). Each
+  # entry states WHY, because an exemption with no reason is just a place to hide an unmanaged hook.
   case "$1" in
     # Shared DEPENDENCY: deployed by install.sh, exec'd BY model-router-guard.sh and
     # frontier-orchestrator-guard.sh. Never wired standalone; off-listing the guard must not
     # strip the guard's own dependency.
     detect-session-model) return 0 ;;
     # Shared DEPENDENCY: the frontier confirm-token consume helper, sourced BY
-    # model-router-guard.sh and frontier-orchestrator-guard.sh. Never wired
-    # standalone. (frontier-confirm-ARM.sh, by contrast, IS a wired UserPromptSubmit
-    # hook and is registered in browser-tree.json - it is not exempt here.)
+    # model-router-guard.sh and frontier-orchestrator-guard.sh. Never wired standalone.
     frontier-confirm) return 0 ;;
+    # Shared DEPENDENCY that IS event-wired (UserPromptSubmit), unlike the two above: it arms
+    # the frontier confirm-token when you type a bare "confirm". install.sh deploys it for fable
+    # OR the model-routing cluster ({ picked fable || picked model-routing; }), so it is
+    # DUAL-OWNED and deployed/removed conditionally (deactivate_fable keeps it while
+    # model-router-guard.sh is still linked). The single-owner tree cannot model dual ownership,
+    # and arm has no meaningful standalone toggle - it turns on/off with whichever consumer needs
+    # it - so it is deliberately NOT in browser-tree.json. Was tree-registered until 2026-08-07;
+    # see session_2026-08-07_frontier-confirm-arm-tree-dedup.md.
+    frontier-confirm-arm) return 0 ;;
     # LAUNCHD-SCHEDULED, not event-driven: reflect-owned, run from
     # ~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist. Appears in no
     # settings.json event, so there is nothing to wire or toggle. Verified 2026-07-16.

@@ -162,6 +162,62 @@ except Exception:
 
 tool = d.get("tool_name", "")
 ti = d.get("tool_input", {}) or {}
+resp = d.get("tool_response", d.get("tool_result", None))
+
+# GAP A (inline-returned images, Jonah 2026-08-07): a tool that RENDERED the image inline
+# in this same tool result has already shown it to the user in the conversation. Recording
+# such a path would nag for a redundant Read and trip the Stop gate on an image the user
+# already saw. has_inline_image() finds an image content block (an Anthropic
+# {"type":"image"} block, or an MCP image/* media type) anywhere in the tool result. It is
+# STRUCTURE-based - it only descends into dict/list nodes, never strings - so a Bash stdout
+# STRING that merely mentions "image/png" can never match. Used by the else-branch below,
+# which is where an inline-image tool (e.g. a Chrome-MCP screenshot with save_to_disk)
+# lands; Write and Bash never return an inline image, so their paths are untouched.
+#
+# A match requires BOTH an image LABEL (a {"type":"image"} block or an image/* media type)
+# AND an actual inline PAYLOAD (base64 data, or a source with data/url). That second
+# condition is load-bearing: a save-only result whose metadata merely says
+# {"type":"image","path":"/x/out.png","status":"saved"} carries NO rendered pixels, so it
+# must fall through and be tracked, not be mistaken for something the user already saw.
+def _has_image_payload(node):
+    if isinstance(node.get("data"), str) and node.get("data"):
+        return True
+    src = node.get("source")
+    if isinstance(src, dict):
+        if isinstance(src.get("data"), str) and src.get("data"):
+            return True
+        if isinstance(src.get("url"), str) and src.get("url"):
+            return True
+    return False
+
+def has_inline_image(node, depth=0):
+    if depth > 6:
+        return False
+    if isinstance(node, dict):
+        t = node.get("type")
+        is_img = isinstance(t, str) and t.lower() == "image"
+        for key in ("media_type", "mimeType", "mime_type"):
+            v = node.get(key)
+            if isinstance(v, str) and v.lower().startswith("image/"):
+                is_img = True
+                break
+        src = node.get("source")
+        if isinstance(src, dict):
+            for key in ("media_type", "mimeType", "mime_type"):
+                v = src.get(key)
+                if isinstance(v, str) and v.lower().startswith("image/"):
+                    is_img = True
+                    break
+        if is_img and _has_image_payload(node):
+            return True
+        for v in node.values():
+            if isinstance(v, (dict, list)) and has_inline_image(v, depth + 1):
+                return True
+    elif isinstance(node, list):
+        for v in node:
+            if isinstance(v, (dict, list)) and has_inline_image(v, depth + 1):
+                return True
+    return False
 
 # The Artifact tool PUBLISHES the file to the user - that already shows it. Never
 # record a pending entry for an Artifact call. (artifact-open-clear.sh, wired to the
@@ -200,8 +256,7 @@ elif tool == "Bash":
                 candidates.append(cand)
         # 3. visual paths in the command, LAST first (a CLI output arg is usually last)
         candidates.extend(reversed(VISUAL_PATH_RE.findall(cmd)))
-        # 4. visual paths named in the tool output
-        resp = d.get("tool_response", d.get("tool_result", {}))
+        # 4. visual paths named in the tool output (resp is hoisted above)
         blob = resp if isinstance(resp, str) else ""
         if isinstance(resp, dict):
             for v in resp.values():
@@ -210,8 +265,15 @@ elif tool == "Bash":
                     break
         candidates.extend(VISUAL_PATH_RE.findall(blob or ""))
 else:
-    # A future MCP artifact/image tool: harvest an explicit output-path key. Dormant
-    # today (no such tool wired); kept so adding one is a one-line matcher widen.
+    # GAP A: a tool (e.g. a Chrome-MCP screenshot with save_to_disk) that returned the
+    # image INLINE in this same result already surfaced it to the user - record nothing so
+    # it neither nags for a redundant Read nor trips the Stop gate on an image already
+    # seen. A saved image that was NOT rendered inline falls through and is tracked below.
+    if has_inline_image(resp):
+        print(""); sys.exit(0)
+    # A future MCP artifact/image tool that saves WITHOUT an inline render: harvest an
+    # explicit output-path key so it is still tracked. Dormant until such a tool is wired
+    # into this hook matcher (a one-line widen).
     for k in ("file_path", "output", "out", "path", "save_path", "output_path", "destination"):
         v = ti.get(k)
         if isinstance(v, str) and v:
@@ -236,6 +298,56 @@ if [ -n "$PATH_TO_SHOW" ]; then
   MSG="MANDATORY: you just created $PATH_TO_SHOW. Open it and show it to the user (Read it, publish it via the Artifact tool, or open it in its app) before you end this turn. A file left in a directory the user has to dig up does not count as shown."
   if [ "${OUTSTANDING:-1}" -gt 1 ]; then
     MSG="$MSG ($OUTSTANDING artifacts are now outstanding in this session; each one must be shown.)"
+  fi
+  # GAP B (superseded intermediates, Jonah 2026-08-07): if the just-recorded artifact looks
+  # like a lighter/sibling VARIANT of another artifact still outstanding this session (same
+  # directory, same extension, identical CORE name, differing only by a known size/quality/
+  # version marker such as full/light/thumb/min/v2), the author may be about to show only
+  # the new one and orphan the original. Nudge PROACTIVELY - at creation time - to surface
+  # the original too or delete the orphan now, rather than let the Stop gate catch the
+  # leftover. This is a HINT appended to the reminder; it never blocks. Bare numbers are
+  # CORE tokens (so a numbered sequence slide_1/slide_2 is NOT a supersede), and a differing
+  # directory or extension is never a sibling, keeping the nudge from over-firing.
+  SIBLINGS=$(python3 - "$PENDING_FILE" "$PATH_TO_SHOW" <<'PY' 2>/dev/null
+import sys, os, re
+pend, target = sys.argv[1], sys.argv[2]
+VARIANT = {
+    "full", "light", "lite", "thumb", "thumbnail", "small", "large", "min",
+    "minified", "mini", "compressed", "compact", "hires", "lowres", "retina",
+    "1x", "2x", "3x", "draft", "temp", "tmp", "wip", "copy", "final", "orig",
+    "original", "old", "backup", "bak",
+}
+def parts(p):
+    base = os.path.basename(p)
+    stem, ext = os.path.splitext(base)
+    toks = [t for t in re.split(r"[ _.\-]+", stem.lower()) if t]
+    core = [t for t in toks if t not in VARIANT and not re.fullmatch(r"(?:v|version)\d+", t)]
+    return os.path.dirname(p), ext.lower(), stem.lower(), tuple(core)
+td, te, ts, tc = parts(target)
+if not tc:
+    sys.exit(0)
+try:
+    lines = [ln.strip() for ln in open(pend) if ln.strip()]
+except Exception:
+    sys.exit(0)
+seen, sibs = set(), []
+for ln in lines:
+    if ln == target or ln in seen:
+        continue
+    seen.add(ln)
+    # Only name a sibling that still exists on disk. The Stop hook self-heals a deleted
+    # pending path; mirroring that here keeps the nudge from pointing at an artifact that
+    # was already cleaned up (aligning proactive advice with the backstop).
+    if not os.path.exists(os.path.expanduser(ln)):
+        continue
+    dd, ee, ss, cc = parts(ln)
+    if dd == td and ee == te and cc == tc and ss != ts:
+        sibs.append(ln)
+print(", ".join(sibs))
+PY
+)
+  if [ -n "$SIBLINGS" ]; then
+    MSG="$MSG SUPERSEDE CHECK: this looks like a sibling/variant of an artifact still outstanding this session ($SIBLINGS). If it supersedes that one, either surface the original too or delete the orphaned intermediate now, so an unshown leftover does not trip the end-of-turn gate."
   fi
   python3 -c "import json, sys; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PostToolUse','additionalContext':sys.argv[1]}}))" "$MSG"
 else

@@ -219,6 +219,109 @@ recorded "$FH" && bad "29. .docx in /tmp -> recorded (MUST NOT: docs keep temp e
                || ok "29. .docx in /tmp -> not recorded (docs keep temp exclusion)"
 
 echo
+echo "=== R8: GAP A - inline-returned image auto-satisfies (Jonah 2026-08-07) ==="
+
+is_block() { python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get("decision")=="block" else 1)' 2>/dev/null; }
+STOP_HOOK="$HERE/artifact-open-stop.sh"
+run_stop() { printf '{"session_id":"S","tool_name":"Stop","stop_hook_active":false}' | HOME="$1" bash "$STOP_HOOK"; }
+# run_imgtool <home> <file_path> <inline true|false> -> mandate hook stdout. Simulates an
+# MCP screenshot tool: tool_input carries the saved path; tool_response carries an inline
+# image content block ONLY when <inline> is true (otherwise a plain status string).
+run_imgtool() {
+  python3 -c '
+import json, sys
+inline = sys.argv[2] == "true"
+if inline:
+    resp = {"content": [
+        {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "x"}},
+        {"type": "text", "text": "Saved screenshot to " + sys.argv[1]},
+    ]}
+else:
+    resp = "Saved screenshot to " + sys.argv[1]
+print(json.dumps({"session_id": "S", "tool_name": "mcp__claude-in-chrome__computer",
+                  "tool_input": {"file_path": sys.argv[1]}, "tool_response": resp}))
+' "$2" "$3" | HOME="$1" bash "$HOOK"
+}
+
+# An inline-rendered screenshot the user already saw -> NOT recorded, reminder is {}.
+FH=$(newhome); F=$(mkfile shots/home.png); OUT=$(run_imgtool "$FH" "$F" true)
+{ ! recorded "$FH" && [ "$OUT" = "{}" ]; } \
+  && ok "A1. MCP screenshot rendered inline -> not recorded, no nag" \
+  || bad "A1. MCP screenshot rendered inline -> not recorded, no nag (out=$OUT)"
+
+# ...and it does NOT trip the Stop gate (nothing pending -> silent).
+FH=$(newhome); F=$(mkfile shots/lib.png); run_imgtool "$FH" "$F" true >/dev/null
+OUT=$(run_stop "$FH")
+[ "$OUT" = "{}" ] && ok "A2. inline-shown screenshot does not trip the Stop gate" \
+                  || bad "A2. inline-shown screenshot wrongly tripped the Stop gate (out=$OUT)"
+
+# A saved image with NO inline render (hypothetical save-only tool) is STILL tracked.
+FH=$(newhome); F=$(mkfile shots/saveonly.png); run_imgtool "$FH" "$F" false >/dev/null
+recorded "$FH" && ok "A3. MCP image saved WITHOUT inline render -> still recorded (no over-suppression)" \
+               || bad "A3. MCP image saved WITHOUT inline render -> still recorded"
+
+# An image-LABELLED result that carries only metadata (type:image but NO payload) is NOT
+# inline - it must still be recorded (Codex v6: a payload is required, not just a label).
+FH=$(newhome); F=$(mkfile shots/meta.png)
+python3 -c 'import json,sys; print(json.dumps({"session_id":"S","tool_name":"mcp__x__save","tool_input":{"file_path":sys.argv[1]},"tool_response":{"type":"image","path":sys.argv[1],"status":"saved"}}))' "$F" \
+  | HOME="$FH" bash "$HOOK" >/dev/null
+recorded "$FH" && ok "A5. image-typed result with metadata only (no payload) -> still recorded" \
+               || bad "A5. image-typed metadata-only result wrongly suppressed (payload must be required)"
+
+# NO REGRESSION: a genuinely-unshown Write artifact (no inline image) STILL trips the gate.
+FH=$(newhome); F=$(mkfile out/report.png); run_tool "$FH" Write "$F" >/dev/null
+OUT=$(run_stop "$FH")
+printf '%s' "$OUT" | is_block \
+  && ok "A4. an unshown non-inline file STILL trips the Stop gate (backstop intact)" \
+  || bad "A4. an unshown non-inline file STILL trips the Stop gate (out=$OUT)"
+
+echo
+echo "=== R9: GAP B - superseded-intermediate nudge (Jonah 2026-08-07) ==="
+
+# preview_full.html recorded, then a lighter preview_light.html: the second reminder
+# recognizes the sibling and names the orphaned original.
+FH=$(newhome); F1=$(mkfile reports/preview_full.html); F2=$(mkfile reports/preview_light.html)
+run_tool "$FH" Write "$F1" >/dev/null; CTX=$(run_tool "$FH" Write "$F2" | ctx)
+{ [[ "$CTX" == *"SUPERSEDE CHECK"* ]] && [[ "$CTX" == *"$F1"* ]]; } \
+  && ok "B1. sibling variant (preview_full -> preview_light) -> supersede nudge names the original" \
+  || bad "B1. sibling variant -> supersede nudge names the original (ctx=$CTX)"
+
+# Two genuinely-distinct artifacts in the same dir must NOT trip the nudge.
+FH=$(newhome); F1=$(mkfile assets/hero.png); F2=$(mkfile assets/footer.png)
+run_tool "$FH" Write "$F1" >/dev/null; CTX=$(run_tool "$FH" Write "$F2" | ctx)
+[[ "$CTX" != *"SUPERSEDE"* ]] \
+  && ok "B2. distinct artifacts (hero / footer) -> no supersede nudge (no over-fire)" \
+  || bad "B2. distinct artifacts wrongly triggered a supersede nudge (ctx=$CTX)"
+
+# A numbered SEQUENCE (slide_1 / slide_2) is not a supersede - both are wanted.
+FH=$(newhome); F1=$(mkfile deck/slide_1.png); F2=$(mkfile deck/slide_2.png)
+run_tool "$FH" Write "$F1" >/dev/null; CTX=$(run_tool "$FH" Write "$F2" | ctx)
+[[ "$CTX" != *"SUPERSEDE"* ]] \
+  && ok "B3. numbered sequence (slide_1 / slide_2) -> no supersede nudge" \
+  || bad "B3. numbered sequence wrongly triggered a supersede nudge (ctx=$CTX)"
+
+# Normal single-artifact flow is unchanged: the reminder is the plain MANDATORY, no note.
+FH=$(newhome); F=$(mkfile solo/only.png); CTX=$(run_tool "$FH" Write "$F" | ctx)
+{ [[ "$CTX" == *"MANDATORY"* ]] && [[ "$CTX" != *"SUPERSEDE"* ]] && [[ "$CTX" != *"outstanding"* ]]; } \
+  && ok "B4. normal single-artifact flow unchanged (plain MANDATORY, no supersede note)" \
+  || bad "B4. normal single-artifact flow altered (ctx=$CTX)"
+
+# A sibling in a DIFFERENT directory is not flagged (same-dir requirement).
+FH=$(newhome); F1=$(mkfile a/preview_full.html); F2=$(mkfile b/preview_light.html)
+run_tool "$FH" Write "$F1" >/dev/null; CTX=$(run_tool "$FH" Write "$F2" | ctx)
+[[ "$CTX" != *"SUPERSEDE"* ]] \
+  && ok "B5. sibling names in different dirs -> no supersede nudge (same-dir required)" \
+  || bad "B5. cross-dir sibling wrongly triggered a supersede nudge (ctx=$CTX)"
+
+# A sibling that was already DELETED is not named (Codex v6: mirror the Stop self-heal).
+FH=$(newhome); F1=$(mkfile reports/preview_full.html); F2=$(mkfile reports/preview_light.html)
+run_tool "$FH" Write "$F1" >/dev/null; rm -f "$F1"
+CTX=$(run_tool "$FH" Write "$F2" | ctx)
+[[ "$CTX" != *"SUPERSEDE"* ]] \
+  && ok "B6. a deleted sibling is not named in the nudge (aligns with Stop self-heal)" \
+  || bad "B6. deleted sibling wrongly named in the supersede nudge (ctx=$CTX)"
+
+echo
 echo "=== R5: disable marker + fail-open ==="
 
 FH=$(newhome); disable "$FH"; F=$(mkfile d.png); OUT=$(run_tool "$FH" Write "$F")

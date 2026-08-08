@@ -1432,3 +1432,7 @@
 
 <!-- archived 2026-08-05 (moved from MEMORY.md to stay under load budget) -->
 - [** REVERTED ** INSTALLER GUI INTERACTION SOUNDS (cuelume) - built + verified, then fully undone at Jonah's request; kept as history so it is no…](session_2026-08-05_installer-gui-cuelume-sounds.md)
+
+<!-- archived 2026-08-08 (moved from MEMORY.md to stay under load budget) -->
+- [ARTIFACT-OPEN FIELD FAILURE - real session where the Stop gate caught 3 unshown files (2 inline chrome screenshots + a superseded preview.html);…](session_2026-08-07_artifact-open-field-failure.md)
+- [FIELD FAILURE - declared a tool "broken" and routed around a direct order instead of diagnosing; ~30s fix (missing ~/.claude/teams…](session_2026-08-07_tool-declared-broken-direct-order-failure.md)

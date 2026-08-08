@@ -131,7 +131,7 @@
  "artifact-open-mandate.sh": [
   {
    "event": "PostToolUse",
-   "matcher": "Write|Artifact|Bash",
+   "matcher": "Write|Artifact|Bash|mcp__claude-in-chrome__computer|mcp__claude-in-chrome__get_screenshot",
    "hook": {
     "type": "command",
     "command": "~/.claude/hooks/artifact-open-mandate.sh",
@@ -468,6 +468,39 @@
    "hook": {
     "type": "command",
     "command": "~/.claude/hooks/elias-detect-stop.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "declared-broken-guard.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/declared-broken-guard.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "named-tool-swap-arm.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/named-tool-swap-arm.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "named-tool-swap-guard.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/named-tool-swap-guard.sh",
     "timeout": 10
    }
   }
