@@ -1,3 +1,4 @@
+- [** ACTIVE PLAN ** JUSTIFY CLOSURE-CONTRACT - verified the 2026-08-08 findings report against code (2 HIGH findings WRONG: both respond paths f…](session_2026-08-08_justify-closure-contract-plan.md)
 - [** ACTIVE ** FIELD-REMEDIES INTEGRATION - wired H2 (declared-broken-guard) + H3 (named-tool-swap arm+guard) into the default-ON grounding cluster…](session_2026-08-08_field-remedies-integration.md)
 - [** ACTIVE ** DECLARED-BROKEN-GUARD (H2) - Stop gate blocking once when a reply calls a tool dead without diagnosing it that turn; carve-outs for user-…](session_2026-08-07_declared-broken-guard.md)
 - [** ACTIVE ** NAMED-TOOL-SWAP GUARD (H3) - conservative arm+guard blocking a done-claim when a user-named tool never ran and no sign-off; prefers false…](session_2026-08-07_named-tool-swap-guard.md)
