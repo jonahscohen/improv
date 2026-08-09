@@ -467,41 +467,10 @@ IP.1 = 127.0.0.1
         req.on('end', () => {
           try {
             const data = JSON.parse(body);
-            // Issue #1: a result must always be visually locatable. The submit
-            // payload records which DOM element(s) the prompt was about; join the
-            // original prompt by promptId and carry its selectors onto the
-            // response so clicking the Changes entry can scroll to + select the
-            // target even for diff-only responses that have no per-change
-            // selectors. An explicit targetSelectors on the body wins if given.
-            let targetSelectors: string[] = Array.isArray(data.targetSelectors) ? data.targetSelectors : [];
-            if (targetSelectors.length === 0 && data.promptId) {
-              const orig = this.readPromptsFile().find((p) => p.id === data.promptId);
-              if (orig && Array.isArray((orig as { selectors?: string[] }).selectors)) {
-                targetSelectors = (orig as { selectors?: string[] }).selectors as string[];
-              }
-            }
-            const responseObj = {
-              promptId: data.promptId + '-' + Date.now(),
-              summary: data.summary,
-              filesChanged: data.filesChanged || [],
-              changes: data.changes || [],
-              diffs: data.diffs || [],
-              targetSelectors,
-              status: data.status || 'completed',
-              question: data.question,
-              timestamp: Date.now(),
-            };
-            this.broadcastToClients('justify_response', responseObj);
-            // Issue #2 (headless durability): if no browser is connected right
-            // now, the broadcast lands nowhere and the result would be lost. The
-            // connected client is what normally persists history to
-            // responses.json; with zero clients, persist it here so the result
-            // surfaces in the Changes panel the moment a tab (re)connects. When
-            // a client IS connected it owns the write, so we skip to avoid
-            // double-appends.
-            if (this.manager.size() === 0) {
-              this.appendResponseFile({ ...responseObj, reviewed: false });
-            }
+            // Build + broadcast + headless-persist + respondedAt stamp all live in
+            // the shared emitResponse helper now, so this HTTP path and the
+            // justify_respond MCP tool cannot drift apart.
+            this.emitResponse(data);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           } catch {
@@ -1417,6 +1386,80 @@ IP.1 = 127.0.0.1
       const arr = this.dropCleared(this.readResponsesRaw());
       if (!this.isCleared(response)) arr.push(response);
       writeFileSync(respFile, JSON.stringify(arr));
+    } catch {}
+  }
+
+  // The ONE place a Justify result is turned into a wire message, persisted for a
+  // reconnecting tab, and stamped onto its originating prompt. Both respond paths
+  // (POST /respond and the justify_respond MCP tool) route through here so the MCP
+  // path is as durable and complete as the HTTP path: headless persist when no
+  // client is connected, targetSelectors joined from the original prompt, and the
+  // respondedAt stamp that lets a sweep tell a finished task from a still-open one.
+  emitResponse(input: {
+    promptId: string;
+    summary?: string;
+    filesChanged?: string[];
+    changes?: unknown[];
+    diffs?: unknown[];
+    targetSelectors?: string[];
+    status?: 'completed' | 'needsInfo' | 'failed';
+    question?: string;
+  }): void {
+    // A result must always be visually locatable. The submit payload records which
+    // DOM element(s) the prompt was about; join the original prompt by promptId and
+    // carry its selectors onto the response so clicking the Changes entry can scroll
+    // to + select the target even for diff-only responses with no per-change
+    // selectors. An explicit targetSelectors on the input wins if given.
+    let targetSelectors: string[] = Array.isArray(input.targetSelectors) ? input.targetSelectors : [];
+    if (targetSelectors.length === 0 && input.promptId) {
+      const orig = this.readPromptsFile().find((p) => p.id === input.promptId);
+      if (orig && Array.isArray((orig as { selectors?: string[] }).selectors)) {
+        targetSelectors = (orig as { selectors?: string[] }).selectors as string[];
+      }
+    }
+    const responseObj = {
+      promptId: input.promptId + '-' + Date.now(),
+      summary: input.summary,
+      filesChanged: input.filesChanged || [],
+      changes: input.changes || [],
+      diffs: input.diffs || [],
+      targetSelectors,
+      status: input.status || 'completed',
+      question: input.question,
+      timestamp: Date.now(),
+    };
+    this.broadcastToClients('justify_response', responseObj);
+    // Headless durability: if no browser is connected right now, the broadcast
+    // lands nowhere and the result would be lost. The connected client is what
+    // normally persists history to responses.json; with zero clients, persist it
+    // here so the result surfaces in the Changes panel the moment a tab
+    // (re)connects. When a client IS connected it owns the write, so we skip to
+    // avoid double-appends.
+    if (this.manager.size() === 0) {
+      this.appendResponseFile({ ...responseObj, reviewed: false });
+    }
+    this.stampResponded(input.promptId);
+  }
+
+  // Mark the ORIGINAL prompt (bare id) as responded so the sweep + status can tell
+  // a still-open task from a finished one. tmp+rename like the claim path. Stamps
+  // once (respondedAt is set only if currently null) and never throws into the
+  // caller - a failed stamp must not sink a response that already broadcast.
+  private stampResponded(promptId: string): void {
+    try {
+      const prompts = this.readPromptsFile();
+      let changed = false;
+      for (const p of prompts) {
+        if (p.id === promptId && (p as Record<string, unknown>).respondedAt == null) {
+          (p as Record<string, unknown>).respondedAt = Date.now();
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      const pf = this.dataFile('prompts.json');
+      const tmp = `${pf}.tmp.${process.pid}.${Date.now()}`;
+      writeFileSync(tmp, JSON.stringify(prompts));
+      renameSync(tmp, pf);
     } catch {}
   }
 

@@ -585,15 +585,10 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     },
     async ({ promptId, summary, filesChanged, changes, status, question }) => {
       ws.recordMcpActivity();
-      ws.broadcastToClients('justify_response', {
-        promptId,
-        summary,
-        filesChanged,
-        changes,
-        status,
-        question,
-        timestamp: Date.now(),
-      });
+      // Route through the shared helper so the MCP path is as durable/complete as
+      // the HTTP path: headless persist when no client is connected, targetSelectors
+      // joined from the original prompt, diffs, and the respondedAt stamp.
+      ws.emitResponse({ promptId, summary, filesChanged, changes, status, question });
 
       if (status === 'completed') {
         return text(`Response sent to browser: ${summary} (${filesChanged.length} file(s), ${changes.length} change(s))`);
