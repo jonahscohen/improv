@@ -305,11 +305,12 @@
         {
           "key": "planning-git",
           "kind": "hooks",
-          "tag": "the 2 planning-git hooks",
-          "desc": "Two lightweight sanity checks around planning and git. One reads a written plan against itself and flags outright contradictions, such as a file one section promises that the actual instructions never touch; the other simply reports, at the start of a session, whether the current branch has commits sitting unpushed.",
+          "tag": "the 3 planning-git hooks",
+          "desc": "Three lightweight sanity checks around planning, git, and your own hook install. One reads a written plan against itself and flags outright contradictions, such as a file one section promises that the actual instructions never touch; one reports, at the start of a session, whether the current branch has commits sitting unpushed; and one flags a hook that is present on disk but was never actually written into your live settings, so it looks installed while doing nothing.",
           "hooks": [
             "plan-consistency-lint",
-            "push-ahead-check"
+            "push-ahead-check",
+            "hook-deploy-currency"
           ]
         },
         {
@@ -568,6 +569,7 @@
     "api-drift-ack": "Clears that pending API warning when you type drift handled. It is the manual way out of a false alarm, or of a change you already dealt with by hand.",
     "plan-consistency-lint": "Checks a written plan that splits work into sections for contradictions inside itself: a file a section claims but its instructions never mention, or a step marked blocked yet told to start now. It compares the document to itself.",
     "push-ahead-check": "Tells you at startup when the current branch has commits you never pushed, naming the branch and how many. It only reports: it never pushes, never blocks, and says nothing outside a git repo or on a branch with no remote.",
+    "hook-deploy-currency": "Warns at startup when a hook is on disk but was never written into your live settings, so it looks installed while doing nothing. Names the hooks and says to re-run install. It only reports; it stays silent when every installed hook is live.",
     "claude-surface": "Works out whether this session can display rich visuals or only text, then tells Claude how to present results. Desktop, web and VS Code get charts and tables; a plain terminal or phone gets clean markdown instead.",
     "surface-visual-gate": "On a display that can render visuals, interrupts once when the reply dumps a large table as plain text and asks for a chart instead. Plain terminals are skipped, because a markdown table is the right answer there.",
     "model-router-guard": "Stops Claude quietly moving your work to a different model, blocking model override flags, model environment variables and per-sub-agent model settings. There is no override: the model you picked is the one that runs.",
@@ -638,6 +640,7 @@
     "api-drift-ack": "api-drift",
     "plan-consistency-lint": "planning-git",
     "push-ahead-check": "planning-git",
+    "hook-deploy-currency": "planning-git",
     "claude-surface": "surface",
     "surface-visual-gate": "surface",
     "model-router-guard": "model-routing",

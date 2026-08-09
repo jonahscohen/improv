@@ -2025,7 +2025,7 @@ DESCS+=(
   "Question discipline: route every user-facing question through AskUserQuestion instead of plain-text option lists."
   "Grounding + completion discipline: anti-hallucination gates that require citing a source before asserting, plus the task-loop and justify-queue mandates - loop the tasks the user gave you (and the justify queue), spawn parallel teammates until each is done AND validated, never stall/half-step/dogfood."
   "API-drift detection: catch breaking API / tool-contract drift in tool outputs and block ending a turn while it is unresolved."
-  "Planning + git hygiene: plan-doc consistency lint (dispatch ownership + sequencing) plus a surfacing of committed-but-unpushed work at session start."
+  "Planning + git hygiene: plan-doc consistency lint (dispatch ownership + sequencing), a surfacing of committed-but-unpushed work at session start, and a hook deploy-currency check that flags wired hooks present on disk but missing from the live settings.json."
   "Surface presentation: detect the Claude Code surface (rich vs text-only) and enforce presenting data visually on rich surfaces."
   "Model routing: govern which model runs which tool (cost control). Installs detect-session-model alongside."
   "Agent routing: classify each prompt's work shape and name a cheaper roster agent that could field it. Advisory only - the session model decides every dispatch and can decline. Installs route-intent.sh + route-intent.json and the ~/.claude/agents/ roster."
@@ -2036,7 +2036,7 @@ FILES+=(
   "~/.claude/hooks/ (2 question-discipline hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (10 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (3 api-drift hooks)\n~/.claude/settings.json (wiring)"
-  "~/.claude/hooks/ (2 planning-git hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (3 planning-git hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 surface hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/model-router-guard.sh + detect-session-model.sh\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/route-intent.sh + route-intent.json\n~/.claude/agents/ (3 roster files)\n~/.claude/settings.json (wiring)"
@@ -2192,7 +2192,7 @@ cluster_hooks() {
     question-discipline) echo "multiple-choice-detect-stop.sh multiple-choice-inject-prompt.sh" ;;
     grounding)           echo "grounding-gate.sh grounding-guard.sh task-loop-mandate.sh justify-queue-mandate.sh concise-mandate.sh concise-toggle.sh concise-detect-stop.sh elias-mandate.sh elias-toggle.sh elias-detect-stop.sh declared-broken-guard.sh named-tool-swap-arm.sh named-tool-swap-guard.sh" ;;
     api-drift)           echo "api-drift-detector.sh api-drift-stop.sh api-drift-ack.sh" ;;
-    planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh" ;;
+    planning-git)        echo "plan-consistency-lint.sh push-ahead-check.sh hook-deploy-currency.sh" ;;
     surface)             echo "claude-surface.sh surface-visual-gate.sh" ;;
     model-routing)       echo "model-router-guard.sh" ;;
     agent-routing)       echo "route-intent.sh" ;;

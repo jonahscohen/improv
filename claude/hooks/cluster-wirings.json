@@ -290,6 +290,18 @@
    }
   }
  ],
+ "hook-deploy-currency.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/hook-deploy-currency.sh",
+    "timeout": 5,
+    "statusMessage": "Checking hook deploy-currency..."
+   }
+  }
+ ],
  "claude-surface.sh": [
   {
    "event": "SessionStart",
