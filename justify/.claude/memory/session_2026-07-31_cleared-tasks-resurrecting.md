@@ -2,7 +2,7 @@
 name: Cleared review tasks came back because every history write was an unawaited fetch and a completed task reloads the page
 description: Root cause was lost writes, not clear logic. window.location.reload() 1200ms after each completion discarded any in-flight persistence request, so a clear reverted itself and the stale server file was restored on load. Fixed with keepalive plus server-side tombstones that make resurrection structurally impossible.
 type: project
-relates_to: [session_2026-07-31_prompt-horizontal-viewport-clamp.md]
+relates_to: [session_2026-07-31_prompt-horizontal-viewport-clamp.md, session_2026-08-08_clear-tombstone-identity-gap.md]
 author_human: Jonah
 author_model: claude-opus-5[1m]
 source: session

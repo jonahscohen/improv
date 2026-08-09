@@ -24,6 +24,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
   const PROMPT_FILE = join(STATE_DIR, 'prompts.json');
   const SEQ_FILE = join(STATE_DIR, 'prompt-seq.json');
   const RESP_FILE = join(STATE_DIR, 'responses.json');
+  const CLEARED_FILE = join(STATE_DIR, 'responses-cleared.json');
   const CLIENT_FILE = join(STATE_DIR, 'served-clients.json');
 
   // Highest prompt-<N> ever RESPONDED to (responses.json ids are
@@ -36,6 +37,26 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       let max = 0;
       for (const r of arr) {
         const m = /^prompt-(\d+)(?:-|$)/.exec(String(r?.promptId ?? ''));
+        if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n) && n > max) max = n; }
+      }
+      return max;
+    } catch { return 0; }
+  }
+
+  // Highest prompt-<N> present in the cleared TOMBSTONES (responses-cleared.json
+  // holds base ids "prompt-<N>" and precise keys "prompt-<N>-<ts>|<ts>"). A clear
+  // now tombstones the TASK (base id), and that tombstone OUTLIVES the response
+  // it removed from responses.json. If prompt-seq.json were lost/corrupt, the
+  // responses-only high-water could reissue a prompt-<N> whose stale base
+  // tombstone would then wrongly drop the new task's answer. Including the
+  // tombstones in the high-water closes that reuse hazard. (Codex, 2026-08-08.)
+  function maxClearedSeq(): number {
+    try {
+      const arr = JSON.parse(readFileSync(CLEARED_FILE, 'utf-8'));
+      if (!Array.isArray(arr)) return 0;
+      let max = 0;
+      for (const t of arr) {
+        const m = /^prompt-(\d+)(?:-|\||$)/.exec(String(t ?? ''));
         if (m) { const n = parseInt(m[1], 10); if (Number.isFinite(n) && n > max) max = n; }
       }
       return max;
@@ -132,10 +153,18 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       const n = parseInt(String(p.id).replace('prompt-', ''), 10);
       return Number.isFinite(n) && n > max ? n : max;
     }, 0);
-    // Seed from the max of the persisted counter, the queue, AND the responded
-    // high-water mark. Even if prompt-seq.json is lost/corrupt and the queue is
-    // empty, the responses history keeps ids strictly increasing (no recycle).
-    const seq = Math.max(persistedNext, maxQueued + 1, maxRespondedSeq() + 1, 1);
+    // Seed from the max of the persisted counter, the queue, the responded
+    // high-water mark, AND the cleared-tombstone high-water. Even if
+    // prompt-seq.json is lost/corrupt and the queue is empty, the responses
+    // history and the tombstones keep ids strictly increasing (no recycle, and
+    // no reissue of an id a task tombstone would still drop).
+    const seq = Math.max(
+      persistedNext,
+      maxQueued + 1,
+      maxRespondedSeq() + 1,
+      maxClearedSeq() + 1,
+      1,
+    );
     try {
       const tmp = `${SEQ_FILE}.tmp.${process.pid}.${Date.now()}`;
       writeFileSync(tmp, JSON.stringify({ next: seq + 1 }));

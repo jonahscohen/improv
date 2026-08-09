@@ -52,6 +52,7 @@ describe('push_prompt is idempotent on clientId, so a forever-retry cannot doubl
     writeFileSync(CLIENT_FILE, '[]');
     writeFileSync(join(dir, 'prompt-seq.json'), JSON.stringify({ next: 1 }));
     writeFileSync(join(dir, 'responses.json'), '[]');
+    writeFileSync(join(dir, 'responses-cleared.json'), '[]');
     push = harness();
   });
 
@@ -61,6 +62,23 @@ describe('push_prompt is idempotent on clientId, so a forever-retry cannot doubl
     expect(readQueue()).toHaveLength(1);
     expect(readQueue()[0].clientId).toBe('cid-abc');
     expect(existsSync(CLIENT_FILE)).toBe(true);
+  });
+
+  // Folded from cross-model review (2026-08-08). A clear now tombstones the TASK
+  // (base id `prompt-<N>`), and that tombstone OUTLIVES the response it removed
+  // from responses.json. So the id allocator must also high-water the tombstones:
+  // a stale-low prompt-seq.json must not reissue a prompt-<N> that a surviving
+  // base tombstone would then wrongly drop.
+  it('a task tombstone raises the id high-water so a cleared prompt-N is never reissued', () => {
+    // prompt-seq is stale-low (next:1), queue + responses empty, but task 50 was
+    // cleared (base tombstone) and task 49 has a precise-key tombstone.
+    writeFileSync(
+      join(dir, 'responses-cleared.json'),
+      JSON.stringify(['prompt-50', 'prompt-49-1786000000000|1786000000000']),
+    );
+    const res = push('cNew', { prompt: 'fresh task', clientId: 'cid-new' });
+    const seq = parseInt(String(res.promptId).replace('prompt-', ''), 10);
+    expect(seq).toBeGreaterThan(50); // never prompt-1..50, which a tombstone would drop
   });
 
   it('a retry while the prompt is STILL QUEUED acks without enqueueing a second copy', () => {

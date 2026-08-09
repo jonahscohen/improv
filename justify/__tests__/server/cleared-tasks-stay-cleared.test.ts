@@ -119,12 +119,80 @@ describe('cleared tasks stay cleared', () => {
     expect(afterReload.some(e => e.promptId === 'prompt-2')).toBe(false);
   });
 
-  it('distinguishes two entries sharing a promptId by timestamp', async () => {
-    await postClear([key(A2)]);           // clear only the 1500 one
+  // 2026-08-08, Jonah: cleared tasks came back INCONSISTENTLY. Root cause was a
+  // tombstone-identity gap. emitResponse mints a response id as
+  // `${originalPromptId}-${Date.now()}` plus a separate `timestamp: Date.now()`,
+  // so the SAME task answered more than once (a retry, a reconnect re-emit, or an
+  // in-flight answer that lands after a clear) carries a DIFFERENT precise key
+  // each time. Tombstoning only the precise key on screen let the other emission
+  // slip back in - the live install held prompt-115 cleared at one epoch and
+  // sitting in responses.json under another. A clear now tombstones the TASK
+  // (base id = original prompt id), so every emission of a cleared task stays
+  // gone regardless of its epoch.
+  const R1 = entry('prompt-9-1786000000000', 1786000000000, true);
+  const R2 = entry('prompt-9-1786000110000', 1786000110000, true); // same task, +110s
+
+  it('clearing one emission of a task clears every emission of that task', async () => {
+    writeFileSync(RESP, JSON.stringify([R1, R2, C]));
+    await postClear([key(R1)]);                 // user cleared the one on screen
     const left = await getResponses();
-    const ones = left.filter(e => e.promptId === 'prompt-1');
-    expect(ones.length).toBe(1);
-    expect(ones[0].timestamp).toBe(1000);
+    expect(left.map(e => e.promptId)).toEqual(['prompt-3']); // both prompt-9 gone
+  });
+
+  it('a later re-emission of a cleared task cannot resurrect it (stale array)', async () => {
+    writeFileSync(RESP, JSON.stringify([R1, C]));
+    await postClear([key(R1)]);
+    // A new emission of the SAME task lands, e.g. a client posts a fresh full
+    // array after a re-answer. Its precise key is new; its base id is tombstoned.
+    await postResponses([R1, R2, C]);
+    const left = await getResponses();
+    expect(left.map(e => e.promptId)).toEqual(['prompt-3']);
+    // and the file itself is clean, not merely filtered on read
+    expect(JSON.parse(readFileSync(RESP, 'utf-8')).map((e: any) => e.promptId)).toEqual(['prompt-3']);
+  });
+
+  it('an in-flight answer landing AFTER a clear (headless emitResponse) does not resurrect', async () => {
+    writeFileSync(RESP, JSON.stringify([R1, C]));
+    await postClear([key(R1)]);
+    // No client is connected in this suite, so emitResponse takes the headless
+    // append path - the real code path a worker's late justify_respond hits. It
+    // mints prompt-9-<now>, whose base id `prompt-9` is tombstoned.
+    server.emitResponse({ promptId: 'prompt-9', summary: 'late answer', status: 'completed' });
+    const left = await getResponses();
+    expect(left.some(e => (e.promptId as string)?.startsWith('prompt-9'))).toBe(false);
+    expect(left.map(e => e.promptId)).toEqual(['prompt-3']);
+  });
+
+  it('Clear All Completed tombstones the done task so a re-emit stays gone, keeping not-done', async () => {
+    // R1/R2 are the same DONE task; C is a different not-done task.
+    writeFileSync(RESP, JSON.stringify([R1, C]));
+    await postClear([key(R1)]);                 // Clear All Completed sends done keys
+    // the done task re-answers; must not come back
+    server.emitResponse({ promptId: 'prompt-9', summary: 're-answer', status: 'completed' });
+    const left = await getResponses();
+    expect(left.map(e => e.promptId)).toEqual(['prompt-3']); // not-done survives, done stays gone
+  });
+
+  // Folded from cross-model review (2026-08-08): the broadcast must be
+  // server-authoritative too. A client in ANOTHER tab, or the same client after a
+  // hot-refresh reload, has an empty in-session cleared set, so a re-emitted
+  // cleared task would re-render there unless the SERVER refuses to broadcast it.
+  it('a re-emitted cleared task is not broadcast to clients (server-authoritative)', async () => {
+    await postClear([key(R1)]);                 // tombstone base prompt-9
+    const methods: string[] = [];
+    const orig = server.broadcastToClients.bind(server);
+    (server as unknown as { broadcastToClients: typeof server.broadcastToClients }).broadcastToClients =
+      (m: string, p?: Record<string, unknown>) => { methods.push(m); return orig(m, p); };
+    try {
+      // a fresh task DOES broadcast (positive control)
+      server.emitResponse({ promptId: 'prompt-77', summary: 'new', status: 'completed' });
+      expect(methods.filter(m => m === 'justify_response').length).toBe(1);
+      // a re-answer of the CLEARED task does NOT add another broadcast
+      server.emitResponse({ promptId: 'prompt-9', summary: 're-answer', status: 'completed' });
+      expect(methods.filter(m => m === 'justify_response').length).toBe(1);
+    } finally {
+      (server as unknown as { broadcastToClients: typeof server.broadcastToClients }).broadcastToClients = orig;
+    }
   });
 
   it('tombstones survive a rewrite of the responses file', async () => {

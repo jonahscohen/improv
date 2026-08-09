@@ -1428,15 +1428,27 @@ IP.1 = 127.0.0.1
       question: input.question,
       timestamp: Date.now(),
     };
-    this.broadcastToClients('justify_response', responseObj);
-    // Headless durability: if no browser is connected right now, the broadcast
-    // lands nowhere and the result would be lost. The connected client is what
-    // normally persists history to responses.json; with zero clients, persist it
-    // here so the result surfaces in the Changes panel the moment a tab
-    // (re)connects. When a client IS connected it owns the write, so we skip to
-    // avoid double-appends.
-    if (this.manager.size() === 0) {
-      this.appendResponseFile({ ...responseObj, reviewed: false });
+    // A cleared task stays cleared even against a fresh re-emission. A clear
+    // tombstones the TASK, and a re-answer (retry / reconnect / an in-flight
+    // answer that lands after the clear) carries a new epoch, so isCleared still
+    // matches it by base id. Suppress it at the SERVER - both the broadcast and
+    // the headless persist - because a client that did the clear in another tab,
+    // or in a session before a hot-refresh reload, has no in-memory record of it
+    // (_clearedBaseIds is per-session) and would otherwise re-render the cleared
+    // task. respondedAt is still stamped below so the prompt lifecycle/sweep sees
+    // the task as finished. (Server-authoritative broadcast; both reviewers,
+    // 2026-08-08.)
+    if (!this.isCleared(responseObj)) {
+      this.broadcastToClients('justify_response', responseObj);
+      // Headless durability: if no browser is connected right now, the broadcast
+      // lands nowhere and the result would be lost. The connected client is what
+      // normally persists history to responses.json; with zero clients, persist
+      // it here so the result surfaces in the Changes panel the moment a tab
+      // (re)connects. When a client IS connected it owns the write, so we skip to
+      // avoid double-appends.
+      if (this.manager.size() === 0) {
+        this.appendResponseFile({ ...responseObj, reviewed: false });
+      }
     }
     this.stampResponded(input.promptId);
   }
@@ -1464,13 +1476,38 @@ IP.1 = 127.0.0.1
   }
 
   // ---- Cleared-entry tombstones -------------------------------------------
-  // An entry's identity is promptId + timestamp, because promptId alone repeats
-  // (one prompt answered twice yields two entries with the same promptId, which
-  // is real: ~/.claude/justify/responses.json held prompt-54 and prompt-57
-  // multiple times on 2026-07-31).
+  // A cleared entry is matched at two levels:
+  //   - PRECISE key  = promptId + '|' + timestamp   (one exact response entry)
+  //   - TASK base id = the original prompt id, i.e. the response promptId with
+  //                    its emission stamp stripped.
+  //
+  // Why the base id exists: emitResponse mints a response promptId as
+  // `${originalPromptId}-${Date.now()}` and a SEPARATE `timestamp: Date.now()`.
+  // So the SAME task answered more than once - a retry, a reconnect re-emit, or
+  // an in-flight answer that lands AFTER a clear - produces a DIFFERENT precise
+  // key every time. Keying the tombstone on the precise key alone therefore
+  // leaks: a clear tombstones only the emission that was on screen, and the next
+  // emission of that same task slips past with a fresh key, so the "cleared" task
+  // reappears. That was the live resurrection Jonah reported on 2026-08-08 -
+  // prompt-115 cleared at one epoch was sitting in responses.json under another.
+  // A clear now tombstones the TASK: any response whose base id was cleared stays
+  // gone, whatever epoch it carries. The precise key is still honored for
+  // back-compat and for callers that pass raw ids.
   private entryKey(e: unknown): string {
     const r = (e || {}) as Record<string, unknown>;
     return `${String(r.promptId ?? r.id ?? '')}|${String(r.timestamp ?? '')}`;
+  }
+
+  // Strip a trailing `-<epoch>` (10+ digits) emission stamp so every answer to
+  // the same original prompt collapses to one stable id. Original ids are
+  // `prompt-<seq>` (a small integer), so a real prompt id is never touched.
+  private baseId(promptId: string): string {
+    return promptId.replace(/-\d{10,}$/, '');
+  }
+
+  private entryBaseId(e: unknown): string {
+    const r = (e || {}) as Record<string, unknown>;
+    return this.baseId(String(r.promptId ?? r.id ?? ''));
   }
 
   private readTombstones(): Set<string> {
@@ -1482,27 +1519,60 @@ IP.1 = 127.0.0.1
     } catch { return new Set(); }
   }
 
+  // The stored tombstones PLUS the task base ids they imply. Deriving base ids at
+  // read time means an install whose tombstone file predates this fix (only
+  // precise keys on disk) still gets task-level protection - a stored
+  // `prompt-115-<epoch>|<epoch>` implies base `prompt-115`, which then filters any
+  // later `prompt-115-<other-epoch>`. `keys` is the raw stored set (used for the
+  // exact-match back-compat path); `bases` is the derived task set.
+  private clearedSets(): { keys: Set<string>; bases: Set<string> } {
+    const keys = this.readTombstones();
+    const bases = new Set<string>();
+    for (const k of keys) {
+      const b = this.baseId(k.split('|')[0]);
+      if (b) bases.add(b); // never match on an empty base (malformed `|<ts>` id)
+    }
+    return { keys, bases };
+  }
+
   private addTombstones(ids: string[]): void {
     const f = this.dataFile('responses-cleared.json');
     try {
-      const set = this.readTombstones();
-      for (const id of ids) set.add(String(id));
-      // Bounded so a long-lived install cannot grow this without limit. The
-      // newest entries are the ones that can still be resurrected by a stale
-      // client array, so keep the tail.
-      const all = [...set];
-      writeFileSync(f, JSON.stringify(all.slice(-5000)));
+      // Two kinds of stored tombstone: precise keys (`promptId|timestamp`) and
+      // task base ids (no '|'). Precise keys can accumulate without bound on a
+      // long-lived install (many emissions per task, plus stale-array reposts),
+      // so they are tail-bounded. Base ids are ONE per cleared task and are the
+      // durable task-level protection, so they are kept in full - bounding them
+      // alongside precise keys (the earlier behavior) could evict a base while a
+      // newer precise key for a DIFFERENT task survived, leaving the earliest
+      // cleared tasks resurrectable after ~2500 clears. (Codex, 2026-08-08.)
+      // The empty-string guard (`if (b)`) keeps a malformed `|<ts>` id from
+      // tombstoning the empty base and over-clearing id-less entries.
+      const bases = new Set<string>();
+      const precise = new Set<string>();
+      const ingest = (raw: string): void => {
+        const s = String(raw);
+        const b = this.baseId(s.split('|')[0]);
+        if (b) bases.add(b);
+        if (s.includes('|')) precise.add(s);
+      };
+      for (const e of this.readTombstones()) ingest(e);
+      for (const id of ids) ingest(id);
+      const boundedPrecise = [...precise].slice(-5000);
+      writeFileSync(f, JSON.stringify([...bases, ...boundedPrecise]));
     } catch {}
   }
 
   private isCleared(e: unknown): boolean {
-    return this.readTombstones().has(this.entryKey(e));
+    const { keys, bases } = this.clearedSets();
+    if (keys.size === 0) return false;
+    return keys.has(this.entryKey(e)) || bases.has(this.entryBaseId(e));
   }
 
   private dropCleared(arr: unknown[]): unknown[] {
-    const tomb = this.readTombstones();
-    if (tomb.size === 0) return arr;
-    return arr.filter((e) => !tomb.has(this.entryKey(e)));
+    const { keys, bases } = this.clearedSets();
+    if (keys.size === 0) return arr;
+    return arr.filter((e) => !keys.has(this.entryKey(e)) && !bases.has(this.entryBaseId(e)));
   }
 
   private readResponsesRaw(): unknown[] {

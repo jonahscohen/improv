@@ -56,6 +56,13 @@ export class JustifyCore {
   private applyConfirmation: ApplyConfirmation | null = null;
   private _toast: HTMLDivElement | null = null;
   _changeHistory: Array<Record<string, unknown>> = [];
+  // Task base ids the user cleared in THIS session. A clear is durable on the
+  // server (tombstoned, so a reload never restores it), but a live in-flight
+  // answer for a just-cleared task could still arrive over the socket and
+  // re-enter the panel before any reload. Dropping it against this set closes
+  // that window. Base id = the original prompt id, i.e. the response promptId
+  // with its `-<epoch>` emission stamp stripped, matching the server.
+  private _clearedBaseIds = new Set<string>();
   private _barTray: HTMLDivElement | null = null;
   private _queuePill: HTMLDivElement | null = null;
   private _changesPanel: ChangesPanel | null = null;
@@ -194,6 +201,15 @@ export class JustifyCore {
 
     this.transport.on('justify_response', (data: unknown) => {
       const response = data as Record<string, unknown>;
+      // A cleared task stays cleared even against a live in-flight answer: if this
+      // response belongs to a task the user cleared in this session, drop it
+      // before it can re-enter the panel. The server tombstones it too (so a
+      // reload never restores it); this closes the pre-reload window. A brand-new
+      // task can never collide here - prompt ids are monotonic, so a cleared base
+      // id is never reused.
+      if (this._clearedBaseIds.has(this._baseId(response.promptId ?? (response as any).id))) {
+        return;
+      }
       response.reviewed = false;
       this._changeHistory.push(response);
       this._persistHistory();
@@ -229,7 +245,12 @@ export class JustifyCore {
 
     // Load change history from server
     fetch(`${this.justifyBaseUrl}/responses`).then(r => r.json()).then((data: any[]) => {
-      this._changeHistory = data;
+      // Defense in depth: the server already drops tombstoned tasks from this
+      // payload; also honor any clear made in this session that may not have been
+      // persisted yet.
+      this._changeHistory = Array.isArray(data)
+        ? data.filter(e => !this._clearedBaseIds.has(this._baseId((e as any)?.promptId ?? (e as any)?.id)))
+        : data;
       this._updateClaudeBadge();
       // Surface the "Review Changes" bar for any pending (unreviewed) changes so
       // the panel is reachable after a reload or any interruption - the bar must
@@ -1085,10 +1106,23 @@ export class JustifyCore {
     } catch {}
   }
 
+  // Base id = the original prompt id, i.e. the response promptId with its
+  // `-<epoch>` emission stamp stripped. Mirrors WsServer.baseId so client and
+  // server agree on task identity.
+  private _baseId(promptId: unknown): string {
+    return String(promptId ?? '').replace(/-\d{10,}$/, '');
+  }
+
   // A clear is recorded as a tombstone rather than "write back what I kept", so a
   // lost write cannot resurrect anything: the server refuses a cleared id on GET
-  // and on its own headless append, whatever a later stale array claims.
+  // and on its own headless append, whatever a later stale array claims. It also
+  // remembers the cleared TASK base ids in-session so a live in-flight answer for
+  // a just-cleared task is dropped before it can re-enter the panel.
   private _persistCleared(cleared: Array<Record<string, unknown>>): void {
+    for (const e of cleared) {
+      const b = this._baseId(e.promptId ?? (e as any).id);
+      if (b) this._clearedBaseIds.add(b); // never guard on an empty base id
+    }
     const ids = cleared.map(e => `${String(e.promptId ?? (e as any).id ?? '')}|${String(e.timestamp ?? '')}`);
     try {
       fetch(`${this.justifyBaseUrl}/responses/clear`, {
