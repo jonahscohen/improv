@@ -118,13 +118,51 @@ def _run(cmd, diff_bytes, timeout):
 
 
 # --- codex launcher resolution ---------------------------------------------
-# codex ships as a Node script whose `#!/usr/bin/env node` shebang picks up
-# whatever `node` is first on PATH. In a non-interactive shell that can be an
-# ancient node (e.g. v12) which cannot parse codex's top-level await, so codex
-# dies with `SyntaxError: Unexpected reserved word` BEFORE it runs. Never lean on
-# the ambient node: resolve a node>=16 absolutely and invoke `<node> <codex.js>`.
-# See reference_codex_broken_node12_path.md.
+# There are TWO shapes of `codex` in the wild and we must launch each correctly:
+#
+#   1. A Node script. A stock npm/nvm install of codex is a JS entrypoint whose
+#      `#!/usr/bin/env node` shebang picks up whatever `node` is first on PATH.
+#      In a non-interactive shell that can be an ancient node (e.g. v12) which
+#      cannot parse codex's top-level await, so codex dies with
+#      `SyntaxError: Unexpected reserved word` BEFORE it runs. For this shape we
+#      must NOT lean on the ambient node: resolve a node>=16 absolutely and
+#      invoke `<node> <codex.js>`. See reference_codex_broken_node12_path.md.
+#
+#   2. A shell shim / non-Node executable. On a cmux machine `codex` on PATH is a
+#      Bourne-Again shell SHIM (cmux-cli-shims/.../codex) that execs the real
+#      codex. Forcing THAT through node (`node <shim>`) crashes instantly -
+#      node's module loader tries to parse bash as JS and throws
+#      `SyntaxError: Unexpected token '['`, exit 1, before codex ever runs. For
+#      this shape we invoke the executable DIRECTLY and let its own shebang pick
+#      the interpreter.
+#
+# So: detect what the resolved codex actually IS, then dispatch. The node>=16
+# resolution applies ONLY to the Node-script shape; everything else runs direct.
 _CODEX_ARGV = None
+
+
+def _is_node_script(path):
+    """True if `path` is a Node entrypoint we should launch via an explicit node:
+    any file whose shebang invokes node, or (absent a shebang) a .js/.mjs/.cjs
+    file. A shell shim, a compiled binary, or anything unreadable is NOT a node
+    script -> run direct.
+
+    The shebang is AUTHORITATIVE and wins over the extension: a shim named
+    `codex.js` that actually starts `#!/usr/bin/env bash` is a shell script and
+    must run direct, not through node. Only when there is no shebang do we fall
+    back to the filename extension (a bare JS entrypoint). A read failure leaves
+    us with no shebang, so an unreadable non-.js file (e.g. the cmux shim) falls
+    through to direct - we never force a non-node file through node, the very
+    crash this guards against. Reads 1024 bytes so a long
+    `#!/usr/bin/env -S ... node` line is not truncated past its `node`."""
+    try:
+        with open(path, "rb") as fh:
+            first = fh.readline(1024).decode("utf-8", errors="replace")
+    except OSError:
+        first = ""
+    if first.startswith("#!"):
+        return re.search(r"\bnode\b", first) is not None
+    return re.search(r"\.(?:js|mjs|cjs)$", path, re.IGNORECASE) is not None
 
 
 def _node_major(node_bin):
@@ -151,12 +189,20 @@ def _nvm_nodes_newest_first():
 
 
 def codex_argv():
-    """Command PREFIX to launch codex under a node>=16, independent of the ambient
-    `node`. Prefers, in order: $CODEX_NODE_BIN, the node co-located with the codex
-    symlink (normally >=16, since codex was installed under it), the ambient node
-    if it happens to be >=16, then the newest nvm node>=16. Every candidate is
-    still version-checked; falls back to ['codex'] if nothing compatible is found
-    (fails loudly, exactly as before). Memoized."""
+    """Command PREFIX to launch codex, robust to BOTH codex shapes (see the block
+    comment above).
+
+    If the resolved codex is a shell shim / non-Node executable (the cmux case),
+    return [<codex-on-PATH>] and invoke it DIRECTLY via its own shebang - never
+    force it through node, which would crash on a bash script.
+
+    If it is a Node script, return the node>=16 launcher prefix independent of the
+    ambient `node`: prefers, in order, $CODEX_NODE_BIN, the node co-located with
+    the codex symlink (normally >=16, since codex was installed under it), the
+    ambient node if it happens to be >=16, then the newest nvm node>=16. Every
+    candidate is still version-checked; if nothing compatible is found it falls
+    back to invoking codex directly (its shebang picks the ambient node and fails
+    loudly, exactly as before). Memoized."""
     global _CODEX_ARGV
     if _CODEX_ARGV is not None:
         return list(_CODEX_ARGV)
@@ -164,7 +210,13 @@ def codex_argv():
     if not link:
         _CODEX_ARGV = ["codex"]
         return list(_CODEX_ARGV)
-    codex_js = os.path.realpath(link)
+    codex_target = os.path.realpath(link)
+    # Shell shim / non-Node executable: run it directly, let its shebang decide.
+    if not _is_node_script(codex_target):
+        _CODEX_ARGV = [link]
+        return list(_CODEX_ARGV)
+    # Node-script codex: force a known-good node>=16 so an ancient ambient node
+    # cannot crash it before it runs.
     candidates = []
     if os.environ.get("CODEX_NODE_BIN"):
         candidates.append(os.environ["CODEX_NODE_BIN"])
@@ -176,9 +228,9 @@ def codex_argv():
     for node_bin in candidates:
         if node_bin and os.path.isfile(node_bin) and os.access(node_bin, os.X_OK) \
                 and _node_major(node_bin) >= 16:
-            _CODEX_ARGV = [node_bin, codex_js]
+            _CODEX_ARGV = [node_bin, codex_target]
             return list(_CODEX_ARGV)
-    _CODEX_ARGV = ["codex"]  # no compatible node found; let codex fail loudly
+    _CODEX_ARGV = [link]  # no compatible node found; run codex directly, fail loudly
     return list(_CODEX_ARGV)
 
 
