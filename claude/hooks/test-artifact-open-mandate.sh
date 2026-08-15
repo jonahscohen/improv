@@ -9,9 +9,13 @@
 #
 # SCOPE (Jonah 2026-08-07 "balanced"): VISUALS (images/pdf/pages) are harvested from
 # Write AND Bash and are caught even in /tmp, /var/folders, or a scratchpad, because a
-# generated image commonly lands there and the user still wants to see it. DOCUMENTS
-# (.md .txt .csv .rtf .doc .docx) are harvested from the Write tool ONLY and keep the
-# temp/scratch exclusion. The BASH section below proves both halves.
+# generated image commonly lands there and the user still wants to see it. TEXT
+# documents (.md .txt .csv .rtf) are harvested from the Write tool ONLY. BINARY office
+# documents (.doc .docx .xls .xlsx .ppt .pptx .od[tsp]) are ALSO harvested from Bash -
+# a script is the only way to create them - but ONLY from an explicit output position
+# (a -o/--output flag, a redirect, or a save()-call), never a bare positional/mention
+# (2026-08-13). All documents keep the temp/scratch exclusion. The BASH + R7 sections
+# below prove each half.
 #
 # Every case runs under a FAKE $HOME so no test reads or mutates real session state.
 # Sample DOCUMENTS live under a repo-local WORK dir (temp is excluded for docs);
@@ -217,6 +221,73 @@ FH=$(newhome); D="/tmp/artifact-test-mandate-$$.docx"; printf 'x' > "$D"
 run_tool "$FH" Write "$D" >/dev/null; rm -f "$D"
 recorded "$FH" && bad "29. .docx in /tmp -> recorded (MUST NOT: docs keep temp exclusion)" \
                || ok "29. .docx in /tmp -> not recorded (docs keep temp exclusion)"
+
+# THE 2026-08-13 FIX (ppai-pm incident): a BINARY office document can only be
+# produced by a script (Bash) - the Write tool cannot author binary - so unlike a
+# TEXT doc (.md/.txt, still Write-only above) it IS harvested from Bash. This is the
+# exact hole a Word doc a script saved to the Desktop fell through, unenforced.
+FH=$(newhome); F=$(mkfile deliverables/review.docx); run_bash "$FH" "pandoc notes.md -o $F" >/dev/null
+recorded "$FH" && ok "R7a. Bash-created .docx (pandoc -o) -> recorded (the incident fix)" \
+               || bad "R7a. Bash-created .docx (pandoc -o) -> recorded (the incident fix)"
+
+# The realistic incident shape: a python-docx script whose .save() names the path.
+FH=$(newhome); F=$(mkfile deliverables/checklist.docx)
+run_bash "$FH" "python3 -c \"from docx import Document; d=Document(); d.save('$F')\"" >/dev/null
+recorded "$FH" && ok "R7b. Bash python-docx .save('<path>.docx') -> recorded" \
+               || bad "R7b. Bash python-docx .save('<path>.docx') -> recorded"
+
+FH=$(newhome); F=$(mkfile out/data.xlsx); run_bash "$FH" "python3 make_sheet.py -o $F" >/dev/null
+recorded "$FH" && ok "R7c. Bash-created .xlsx -> recorded" || bad "R7c. Bash-created .xlsx -> recorded"
+
+FH=$(newhome); F=$(mkfile out/deck.pptx); run_bash "$FH" "python3 slides.py --output $F" >/dev/null
+recorded "$FH" && ok "R7d. Bash-created .pptx -> recorded" || bad "R7d. Bash-created .pptx -> recorded"
+
+# A binary office doc in /tmp is still a document -> temp exclusion still applies.
+FH=$(newhome); D="/tmp/artifact-test-mandate-$$-bash.docx"; printf 'x' > "$D"
+run_bash "$FH" "pandoc notes.md -o $D" >/dev/null; rm -f "$D"
+recorded "$FH" && bad "R7e. Bash .docx in /tmp -> recorded (MUST NOT: office docs keep temp exclusion)" \
+               || ok "R7e. Bash .docx in /tmp -> not recorded (office docs keep temp exclusion)"
+
+# A CONSUMER command that only reads a .docx did not create it -> not recorded.
+FH=$(newhome); F=$(mkfile deliverables/existing.docx); run_bash "$FH" "cat $F" >/dev/null
+recorded "$FH" && bad "R7f. 'cat <doc>.docx' -> recorded (MUST NOT: consumer command)" \
+               || ok "R7f. consumer 'cat .docx' -> not recorded"
+
+# Codex 2026-08-13 false-positive guards: office docs are harvested ONLY from an
+# explicit OUTPUT position (flag / redirect / save-call), never a bare positional
+# INPUT or a stdout mention.
+# g) `soffice --convert-to` names an INPUT positional + an --outdir (a dir, not a
+#    file): the input must NOT be recorded (and the derived output is simply missed).
+FH=$(newhome); SRC=$(mkfile work/source.odt)
+run_bash "$FH" "soffice --headless --convert-to docx --outdir $WORK/proj/out $SRC" >/dev/null
+recorded "$FH" && bad "R7g. soffice input .odt -> recorded (MUST NOT: bare input positional)" \
+               || ok "R7g. soffice input .odt -> not recorded (output-position-only)"
+
+# h) converting FROM an office doc TO a visual: record the OUTPUT (pdf), not the input docx.
+FH=$(newhome); IN=$(mkfile src/report.docx); OUT=$(mkfile out/report.pdf)
+run_bash "$FH" "libreoffice --convert-to pdf $IN -o $OUT" >/dev/null
+{ grep -qxF -- "$OUT" "$(pend "$FH")" && ! grep -qxF -- "$IN" "$(pend "$FH")"; } \
+  && ok "R7h. 'convert report.docx -o out.pdf' -> records the PDF, not the input docx" \
+  || bad "R7h. 'convert report.docx -o out.pdf' -> records the PDF, not the input docx"
+
+# i) an office doc merely MENTIONED in stdout (a template/log reference) -> not recorded.
+FH=$(newhome); TPL=$(mkfile templates/contract.docx)
+python3 -c 'import json,sys; print(json.dumps({"session_id":"S","tool_name":"Bash","tool_input":{"command":"python3 validate.py"},"tool_response":"Using template "+sys.argv[1]}))' "$TPL" \
+  | HOME="$FH" bash "$HOOK" >/dev/null
+recorded "$FH" && bad "R7i. office doc mentioned in stdout -> recorded (MUST NOT)" \
+               || ok "R7i. office doc mentioned in stdout -> not recorded"
+
+# j) a save-call output PATH WITH SPACES is caught (BASH_PATH_RE would have missed it).
+FH=$(newhome); F=$(mkfile "deliverables/Project Plan.docx")
+run_bash "$FH" "python3 -c \"d.save('$F')\"" >/dev/null
+recorded "$FH" && ok "R7j. .save('<path with spaces>.docx') -> recorded" \
+               || bad "R7j. .save('<path with spaces>.docx') -> recorded"
+
+# k) an archive tool's -o is OVERWRITE, not an output file; its named archive is an
+#    INPUT (Codex LOW). `unzip -o x.docx` must NOT record the input .docx.
+FH=$(newhome); F=$(mkfile archives/bundle.docx); run_bash "$FH" "unzip -o $F -d /tmp/x" >/dev/null
+recorded "$FH" && bad "R7k. 'unzip -o <docx>' -> recorded (MUST NOT: archive input)" \
+               || ok "R7k. 'unzip -o <docx>' -> not recorded (archive extractor)"
 
 echo
 echo "=== R8: GAP A - inline-returned image auto-satisfies (Jonah 2026-08-07) ==="

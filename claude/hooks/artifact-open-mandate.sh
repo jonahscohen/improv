@@ -74,6 +74,11 @@ VISUAL_EXTS = {
 }
 DOC_EXTS = {
     ".md", ".txt", ".csv", ".rtf", ".doc", ".docx",
+    # Binary office formats. Unlike the text docs above, these can ONLY be produced
+    # by a script (they are binary - the Write tool cannot author them), so they are
+    # ALSO harvested from Bash below (OFFICE_BASH). A Word doc a script saved to the
+    # Desktop fell straight through this hook until 2026-08-13 because of that.
+    ".xlsx", ".xls", ".pptx", ".ppt", ".odt", ".ods", ".odp",
 }
 DEFAULT_EXTS = VISUAL_EXTS | DOC_EXTS
 # Source-code / config extensions are deliberately NOT in scope - a stylesheet, a
@@ -148,11 +153,29 @@ def in_scope(path):
 # A Bash command that only READS/inspects/deletes a file did not create an artifact.
 CONSUMER_RE = re.compile(
     r"^\s*(?:sudo\s+)?(?:cat|rm|ls|stat|file|head|tail|grep|egrep|fgrep|rg|less|more"
-    r"|open|xdg-open|wc|md5|md5sum|shasum|sha256sum|du|chmod|chown|touch|find|diff)\b"
+    r"|open|xdg-open|wc|md5|md5sum|shasum|sha256sum|du|chmod|chown|touch|find|diff"
+    # Archive tools: their -o / first positional names an INPUT archive (e.g.
+    # `unzip -o x.docx` = OVERWRITE while extracting, not an output file), and an
+    # extracted file is not a deliverable Claude authored (Codex LOW 2026-08-13).
+    r"|unzip|zipinfo|tar|bsdtar|7z|7za|unar)\b"
 )
-# Only VISUAL extensions are harvested from a Bash command; documents stay Write-only.
+# VISUAL paths are harvested from ANYWHERE in a Bash command or its output (the
+# balanced choice, Jonah 2026-08-07 - over-nag rather than miss a generated image).
 VISUAL_PATH_RE = re.compile(
     r"(/[^\s\"\x27;|&><]+\.(?:png|jpe?g|gif|webp|avif|svg|pdf|html?))", re.I
+)
+# Binary office docs (a Word/Excel/PowerPoint file can ONLY be produced by a script,
+# never by the Write tool) are harvested ONLY from an EXPLICIT OUTPUT position - an
+# -o/--output flag, a redirect, or a save/write/to_excel(...) call that names the
+# path. NOT from a bare positional or a stdout mention, because office formats also
+# appear as INPUTS (convert FROM a .docx, a template .docx) and as log references,
+# and nagging to open one of THOSE is a false positive (Codex 2026-08-13). The
+# quoted-capture in OFFICE_SAVE_RE also catches an output PATH WITH SPACES.
+OFFICE_BASH = {".docx", ".doc", ".xlsx", ".xls", ".pptx", ".ppt", ".odt", ".ods", ".odp"}
+OFFICE_SAVE_RE = re.compile(
+    r"(?:save(?:_as)?|write|to_excel|dump)\s*\(\s*"
+    r"([\x27\"])((?:/|~)(?:(?!\1).)*\.(?:docx?|xlsx?|pptx?|od[tsp]))\1",
+    re.I,
 )
 
 try:
@@ -231,32 +254,43 @@ if tool == "Write":
     if fp:
         candidates.append(fp)
 elif tool == "Bash":
-    # Harvest the VISUAL artifact a command PRODUCED, from the command text and the tool
-    # output. Documents are intentionally NOT harvested from Bash. require-exists below
-    # is the real gate against phantom paths. Candidates are built in OUTPUT-first
-    # priority so an input/source visual never steals the obligation from the generated
+    # Harvest the VISUAL or BINARY-OFFICE artifact a command PRODUCED, from the command
+    # text and the tool output. TEXT documents (.md/.txt/.csv/.rtf) are still NOT
+    # harvested from Bash (they can be scratch/intermediate); binary office docs ARE,
+    # because a script is the only way to create them and they are always deliverables.
+    # require-exists below is the real gate against phantom paths. Candidates are built
+    # OUTPUT-first so an input/source never steals the obligation from the generated
     # output (e.g. `svgo src/logo.svg -o out.svg` must record out.svg, not logo.svg).
     cmd = ti.get("command", "") or ""
     if cmd and not CONSUMER_RE.search(cmd):
         def _unquote(s):
             return s[1:-1] if len(s) >= 2 and s[0] in "\"\x27" and s[-1] == s[0] else s
-        def _visual(p):
-            # Only VISUALs are harvested from Bash; a document named by -o/redirect must
-            # not sneak in (documents are Write-tool-only).
-            return os.path.splitext(p)[1].lower() in VIS
+        def _harvestable(p):
+            # VISUALs and binary office docs are harvested from Bash; a TEXT document
+            # named by -o/redirect must not sneak in (those are Write-tool-only).
+            ext = os.path.splitext(p)[1].lower()
+            return ext in VIS or ext in OFFICE_BASH
         # 1. explicit output flags: -o / -O / --out / --output / --outfile FILE
         for m in re.finditer(r"(?:-o|-O|--out(?:put|file)?)[ =]+(\"[^\"]+\"|\x27[^\x27]+\x27|[^\s;|&]+)", cmd):
             cand = _unquote(m.group(1))
-            if _visual(cand):
+            if _harvestable(cand):
                 candidates.append(cand)
         # 2. redirect target: > FILE or >> FILE (not >&2 etc - & is excluded)
         for m in re.finditer(r">>?[ \t]*(\"[^\"]+\"|\x27[^\x27]+\x27|[^\s;|&<>]+)", cmd):
             cand = _unquote(m.group(1))
-            if _visual(cand):
+            if _harvestable(cand):
                 candidates.append(cand)
-        # 3. visual paths in the command, LAST first (a CLI output arg is usually last)
+        # 3. an office OUTPUT named by a save/write/to_excel(...) call (the python-docx
+        #    incident shape). Quoted-capture catches a path WITH SPACES, and only an
+        #    explicit save call qualifies, so an INPUT/mention office path never sneaks in.
+        for m in OFFICE_SAVE_RE.finditer(cmd):
+            candidates.append(m.group(2))
+        # 4. generic VISUAL paths in the command, LAST first. Visuals only: office docs
+        #    are output-position-only (flags/redirect/save-call above), because a bare
+        #    positional office path is often an INPUT (e.g. `soffice --convert-to`).
         candidates.extend(reversed(VISUAL_PATH_RE.findall(cmd)))
-        # 4. visual paths named in the tool output (resp is hoisted above)
+        # 5. VISUAL paths named in the tool output (resp hoisted above). Office docs are
+        #    NEVER harvested from stdout - a mentioned template/input is not a creation.
         blob = resp if isinstance(resp, str) else ""
         if isinstance(resp, dict):
             for v in resp.values():
