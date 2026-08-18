@@ -123,12 +123,13 @@
           "key": "Hooks",
           "kind": "hooks",
           "tag": "the hooks Justify depends on",
-          "desc": "Keeps the Justify visual-editing loop honest while it runs in the background. One hook guards its source files from accidental edits, one manages the watch process, one reports when it is idle and waiting, and one holds the session open until every queued prompt has actually been handled.",
+          "desc": "Keeps the Justify visual-editing loop honest while it runs in the background. One hook guards its source files from accidental edits, one manages the watch process, one reports when it is idle and waiting, one holds the session open until every queued prompt has actually been handled, and one stops any agent from shutting down a justify-* watcher teammate (only you can).",
           "hooks": [
             "justify-source-guard",
             "justify-watch-guard",
             "justify-watch-standing-by",
-            "justify-queue-drain-stop"
+            "justify-queue-drain-stop",
+            "justify-watcher-guard"
           ]
         }
       ]
@@ -513,6 +514,7 @@
     "sidecoach-sessionstart": "Starts the Sidecoach daemon in the background and writes ~/.claude/.sidecoach-state, which the two sidecoach-post hooks in this list read. It loads no PRODUCT.md or DESIGN.md itself; sidecoach-preamble is what does that.",
     "justify-source-guard": "Blocks edits and builds aimed at the installed copy of Justify under ~/.claude/justify, so you change the source in this repo instead. Rebuilding from that stale copy once cut the bundle it serves from 543KB to 291KB.",
     "justify-watch-guard": "Prints one informational line at startup when the Justify background watcher is running. It relaunches nothing and never stops you ending a session; the old auto-relaunch caused the very failure it was supposed to prevent.",
+    "justify-watcher-guard": "Stops any managing, lead, or peer agent from shutting down a Justify-watching teammate (a justify-* watcher). It denies a SendMessage shutdown_request aimed at a justify-* agent and blocks forging the shutdown consent token. Only you can stop a watcher, by running justify-watcher-shutdown in your own terminal. The bare-pid Bash kill of a watcher is blocked by bash-guard; a killed watcher has silently broken the watch before.",
     "justify-watch-standing-by": "Corrects the misleading finished label the terminal shows when the Justify watcher is simply parked and waiting. It also drops the watcher's routine idle ping, so Claude does not spend a whole turn answering it.",
     "justify-queue-drain-stop": "Stops a session ending while Justify still holds prompts nobody answered. Saying the work is done in chat does not close a prompt, only the justify-done script does, and every other situation lets the session end normally.",
     "agent-teams-guard": "Rejects the ways of starting a sub-agent that can never show up as a visible terminal pane: one with no name, one asked to run in the background, and the Workflow tool. It does nothing outside a split-pane team session.",
@@ -600,6 +602,7 @@
     "sidecoach-sessionstart": "sidecoach",
     "justify-source-guard": "justify",
     "justify-watch-guard": "justify",
+    "justify-watcher-guard": "justify",
     "justify-watch-standing-by": "justify",
     "justify-queue-drain-stop": "justify",
     "figma-fidelity-stop": "figma",

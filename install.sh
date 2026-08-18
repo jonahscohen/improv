@@ -2063,7 +2063,7 @@ FILES+=(
   "~/.claude/hooks/block-clickup-writes.sh\n~/.claude/settings.json (1 PreToolUse hook)"
   "~/.claude/hooks/visualizer-guard.sh\n~/.claude/settings.json (1 PreToolUse hook)"
   "~/.claude/hooks/codex-failure-watcher.sh + codex-rescue-guard.sh + codex-review.py\n~/.claude/settings.json (2 hooks)"
-  "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh + justify-watch-standing-by.sh + justify-queue-drain-stop.sh"
+  "~/.claude/justify/ + ~/.claude/skills/justify/ + ~/.claude.json (MCP)\n~/.claude/hooks/justify-source-guard.sh + justify-watch-guard.sh + justify-watch-standing-by.sh + justify-queue-drain-stop.sh + justify-watcher-guard.sh + justify-watcher-consent.py"
 )
 DIRS+=("" "" "" "$REPO_DIR/justify")
 PICKS+=(0 0 0 0)
@@ -4093,7 +4093,8 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 }
 
 deactivate_justify() {
-  deactivate_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
+  deactivate_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh justify-watcher-guard.sh
+  rm_hook_if_ours justify-watcher-consent.py
   rm -rf "$CLAUDE_DIR/justify"
   rm -rf "$CLAUDE_DIR/skills/justify"
   # Remove MCP server from ~/.claude.json
@@ -7945,7 +7946,11 @@ picked fable        && install_app_hooks frontier-orchestrator-guard.sh
 # otherwise a model-routing-only install can never lift a frontier-route block.
 { picked fable || picked model-routing; } && install_app_hooks frontier-confirm-arm.sh
 picked voice-output && install_app_hooks voice-gate.sh voice-mandate.sh voice-toggle.sh
-picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh
+picked justify      && install_app_hooks justify-source-guard.sh justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh justify-watcher-guard.sh
+# justify-watcher-consent.py is the single-use consent-token check/consume helper that
+# justify-watcher-guard.sh and bash-guard.sh both exec. It is not a wired event hook (a
+# plain .py dependency, like codex-review.py), so deploy it directly with the justify app.
+picked justify      && link_or_copy "$REPO_DIR/claude/hooks/justify-watcher-consent.py" "$CLAUDE_DIR/hooks/justify-watcher-consent.py"
 picked clickup      && install_app_hooks block-clickup-writes.sh
 picked visualizer   && install_app_hooks visualizer-guard.sh
 picked codex        && install_app_hooks codex-failure-watcher.sh codex-rescue-guard.sh
@@ -8112,7 +8117,7 @@ picked codex      && echo "  - Codex guards: codex-failure-watcher + codex-rescu
 picked chrome     && echo "  - Chrome tab-group hygiene: chrome-tabgroup track/clear/stop hooks wired into settings.json"
 picked figma      && echo "  - Figma fidelity guard: figma-fidelity-stop (Stop) + figma-fidelity-arm (PreToolUse, auto-arms on Figma pulls) wired into settings.json"
 picked fable      && echo "  - Frontier orchestrator guard: frontier-orchestrator-guard + frontier-confirm-arm hooks wired into settings.json"
-picked justify    && echo "  - Justify: server + core + /justify skill + MCP registration + source/watch/standing-by/queue-drain hooks"
+picked justify    && echo "  - Justify: server + core + /justify skill + MCP registration + source/watch/standing-by/queue-drain/watcher-guard hooks + justify-watcher-shutdown CLI"
 picked ghostty  && echo "  - Ghostty: config.ghostty (copied from repo - re-run install.sh to sync edits)"
 picked shaders  && echo "  - Ghostty shaders: in-repo chain at $REPO_DIR/shaders, plus library at ~/Documents/Github/ghostty-shaders"
 picked cmux     && echo "  - cmux: settings.json"

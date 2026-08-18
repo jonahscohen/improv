@@ -864,11 +864,12 @@ done
 # Daemon-owned watch (2026-07-08): the headless apply worker the daemon spawns,
 # plus the CLI arm/disarm path (chat "watch justify" / "stop watching" is the
 # other). justify-watch.sh now ARMS the daemon instead of running a session loop.
-for cli in justify-watch justify-done justify-serve justify-worker justify-watch-arm justify-watch-disarm; do
+for cli in justify-watch justify-done justify-serve justify-worker justify-watch-arm justify-watch-disarm justify-watcher-shutdown; do
   atomic_install_file "$SCRIPT_DIR/cli/$cli.sh" "$JUSTIFY_DIR/$cli.sh" || exit 2
 done
 chmod +x "$JUSTIFY_DIR/init.sh" "$JUSTIFY_DIR/remove.sh" "$JUSTIFY_DIR/justify-watch.sh" "$JUSTIFY_DIR/justify-done.sh" \
-  "$JUSTIFY_DIR/justify-serve.sh" "$JUSTIFY_DIR/justify-worker.sh" "$JUSTIFY_DIR/justify-watch-arm.sh" "$JUSTIFY_DIR/justify-watch-disarm.sh"
+  "$JUSTIFY_DIR/justify-serve.sh" "$JUSTIFY_DIR/justify-worker.sh" "$JUSTIFY_DIR/justify-watch-arm.sh" "$JUSTIFY_DIR/justify-watch-disarm.sh" \
+  "$JUSTIFY_DIR/justify-watcher-shutdown.sh"
 
 # >>> justify-shim-bin-selection >>>
 # WHERE THE SHIMS GO, and the rule that decides it.
@@ -1057,6 +1058,7 @@ justify-done:justify-done.sh
 justify-serve:justify-serve.sh
 justify-watch-arm:justify-watch-arm.sh
 justify-watch-disarm:justify-watch-disarm.sh
+justify-watcher-shutdown:justify-watcher-shutdown.sh
 justify-worker:justify-worker.sh"
 
 shim_failures=0
@@ -1124,7 +1126,7 @@ if [ "$shim_failures" -gt 0 ]; then
   echo "ERROR: $shim_failures justify shim(s) are wrong. Install aborted." >&2
   exit 1
 fi
-echo "Installed justify-init, justify-remove, justify-watch, justify-done, justify-serve, justify-watch-arm, justify-watch-disarm, justify-worker to $BIN_DIR (all verified resolvable)"
+echo "Installed justify-init, justify-remove, justify-watch, justify-done, justify-serve, justify-watch-arm, justify-watch-disarm, justify-watcher-shutdown, justify-worker to $BIN_DIR (all verified resolvable)"
 
 # launchd KeepAlive agent (macOS): make the daemon itself durable. Placement only
 # - activation is the user's choice (see claude/docs/justify-daemon-launchd.md).

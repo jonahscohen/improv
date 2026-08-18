@@ -517,5 +517,25 @@
     "timeout": 5
    }
   }
+ ],
+ "justify-watcher-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "SendMessage",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-watcher-guard.sh",
+    "timeout": 5
+   }
+  },
+  {
+   "event": "PreToolUse",
+   "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/justify-watcher-guard.sh",
+    "timeout": 5
+   }
+  }
  ]
 }

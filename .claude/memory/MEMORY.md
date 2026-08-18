@@ -1,3 +1,4 @@
+- [** ACTIVE DECISION ** JUSTIFY-WATCHER SHUTDOWN GUARD (human-gated) - a justify-* watcher agent may only be shut down by the USER; SendMessage…](session_2026-08-17_justify-watcher-shutdown-guard.md)
 - [** ACTIVE FEEDBACK ** ARTIFACT-OPEN BINARY-OFFICE HOLE - a script-made .docx/.xlsx/.pptx was never enforced (docs harvested from Write only…](session_2026-08-13_artifact-open-binary-office-docs.md)
 - [** ACTIVE ** JUSTIFY INIT DETECTION FIX - installer wired on independent file checks (not the detected stack), always wrote a success marker even…](session_2026-08-11_justify-init-detection-fix.md)
 - [** ACTIVE ** JUSTIFY WORDPRESS UNINSTALL FIX - remove.sh had no WordPress branch, so init.sh's // justify:dev functions.php block was never…](session_2026-08-11_justify-wordpress-uninstall-fix.md)

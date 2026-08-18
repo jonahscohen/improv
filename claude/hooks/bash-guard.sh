@@ -1838,6 +1838,123 @@ if [ -z "$REASON" ] && [ -n "$_KILL_SLICES" ] && printf '%s' "$_KILL_SLICES" | g
 fi
 
 # ---------------------------------------------------------------------------
+# Justify WATCHER AGENT shutdown (2026-08-17, Jonah). DISTINCT from the daemon/worker
+# gate above. A Justify-WATCHING AGENT is a teammate whose ROLE is watching the Justify
+# daemon/queue - named justify-* by convention (justify-warden, justify-owner,
+# justify-watch) and running as `claude.exe --agent-id justify-*`. It must NOT be shut
+# down by a managing/lead/peer agent; only the human USER may stop it (mandate: Jonah,
+# 2026-08-17, after repeated agent-killed-the-watcher incidents - see the beat).
+#
+# The gate above already blocks `pkill -f justify-warden` / `killall justify` because the
+# name is IN the command text. What it CANNOT see is a bare-PID kill: `kill 16755` where
+# 16755 IS the watcher and the word "justify" appears nowhere. This gate closes that hole
+# by RESOLVING each bare pid in a kill-family slice back to its process and checking
+# whether it is a justify-* agent. The ONLY authorisation is a single-use, TTY-minted USER
+# consent token (justify-watcher-shutdown / justify-watcher-consent.py); an agent cannot
+# forge it (see the consent-token gate below), and there is no env-var bypass.
+if [ -z "$REASON" ] && [ -n "$_KILL_SLICES" ]; then
+  # Emit EVERY distinct justify-* watcher this kill would hit, one name per line (empty = none).
+  _JW_TARGETS=$(JW_SLICES="$_KILL_SLICES" python3 - <<'PYEOF' 2>/dev/null
+import os, re, subprocess
+slices = os.environ.get("JW_SLICES", "")
+pids  = set()
+pgids = set()
+for line in slices.splitlines():
+    # Every 2-7 digit run in a kill-family invocation is a candidate. A leading '-' marks a
+    # process-GROUP target (`kill -- -16755`, `kill -TERM -16755`): record it as a PGID so we
+    # can expand its MEMBERS, not only ps -p the leader (Codex finding, 2026-08-17 - a member
+    # watcher whose group LEADER is a non-justify process would otherwise slip). We ALSO keep
+    # the bare number as a pid, since over-collecting is safe (a real signal like `-15`
+    # resolves to nothing and is allowed); under-collecting is the only danger.
+    for tok in re.findall(r'(?<![\w.])(-?\d{2,7})(?![\w.])', line):
+        if tok.startswith('-'):
+            pgids.add(tok[1:]); pids.add(tok[1:])
+        else:
+            pids.add(tok)
+# Expand each candidate process group into its member pids.
+for g in list(pgids):
+    try:
+        out = subprocess.run(["ps", "-o", "pid=", "-g", str(g)],
+                             capture_output=True, text=True, timeout=3).stdout
+        for m in re.findall(r'\d+', out or ""):
+            pids.add(m)
+    except Exception:
+        pass
+def watcher_name(pid):
+    try:
+        out = subprocess.run(["ps", "-o", "command=", "-p", str(pid)],
+                             capture_output=True, text=True, timeout=3).stdout
+    except Exception:
+        return None
+    m = re.search(r'--agent-(?:id|name)\s+(justify[-_][^\s@"\x27]*)', out or "")
+    return m.group(1) if m else None
+targets = []
+for pid in pids:
+    n = watcher_name(pid)
+    if n and n not in targets:
+        targets.append(n)
+for t in targets:
+    print(t)
+PYEOF
+)
+  if [ -n "$_JW_TARGETS" ]; then
+    _JW_CONSENT_HELPER="$HOME/.claude/hooks/justify-watcher-consent.py"
+    # A single kill may hit MORE THAN ONE watcher (`kill <warden> <owner>`). A user consent
+    # token authorises only what it covers, so REQUIRE every target to be covered before
+    # allowing - a token for justify-warden must NOT wave through a kill that also hits
+    # justify-owner (Codex finding, 2026-08-17). check (non-destructive) all, THEN consume once.
+    _JW_ALL_OK=1
+    _JW_FIRST=""
+    _JW_UNCOVERED=""
+    while IFS= read -r _t; do
+      [ -z "$_t" ] && continue
+      [ -z "$_JW_FIRST" ] && _JW_FIRST="$_t"
+      if [ -f "$_JW_CONSENT_HELPER" ] && python3 "$_JW_CONSENT_HELPER" check "$_t" </dev/null >/dev/null 2>&1; then
+        :
+      else
+        _JW_ALL_OK=0
+        _JW_UNCOVERED="${_JW_UNCOVERED:+$_JW_UNCOVERED, }$_t"
+      fi
+    done <<EOF
+$_JW_TARGETS
+EOF
+    if [ "$_JW_ALL_OK" -eq 1 ] && [ -n "$_JW_FIRST" ]; then
+      # Every watcher this kill hits is covered by the USER's single-use TTY-minted token.
+      # Spend it once (consume deletes it; single-use) and allow the kill through.
+      python3 "$_JW_CONSENT_HELPER" consume "$_JW_FIRST" </dev/null >/dev/null 2>&1 || true
+    else
+      REASON="BLOCKED: this kill would stop Justify WATCHER agent(s): ${_JW_UNCOVERED:-$_JW_FIRST}. A Justify-watching agent may only be shut down by the USER's direct command - never by a managing/lead/peer agent (killing the watcher by mistake has broken the watch before). Leave it running. If it genuinely must stop, the USER runs 'justify-watcher-shutdown ${_JW_FIRST}' in their own terminal (TTY + typed confirmation), or authorises it once with 'justify-watcher-shutdown --authorize ${_JW_FIRST}'. A token for one watcher does NOT authorise a kill that also hits another. There is no env-var bypass and no --force."
+    fi
+  fi
+fi
+
+# An agent must not RUN the justify-watcher-shutdown CLI at all. That CLI is the USER's own
+# path and it runs in the user's terminal, which never passes through this hook; its internal
+# `[ -t 0 ]` TTY gate is not a boundary we trust an agent not to forge (an agent can allocate a
+# pseudo-terminal via script/expect/pty and feed the confirmation), so the agent's Bash path is
+# denied outright here (Codex finding, 2026-08-17). command_slices returns a slice ONLY when the
+# CLI is the invoked COMMAND (head_name sees past VAR=val, sudo/env/timeout/nohup wrappers, a
+# full path -> basename, and `bash -c '...'` payloads it walks into); a bare mention inside an
+# echo/grep/beat has a different head and is not returned, so prose passes.
+if [ -z "$REASON" ] && [ -n "$(command_slices 'justify-watcher-shutdown|justify-watcher-shutdown\.sh')" ]; then
+  REASON="BLOCKED: an agent may not run 'justify-watcher-shutdown'. That CLI is the USER's own path to stop a justify-* watcher and it runs in the user's own terminal, which does not pass through this hook. Only the human USER may stop a justify-* watcher. If the watcher must stop, the USER runs 'justify-watcher-shutdown <name>' themselves in their terminal; do not run it, wrap it in a pty, or otherwise invoke it as an agent."
+fi
+
+# The USER consent token for a watcher shutdown. An agent must not CREATE, write, or
+# delete it - forging it would be self-authorising the very shutdown this rule forbids.
+# Same reader shape as the watch-state gate (command_slices for a filename argument,
+# redirect_targets for a `> file`), so prose about the token in a beat or an echo passes
+# while a real write is blocked. The Write/Edit tool path is covered by
+# justify-watcher-guard.sh; this is the Bash half.
+_JW_TOKEN_WR=$(command_slices 'tee|cp|mv|dd|install|ln|touch|rm|truncate')
+_JW_TOKEN_REDIR=$(redirect_targets)
+if [ -z "$REASON" ] \
+   && printf '%s\n%s' "$_JW_TOKEN_WR" "$_JW_TOKEN_REDIR" \
+      | grep -q '\.justify-watcher-shutdown-consent'; then
+  REASON="BLOCKED: do not create, write, or delete the Justify-watcher shutdown consent token (~/.claude/.justify-watcher-shutdown-consent). Only the user's 'justify-watcher-shutdown' CLI may mint it, from a real terminal (TTY). Writing it yourself is self-authorising the shutdown of a justify-* watcher, which only the USER may do. Do not work around this."
+fi
+
+# ---------------------------------------------------------------------------
 # Voice-credential keyguard (2026-07-29, Jonah).
 #
 # `openai-tts-api-key` (Keychain account `claude-voice`) is provisioned for ONE
