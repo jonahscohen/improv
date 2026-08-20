@@ -32,6 +32,17 @@
    }
   }
  ],
+ "artifact-announce-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/artifact-announce-stop.sh",
+    "timeout": 10
+   }
+  }
+ ],
  "destructive-ops-guard.sh": [
   {
    "event": "PreToolUse",

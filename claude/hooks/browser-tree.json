@@ -257,6 +257,7 @@
             "artifact-open-mandate",
             "artifact-open-clear",
             "artifact-open-stop",
+            "artifact-announce-stop",
             "second-fix-gate",
             "validation-guard"
           ]
@@ -549,6 +550,7 @@
     "artifact-open-mandate": "Notes the path each time Claude creates an artifact worth showing - an image, a page, or an authored document - and requires it to be surfaced to you before the turn ends. Beats, scratch files, source and config files, and internal repo docs are left alone, so only real deliverables ever get flagged.",
     "artifact-open-clear": "Ticks an artifact off this session's outstanding list the moment Claude surfaces it, whether by opening it or by publishing it. The list belongs to one session, so surfacing a file elsewhere cannot excuse it.",
     "artifact-open-stop": "Blocks the end of a turn once while any artifact Claude made this session is still unshown, listing each one and how to surface it. A file that no longer exists is dropped rather than left to wedge the turn, and once everything is shown the turn ends normally.",
+    "artifact-announce-stop": "Blocks the end of a turn once when Claude's own closing message tells you a deliverable is at a location (on your desktop, saved to a path) but the file was never opened this session and is sitting closed. It only fires when a real, unopened, non-internal file is named with delivery wording, catching documents a build script created that the creation-time check cannot see.",
     "second-fix-gate": "Warns when a second edit hits the same file within ten minutes while an earlier change is still unchecked, the pattern that once turned one bug into a worse one. Edits that only add to existing text are ignored.",
     "validation-guard": "Blocks JavaScript that fakes real interaction: getComputedStyle, textContent, element.click, dispatchEvent and similar. Feature detection such as CSS.supports still passes, and the same blocklist is enforced for shell commands.",
     "multiple-choice-detect-stop": "Notices when Claude asked you a question as plain text instead of a proper selectable prompt, and records it so the next turn gets a reminder. A plain yes or no counts, since that is simply a two-option question.",
@@ -621,6 +623,7 @@
     "artifact-open-mandate": "verification",
     "artifact-open-clear": "verification",
     "artifact-open-stop": "verification",
+    "artifact-announce-stop": "verification",
     "second-fix-gate": "verification",
     "validation-guard": "verification",
     "multiple-choice-detect-stop": "question-discipline",

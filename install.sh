@@ -2162,7 +2162,7 @@ fi
 cluster_hooks() {
   case "$1" in
     safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh" ;;
-    verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh artifact-open-mandate.sh artifact-open-clear.sh artifact-open-stop.sh second-fix-gate.sh validation-guard.sh" ;;
+    verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh artifact-open-mandate.sh artifact-open-clear.sh artifact-open-stop.sh artifact-announce-stop.sh second-fix-gate.sh validation-guard.sh" ;;
     # question-enforcement.sh is deliberately NOT in this list. It is a Stop-shaped hook
     # (reads stdin, exits 1 to block) that was never wired to any settings event, so it
     # installed and sat inert on every machine that ever took this cluster. It is
