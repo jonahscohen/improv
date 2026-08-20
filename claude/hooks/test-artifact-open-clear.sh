@@ -200,5 +200,27 @@ run_tool "$FH" M1 Read "$A" >/dev/null
   || bad "9. Read clears its own session's entry, never the other session's"
 
 echo
+echo "=== shown ledger (feeds the mandate's re-flag-loop guard) ==="
+
+# A Read that discharges a pending path must also append it to the shown ledger, so a
+# later Bash mention cannot re-arm the mandate and re-block the Stop gate.
+FH=$(newhome); SLF="$(mktemp)"; printf 'x' > "$SLF"; seed "$FH" SL "$SLF"
+run_tool "$FH" SL Read "$SLF" >/dev/null
+awk -F'\t' -v p="$(canon "$SLF")" '$1==p && $2 ~ /^[0-9]+$/ {f=1} END{exit !f}' \
+    "$FH/.claude/.artifact-shown.SL" 2>/dev/null \
+  && ok "10. a discharged Read is written to the shown ledger as path + mtime-ns" \
+  || bad "10. a discharged Read is written to the shown ledger as path + mtime-ns"
+rm -f "$SLF"
+
+# A surface that does NOT match a pending entry must NOT write the shown ledger (only a
+# real discharge feeds it), so the ledger stays bounded to genuinely-tracked artifacts.
+FH=$(newhome); seed "$FH" SL2 "$A"; OTHER="$(mktemp)"; printf 'x' > "$OTHER"
+run_tool "$FH" SL2 Read "$OTHER" >/dev/null
+[ ! -f "$FH/.claude/.artifact-shown.SL2" ] \
+  && ok "11. a non-matching Read does not write the shown ledger" \
+  || bad "11. a non-matching Read does not write the shown ledger"
+rm -f "$OTHER"
+
+echo
 echo "== $pass passed, $fail failed =="
 [ "$fail" -eq 0 ]

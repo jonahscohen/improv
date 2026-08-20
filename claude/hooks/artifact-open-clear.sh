@@ -31,6 +31,9 @@ print(s or "global")
 ' 2>/dev/null)
 [ -z "$SESSION_KEY" ] && SESSION_KEY=global
 PENDING_FILE="$HOME/.claude/.artifact-pending.$SESSION_KEY"
+# Shown ledger: every path discharged here is appended so artifact-open-mandate.sh will
+# not re-record it later this session (the re-flag-loop fix). Key byte-identical to PENDING_FILE.
+SHOWN_FILE="$HOME/.claude/.artifact-shown.$SESSION_KEY"
 
 [ ! -f "$PENDING_FILE" ] && echo '{}' && exit 0
 
@@ -113,6 +116,30 @@ if [ -n "$SURFACED_PATH" ] && grep -qxF -- "$SURFACED_PATH" "$PENDING_FILE" 2>/d
   else
     rm -f "$PENDING_FILE" "$TMP"
   fi
+  # Record path + its mtime-ns AT SHOW TIME (one entry per path, latest wins), so the
+  # mandate skips a later MENTION only while the file is UNCHANGED since it was shown; a
+  # re-created artifact (newer mtime) is re-flagged rather than hidden (Codex P1). SURFACED_PATH
+  # is already canonical. Fail-open: any error leaves the ledger untouched.
+  mkdir -p "$(dirname "$SHOWN_FILE")"
+  python3 - "$SHOWN_FILE" "$SURFACED_PATH" <<'PY' 2>/dev/null
+import os, sys
+shown, path = sys.argv[1], sys.argv[2]
+try:
+    mt = os.stat(path).st_mtime_ns
+except Exception:
+    sys.exit(0)
+try:
+    lines = [ln.rstrip("\n") for ln in open(shown) if ln.strip()]
+except Exception:
+    lines = []
+kept = [ln for ln in lines if ln.split("\t", 1)[0] != path]
+kept.append("%s\t%d" % (path, mt))
+try:
+    with open(shown, "w") as f:
+        f.write("\n".join(kept) + "\n")
+except Exception:
+    pass
+PY
 fi
 
 echo '{}'

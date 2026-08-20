@@ -53,17 +53,22 @@ print(s or "global")
 ' 2>/dev/null)
 [ -z "$SESSION_KEY" ] && SESSION_KEY=global
 PENDING_FILE="$HOME/.claude/.artifact-pending.$SESSION_KEY"
+# The shown ledger records every artifact SURFACED this session (written by
+# artifact-open-clear.sh). This hook consults it so a path shown once is never
+# re-recorded, even if a later Bash command mentions it again - that re-harvest with no
+# shown-memory was the re-flag loop reproduced 2026-08-19. Key byte-identical to PENDING_FILE.
+SHOWN_FILE="$HOME/.claude/.artifact-shown.$SESSION_KEY"
 
-# Reap pending files from sessions that ended without discharging, so per-session
-# files cannot accumulate forever and a stale one cannot block a key that gets reused.
-find "$HOME/.claude" -maxdepth 1 -name '.artifact-pending.*' -mtime +1 -delete 2>/dev/null
+# Reap pending AND shown files from sessions that ended, so per-session files cannot
+# accumulate forever and a stale one cannot block/skip a key that gets reused.
+find "$HOME/.claude" -maxdepth 1 \( -name '.artifact-pending.*' -o -name '.artifact-shown.*' \) -mtime +1 -delete 2>/dev/null
 
 # Extract the one in-scope, not-excluded, existing path to record (or nothing). All
 # the scope + exclusion logic lives here so tuning is a single-file edit.
 #
 # ARTIFACT_SURFACE_EXTS (optional): a comma/space list of extensions that REPLACES the
 # default in-scope set. Leading dots optional. Cheap tuning override; unset by default.
-PATH_TO_SHOW=$(printf '%s' "$INPUT" | ARTIFACT_SURFACE_EXTS="${ARTIFACT_SURFACE_EXTS:-}" python3 -c '
+PATH_TO_SHOW=$(printf '%s' "$INPUT" | ARTIFACT_SURFACE_EXTS="${ARTIFACT_SURFACE_EXTS:-}" ARTIFACT_SURFACE_IGNORE="${ARTIFACT_SURFACE_IGNORE:-}" ARTIFACT_SHOWN_FILE="$SHOWN_FILE" python3 -c '
 import json, sys, os, re
 
 # IN SCOPE, split by HOW the user sees it. Visuals render/open directly; documents are
@@ -109,6 +114,8 @@ EXCLUDED_BASENAMES = {
 # Internal / vendor / build locations excluded for EVERY artifact type.
 EXCLUDE_ALWAYS = re.compile(
     r"(^|/)\.claude(/|$)"            # beats, settings, memory - NEVER flag these
+    r"|(^|/)\.design(/|$)"          # internal design/Figma reference captures, pulled to
+                                    # build AGAINST, not deliverables (peer report 2026-08-19)
     r"|(^|/)node_modules/"
     r"|(^|/)\.git/"
     r"|(^|/)dist/"
@@ -117,6 +124,18 @@ EXCLUDE_ALWAYS = re.compile(
     r"|(^|/)coverage/"
     r"|(^|/)docs/superpowers/plans/"  # internal plan docs
 )
+# USER IGNORE (ARTIFACT_SURFACE_IGNORE): a comma/space list of directory names or path
+# fragments a project marks as its own internal scaffolding (e.g. ".design, assets/refs,
+# .snapshots"). Any artifact whose path contains a listed token as a /-bounded segment is
+# never flagged. This is the durable "mark a dir internal" knob so scaffolding a script
+# CREATES but never itself opens does not nag; set it per project (settings env) or
+# globally. Unset by default, so default behavior is unchanged.
+_ign = os.environ.get("ARTIFACT_SURFACE_IGNORE", "").strip()
+IGNORE_RE = None
+if _ign:
+    _toks = [re.escape(t) for t in re.split(r"[,\s]+", _ign) if t]
+    if _toks:
+        IGNORE_RE = re.compile(r"(^|/)(?:" + "|".join(_toks) + r")(/|$)")
 # Scratch/temp locations excluded for DOCUMENTS ONLY. A generated image commonly lands
 # in a temp dir and the user still wants to see it (Jonah 2026-08-07 balanced choice),
 # so visuals are NOT excluded here; an intermediate .md/.txt in scratch usually is not
@@ -145,6 +164,8 @@ def in_scope(path):
     if b.endswith(".lock"):
         return False
     if EXCLUDE_ALWAYS.search(path):
+        return False
+    if IGNORE_RE and IGNORE_RE.search(path):
         return False
     if ext in DOCS and EXCLUDE_DOCS_TEMP.search(path):
         return False
@@ -248,11 +269,38 @@ def has_inline_image(node, depth=0):
 if tool == "Artifact":
     print(""); sys.exit(0)
 
-candidates = []
+# Paths already surfaced this session (written by artifact-open-clear.sh on discharge). The
+# already-shown skip is applied ONLY to MENTION candidates below - never to a creation or a
+# Write - so re-generating or overwriting a shown path is still flagged as unshown (Codex P1
+# 2026-08-19). Loading here is safe: canonical() is defined above.
+SHOWN = {}
+_sf = os.environ.get("ARTIFACT_SHOWN_FILE", "")
+if _sf:
+    try:
+        with open(_sf) as _f:
+            for _ln in _f:
+                _ln = _ln.rstrip("\n")
+                if not _ln.strip():
+                    continue
+                _p, _, _mt = _ln.partition("\t")
+                try:
+                    SHOWN[canonical(_p)] = int(_mt) if _mt else 0
+                except Exception:
+                    SHOWN[canonical(_p)] = 0
+    except Exception:
+        SHOWN = {}
+
+# CREATIONS (Write, -o/--output flags, redirects, save()-calls, MCP output keys) name an
+# artifact this call PRODUCED - always a live obligation. MENTIONS (a visual path scraped
+# generically from a Bash command or its stdout) may be an input/reference; a mention of a
+# path already shown this session must NOT re-arm the gate. Creations are considered first
+# (output-first priority, unchanged), then unshown mentions.
+creations = []
+mentions = []
 if tool == "Write":
     fp = ti.get("file_path", "") or ""
     if fp:
-        candidates.append(fp)
+        creations.append(fp)
 elif tool == "Bash":
     # Harvest the VISUAL or BINARY-OFFICE artifact a command PRODUCED, from the command
     # text and the tool output. TEXT documents (.md/.txt/.csv/.rtf) are still NOT
@@ -274,21 +322,22 @@ elif tool == "Bash":
         for m in re.finditer(r"(?:-o|-O|--out(?:put|file)?)[ =]+(\"[^\"]+\"|\x27[^\x27]+\x27|[^\s;|&]+)", cmd):
             cand = _unquote(m.group(1))
             if _harvestable(cand):
-                candidates.append(cand)
+                creations.append(cand)
         # 2. redirect target: > FILE or >> FILE (not >&2 etc - & is excluded)
         for m in re.finditer(r">>?[ \t]*(\"[^\"]+\"|\x27[^\x27]+\x27|[^\s;|&<>]+)", cmd):
             cand = _unquote(m.group(1))
             if _harvestable(cand):
-                candidates.append(cand)
+                creations.append(cand)
         # 3. an office OUTPUT named by a save/write/to_excel(...) call (the python-docx
         #    incident shape). Quoted-capture catches a path WITH SPACES, and only an
         #    explicit save call qualifies, so an INPUT/mention office path never sneaks in.
         for m in OFFICE_SAVE_RE.finditer(cmd):
-            candidates.append(m.group(2))
+            creations.append(m.group(2))
         # 4. generic VISUAL paths in the command, LAST first. Visuals only: office docs
         #    are output-position-only (flags/redirect/save-call above), because a bare
         #    positional office path is often an INPUT (e.g. `soffice --convert-to`).
-        candidates.extend(reversed(VISUAL_PATH_RE.findall(cmd)))
+        #    These are MENTIONS (could be an input/reference), so a shown one is skipped.
+        mentions.extend(reversed(VISUAL_PATH_RE.findall(cmd)))
         # 5. VISUAL paths named in the tool output (resp hoisted above). Office docs are
         #    NEVER harvested from stdout - a mentioned template/input is not a creation.
         blob = resp if isinstance(resp, str) else ""
@@ -297,7 +346,7 @@ elif tool == "Bash":
                 if isinstance(v, str) and v:
                     blob = v
                     break
-        candidates.extend(VISUAL_PATH_RE.findall(blob or ""))
+        mentions.extend(VISUAL_PATH_RE.findall(blob or ""))
 else:
     # GAP A: a tool (e.g. a Chrome-MCP screenshot with save_to_disk) that returned the
     # image INLINE in this same result already surfaced it to the user - record nothing so
@@ -311,20 +360,41 @@ else:
     for k in ("file_path", "output", "out", "path", "save_path", "output_path", "destination"):
         v = ti.get(k)
         if isinstance(v, str) and v:
-            candidates.append(v)
+            creations.append(v)
             break
 
-# Record the first candidate that is in scope AND exists on disk.
-for cand in candidates:
+# Record the first CREATION in scope + on disk (always a live obligation). Failing that,
+# the first MENTION in scope + on disk that was NOT already surfaced this session - so a
+# bare re-mention of a shown artifact cannot re-arm the gate (the re-flag-loop fix), while
+# an unshown referenced path still nags (the balanced over-nag choice, unchanged).
+for cand in creations:
     cp = canonical(cand)
     if in_scope(cp) and os.path.exists(cp):
         print(cp)
         sys.exit(0)
+for cand in mentions:
+    cp = canonical(cand)
+    if not (in_scope(cp) and os.path.exists(cp)):
+        continue
+    if cp in SHOWN:
+        # Skip ONLY if the file is unchanged since it was shown. A newer mtime means the
+        # command re-created it (bare-positional output, or a stdout "saved X"), so it is a
+        # new artifact and must re-flag. A stat failure cannot prove it unchanged -> record.
+        try:
+            unchanged = os.stat(cp).st_mtime_ns <= SHOWN[cp]
+        except Exception:
+            unchanged = False
+        if unchanged:
+            continue
+    print(cp)
+    sys.exit(0)
 print("")
 ' 2>/dev/null)
 
 if [ -n "$PATH_TO_SHOW" ]; then
   # APPEND, never overwrite. Dedup so re-writing the same file does not double-list it.
+  # (The already-shown guard lives in the extractor above, applied to MENTION candidates
+  # only, so a genuine re-creation/overwrite of a shown path is still flagged.)
   mkdir -p "$(dirname "$PENDING_FILE")"
   grep -qxF -- "$PATH_TO_SHOW" "$PENDING_FILE" 2>/dev/null \
     || printf '%s\n' "$PATH_TO_SHOW" >> "$PENDING_FILE"

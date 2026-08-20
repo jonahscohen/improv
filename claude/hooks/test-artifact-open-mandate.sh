@@ -55,6 +55,10 @@ recorded() { [ -s "$(pend "$1")" ]; }
 count()    { wc -l < "$(pend "$1")" 2>/dev/null | tr -d ' '; }
 is_json()  { python3 -c 'import json,sys; json.load(sys.stdin)' >/dev/null 2>&1; }
 ctx()      { python3 -c 'import json,sys; print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])' 2>/dev/null; }
+mtns()     { python3 -c 'import os,sys; print(os.stat(sys.argv[1]).st_mtime_ns)' "$1"; }
+# seed_shown <home> <abs_path> [mtime_ns] : write a one-line shown ledger (path<TAB>mtime)
+# for session S; mtime defaults to the file's current mtime (i.e. "shown, unchanged since").
+seed_shown() { printf '%s\t%s\n' "$2" "${3:-$(mtns "$2")}" > "$1/.claude/.artifact-shown.S"; }
 
 echo "=== R1: in-scope artifacts ARE recorded ==="
 
@@ -391,6 +395,79 @@ CTX=$(run_tool "$FH" Write "$F2" | ctx)
 [[ "$CTX" != *"SUPERSEDE"* ]] \
   && ok "B6. a deleted sibling is not named in the nudge (aligns with Stop self-heal)" \
   || bad "B6. deleted sibling wrongly named in the supersede nudge (ctx=$CTX)"
+
+echo
+echo "=== R6: re-flag-loop guard (shown ledger) + scaffold exclusions ==="
+
+# A path already surfaced this session and UNCHANGED since must NOT be re-recorded when a
+# later Bash command merely mentions it - that re-harvest was the re-flag loop.
+FH=$(newhome); F=$(mkfile assets/hero.png)
+seed_shown "$FH" "$F"
+run_bash "$FH" "compare base.png $F" >/dev/null
+! recorded "$FH" \
+  && ok "32. an unchanged shown path is NOT re-recorded on a later mention (re-flag loop fixed)" \
+  || bad "32. an unchanged shown path is NOT re-recorded on a later mention (re-flag loop fixed)"
+
+# MUTANT for 32: the SAME mention DOES record when the path is not in the shown ledger,
+# proving the shown ledger is what suppressed it (not something incidental).
+FH=$(newhome); F=$(mkfile assets/hero.png); run_bash "$FH" "compare base.png $F" >/dev/null
+recorded "$FH" \
+  && ok "33. control: same mention records when NOT in the shown ledger" \
+  || bad "33. control: same mention records when NOT in the shown ledger"
+
+# .design/ captures (internal Figma reference pulls) are never recorded.
+FH=$(newhome); F=$(mkfile .design/figma/header.png); run_bash "$FH" "figma-export --out $F" >/dev/null
+! recorded "$FH" \
+  && ok "34. a .design/ reference capture is never recorded" \
+  || bad "34. a .design/ reference capture is never recorded"
+
+# ARTIFACT_SURFACE_IGNORE excludes a project's own scaffold dir by /-bounded segment.
+FH=$(newhome); F=$(mkfile refs/tile.png)
+printf '{"session_id":"S","tool_name":"Bash","tool_input":{"command":"gen --out %s"}}' "$F" \
+  | ARTIFACT_SURFACE_IGNORE="refs,.snapshots" HOME="$FH" bash "$HOOK" >/dev/null
+! recorded "$FH" \
+  && ok "35. ARTIFACT_SURFACE_IGNORE excludes a listed scaffold dir" \
+  || bad "35. ARTIFACT_SURFACE_IGNORE excludes a listed scaffold dir"
+
+# MUTANT for 35: the SAME path WITHOUT the env IS recorded, so the env is the cause.
+FH=$(newhome); F=$(mkfile refs/tile.png); run_bash "$FH" "gen --out $F" >/dev/null
+recorded "$FH" \
+  && ok "36. control: the same path records when the ignore env is unset" \
+  || bad "36. control: the same path records when the ignore env is unset"
+
+# A partial-name match must NOT be excluded (segment-bounded, not substring): 'refs' in
+# the ignore list must not silence a sibling dir 'myrefs'.
+FH=$(newhome); F=$(mkfile myrefs/tile.png)
+printf '{"session_id":"S","tool_name":"Bash","tool_input":{"command":"gen --out %s"}}' "$F" \
+  | ARTIFACT_SURFACE_IGNORE="refs" HOME="$FH" bash "$HOOK" >/dev/null
+recorded "$FH" \
+  && ok "37. ignore token 'refs' does NOT match sibling dir 'myrefs' (segment-bounded)" \
+  || bad "37. ignore token 'refs' does NOT match sibling dir 'myrefs' (segment-bounded)"
+
+# Codex P1 guard: the shown-ledger skip must apply to MENTIONS only, never to a genuine
+# re-CREATION of a shown path (that new artifact is unshown and must still be flagged).
+# 38/39 use CREATION positions (Write, --out); 40 proves the mtime discrimination catches a
+# re-creation whose output is only a bare positional (indistinguishable from a mention by text).
+FH=$(newhome); F=$(mkfile assets/hero.png); seed_shown "$FH" "$F"
+run_tool "$FH" Write "$F" >/dev/null
+recorded "$FH" \
+  && ok "38. a shown path RE-CREATED by Write is still recorded (no false-clean)" \
+  || bad "38. a shown path RE-CREATED by Write is still recorded (no false-clean)"
+
+FH=$(newhome); F=$(mkfile assets/hero.png); seed_shown "$FH" "$F"
+run_bash "$FH" "gen --out $F" >/dev/null
+recorded "$FH" \
+  && ok "39. a shown path RE-CREATED by a Bash --out is still recorded (creation != mention)" \
+  || bad "39. a shown path RE-CREATED by a Bash --out is still recorded (creation != mention)"
+
+# 40: shown EARLIER (older mtime), then re-created via a BARE positional (a mention by text).
+# The file's current mtime is newer than the recorded show-time, so it re-flags anyway.
+FH=$(newhome); F=$(mkfile assets/hero.png)
+seed_shown "$FH" "$F" "$(( $(mtns "$F") - 5000000000 ))"
+run_bash "$FH" "magick in.jpg $F" >/dev/null
+recorded "$FH" \
+  && ok "40. a shown path re-created (newer mtime) re-flags even via a bare-positional mention" \
+  || bad "40. a shown path re-created (newer mtime) re-flags even via a bare-positional mention"
 
 echo
 echo "=== R5: disable marker + fail-open ==="
