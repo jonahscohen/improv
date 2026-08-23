@@ -589,7 +589,7 @@ case "$out" in
 esac
 
 # 8. stage_all install is TOTAL: it clears an opposite-direction staged-uninstall.
-INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|justify/Hooks/justify-queue-drain-stop|"; stage_reset
+INSTALLED="|justify/justify|justify/Hooks/justify-source-guard|justify/Hooks/justify-watch-guard|justify/Hooks/justify-watch-standing-by|justify/Hooks/justify-queue-drain-stop|justify/Hooks/justify-watcher-guard|"; stage_reset
 stage_toggle 'justify/Hooks/justify-source-guard'   # currently on -> stages UNINSTALL
 stage_all 'justify' install                          # "install all" must clear that
 [ "$(pending_under 'justify')" = "0" ] && ok "stage_all install clears opposite pending" || bad "stage_all install clears opposite pending"
@@ -769,7 +769,7 @@ INSTALLED="||"; stage_reset; stage_toggle 'tilt-lab'
 # justify-queue-drain-stop was packaged (2026-07-23). If justify gains a hook, this
 # expectation must grow with it; that coupling is the point, not friction to route around.
 INSTALLED="||"; stage_reset; stage_toggle 'justify/Hooks/justify-source-guard'
-[ "$(apl_line 1)" = "INSTALL justify|justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh" ] \
+[ "$(apl_line 1)" = "INSTALL justify|justify-watch-guard.sh justify-watch-standing-by.sh justify-queue-drain-stop.sh justify-watcher-guard.sh" ] \
   && ok "apply_pending_plan multi-hook off-list .sh suffix" || bad "apply_pending_plan multi-hook off-list .sh suffix"
 
 # 19. nothing staged -> both lines still emitted, both empty (fixed 2-line shape).
