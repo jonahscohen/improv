@@ -1,0 +1,20 @@
+{
+  "$schema_note": "NEGATIVE fixture: every source here names a forbidden agent-config path. The fetcher's code-level guard MUST reject this manifest (exit 4) before any fetch or write. Used by the allowlist test.",
+  "version": "fixture-forbidden-1",
+  "sources": [
+    {
+      "source": "bad-agents",
+      "repo_url": "https://github.com/fixture-owner/demo-source",
+      "branch": "main",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Fixture Author",
+      "allowlisted_paths": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "opencode.json",
+        ".claude-plugin/plugin.json",
+        "skills/better-ui/README.md"
+      ]
+    }
+  ]
+}

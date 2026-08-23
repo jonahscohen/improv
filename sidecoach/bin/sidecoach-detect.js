@@ -635,6 +635,15 @@ async function main() {
 
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
   if (!args.quiet) printSummary(result);
+
+  // Append this scan to the append-only audit-history log so its fire-data accrues for the
+  // taste miner. This is the single choke point BOTH the CLI and the taste-gate hook run
+  // through (the hook shells out to this same binary), so capturing here captures both paths.
+  // It is best-effort and FAIL-OPEN: capture never writes to stdout (detect's stdout is a
+  // machine contract) and a capture failure never changes this scan's verdict or exit code.
+  // The require + call are wrapped so even a broken/absent module cannot break a scan.
+  try { require('./audit-history').captureScan(result); } catch (_e) { /* fail-open */ }
+
   process.exit(exitCodeFor(verdict));
 }
 

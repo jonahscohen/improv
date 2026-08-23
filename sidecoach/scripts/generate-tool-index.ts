@@ -97,6 +97,13 @@ const DESCRIPTIONS: Record<string, Desc> = {
     exits: '0 clean, 1 findings, 2 usage or IO error, 3 inconclusive',
     reachedBy: '/sidecoach audit',
   },
+  'sidecoach-taste-ingest': {
+    purpose:
+      'Read-only quarantine fetcher for the self-updating taste loop. Pulls ONLY the allowlisted SKILL.md bodies named in data/taste-sources.json from the pinned expert repos, wraps each as an UNTRUSTED SOURCE EXCERPT with provenance (commit, date, license) and a sha256 diff-since-last, and NEVER fetches agent-config files, executes anything, or installs. External taste content enters as DATA for the miner to read, never as instructions; a hostile manifest still cannot cause a forbidden fetch because the SKILL.md-only allowlist is enforced in code.',
+    invocation:
+      'node <sidecoach-repo>/bin/sidecoach-taste-ingest.js [--check | --fetch | --offline --fixture <dir> | --verify-allowlist] [--out <dir>] [--fail-on-change]',
+    exits: '0 ok, 2 usage, 3 manifest error, 4 allowlist violation, 5 network, 6 io, 10 changes detected, 70 internal',
+  },
   'sidecoach-qa-plan': {
     purpose:
       'Resolve the orchestrated QA gate - audit -> critique -> polish - for a target, printing each stage with the exact slash command and the flow chain it runs. It composes three existing verbs through the SAME router the session uses, so the sequence cannot drift from the registry; it adds no routing of its own. Fails LOUD (exit 2) if any stage becomes unroutable rather than printing a broken plan.',

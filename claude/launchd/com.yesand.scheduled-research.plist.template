@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.yesand.scheduled-research.plist.template - the launchd TEMPLATE every scheduled
+  learning-researcher instantiates. It runs a per-job wrapper (or this repo's shared
+  runner directly) that execs claude/hooks/lib/scheduled-research-run.sh - the generic
+  spine that gates on new signal, runs a headless flow under a wall-clock watchdog, and
+  advances its cursor only on complete success. The runner DISCOVERS + PROPOSES only; it
+  never edits the harness.
+
+  THIS IS A TEMPLATE, NOT A LOADABLE PLIST. A specific job (the CC tracker, the cmux
+  tracker, the taste miner) copies it to claude/launchd/com.yesand.<job>.plist and
+  substitutes every {{TOKEN}} below. Do NOT `launchctl bootstrap` this file as-is.
+
+  TOKENS TO SUBSTITUTE (install.sh / the lead owns the wiring)
+    {{JOB_LABEL}}        the launchd Label + SRR_JOB_NAME, e.g. cc-tracker-daily
+                         (reverse-DNS'd as com.yesand.<JOB_LABEL>)
+    {{WRAPPER_PATH}}     absolute path to the per-job wrapper hook that exports the SRR_*
+                         params and execs the runner, e.g.
+                         /Users/spare3/.claude/hooks/cc-tracker-daily.sh
+                         (a wrapper is preferred over inlining every SRR_* here so the job
+                         definition lives in version-controlled shell, not in the plist)
+    {{HOME}}             the target home dir, e.g. /Users/spare3
+    {{REPO_ROOT}}        the dotfiles checkout, e.g. /Users/spare3/Documents/Github/improv
+
+  FIRE TIME: the Hour/Minute integers below default to 03:00 local (off-peak). Change them
+  to the job's cadence. For a WEEKLY cadence (like the reflect runner) add a
+  <key>Weekday</key><integer>0..6</integer> line to the StartCalendarInterval dict. The
+  integers are real values (not {{TOKENS}}) so this template passes `plutil -lint` as-is;
+  every remaining {{TOKEN}} sits in a string field, which accepts any text.
+
+  MISSED-FIRE ON WAKE: a StartCalendarInterval job whose scheduled time passes while the
+  Mac is asleep or powered off runs ONCE on the next wake/boot - launchd's built-in
+  catch-up. That is why RunAtLoad is false (no run at install/login) yet a laptop that was
+  closed at the scheduled hour still gets its run. The runner's cheap pre-check keeps that
+  catch-up near-free when nothing changed.
+
+  LOAD / UNLOAD (after substitution)
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yesand.{{JOB_LABEL}}.plist
+    launchctl bootout   gui/$(id -u)/com.yesand.{{JOB_LABEL}}
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.yesand.{{JOB_LABEL}}</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>{{WRAPPER_PATH}}</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>WorkingDirectory</key>
+    <string>{{REPO_ROOT}}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>SRR_JOB_NAME</key>
+        <string>{{JOB_LABEL}}</string>
+        <key>SRR_REPO_ROOT</key>
+        <string>{{REPO_ROOT}}</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>{{HOME}}/.claude/logs/{{JOB_LABEL}}.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{HOME}}/.claude/logs/{{JOB_LABEL}}.launchd.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

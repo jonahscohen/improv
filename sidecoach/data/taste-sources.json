@@ -1,0 +1,40 @@
+{
+  "$schema_note": "Pinned allowlist for the SAFE external taste-source ingest. Only paths listed here are ever fetched, and the fetcher independently rejects any path that is not a SKILL.md body or that names a forbidden agent-config file (AGENTS.md, CLAUDE.md, opencode.json, .claude-plugin). Fetched content is stored as UNTRUSTED DATA the miner and a human reviewer read - never instructions, never auto-applied, never executed. See reference_external_taste_sources.md for the full design.",
+  "version": "1",
+  "generated_note": "Superseded repo B (jakubkrehel single-skill interfaces repo) is intentionally EXCLUDED - its content is folded into better-ui in repo A.",
+  "sources": [
+    {
+      "source": "jakub-krehel-skills",
+      "author": "Jakub Krehel",
+      "repo_url": "https://github.com/jakubkrehel/skills",
+      "branch": "main",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+      "allowlisted_paths": [
+        "skills/better-ui/SKILL.md",
+        "skills/better-typography/SKILL.md",
+        "skills/better-colors/SKILL.md",
+        "skills/better-accessibility/SKILL.md",
+        "skills/better-layout/SKILL.md",
+        "skills/better-writing/SKILL.md"
+      ]
+    },
+    {
+      "source": "emil-kowalski-skills",
+      "author": "Emil Kowalski",
+      "repo_url": "https://github.com/emilkowalski/skills",
+      "branch": "main",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Emil Kowalski",
+      "allowlisted_paths": [
+        "skills/emil-design-eng/SKILL.md",
+        "skills/animate/SKILL.md",
+        "skills/review-animations/SKILL.md",
+        "skills/improve-animations/SKILL.md",
+        "skills/find-animation-opportunities/SKILL.md",
+        "skills/animation-vocabulary/SKILL.md",
+        "skills/apple-design/SKILL.md"
+      ]
+    }
+  ]
+}

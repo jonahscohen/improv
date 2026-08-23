@@ -38,9 +38,9 @@ sidecoach-monitor "<utterance>" --json
 
 Exit: 0 ran, non-zero the run did not complete
 
-## Standalone tools (16)
+## Standalone tools (17)
 
-Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 9 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
+Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 10 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-ingest`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
 
 Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-preauthor`, `sidecoach-qa-plan`. Every other tool here is run by you or by the user, never automatically.
 
@@ -235,6 +235,18 @@ wired from claude/hooks/sidecoach-taste-gate.sh
 ```
 
 Exit: 0 clean, non-zero a ban fired
+
+### `sidecoach-taste-ingest`
+
+_not listed by the resolver_
+
+Read-only quarantine fetcher for the self-updating taste loop. Pulls ONLY the allowlisted SKILL.md bodies named in data/taste-sources.json from the pinned expert repos, wraps each as an UNTRUSTED SOURCE EXCERPT with provenance (commit, date, license) and a sha256 diff-since-last, and NEVER fetches agent-config files, executes anything, or installs. External taste content enters as DATA for the miner to read, never as instructions; a hostile manifest still cannot cause a forbidden fetch because the SKILL.md-only allowlist is enforced in code.
+
+```
+node <sidecoach-repo>/bin/sidecoach-taste-ingest.js [--check | --fetch | --offline --fixture <dir> | --verify-allowlist] [--out <dir>] [--fail-on-change]
+```
+
+Exit: 0 ok, 2 usage, 3 manifest error, 4 allowlist violation, 5 network, 6 io, 10 changes detected, 70 internal
 
 ## Dead weight, named on purpose
 

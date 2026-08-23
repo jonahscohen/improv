@@ -1,0 +1,17 @@
+{
+  "$schema_note": "Fixture manifest for hermetic offline ingest verification. Points at the demo-source fixture bodies.",
+  "version": "fixture-1",
+  "sources": [
+    {
+      "source": "demo-source",
+      "author": "Fixture Author",
+      "repo_url": "https://github.com/fixture-owner/demo-source",
+      "branch": "main",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Fixture Author",
+      "allowlisted_paths": [
+        "skills/better-ui/SKILL.md"
+      ]
+    }
+  ]
+}

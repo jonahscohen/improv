@@ -1,0 +1,4 @@
+# Append-only audit-history capture from bin/sidecoach-detect.js. Machine-local, runtime-
+# accrued fire-data for the taste miner - never committed. The rotation sidecar is ignored too.
+data/audit-history.jsonl
+data/audit-history.jsonl.1
