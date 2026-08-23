@@ -4133,7 +4133,7 @@ deactivate_statusline() {
 }
 
 deactivate_cmux() {
-  deactivate_app_hooks agent-teams-guard.sh node-shim-heal.sh
+  deactivate_app_hooks agent-teams-guard.sh node-shim-heal.sh plugin-node-hook-heal.sh
   [ -L "$HOME/.config/cmux/settings.json" ] && rm -f "$HOME/.config/cmux/settings.json"
   # Remove Claude Teams launcher
   [ -L "$CLAUDE_DIR/claude-teams-launcher.sh" ] && rm -f "$CLAUDE_DIR/claude-teams-launcher.sh"
@@ -4273,7 +4273,7 @@ deactivate_task_list() {
 deactivate_sidecoach() {
   [ -d "$CLAUDE_DIR/skills/sidecoach" ] && rm -rf "$CLAUDE_DIR/skills/sidecoach"
   local f
-  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-detect.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
+  for f in sidecoach-sessionstart.sh sidecoach-postuserp.sh sidecoach-postresponse.sh sidecoach-keyword.sh sidecoach-preamble.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-heal.sh sidecoach-detect.sh sidecoach-verbs.json sidecoach-lanes.json sidecoach-intent.json sidecoach_lanes.py; do
     [ -L "$CLAUDE_DIR/hooks/$f" ] && rm -f "$CLAUDE_DIR/hooks/$f"
   done
   [ -L "$HOME/.local/bin/sidecoach" ] && rm -f "$HOME/.local/bin/sidecoach"
@@ -7699,6 +7699,22 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
 " || settings_write_failed sidecoach "Could not normalize stale Sidecoach wirings in settings.json - stale entries may survive this run."
   fi
 
+  # RE-ADD, CO-LOCATED WITH THE STRIP so the two are ATOMIC. The canonical
+  # `picked sidecoach && install_app_hooks ...` declaration lives ~250 lines below in the
+  # consolidated app-hook pass, past every OTHER component's install block. Under
+  # `set -euo pipefail`, an abort anywhere in that gap (a failing top-level command in the
+  # fable/voice/justify/... blocks on a full install) would leave sidecoach STRIPPED-BUT-
+  # NOT-RESTORED - the zero-wiring state measured 2026-08-01. Re-adding here, immediately
+  # after the strip, closes that window: the two never diverge no matter what fails later.
+  # install_app_hooks is defined far above, returns 0 by design (safe as a bare command
+  # under set -e), is idempotent (dedup by exact command), and honors the per-hook
+  # off-list - so this is a no-op the second time the consolidated pass runs it, and it
+  # deploys the symlinks + registrations regardless of the later pass. sidecoach-heal.sh is
+  # the SessionStart self-heal that reasserts this wiring every session thereafter; wiring
+  # it HERE (atomically) is what guarantees its own registration lands so it can then keep
+  # the rest whole. Keep this arg list identical to the consolidated line below.
+  install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh
+
   # The sidecoach MCP server was RETIRED (Jonah 2026-07-24, reversing the 2026-07-15
   # wire-up - the external surface was never consumed). It was built + registered here
   # for ~9 days, so this block now REMOVES any stale mcpServers.sidecoach entry a
@@ -7938,8 +7954,8 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 # improv-only hook on every project. Ruled keep-project-scoped (Jonah 2026-07-15;
 # decision_beats_hooks_stay_project_scoped.md).
 picked reflect      && install_app_hooks reflect-nudge.sh
-picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh cmux-team-config-heal.sh teammate-relay-stop.sh
-picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-detect.sh
+picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh plugin-node-hook-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh cmux-team-config-heal.sh teammate-relay-stop.sh
+picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh
 picked fable        && install_app_hooks frontier-orchestrator-guard.sh
 # The confirm-arm hook powers the "confirm" override on BOTH the session-production
 # (fable) and agent-routing (model-routing) surfaces, so wire it if EITHER is picked -

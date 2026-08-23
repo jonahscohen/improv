@@ -147,15 +147,18 @@ browser_load "$TREE"
 [ "$(node_children 'sidecoach')" = "sidecoach Hooks" ] \
   && ok "sidecoach children (leaf + Hooks)" || bad "sidecoach children (got '$(node_children 'sidecoach')')"
 [ "$(node_kind 'sidecoach/sidecoach')" = "leaf" ] && ok "sidecoach component leaf" || bad "sidecoach component leaf"
-# All EIGHT sidecoach hooks, in the order install_app_hooks deploys them.
-# sidecoach-craft-floor is the 8th (2026-07-29): a PreToolUse floor that loads the standing
+# All NINE sidecoach hooks, in the order install_app_hooks deploys them.
+# sidecoach-craft-floor is a PreToolUse floor (2026-07-29) that loads the standing
 # craft minimum before a UI write, on its own 15-minute per-project cooldown. The tree used to
 # list only 2 of the 6 the installer actually deploys and wires, so the browser rendered
 # "2/2 active" for a component with 6 managed hooks and gave no toggle for the other 4.
-# sidecoach-detect is the 7th (Stage 3b): fully packaged but shipped OPT-IN via the default
-# off-list seed in install.sh, so the browser shows and can toggle it while a plain install
-# leaves the per-edit scan unwired.
-[ "$(node_children 'sidecoach/Hooks')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-craft-floor sidecoach-postresponse sidecoach-detect" ] \
+# sidecoach-heal is the SessionStart self-heal (2026-08-22): it reasserts sidecoach's own
+# symlinks + registrations every session so a stripped registration or a missing symlink
+# repairs itself. Default-ON, so it sits before sidecoach-detect in the deploy order.
+# sidecoach-detect is the opt-in per-edit scanner (Stage 3b): fully packaged but shipped OPT-IN
+# via the default off-list seed in install.sh, so the browser shows and can toggle it while a
+# plain install leaves the per-edit scan unwired.
+[ "$(node_children 'sidecoach/Hooks')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-orchestrate-edit sidecoach-qa-gate-stop qa-gate-manual sidecoach-craft-floor sidecoach-postresponse sidecoach-heal sidecoach-detect" ] \
   && ok "sidecoach hook children" || bad "sidecoach hook children (got '$(node_children 'sidecoach/Hooks')')"
 # Every payload component has the same shape, and each leaf resolves as its owner's
 # master switch. A regression here is what re-hides the install affordance.
@@ -673,8 +676,8 @@ INSTALLED="||"; stage_reset
 stage_toggle 'sidecoach/Hooks/sidecoach-detect'
 out="$(apply_plan)"
 case "$out" in
-  *"INSTALL sidecoach sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-craft-floor sidecoach-postresponse"*)
-    ok "per-hook toggle opts default-off sidecoach-detect in (other 7 off-listed)";;
+  *"INSTALL sidecoach sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-orchestrate-edit sidecoach-qa-gate-stop qa-gate-manual sidecoach-craft-floor sidecoach-postresponse"*)
+    ok "per-hook toggle opts default-off sidecoach-detect in (other default-on hooks off-listed)";;
   *) bad "per-hook toggle opts default-off sidecoach-detect in (got '$out')";;
 esac
 case "$out" in
@@ -686,7 +689,7 @@ esac
 # "toggle both directions"): staged-uninstall (rung 1) still wins, detect off-listed, component
 # preserved. Identical off-list string to case 15 but reached via a different rung - the point
 # is that neither the browser toggle nor the leaf force-enable was disturbed by the guard.
-INSTALLED="|sidecoach/sidecoach|sidecoach/Hooks/sidecoach-sessionstart|sidecoach/Hooks/sidecoach-preamble|sidecoach/Hooks/sidecoach-postuserp|sidecoach/Hooks/sidecoach-keyword|sidecoach/Hooks/sidecoach-taste-gate|sidecoach/Hooks/sidecoach-craft-floor|sidecoach/Hooks/sidecoach-postresponse|sidecoach/Hooks/sidecoach-detect|"; stage_reset
+INSTALLED="|sidecoach/sidecoach|sidecoach/Hooks/sidecoach-sessionstart|sidecoach/Hooks/sidecoach-preamble|sidecoach/Hooks/sidecoach-postuserp|sidecoach/Hooks/sidecoach-keyword|sidecoach/Hooks/sidecoach-taste-gate|sidecoach/Hooks/sidecoach-orchestrate-edit|sidecoach/Hooks/sidecoach-qa-gate-stop|sidecoach/Hooks/qa-gate-manual|sidecoach/Hooks/sidecoach-craft-floor|sidecoach/Hooks/sidecoach-postresponse|sidecoach/Hooks/sidecoach-heal|sidecoach/Hooks/sidecoach-detect|"; stage_reset
 stage_toggle 'sidecoach/Hooks/sidecoach-detect'
 out="$(apply_plan)"
 case "$out" in

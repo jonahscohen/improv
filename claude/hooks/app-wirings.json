@@ -85,6 +85,18 @@
    }
   }
  ],
+ "plugin-node-hook-heal.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/plugin-node-hook-heal.sh",
+    "timeout": 10,
+    "statusMessage": "Pointing plugin node hooks at an absolute node..."
+   }
+  }
+ ],
  "voice-gate.sh": [
   {
    "event": "PreToolUse",
@@ -454,6 +466,39 @@
    }
   }
  ],
+ "sidecoach-orchestrate-edit.sh": [
+  {
+   "event": "PostToolUse",
+   "matcher": "Write|Edit|MultiEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-orchestrate-edit.sh",
+    "timeout": 120
+   }
+  }
+ ],
+ "sidecoach-qa-gate-stop.sh": [
+  {
+   "event": "Stop",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-qa-gate-stop.sh",
+    "timeout": 10
+   }
+  }
+ ],
+ "qa-gate-manual.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/qa-gate-manual.sh",
+    "timeout": 5
+   }
+  }
+ ],
  "sidecoach-craft-floor.sh": [
   {
    "event": "PreToolUse",
@@ -482,6 +527,18 @@
    "hook": {
     "type": "command",
     "command": "~/.claude/hooks/sidecoach-postresponse.sh"
+   }
+  }
+ ],
+ "sidecoach-heal.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-heal.sh",
+    "timeout": 10,
+    "statusMessage": "Reasserting Sidecoach hook wiring..."
    }
   }
  ],

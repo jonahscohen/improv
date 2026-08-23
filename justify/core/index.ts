@@ -18,6 +18,8 @@ import { ApplyConfirmation } from './apply-confirmation';
 import { ManipulateMode } from './manipulate/index.js';
 import { PromptMode } from './prompt/index.js';
 import { ChangesPanel } from './changes-panel';
+import { decidePageNav, isSamePageUrl } from './same-page';
+import { normalizeEntry } from './normalize-entry';
 import type { JustifyAdapter, JustifyMode } from './types';
 
 // Window.__justify typed via assignment below
@@ -211,23 +213,23 @@ export class JustifyCore {
         return;
       }
       response.reviewed = false;
-      this._changeHistory.push(response);
+      // Coerce array-typed fields (changes/diffs/filesChanged/targetSelectors) to
+      // real arrays before anything downstream maps over them: the unvalidated
+      // /respond path can land a prose STRING in `changes`, and a bare `.map` on it
+      // throws - blanking the Review panel and killing the live preview below.
+      // (Jonah 2026-08-22, see normalize-entry.ts)
+      const normalized = normalizeEntry(response);
+      this._changeHistory.push(normalized);
       this._persistHistory();
       this._updateClaudeBadge();
-      const status = response.status as string;
+      const status = normalized.status as string;
       if (status === 'completed') {
-        this._previewChanges(response.changes as any[]);
-        // Never send a change up to review without showing what changed: scroll
-        // to + persistently select the changed object. The hot-refresh below
-        // reloads the page (to reflect new code) and would wipe this, so relay
-        // the target across the reload via sessionStorage - on load we re-locate.
-        const sels = this._changeSelectors(response);
-        if (sels.length > 0) {
-          try { sessionStorage.setItem('justify:locate', JSON.stringify(sels)); } catch {}
-          this._locateAndSelect(sels);
-        } else {
-          this._highlightChangedElements(response.changes as any[]);
-        }
+        this._previewChanges(normalized.changes as any[]);
+        // Highlighting is CLICK-DRIVEN only (Jonah 2026-08-20). A completed change
+        // no longer auto-selects/highlights its target, and nothing is stashed for
+        // the post-refresh relay - so the orange outline no longer reappears on
+        // every refresh. The user reveals what changed by clicking the task in the
+        // Review panel (setOnSelect below), which is the ONLY path that highlights.
         // MANDATORY (Jonah 2026-06-11): a completed task hot-refreshes the page
         // in EVERY tab/instance running this project, so the live page always
         // reflects the latest code. The server broadcasts justify_response to
@@ -249,8 +251,10 @@ export class JustifyCore {
       // payload; also honor any clear made in this session that may not have been
       // persisted yet.
       this._changeHistory = Array.isArray(data)
-        ? data.filter(e => !this._clearedBaseIds.has(this._baseId((e as any)?.promptId ?? (e as any)?.id)))
-        : data;
+        ? data
+            .filter(e => !this._clearedBaseIds.has(this._baseId((e as any)?.promptId ?? (e as any)?.id)))
+            .map(normalizeEntry)
+        : [];
       this._updateClaudeBadge();
       // Surface the "Review Changes" bar for any pending (unreviewed) changes so
       // the panel is reachable after a reload or any interruption - the bar must
@@ -258,15 +262,25 @@ export class JustifyCore {
       this._surfaceReviewIfPending();
     }).catch(() => {});
 
-    // Hot-refresh relay: a change sent up just before the reload stashed its
-    // target selector(s); after the page reloads, scroll to + select the changed
-    // object so the user lands on exactly what changed. Cleared after one use.
+    // Cross-page highlight relay (Jonah 2026-08-20): the ONLY thing that stashes
+    // 'justify:locate' is a Review-panel click on a task whose change lives on a
+    // DIFFERENT page (setOnSelect below navigates there). After that navigation
+    // loads, re-locate + highlight the target so the user lands on exactly what
+    // changed. Cleared after one use. Nothing auto-stashes this anymore, so it
+    // never fires on a plain refresh - only after an intentional cross-page click.
     try {
       const raw = sessionStorage.getItem('justify:locate');
       if (raw) {
         sessionStorage.removeItem('justify:locate');
-        const sels = JSON.parse(raw);
-        if (Array.isArray(sels) && sels.length > 0) {
+        const parsed = JSON.parse(raw);
+        const sels = parsed && parsed.selectors;
+        const target = parsed && parsed.target;
+        // Only highlight if we ACTUALLY arrived at the page the click meant to reach.
+        // A stale key (an aborted nav, an older build's bare-array format, or a
+        // hand-mutated storage value) fails this validation and is dropped silently -
+        // so the relay can never fire a highlight on an unrelated plain refresh.
+        if (Array.isArray(sels) && sels.length > 0 && typeof target === 'string'
+            && isSamePageUrl(target, window.location.href)) {
           setTimeout(() => this._locateAndSelect(sels), 800);
         }
       }
@@ -532,7 +546,34 @@ export class JustifyCore {
       }
     });
 
-    this._changesPanel.setOnSelect((selectors: string[]) => {
+    this._changesPanel.setOnSelect((selectors: string[], pageUrl?: string) => {
+      // Cross-page highlight (Jonah 2026-08-20). Highlighting is click-driven. Where
+      // the clicked task's change lives decides what happens (decidePageNav):
+      //  - same document        -> highlight in place now
+      //  - same doc, diff hash   -> hash-router change: set the hash, highlight after
+      //                             the route settles (same-document, no reload)
+      //  - different document    -> navigate there. Only a SAME-ORIGIN navigation can
+      //                             carry the highlight, because the relay lives in
+      //                             origin-scoped sessionStorage AND is validated on
+      //                             arrival - so a cross-origin nav lands the user on
+      //                             the page without a stale key ever re-firing on a
+      //                             later refresh of this origin.
+      if (selectors.length === 0) { this._locateAndSelect(selectors); return; }
+      const decision = decidePageNav(pageUrl, window.location.href);
+      if (decision.kind === 'navigate') {
+        if (decision.relay) {
+          try {
+            sessionStorage.setItem('justify:locate', JSON.stringify({ selectors, target: decision.href }));
+          } catch {}
+        }
+        window.location.href = decision.href;
+        return;
+      }
+      if (decision.kind === 'hash') {
+        window.location.hash = decision.hash;
+        setTimeout(() => this._locateAndSelect(selectors), 400);
+        return;
+      }
       this._locateAndSelect(selectors);
     });
 
@@ -1149,61 +1190,6 @@ export class JustifyCore {
     }
   }
 
-  private _highlightChangedElements(changes: Array<{ selector: string; property: string; oldValue: string; newValue: string }>): void {
-    if (!changes || changes.length === 0) return;
-    const mc = this.toolbar?.getMarkerColor() || '#D97757';
-    const selectors = [...new Set(changes.map(c => c.selector))];
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    for (const sel of selectors) {
-      let els: Element[];
-      try { els = Array.from(document.querySelectorAll(sel)); } catch { continue; }
-
-      for (const el of els) {
-        const htmlEl = el as HTMLElement;
-        const rect = htmlEl.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) continue;
-
-        const highlight = document.createElement('div');
-        highlight.dataset.justify = '';
-        highlight.style.cssText =
-          'position:fixed;pointer-events:none;z-index:2147483646;' +
-          'border:2px solid ' + mc + ';border-radius:4px;' +
-          'box-shadow:0 0 12px ' + mc + '40;' +
-          'top:' + rect.top + 'px;left:' + rect.left + 'px;' +
-          'width:' + rect.width + 'px;height:' + rect.height + 'px;' +
-          'transition:opacity 0.4s ease;opacity:1';
-
-        if (!reducedMotion) {
-          highlight.style.animation = 'justify-highlight-pulse 0.6s ease-in-out 2';
-        }
-
-        const selectorChanges = changes.filter(c => c.selector === sel);
-        if (selectorChanges.length > 0) {
-          const pill = document.createElement('div');
-          pill.dataset.justify = '';
-          pill.style.cssText =
-            'position:absolute;top:-24px;left:0;padding:2px 8px;border-radius:4px;' +
-            'background:' + currentPalette().surface + ';border:1px solid ' + currentPalette().borderSubtle + ';' +
-            'font-size:10px;font-family:JustifyMono,ui-monospace,monospace;color:' + currentPalette().textDim + ';' +
-            'white-space:nowrap;pointer-events:none';
-          pill.textContent = selectorChanges.map(c => c.property + ': ' + c.newValue).join('; ');
-          highlight.appendChild(pill);
-        }
-
-        document.body.appendChild(highlight);
-        setTimeout(() => { highlight.style.opacity = '0'; }, 1200);
-        setTimeout(() => { highlight.remove(); }, 1600);
-      }
-    }
-
-    if (!document.getElementById('justify-highlight-style')) {
-      const style = document.createElement('style');
-      style.id = 'justify-highlight-style';
-      style.textContent = '@keyframes justify-highlight-pulse{0%{box-shadow:0 0 4px ' + mc + '40}50%{box-shadow:0 0 20px ' + mc + '60}100%{box-shadow:0 0 4px ' + mc + '40}}';
-      document.head.appendChild(style);
-    }
-  }
 
   isActive(): boolean {
     return this.active;
@@ -1212,10 +1198,10 @@ export class JustifyCore {
   private _highlightRaf: number | null = null;
 
   // Scroll to + persistently select the element(s) a change was about. Shared by
-  // the Changes-panel click handler AND the on-arrival auto-locate, so a change is
-  // never sent to review without the user being shown what changed. A DELETED
-  // target (selector no longer resolves) walks up the descendant path to the
-  // nearest surviving ancestor and marks it with a DASHED box ("removed near").
+  // the Changes-panel click handler AND the cross-page on-load relay, so clicking a
+  // task always shows the user what changed. A DELETED target (selector no longer
+  // resolves) walks up the descendant path to the nearest surviving ancestor and
+  // marks it with a DASHED box ("removed near").
   private _locateAndSelect(selectors: string[]): void {
     this._clearTaskHighlights();
     if (!selectors || selectors.length === 0) return;
@@ -1278,15 +1264,6 @@ export class JustifyCore {
         (scrollTarget as HTMLElement).scrollIntoView();
       }
     }
-  }
-
-  // Selectors a completed response was about: per-change selectors unioned with
-  // the prompt's target selectors (joined onto the response by the daemon).
-  private _changeSelectors(response: Record<string, unknown>): string[] {
-    const changeSel = ((response.changes as Array<{ selector?: string }>) || [])
-      .map(c => c && c.selector).filter((s): s is string => !!s);
-    const targetSel = (response.targetSelectors as string[]) || [];
-    return [...new Set([...changeSel, ...targetSel])];
   }
 
   private _startHighlightTracking(): void {

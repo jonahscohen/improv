@@ -1,45 +1,62 @@
 #!/bin/bash
 # PostToolUse hook for Write|Edit|MultiEdit on a project's HTML/CSS.
 #
-# The taste gate: the moment a UI file is written in a sidecoach design project
-# (a directory carrying a DESIGN.md), run the STATIC half of sidecoach's evaluation
-# against it - the 5 absolute-ban anti-pattern scan (side-stripe-borders,
-# gradient-text, glassmorphism-default, hero-metric-template, modal-as-first-thought)
-# plus the taste validator - and inject any findings back as a must-fix directive.
+# THE TASTE GATE. The moment a UI file is written in a sidecoach design project (a
+# directory carrying a DESIGN.md), scan the FILE THAT WAS JUST WRITTEN through the
+# productized detect engine (sidecoach/bin/sidecoach-detect.js) and inject any
+# findings back as a must-fix directive.
 #
-# COUNT CORRECTED 2026-07-29 (Jonah). This header said "6" and listed
-# `identical card grids`, whose scanner was DELETED 2026-06-24 for a ReDoS-class
-# regex. The authoritative list is BAN_SCANNERS in
-# sidecoach/src/absolute-ban-detector.ts, which has five entries and throws on drift,
-# so it cannot silently disagree with the shipped ban list. Do not re-hardcode a
-# count here without reading that table.
+# WHAT IT ACTUALLY RUNS (2026-08-22 rewrite - read before editing).
+# The gate no longer hand-calls two static engines. It invokes ONE tool,
+# `sidecoach-detect <edited-file>`, which dispatches every shipping lens at once:
+#   - an .html edit  -> static-ban + static-check + rendered objective + rendered subjective.
+#       The rendered lenses run against the file's own file:// URL, so the HELD-OUT-VALIDATED
+#       detectors fire on write: marketing-buzzword (v4 gate, held-out precision 1.000),
+#       tiny-text, nested-cards, low-contrast, skipped-heading, broken-image, justified-text,
+#       plus the 5 absolute bans over raw source.
+#   - a .css edit    -> static-ban + static-check only. A lone stylesheet has no renderable
+#       target, so the rendered lenses correctly report `skip` and the edit gets the ban sweep
+#       + the static polish/theming rules. This matches "a CSS-only edit gets the ban sweep".
 #
-# WHAT THIS GATE DOES NOT COVER - read before claiming it enforces something.
-# It is a SUBSET of `/sidecoach audit`, not an equivalent: it runs only the two
-# STATIC engines above. Every RENDERED rule is out of scope, because no write-time
-# hook can render a page - that includes marketing-buzzword, tiny-text, nested-cards,
-# default-typeface, low-contrast, skipped-heading, broken-image and justified-text.
-# marketing-buzzword in particular is a real, calibrated sidecoach rule
-# (polish.marketing-buzzword, held-out precision 1.000) that lives ONLY in the
-# rendered subjective lane. It has never been one of the absolute bans and this hook
-# has never checked it. A rule documented as enforced that no path can reach buys
-# false confidence, which is worse than a missing rule.
+# This SUPERSEDES the previous gate, which ran only the 5 static bans plus an older structural
+# taste-validator and could NEVER reach marketing-buzzword/tiny-text/nested-cards/low-contrast
+# because those live in the rendered lane. Rendering the edited page at write-time is exactly
+# what closes that gap. Cost: ~2-6s per .html write (a real headless render); acceptable for a
+# gate that only fires on genuine UI edits under a DESIGN.md project.
 #
-# Origin (2026-06-15): repeatedly shipped AI-slop tells (side-tab accent borders,
-# hero-metric template, low-contrast accent text) because I declared UI "done"
-# WITHOUT running the evaluators, then ran one check at a time only after Jonah
-# pointed at each failure. Discipline alone failed; this makes the full sweep
-# mechanical - it fires on every UI edit, no cherry-picking, no skipping.
+# HARD PREREQUISITE for the rendered lane: the matching Playwright browser must be installed
+# (node_modules Playwright pins a chromium_headless_shell revision). If it is missing the
+# rendered lenses cannot run - the gate then surfaces whatever the STATIC lenses found AND a
+# loud, actionable "rendered taste lane did NOT run" note naming the fix
+# (`cd sidecoach && npx playwright install chromium-headless-shell`). It never silently claims a
+# page is clean when the taste lane could not run - that fail-closed honesty is the whole point.
 #
-# Scope guards: only fires for .html/.css under a dir that has a DESIGN.md (a real
-# sidecoach project), and never on the sidecoach engine's own source or node_modules.
+# ALERTS ON FINDINGS, NOT ON VERDICT. detect's verdict for a lone clean .html is `inconclusive`,
+# not `clean`, because the static-check lens cannot fully certify a single file (forms /
+# page-quality validators have no applicable rule to measure). Keying the alert off `verdict`
+# would fire on every clean page. So the gate alerts strictly on the FINDINGS the lenses
+# produced, and reserves the coverage-gap note for the RENDERED lenses being attempted-but-
+# unavailable on an .html edit - the only "did not run" that means a taste defect could be hiding.
+#
+# Origin (2026-06-15): repeatedly shipped AI-slop tells (side-tab accent borders, hero-metric
+# template, low-contrast accent text) because I declared UI "done" WITHOUT running the
+# evaluators. Discipline alone failed; this makes the sweep mechanical - it fires on every UI
+# edit, no cherry-picking, no skipping.
+#
+# Scope guards: only fires for .html/.css under a dir that has a DESIGN.md (a real sidecoach
+# project), and never on the sidecoach engine's own source or node_modules.
 # Override: `touch ~/.claude/.suppress-taste-gate` silences it for 30 minutes.
 
 INPUT=$(cat)
 export HOOK_INPUT="$INPUT"
 
 python3 <<'PYEOF'
-import json, os, sys, subprocess, time, glob
+import json, os, sys, subprocess, time, shlex
+
+def emit(ctx):
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse",
+                                             "additionalContext": ctx}}))
+    sys.exit(0)
 
 raw = os.environ.get("HOOK_INPUT", "")
 try:
@@ -51,9 +68,11 @@ if data.get("tool_name") not in ("Write", "Edit", "MultiEdit"):
     print("{}"); sys.exit(0)
 
 fp = (data.get("tool_input", {}) or {}).get("file_path", "") or ""
-if not (fp.endswith(".html") or fp.endswith(".css")) or not os.path.isfile(fp):
+is_html = fp.endswith(".html") or fp.endswith(".htm")
+is_css = fp.endswith(".css")
+if not (is_html or is_css) or not os.path.isfile(fp):
     print("{}"); sys.exit(0)
-# Never gate the engine's own source, deps, or memory.
+# Never gate the engine's own source, deps, dist, or memory.
 if any(seg in fp for seg in ("/node_modules/", "/sidecoach/", "/dist/", "/.claude/")):
     print("{}"); sys.exit(0)
 
@@ -74,10 +93,9 @@ for _ in range(8):
 if not project:
     print("{}"); sys.exit(0)
 
-# Load this project's accepted exceptions: named absolute-ban findings the team
-# has deliberately chosen to keep. The raw detector still reports them; this only
-# tells the BLOCKING gate they are accepted design calls, not oversights. Match is
-# by ban name + file basename (line numbers drift, so they are ignored).
+# Load this project's accepted exceptions: named absolute-ban findings the team has deliberately
+# chosen to keep. The raw detector still reports them; this only tells the gate they are
+# accepted design calls, not oversights. Match is by ban name + file basename (line numbers drift).
 accepts = []
 acc_path = os.path.join(project, ".sidecoach-accept.json")
 if os.path.isfile(acc_path):
@@ -87,78 +105,201 @@ if os.path.isfile(acc_path):
     except Exception:
         accepts = []
 
-def is_accepted(ban, fpath):
-    base = os.path.basename(fpath or "")
+def ban_name_of(rule):
+    # Findings from the two static lenses name a ban as `ban.<x>` (static-ban) or
+    # `anti-pattern.<x>` (static-check). Return <x> for those, else None.
+    for pref in ("ban.", "anti-pattern."):
+        if rule.startswith(pref):
+            return rule[len(pref):]
+    return None
+
+def is_accepted(ban, location):
+    base = os.path.basename((location or "").rsplit(":", 1)[0]) if location else ""
     for a in accepts:
         if a.get("ban") and a.get("ban") != ban:
             continue
         af = a.get("file")
-        if af and os.path.basename(af) != base:
+        if af and base and os.path.basename(af) != base:
             continue
         return True
     return False
 
-# Locate the sidecoach engine (compiled dist).
+# Past this point we are IN SCOPE: a UI file, under a DESIGN.md project, not suppressed, not the
+# engine's own source. So an infra failure here is "we should have checked and could not", NOT a
+# clean page. FAIL CLOSED - say the page is unverified, never go silent (which reads as clean).
+def not_run(reason, remedy=None):
+    msg = ("TASTE GATE - could NOT run on " + os.path.basename(fp) + ": " + reason
+           + ". This page was NOT evaluated for taste / anti-pattern defects; do not report this "
+             "UI change done as verified.")
+    if remedy:
+        msg += "\n  Fix: " + remedy
+    msg += "\n  To silence for 30 min: touch ~/.claude/.suppress-taste-gate"
+    emit(msg)
+
+# Locate the sidecoach engine (needs the detect CLI AND a compiled dist).
 cands = [os.environ.get("SIDECOACH_DIR", ""),
          os.path.expanduser("~/Documents/Github/improv/sidecoach"),
          os.path.expanduser("~/.claude/sidecoach")]
-sc = next((c for c in cands if c and os.path.isfile(os.path.join(c, "dist", "absolute-ban-detector.js"))), None)
+sc = next((c for c in cands
+           if c and os.path.isfile(os.path.join(c, "bin", "sidecoach-detect.js"))
+           and os.path.isfile(os.path.join(c, "dist", "absolute-ban-detector.js"))), None)
 if not sc:
-    print("{}"); sys.exit(0)
+    not_run("the sidecoach engine was not found or is not built",
+            "install sidecoach and run `npm run build` in its directory (or set SIDECOACH_DIR)")
 
-findings = []
-
-# 1) Full absolute-ban sweep across the project. Emit the real banName (the
-#    finding field is `banName`, not `ban`/`id`), then drop any finding the
-#    project has registered as an accepted exception.
+# Run detect on the FILE THAT WAS JUST WRITTEN. For an .html this renders its file:// URL and
+# runs the rendered lenses; for a .css it runs the static lenses only. --quiet keeps the JSON on
+# stdout as the only machine signal (detect always writes a result JSON to stdout for a scan).
+detect = os.path.join(sc, "bin", "sidecoach-detect.js")
+abspath = os.path.abspath(fp)
+rerun = "node " + shlex.quote(detect) + " " + shlex.quote(abspath)
 try:
-    out = subprocess.run(
-        ["node", "-e",
-         "const{scanForAbsoluteBans}=require(process.argv[1]);"
-         "const r=scanForAbsoluteBans(process.argv[2]);"
-         "for(const f of r.findings){console.log((f.banName||f.ban||f.id||'ban')+'|'+(f.file||'')+':'+(f.line||'?')+'|'+(f.severity||''))}",
-         os.path.join(sc, "dist", "absolute-ban-detector.js"), project],
-        capture_output=True, text=True, timeout=20)
-    for ln in out.stdout.splitlines():
-        s = ln.strip()
-        if not s:
-            continue
-        parts = s.split("|")
-        ban = parts[0] if parts else ""
-        loc = parts[1] if len(parts) > 1 else ""
-        fpath = loc.rsplit(":", 1)[0] if loc else ""
-        if is_accepted(ban, fpath):
-            continue
-        findings.append("anti-pattern " + s)
+    out = subprocess.run(["node", detect, abspath, "--quiet"],
+                         capture_output=True, text=True, timeout=120)
+except subprocess.TimeoutExpired:
+    not_run("the detector timed out after 120s", "re-run manually: " + rerun)
+except Exception as e:
+    not_run("the detector failed to start (" + type(e).__name__ + ")", "re-run manually: " + rerun)
+
+try:
+    result = json.loads(out.stdout)
 except Exception:
-    pass
+    # detect writes a JSON verdict for every path that STARTED a scan; no parseable JSON means it
+    # died before scanning (e.g. dist not built -> exit 2 with an error on stderr). Surface that.
+    err = (out.stderr or "").strip().splitlines()
+    tail = err[-1][:160] if err else ("exit " + str(out.returncode) + ", no output")
+    not_run("the detector did not return a readable result (" + tail + ")",
+            "re-run manually: " + rerun)
 
-# 2) Taste validator on the edited HTML (+ project styles.css if present).
-if fp.endswith(".html"):
-    css = os.path.join(project, "styles.css")
-    args = ["node", os.path.join(sc, "bin", "sidecoach-taste-check.js"), fp]
-    if os.path.isfile(css): args.append(css)
-    try:
-        out = subprocess.run(args, capture_output=True, text=True, timeout=20)
-        for ln in out.stdout.splitlines():
-            s = ln.strip()
-            if s.startswith("[") and "]" in s:   # "[error] taste/..." finding lines
-                findings.append("taste " + s)
-    except Exception:
-        pass
+raw_findings = result.get("findings", []) or []
+lenses = result.get("lenses", {}) or {}
 
-if not findings:
+# A well-formed scan ALWAYS carries a populated lenses map - detect's recordSkippedLenses fills
+# every one of static-ban/static-check/objective/subjective. An empty or missing map therefore
+# means detect aborted MID-SCAN: its top-level catch emits {verdict:inconclusive, scanned:false,
+# findings:[]} with NO lenses. Without this guard that parses cleanly, shows no findings and no
+# rendered gap, and the hook would go silent - fail-open on a crash. Fail CLOSED instead.
+if not isinstance(lenses, dict) or not lenses:
+    reasons = result.get("unavailableReasons") or []
+    reason = str(reasons[0])[:160] if reasons else "the detector aborted before completing"
+    not_run("the detector did not complete (" + reason + ")", "re-run manually: " + rerun)
+
+# Drop accepted-exception ban findings BEFORE grouping.
+kept = []
+for f in raw_findings:
+    rule = f.get("rule", "") or ""
+    ban = ban_name_of(rule)
+    if ban and is_accepted(ban, f.get("location")):
+        continue
+    kept.append(f)
+
+# Group by the defect's identity - the rule's final dotted segment - so the same defect seen by
+# two lenses (e.g. subjective/marketing-buzzword + static-check/polish.marketing-buzzword) and
+# a per-element rule repeated across many nodes (low-contrast x N) each collapse to ONE clear
+# line. Keep the highest severity, the most concrete detail, and the set of lenses that saw it.
+# Cross-lane synonyms: the rendered objective scanner names the contrast defect `low-contrast`
+# while the registry-backed static-check rule is `a11y.color-contrast` (tail `color-contrast`).
+# They are ONE defect, so alias them to a single group; without this a contrast failure prints as
+# two lines. Every other rendered/static pair already shares a tail (tiny-text, marketing-buzzword,
+# nested-cards, broken-image, skipped-heading, ...), so this is the only alias needed today.
+RULE_ALIASES = {"color-contrast": "low-contrast"}
+
+SEV_RANK = {"blocking": 2, "warning": 1}
+groups = {}
+order = []
+for f in kept:
+    rule = f.get("rule", "") or ""
+    key = rule.split(".")[-1] if rule else "finding"
+    key = RULE_ALIASES.get(key, key)
+    if key not in groups:
+        groups[key] = {"sev": "warning", "count": 0, "lenses": set(),
+                       "detail": "", "detail_rendered": False, "loc": None}
+        order.append(key)
+    g = groups[key]
+    g["count"] += 1
+    lens = f.get("lens", "")
+    if lens:
+        g["lenses"].add(lens)
+    sev = f.get("severity", "warning")
+    if SEV_RANK.get(sev, 0) > SEV_RANK.get(g["sev"], 0):
+        g["sev"] = sev
+    # Prefer a rendered lens's measured detail (concrete numbers) over a static message.
+    detail = (f.get("detail") or "").strip()
+    rendered = lens in ("objective", "subjective")
+    if detail and (not g["detail"] or (rendered and not g["detail_rendered"])):
+        g["detail"] = detail
+        g["detail_rendered"] = rendered
+    if not g["loc"]:
+        g["loc"] = f.get("selector") or f.get("location")
+
+def fmt(key):
+    g = groups[key]
+    lenses_s = "+".join(sorted(g["lenses"])) if g["lenses"] else "?"
+    count = f" x{g['count']}" if g["count"] > 1 else ""
+    loc = f" @ {g['loc']}" if g["loc"] else ""
+    dtxt = g["detail"]
+    if len(dtxt) > 140:
+        dtxt = dtxt[:140].rstrip() + "..."   # mark the cut so a mid-word trim never reads as the real end
+    detail = f" - {dtxt}" if g["detail"] else ""
+    return f"{key}{count} [{lenses_s}]{loc}{detail}"
+
+blocking = [k for k in order if groups[k]["sev"] == "blocking"]
+warning = [k for k in order if groups[k]["sev"] == "warning"]
+
+# Rendered-lane coverage gap: only meaningful when the file was an .html (renderable) and a
+# RENDERED lens was attempted but could not run. static-check being incomplete on a lone file is
+# normal and is NOT a gap worth reporting.
+gap_reason = None
+if is_html:
+    for name in ("objective", "subjective"):
+        l = lenses.get(name) or {}
+        if l.get("attempted") and not l.get("available"):
+            gap_reason = (l.get("reason") or "no reason reported")
+            break
+
+if not blocking and not warning and not gap_reason:
     print("{}"); sys.exit(0)
 
-msg = ("TASTE GATE - sidecoach flagged " + str(len(findings)) +
-       " finding(s) in the UI you just edited (" + os.path.basename(fp) + "). "
-       "These are real anti-pattern / taste failures; fix them before reporting this "
-       "UI change done, do not ship them:\n  - " + "\n  - ".join(findings[:12]) +
-       ("\n  ...(+" + str(len(findings) - 12) + " more)" if len(findings) > 12 else "") +
-       "\nRe-run the full sweep until clean. To silence for 30 min: touch ~/.claude/.suppress-taste-gate")
+parts = []
+total = len(blocking) + len(warning)
+base = os.path.basename(fp)
+if total == 0 and gap_reason:
+    # Gap-only: there is nothing to "fix" yet, the page is simply UNVERIFIED. Say that plainly
+    # rather than "flagged 0 issue(s)", which reads as a clean bill of health it is not.
+    head = ("TASTE GATE - sidecoach could NOT fully check " + base + ": the rendered taste lane "
+            "did not run, so this page is UNVERIFIED for marketing-buzzword / tiny-text / "
+            "nested-cards / contrast. Do not report this UI change done until it is checked:")
+else:
+    head = ("TASTE GATE - sidecoach scanned " + base + " and flagged " + str(total) + " issue(s)"
+            + (" (and the rendered taste lane did NOT fully run - see below)" if gap_reason else "")
+            + ". These are real anti-pattern / taste failures; fix them before reporting this UI "
+              "change done, do not ship them:")
+parts.append(head)
+
+def emit_section(label, keys):
+    if not keys:
+        return
+    parts.append("  " + label + ":")
+    for k in keys[:12]:
+        parts.append("    - " + fmt(k))
+    if len(keys) > 12:
+        parts.append("    ...(+" + str(len(keys) - 12) + " more)")
+
+emit_section("MUST FIX (blocking)", blocking)
+emit_section("SHOULD FIX (warnings)", warning)
+
+if gap_reason:
+    short = gap_reason.splitlines()[0][:160]
+    parts.append("  NOT CHECKED: the rendered taste lane (marketing-buzzword, tiny-text, "
+                 "nested-cards, contrast, heading order) did NOT run - " + short)
+    parts.append("    This page was NOT checked for those defects. Fix: cd "
+                 + shlex.quote(sc) + " && npx playwright install chromium-headless-shell")
+
+parts.append("  Re-run: " + rerun)
+parts.append("  To silence for 30 min: touch ~/.claude/.suppress-taste-gate")
 
 print(json.dumps({"hookSpecificOutput": {
     "hookEventName": "PostToolUse",
-    "additionalContext": msg,
+    "additionalContext": "\n".join(parts),
 }}))
 PYEOF

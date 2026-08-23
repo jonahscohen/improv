@@ -213,6 +213,39 @@ else
 fi
 
 # =============================================================================
+# Case 6c: an EXPLICIT JUSTIFY_DIFF is parsed and surfaced as the card diff line
+# (Jonah 2026-08-22). justify-done no longer auto-captures a diff - the daemon does
+# that from a per-task baseline - but an explicitly passed diff is still honored.
+# =============================================================================
+EXPLICIT_DIFF='diff --git a/style.css b/style.css
+--- a/style.css
++++ b/style.css
+@@ -1 +1 @@
+-.dot { color: white; }
++.dot { color: yellow; }'
+OUT6C="$(JUSTIFY_DRY_RUN=1 JUSTIFY_DIFF="$EXPLICIT_DIFF" bash "$DONE" prompt-6c "Made the dot yellow." "style.css")"
+
+if contains "$OUT6C" "Diff: 1 file (+1 / -1)."; then
+  pass "Case 6c: explicit JUSTIFY_DIFF parsed and surfaced (+1/-1, 1 file)"
+else
+  fail "Case 6c: explicit diff not surfaced. Got:
+$OUT6C"
+fi
+
+# =============================================================================
+# Case 6d: no JUSTIFY_DIFF -> no auto-capture, so the Diff line is absent (the
+# daemon supplies the panel diff; justify-done stays quiet unless overridden).
+# =============================================================================
+OUT6D="$(JUSTIFY_DRY_RUN=1 bash "$DONE" prompt-6d "No explicit diff." "style.css")"
+
+if contains "$OUT6D" "Diff:"; then
+  fail "Case 6d: Diff line must be absent without an explicit JUSTIFY_DIFF. Got:
+$OUT6D"
+else
+  pass "Case 6d: no Diff line when no explicit diff is passed"
+fi
+
+# =============================================================================
 # Case 7: exit codes preserved
 # =============================================================================
 bash "$DONE" >/dev/null 2>&1

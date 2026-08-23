@@ -63,7 +63,7 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
     } catch { return 0; }
   }
 
-  type QueuePrompt = { id: string; context: string; prompt: string; elementCount: number; timestamp: number; selectors?: string[]; claimedBy?: string; claimedAt?: number; clientId?: string };
+  type QueuePrompt = { id: string; context: string; prompt: string; elementCount: number; timestamp: number; selectors?: string[]; pageUrl?: string; claimedBy?: string; claimedAt?: number; clientId?: string; diffBase?: string };
 
   // Ledger of clientIds already accepted, so the browser outbox's forever-retry
   // can never enqueue the same prompt twice. Capped at CLIENT_LEDGER_MAX entries,
@@ -260,8 +260,24 @@ export function registerTools(mcp: McpServer, ws: WsServer): void {
       // about, so the daemon can join them onto the response and the Changes
       // panel can scroll to + select the target on click.
       selectors: (Array.isArray(params?.selectors) ? params?.selectors : []) as string[],
+      // Cross-page highlight (Jonah 2026-08-20): the page the prompt was authored
+      // on, joined onto the response so the Review entry can navigate-then-highlight.
+      pageUrl: (typeof params?.pageUrl === 'string' ? params?.pageUrl : '') as string,
       timestamp: Date.now(),
       ...(clientId ? { clientId } : {}),
+      // Per-task diff baseline (Jonah 2026-08-22, "snapshot before each change"):
+      // snapshot the working tree the moment the prompt is created, BEFORE the agent
+      // edits, so the response can later diff against exactly this task's pre-edit
+      // state. Captured once here - the earliest pre-edit point, shared by every
+      // processing path - rather than per serve/claim. null (not a git repo / nothing
+      // armed) simply omits it and the panel shows the filename as before.
+      ...((): { diffBase?: string } => {
+        // Guarded: real WsServer has this; a test double may not. A missing method
+        // or a null result simply omits the baseline (panel shows the filename).
+        const base = typeof ws.captureCurrentDiffBase === 'function'
+          ? ws.captureCurrentDiffBase() : null;
+        return base ? { diffBase: base } : {};
+      })(),
     };
     // If this write fails it THROWS, the ws layer returns an error, and the
     // browser outbox keeps its copy and retries. Never ack an undurable prompt.

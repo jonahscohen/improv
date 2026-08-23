@@ -1436,3 +1436,6 @@
 <!-- archived 2026-08-08 (moved from MEMORY.md to stay under load budget) -->
 - [ARTIFACT-OPEN FIELD FAILURE - real session where the Stop gate caught 3 unshown files (2 inline chrome screenshots + a superseded preview.html);…](session_2026-08-07_artifact-open-field-failure.md)
 - [FIELD FAILURE - declared a tool "broken" and routed around a direct order instead of diagnosing; ~30s fix (missing ~/.claude/teams…](session_2026-08-07_tool-declared-broken-direct-order-failure.md)
+
+<!-- archived 2026-08-20 (moved from MEMORY.md to stay under load budget) -->
+- [** HANDOFF / NEXT SESSION ** Execute the bare-node hook-PATH ROOT FIX - a SessionStart probe is ARMED to measure the reduced hook PATH; next…](session_2026-08-20_HANDOFF_node-hook-path-rootfix.md)

@@ -9,6 +9,7 @@ import { ConnectionManager } from './connection-manager.js';
 import type { JsonRpcRequest, JsonRpcResponse, JsonRpcMessage } from './types.js';
 import type { WatchStateStore } from './watch-state.js';
 import { DisarmConsentStore, ConsentStore, modeConsentPath } from './consent.js';
+import { parseGitDiff, type FileDiff } from './parse-git-diff.js';
 
 type MessageHandler = (connectionId: string, params: Record<string, unknown> | undefined) => unknown | Promise<unknown>;
 
@@ -556,6 +557,13 @@ IP.1 = 127.0.0.1
             try {
               const parsed = JSON.parse(content);
               if (Array.isArray(parsed) && parsed.length > 0) {
+                let changed = false;
+
+                // The per-task diff baseline is captured at prompt CREATION
+                // (mcp-tools push_prompt -> captureCurrentDiffBase), not here: that
+                // is the earliest pre-edit point and the one every processing path
+                // shares, so no baseline capture is needed on this hot poll path.
+
                 // Stamp what we just handed to an HTTP owner, so the dispatcher can
                 // SEE that someone is (probably) applying it and stand down. A poll
                 // is not a claim, so without this the prompt still looks claimable
@@ -563,7 +571,7 @@ IP.1 = 127.0.0.1
                 // into the user's source twice.
                 //
                 // ONLY in headless mode. In owner mode the dispatcher never claims
-                // anything, so there is nothing to protect against, and this path
+                // anything, so there is nothing to protect against, and this stamp
                 // stays byte-for-byte what it has always been - no new writes on the
                 // hot poll path that the interactive flow depends on.
                 //
@@ -573,7 +581,6 @@ IP.1 = 127.0.0.1
                 // That is the same recovery contract a dead worker's claim gets.
                 if (this.dispatcher?.status().headless === true) {
                   const now = Date.now();
-                  let changed = false;
                   for (const p of parsed) {
                     // Do not rewrite the file on every 2s poll; refresh at most
                     // every 5s. Still far tighter than any claim TTL.
@@ -582,9 +589,10 @@ IP.1 = 127.0.0.1
                       changed = true;
                     }
                   }
-                  if (changed && this.writeJsonAtomic(promptFile, parsed)) {
-                    served = JSON.stringify(parsed);
-                  }
+                }
+
+                if (changed && this.writeJsonAtomic(promptFile, parsed)) {
+                  served = JSON.stringify(parsed);
                 }
               }
             } catch {}
@@ -1372,6 +1380,58 @@ IP.1 = 127.0.0.1
     }
   }
 
+  // Per-task diff baseline (Jonah 2026-08-22, "snapshot before each change").
+  // Capture the working tree as a commit object WITHOUT touching the tree or index
+  // (`git stash create` returns a commit sha for the current WIP; empty when the
+  // tree is clean, in which case HEAD is the baseline). Taken when a prompt is first
+  // handed to a processor - i.e. BEFORE the edit - so a later `git diff <base>`
+  // isolates exactly this task's change even in a repo whose whole app sits
+  // uncommitted on a bare initial commit. Returns null when the root is not a git
+  // repo, so capture silently no-ops rather than throwing on the serve path.
+  private captureDiffBase(root: string): string | null {
+    try {
+      const wip = execFileSync('git', ['-C', root, 'stash', 'create'], {
+        encoding: 'utf-8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+      if (wip) return wip;
+      // Clean tree: diff against HEAD instead.
+      return execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], {
+        encoding: 'utf-8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim() || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Public: snapshot the armed project's working tree NOW as a per-task baseline.
+  // Called at prompt CREATION (mcp-tools push_prompt) - the earliest pre-edit moment,
+  // and the ONE point every processing path (owner GET/claim, MCP get_prompts, the
+  // headless dispatcher) funnels through, so the baseline is present no matter who
+  // works the prompt. Returns null when no project is armed or it is not a git repo.
+  captureCurrentDiffBase(): string | null {
+    const root = this.watchStore?.projectRoot() || null;
+    return root ? this.captureDiffBase(root) : null;
+  }
+
+  // Diff the current working tree against a captured baseline, scoped to the task's
+  // files, and parse into the panel's hunk shape. Scoping to `files` keeps other
+  // pending edits out; an empty/failed diff yields [] (the panel then just shows the
+  // filename, as before). Never throws.
+  private computeTaskDiff(root: string, base: string, files: string[]): FileDiff[] {
+    try {
+      const args = ['-C', root, 'diff', base, '--'];
+      for (const f of files) if (typeof f === 'string' && f) args.push(f);
+      if (args.length === 4) return []; // no valid files to scope to
+      const out = execFileSync('git', args, {
+        encoding: 'utf-8', timeout: 8000, maxBuffer: 8 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      return parseGitDiff(out);
+    } catch {
+      return [];
+    }
+  }
+
   // Headless durability (issue #2): when no browser is connected, append a
   // finished response to responses.json so it is restored into the Changes
   // panel as soon as a tab connects. Mirrors the array shape the browser's
@@ -1402,6 +1462,7 @@ IP.1 = 127.0.0.1
     changes?: unknown[];
     diffs?: unknown[];
     targetSelectors?: string[];
+    pageUrl?: string;
     status?: 'completed' | 'needsInfo' | 'failed';
     question?: string;
   }): void {
@@ -1411,19 +1472,57 @@ IP.1 = 127.0.0.1
     // to + select the target even for diff-only responses with no per-change
     // selectors. An explicit targetSelectors on the input wins if given.
     let targetSelectors: string[] = Array.isArray(input.targetSelectors) ? input.targetSelectors : [];
-    if (targetSelectors.length === 0 && input.promptId) {
-      const orig = this.readPromptsFile().find((p) => p.id === input.promptId);
-      if (orig && Array.isArray((orig as { selectors?: string[] }).selectors)) {
+    // Cross-page highlight (Jonah 2026-08-20): carry the prompt's authoring page onto
+    // the response so the Review entry can navigate-then-highlight on click. An
+    // explicit input.pageUrl wins; otherwise join it from the original prompt by id
+    // - the SAME lookup that joins targetSelectors, so both come from one read.
+    let pageUrl = typeof input.pageUrl === 'string' ? input.pageUrl : '';
+    // Resolve the originating prompt ONCE: it carries selectors, pageUrl, and the
+    // per-task diff baseline (captured when the prompt was served, before the edit).
+    const orig = input.promptId
+      ? this.readPromptsFile().find((p) => p.id === input.promptId)
+      : undefined;
+    if (orig) {
+      if (targetSelectors.length === 0 && Array.isArray((orig as { selectors?: string[] }).selectors)) {
         targetSelectors = (orig as { selectors?: string[] }).selectors as string[];
+      }
+      if (!pageUrl && typeof (orig as { pageUrl?: string }).pageUrl === 'string') {
+        pageUrl = (orig as { pageUrl?: string }).pageUrl as string;
+      }
+    }
+
+    // Diffs: an explicit array on the input wins (justify-done may pass a pre-parsed
+    // diff, or JUSTIFY_DIFF was set). Otherwise compute one NOW from the prompt's
+    // captured baseline + the reported files, so a real line-by-line diff reaches the
+    // panel GUARANTEED by the daemon - not dependent on the agent remembering to pass
+    // it. Empty when there is no baseline/files/root, in which case the panel shows
+    // just the filename as before. (Jonah 2026-08-22, "snapshot before each change".)
+    let diffs: unknown[] = Array.isArray(input.diffs) ? input.diffs : [];
+    if (diffs.length === 0) {
+      const diffRoot = this.watchStore?.projectRoot() || null;
+      const base = orig && typeof (orig as { diffBase?: string }).diffBase === 'string'
+        ? ((orig as { diffBase?: string }).diffBase as string) : '';
+      const files = Array.isArray(input.filesChanged)
+        ? input.filesChanged.filter((f): f is string => typeof f === 'string' && f.length > 0)
+        : [];
+      if (diffRoot && base && files.length > 0) {
+        diffs = this.computeTaskDiff(diffRoot, base, files);
       }
     }
     const responseObj = {
       promptId: input.promptId + '-' + Date.now(),
       summary: input.summary,
-      filesChanged: input.filesChanged || [],
-      changes: input.changes || [],
-      diffs: input.diffs || [],
+      // Coerce array fields at the ingest boundary. The HTTP POST /respond path is
+      // not schema-validated (unlike the justify_respond MCP tool), so a caller can
+      // land a non-array here - e.g. a prose STRING in `changes` ("No change made -
+      // deferred."). `x || []` only rescues null/undefined; a truthy string passes
+      // through, persists, and later throws on `.map` in the browser panel, blanking
+      // it. Array.isArray is the guard that actually holds. (Jonah 2026-08-22)
+      filesChanged: Array.isArray(input.filesChanged) ? input.filesChanged : [],
+      changes: Array.isArray(input.changes) ? input.changes : [],
+      diffs,
       targetSelectors,
+      pageUrl,
       status: input.status || 'completed',
       question: input.question,
       timestamp: Date.now(),

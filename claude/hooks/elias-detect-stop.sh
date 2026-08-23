@@ -117,9 +117,15 @@ TECH_REQUEST_RE = re.compile(r"""(
     | \bdebug\b | \bapi\b | \bendpoint\b | \bquery\b
 )""", re.IGNORECASE | re.VERBOSE)
 
-PROMPT_ARTIFACT_RE = re.compile(r"(?:```|~~~|(?<![\w./])/[\w.@+-]+/[\w.@+-]+)")
+# A literal backtick imbalances macOS bash 3.2's $(...) parser: it scans this
+# heredoc body for command substitution, an odd count of literal backticks leaves
+# a substitution "open", and it runs to EOF (a "matching backtick" error on every
+# stop). Build every backtick below from its codepoint so NONE appears in this
+# script - same fix documented in surface-visual-gate.sh. Behavior is identical.
+_bt = chr(96)
+PROMPT_ARTIFACT_RE = re.compile(r"(?:" + _bt * 3 + r"|~~~|(?<![\w./])/[\w.@+-]+/[\w.@+-]+)")
 
-FENCE_OPEN_RE = re.compile(r"(?m)^[ \t]{0,3}(?:```|~~~)")
+FENCE_OPEN_RE = re.compile(r"(?m)^[ \t]{0,3}(?:" + _bt * 3 + r"|~~~)")
 URL_RE   = re.compile(r"https?://\S+|\bwww\.\S+")
 BRAND_RE = re.compile(r"\b(?:node|next|three|vue|d3|express|nuxt|ember|nest|remix|alpine|chart)\.js\b",
                       re.IGNORECASE)
@@ -136,7 +142,7 @@ CMD_TOOLS = (r"npm|npx|yarn|pnpm|bun|git|grep|rg|sed|awk|curl|wget|chmod|chown|m
              r"pytest|jest|vitest|shellcheck")
 CMD_LINE_RE = re.compile(r"^\s*(?:\$\s+)?(?:" + CMD_TOOLS + r")\s+[\w./@-]", re.IGNORECASE)
 
-BACKTICK_RE   = re.compile(r"`([^`\n]{1,80})`")
+BACKTICK_RE   = re.compile(_bt + r"([^" + _bt + r"\n]{1,80})" + _bt)
 CODE_SHAPE_RE = re.compile(r"""(
       \w+\(\s*\)
     | [a-z0-9]+_[a-z0-9_]+

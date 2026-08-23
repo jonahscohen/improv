@@ -38,11 +38,11 @@ sidecoach-monitor "<utterance>" --json
 
 Exit: 0 ran, non-zero the run did not complete
 
-## Standalone tools (15)
+## Standalone tools (16)
 
-Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 8 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-present`, `sidecoach-taste-check`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
+Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 9 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
 
-Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-preauthor`. Every other tool here is run by you or by the user, never automatically.
+Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-preauthor`, `sidecoach-qa-plan`. Every other tool here is run by you or by the user, never automatically.
 
 ### `sidecoach-artifacts`
 
@@ -187,6 +187,18 @@ required by bin/sidecoach-monitor.js (require('./sidecoach-present'))
 ```
 
 Exit: n/a - a module, not a CLI
+
+### `sidecoach-qa-plan`
+
+_not listed by the resolver | flow-invoked | reached by claude/hooks/sidecoach-orchestrate-edit.sh (on a substantive design edit)_
+
+Resolve the orchestrated QA gate - audit -> critique -> polish - for a target, printing each stage with the exact slash command and the flow chain it runs. It composes three existing verbs through the SAME router the session uses, so the sequence cannot drift from the registry; it adds no routing of its own. Fails LOUD (exit 2) if any stage becomes unroutable rather than printing a broken plan.
+
+```
+node <sidecoach-repo>/bin/sidecoach-qa-plan.js [--target <target>] [--json]
+```
+
+Exit: 0 resolved, 2 usage / load error / an unresolvable gate stage
 
 ### `sidecoach-refs`
 

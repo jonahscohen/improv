@@ -1,4 +1,5 @@
 import { currentPalette, registerThemedSurface, type Palette } from './toolbar';
+import { normalizeEntriesInPlace } from './normalize-entry';
 
 interface DiffLine { t: ' ' | '-' | '+'; oldNo: number | null; newNo: number | null; text: string; }
 interface DiffHunk { oldStart: number; newStart: number; header: string; lines: DiffLine[]; }
@@ -17,6 +18,12 @@ interface ChangeEntry {
   // from the original prompt. Used so clicking the entry can scroll to + select
   // the target even when there are no per-change selectors (diff-only results).
   targetSelectors?: string[];
+  // Cross-page highlight (Jonah 2026-08-20): the page this task's change was
+  // authored on, joined from the original prompt by the daemon. When the user
+  // clicks the entry from a DIFFERENT page, the host navigates here first, then
+  // highlights. Absent on tasks created before this field existed (falls back to
+  // in-place highlight).
+  pageUrl?: string;
   status: 'completed' | 'needsInfo' | 'failed';
   question?: string;
   reviewed: boolean;
@@ -42,7 +49,7 @@ export class ChangesPanel {
   private onClearAllCallback: (() => void) | null = null;
   private onClearCompletedCallback: (() => void) | null = null;
   private onHideCallback: (() => void) | null = null;
-  private onSelectCallback: ((selectors: string[]) => void) | null = null;
+  private onSelectCallback: ((selectors: string[], pageUrl?: string) => void) | null = null;
   private onItemClickCallback: ((index: number) => void) | null = null;
   private _clearReviewedBtn: HTMLButtonElement | null = null;
   private _clearAllTasksBtn: HTMLButtonElement | null = null;
@@ -308,7 +315,14 @@ export class ChangesPanel {
   }
 
   show(entries: ChangeEntry[]) {
-    this.entries = entries;
+    // Defense in depth: an entry may carry a non-array in an array-typed field
+    // (e.g. a prose string in `changes` from the unvalidated /respond path). Every
+    // consumer below calls .map/.length on these, so coerce them to real arrays
+    // here - one malformed entry must never blank the whole panel. Coerce IN PLACE
+    // (not a clone): these objects are shared with the host's change history, which
+    // mutates entry.reviewed and persists that same object. See normalize-entry.ts.
+    // (Jonah 2026-08-22)
+    this.entries = normalizeEntriesInPlace(entries);
     this.filterEntries();
     if (this.filteredEntries.length === 0) {
       this.hide();
@@ -351,7 +365,7 @@ export class ChangesPanel {
   setOnClearReviewed(cb: () => void) { this.onClearReviewedCallback = cb; }
   setOnClearAll(cb: () => void) { this.onClearAllCallback = cb; }
   setOnClearCompleted(cb: () => void) { this.onClearCompletedCallback = cb; }
-  setOnSelect(cb: (selectors: string[]) => void) { this.onSelectCallback = cb; }
+  setOnSelect(cb: (selectors: string[], pageUrl?: string) => void) { this.onSelectCallback = cb; }
   setOnItemClick(cb: (index: number) => void) { this.onItemClickCallback = cb; }
   setOnHide(cb: () => void) { this.onHideCallback = cb; }
 
@@ -1354,7 +1368,9 @@ export class ChangesPanel {
         // to + select the element the task was about.
         const changeSelectors = (entry.changes || []).map(c => c.selector).filter(Boolean);
         const selectors = [...new Set([...changeSelectors, ...(entry.targetSelectors || [])])];
-        if (this.onSelectCallback) this.onSelectCallback(selectors);
+        // Pass the task's authoring page so the host can navigate there first when
+        // the change lives on a different page, THEN highlight (Jonah 2026-08-20).
+        if (this.onSelectCallback) this.onSelectCallback(selectors, entry.pageUrl);
 
         // Detail must be reachable whenever there is ANYTHING to show -
         // property diffs OR a files-changed list. Gating on changes alone

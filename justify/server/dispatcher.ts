@@ -27,6 +27,7 @@ interface QueuePrompt {
   elementCount?: number;
   timestamp?: number;
   selectors?: string[];
+  pageUrl?: string;
   claimedBy?: string;
   claimedAt?: number;
   /**

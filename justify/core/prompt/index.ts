@@ -625,7 +625,11 @@ export class PromptMode {
       elementCount: t.length,
       // Issue #1: structured selectors of the selected target(s) so the result
       // entry can scroll to + reselect them in the Changes panel.
-      selectors: t.map(r => r.selector).filter(Boolean)
+      selectors: t.map(r => r.selector).filter(Boolean),
+      // Cross-page highlight (Jonah 2026-08-20): record the page this prompt was
+      // authored on, so clicking its Review entry later can navigate back here
+      // before highlighting when the user is on a different page.
+      pageUrl: window.location.href
     };
     if (this._core) {
       this._core._lastPromptData = promptData;
@@ -666,7 +670,10 @@ export class PromptMode {
       prompt: promptText,
       elementCount: elements.length,
       // Issue #1: structured selectors of the queued target(s).
-      selectors: elements.map(r => r.selector).filter(Boolean)
+      selectors: elements.map(r => r.selector).filter(Boolean),
+      // Cross-page highlight (Jonah 2026-08-20): the page this prompt was authored
+      // on, for navigate-then-highlight when its Review entry is clicked later.
+      pageUrl: window.location.href
     };
     if (this._core) {
       this._core._lastPromptData = promptData;

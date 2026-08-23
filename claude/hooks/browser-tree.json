@@ -98,8 +98,12 @@
             "sidecoach-postuserp",
             "sidecoach-keyword",
             "sidecoach-taste-gate",
+            "sidecoach-orchestrate-edit",
+            "sidecoach-qa-gate-stop",
+            "qa-gate-manual",
             "sidecoach-craft-floor",
             "sidecoach-postresponse",
+            "sidecoach-heal",
             "sidecoach-detect"
           ]
         }
@@ -453,6 +457,7 @@
               "hooks": [
                 "agent-teams-guard",
                 "node-shim-heal",
+                "plugin-node-hook-heal",
                 "resume-guard",
                 "resume-toggle",
                 "team-reaper",
@@ -583,11 +588,16 @@
     "sidecoach-preamble": "Injects your PRODUCT.md and DESIGN.md into context at session start and whenever the conversation is compacted, so design constraints hold even when you never ask for a review. Each file must exceed 200 chars and carry no TODO marker.",
     "sidecoach-postuserp": "Passes your message to the Sidecoach background service. It exits immediately when that service is not running, and gives up after one second, so a stalled service can never hold up your turn.",
     "sidecoach-taste-gate": "Scans every .html or .css file you save inside a project that has a DESIGN.md, checking for banned visual patterns and, on HTML, a wider quality pass. It cannot catch anything needing the page rendered, such as low contrast.",
+    "sidecoach-orchestrate-edit": "On a substantive design-file edit it runs the headless defect scan and injects the audit, critique and polish QA gate, so the orchestrator engages without you loading a skill or typing a verb. Advisory, never blocks, and stays quiet for a cooldown window after it fires once.",
+    "sidecoach-qa-gate-stop": "Stops Claude declaring a design change finished until the sidecoach QA gate has actually run on it - all three of audit, critique and polish, as real sidecoach runs. Describing the review in prose does not count. Clears on its own once the review runs or the changed files are reverted, and interrupts once per change so it can never trap a session; reply qa done or skip qa to override.",
+    "qa-gate-manual": "Clears this session's outstanding sidecoach QA-gate check when you type qa done, skip qa, qa override, gate override, looks good, or verified. The phrase must be your entire message, and it applies only to this session.",
     "sidecoach-craft-floor": "Loads a standing UI quality baseline before any interface file is written or edited: 15 rules with concrete values and 10 banned patterns, each naming what to do instead. Fires on any UI edit, at most once every 15 minutes per project.",
     "sidecoach-postresponse": "Prints the newest result from the Sidecoach background service at the end of a reply. A failed or inconclusive review is shown rather than hidden, and the result file is removed once it has been displayed.",
     "sidecoach-detect": "Runs the full interface defect scanner over each UI file you save and reports what it finds. It only advises, never blocks, is off unless you turn it on, and a scan that could not run says so instead of reporting clean.",
+    "sidecoach-heal": "Repairs Sidecoach's own wiring at the start of each session: re-creates any missing hook symlink so it resolves and fires, and re-adds any registration that was stripped from settings.json. It only adds, never removes, and stays silent when nothing needs fixing.",
     "voice-mandate": "Decides at the start of each session whether spoken output may be used, based on whether it is installed and whether you muted it. It says one of three things: allowed, muted, or nothing at all when it is not installed.",
-    "voice-toggle": "Switches spoken output on or off when you type voice on, voice off, voice toggle or voice status. It writes the flag at ~/.claude/.voice-enabled, which the other two voice entries in this list read to decide what is allowed."
+    "voice-toggle": "Switches spoken output on or off when you type voice on, voice off, voice toggle or voice status. It writes the flag at ~/.claude/.voice-enabled, which the other two voice entries in this list read to decide what is allowed.",
+    "plugin-node-hook-heal": "Points any plugin hook that starts Node by bare name at Node's full location instead. cmux-launched sessions give hooks a stripped-down search path with no Node on it, so those hooks were silently failing every time (the Codex end-of-session review among them). Re-applies itself each session so a plugin update cannot quietly undo it."
   },
   "hook_note": {
     "model-router-guard": "Recommendation: designed to keep Anthropic from routing away from Fable 5 if erroneously detects unsafe behavior, but prevents Claude from routing agents based on LOE. Do not activate."
@@ -672,11 +682,16 @@
     "sidecoach-preamble": "sidecoach",
     "sidecoach-postuserp": "sidecoach",
     "sidecoach-taste-gate": "sidecoach",
+    "sidecoach-orchestrate-edit": "sidecoach",
+    "sidecoach-qa-gate-stop": "sidecoach",
+    "qa-gate-manual": "sidecoach",
     "sidecoach-craft-floor": "sidecoach",
     "sidecoach-postresponse": "sidecoach",
     "sidecoach-detect": "sidecoach",
+    "sidecoach-heal": "sidecoach",
     "voice-mandate": "voice-output",
-    "voice-toggle": "voice-output"
+    "voice-toggle": "voice-output",
+    "plugin-node-hook-heal": "cmux"
   },
   "pinned_hooks": [
     "beats-rebuild",

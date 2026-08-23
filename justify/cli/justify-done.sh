@@ -12,6 +12,12 @@
 #   JUSTIFY_DIFF     raw `git diff` output - parsed into real per-file diff hunks
 #                    (with line numbers) so the Review Changes panel shows a
 #                    standard code diff and can open each file at the exact line.
+#                    EXPLICIT OVERRIDE ONLY (Jonah 2026-08-22): normally leave this
+#                    unset. The daemon captures a per-task baseline at prompt creation
+#                    and computes the diff itself, which is the only way to isolate a
+#                    single task's edit; a `git diff HEAD` here would show the whole
+#                    uncommitted tree and would wrongly override that correct diff.
+#                    Set it only to force a specific diff.
 #   JUSTIFY_PORT     daemon port (default 9223)
 #   JUSTIFY_DRY_RUN  when set (non-empty), skip the /respond + /prompts/clear
 #                    network calls and just render the card (offline testing).
@@ -27,6 +33,12 @@ if [ -z "$PID" ] || [ -z "$SUMMARY" ]; then
   exit 1
 fi
 
+# JUSTIFY_DIFF is an EXPLICIT override only. The daemon now captures a per-task
+# baseline at prompt creation and computes the diff itself in emitResponse (the ONLY
+# way to isolate a task's edit correctly - a `git diff HEAD` here would show the whole
+# accumulated working tree in a repo whose app is uncommitted, and would wrongly
+# OVERRIDE that correct daemon diff since an explicit diffs array wins). So do not
+# auto-capture here; pass JUSTIFY_DIFF yourself only when you truly want to override.
 PORT="${JUSTIFY_PORT:-9223}" PID="$PID" SUMMARY="$SUMMARY" FILES="$FILES" \
 STATUS="${JUSTIFY_STATUS:-completed}" CHANGES="${JUSTIFY_CHANGES:-[]}" \
 JUSTIFY_DIFF="${JUSTIFY_DIFF:-}" JUSTIFY_DRY_RUN="${JUSTIFY_DRY_RUN:-}" \
@@ -64,6 +76,14 @@ def parse_git_diff(text):
                 cur["file"] = p
             continue
         if raw.startswith('--- '):
+            # Fallback filename for a DELETION (+++ is /dev/null). git emits --- before
+            # +++, so +++ overrides this for a normal edit; a deletion keeps this path
+            # instead of being dropped for having no filename.
+            p = raw[4:].strip()
+            if p.startswith('a/'):
+                p = p[2:]
+            if p != '/dev/null' and not cur.get("file"):
+                cur["file"] = p
             continue
         m = re.match(r'^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$', raw)
         if m:
@@ -171,6 +191,21 @@ def render_card():
         noun = "change" if n == 1 else "changes"
         filelist = ", ".join(files) if files else "none"
         out.append(f"{n} {noun} applied. Files: {filelist}. Sent for review.")
+    # Diff summary: proves a real per-file diff was captured and is flowing to the
+    # panel (which renders the line-by-line view from it). Only shown when a diff
+    # was actually parsed, so tasks with no code diff read unchanged.
+    if diffs:
+        nf = len(diffs)
+        adds = dels = 0
+        for d in diffs:
+            for h in d.get("hunks", []):
+                for ln in h.get("lines", []):
+                    if ln.get("t") == "+":
+                        adds += 1
+                    elif ln.get("t") == "-":
+                        dels += 1
+        fnoun = "file" if nf == 1 else "files"
+        out.append(f"Diff: {nf} {fnoun} (+{adds} / -{dels}).")
     return "\n".join(out)
 
 if e.get("JUSTIFY_DRY_RUN", "").strip():
