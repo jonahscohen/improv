@@ -32,6 +32,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const tty = require('tty');
 
 const EXIT_OK = 0;
 const EXIT_USAGE = 2;
@@ -128,13 +129,27 @@ function parseArgs(argv) {
 }
 
 // Read stdin fully (used only when --ids is absent). Returns '' when nothing is piped. On an INTERACTIVE
-// terminal there is no piped input, so reading fd 0 would BLOCK forever waiting for EOF - guard on isTTY so a
+// terminal there is no piped input, so reading fd 0 would BLOCK forever waiting for EOF - guard on TTY-ness so a
 // bare `sidecoach-deck` in a terminal falls straight through to the usage error instead of hanging.
+//
+// The TTY check goes through tty.isatty(0), NOT process.stdin.isTTY, and that is load-bearing. Touching
+// `process.stdin` lazily constructs the stdin stream, and constructing it flips fd 0 to NON-BLOCKING mode. A
+// subsequent fs.readFileSync(0) on a non-blocking pipe then RACES the writer: if the bytes have not all arrived
+// the read throws EAGAIN, the catch below swallows it to '', and the deck reports "no directions to present".
+// Measured: `sidecoach-roll | sidecoach-deck` - the tool's own advertised pipe - failed intermittently for
+// exactly this reason (fast writers like `cat` happened to win the race, a slower `node` producer lost it).
+// tty.isatty(0) answers the same question without initialising process.stdin, so fd 0 stays blocking and
+// readFileSync reads to EOF every time.
 function readStdin() {
-  if (process.stdin.isTTY) return '';
+  if (tty.isatty(0)) return '';
   try {
     return fs.readFileSync(0, 'utf8');
-  } catch (_err) {
+  } catch (err) {
+    // With fd 0 left in blocking mode (see above) a piped or redirected read succeeds to EOF, so a throw here is
+    // now UNEXPECTED - a closed, invalid, or externally-non-blocking stdin. Surface the real cause on stderr
+    // rather than letting it masquerade silently as "no directions to present"; still return '' so the caller
+    // falls through to the loud usage exit rather than crashing.
+    process.stderr.write(`sidecoach-deck: could not read stdin (${(err && err.code) || (err && err.message) || err}).\n`);
     return '';
   }
 }

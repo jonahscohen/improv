@@ -26,6 +26,11 @@ import {
 } from '../flow-handler-design-references';
 import { decodePng } from '../image-png-codec';
 import { SYNTHETIC_MARKER_KEY } from '../image-asset-verify';
+import {
+  assetProductionChecklistItem,
+  assetProductionValidationStatus,
+  type AssetProductionOutcome,
+} from '../image-asset-production';
 import type { FlowExecutionContext } from '../flow-handler';
 
 function assert(cond: boolean, msg: string): void {
@@ -207,11 +212,63 @@ async function testFlowIntegration(): Promise<void> {
   assert(noValidation !== undefined && noValidation.result === 'warning', `a lens that did not run is a warning, never a pass (got ${noValidation?.result})`);
 }
 
+// ---------------------------------------------------------------------------
+// 6. Provenance-aware severity: the memory validation the report actually reads is in LOCKSTEP with the
+//    checklist item, so a flow can never block a build on the offline placeholder it is forced to use.
+//
+//    REGRESSION GUARD for session_2026-08-22: flowG wrote a second, ad-hoc severity that marked a failed
+//    offline placeholder `fail` (-> blocking finding) while the checklist item correctly made it non-blocking.
+//    A flow cannot spend, so the produce path always renders the placeholder; grading it a blocker made every
+//    `craft <backdrop>` condemn its own output. assetProductionValidationStatus derives the validation status
+//    from the checklist item's {required, completed}, so the two surfaces cannot disagree again.
+// ---------------------------------------------------------------------------
+
+function testAssetSeverity(): void {
+  const mk = (o: Partial<AssetProductionOutcome> & { status: AssetProductionOutcome['status'] }): AssetProductionOutcome =>
+    ({ detail: 'd', ...o } as AssetProductionOutcome);
+
+  // A SYNTHETIC (offline placeholder) failure: non-blocking. This is the exact bug.
+  const synFail = assetProductionChecklistItem(mk({ status: 'failed', synthetic: true }), true);
+  assert(synFail.required === false, 'a failed offline placeholder is not a required (blocking) row');
+  assert(
+    assetProductionValidationStatus(synFail) === 'warning',
+    `a failed offline placeholder validates as a WARNING, never a blocker (got ${assetProductionValidationStatus(synFail)})`,
+  );
+
+  // A LIVE (non-synthetic) render that fails legibility: a real blocker. Those are the bytes that ship.
+  const liveFail = assetProductionChecklistItem(mk({ status: 'failed', synthetic: false }), true);
+  assert(liveFail.required === true, 'a failed LIVE render is a required (blocking) row');
+  assert(
+    assetProductionValidationStatus(liveFail) === 'fail',
+    `a failed live render validates as a FAIL/blocker (got ${assetProductionValidationStatus(liveFail)})`,
+  );
+
+  // A verified asset passes; a not-needed step passes (no raster asked for -> no noise).
+  assert(assetProductionValidationStatus(assetProductionChecklistItem(mk({ status: 'verified', synthetic: true }), true)) === 'pass', 'a verified asset passes');
+  assert(assetProductionValidationStatus(assetProductionChecklistItem(mk({ status: 'not-needed' }), false)) === 'pass', 'not-needed is a pass, not a warning: no raster was asked for');
+
+  // OPERATIONAL "could not run" statuses do NOT block the build (property 2): a live provider with no key, no
+  // spend consent, an over-budget cap, or a harness failure is a non-blocking warning, never a "cannot ship".
+  for (const status of ['needs-consent', 'no-key', 'budget', 'unavailable'] as const) {
+    const item = assetProductionChecklistItem(mk({ status }), true);
+    assert(item.required === false, `${status} is a "could not run" state, not a blocking row`);
+    assert(
+      assetProductionValidationStatus(item) === 'warning',
+      `${status} validates as a WARNING, not a build blocker (got ${assetProductionValidationStatus(item)})`,
+    );
+  }
+
+  // The lens did not run at all: a blocker ONLY when a raster was actually requested.
+  assert(assetProductionValidationStatus(assetProductionChecklistItem(null, true)) === 'fail', 'a raster was asked for and the step never ran: that blocks');
+  assert(assetProductionValidationStatus(assetProductionChecklistItem(null, false)) === 'pass', 'no raster asked and no run: a clean pass');
+}
+
 async function main(): Promise<void> {
   testPrompt();
   testLens();
   testGuidance();
   testOfferPredicate();
+  testAssetSeverity();
   await testFlowIntegration();
   fs.rmSync(TMP, { recursive: true, force: true });
   console.log('image-flow-lens: OK (deterministic prompt, real plate through the real bin at zero cost, honest guidance in all four states, flowD guidance + checklist + artifact + fail-closed memory validation)');

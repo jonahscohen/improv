@@ -74,6 +74,7 @@ exports.buildImageArgv = buildImageArgv;
 exports.runAssetProductionLens = runAssetProductionLens;
 exports.assetProductionGuidance = assetProductionGuidance;
 exports.assetProductionChecklistItem = assetProductionChecklistItem;
+exports.assetProductionValidationStatus = assetProductionValidationStatus;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
@@ -554,6 +555,42 @@ wantedRaster = false) {
             completed: false,
         };
     }
+    // OPERATIONAL statuses are "the asset step COULD NOT RUN", not "the design is wrong": a live provider with no
+    // key, no spend consent, a hit budget cap, or a harness failure. Property 2 of this lens is explicit that a
+    // BUILD must never fail because the asset step could not run, so these are non-blocking warnings that name the
+    // reason and the next action - never a "cannot ship" blocker. Only bytes that WOULD SHIP and are wrong block:
+    // a live render whose pixels were checked and FAILED, or one that could not be checked (unverified, fail-closed
+    // because only a verified asset is ever offered downstream). This keeps the hard blocker exactly where the
+    // full-flight rule puts it - a live render that fails legibility - and nowhere else.
+    const COULD_NOT_RUN = ['needs-consent', 'no-key', 'budget', 'unavailable'];
+    if (COULD_NOT_RUN.includes(outcome.status)) {
+        return { id, label, required: false, description: outcome.detail, completed: false };
+    }
     return { id, label, required: true, description: outcome.detail, completed: verified };
+}
+/**
+ * The MEMORY-VALIDATION status for the asset step, kept in LOCKSTEP with the checklist item so the two surfaces
+ * can never disagree about severity.
+ *
+ * WHY THIS EXISTS, and it is the whole point. The build-report aggregator reads a flow's memory validations and
+ * turns a `fail` into a BLOCKING finding and a `warning` into a warning; the checklist, by contrast, is not read
+ * into findings at all. So the memory validation - not the checklist - is the surface where a severity decision
+ * actually reaches the report a human sees. Computing that severity a SECOND time, ad hoc, is exactly how the
+ * provenance rule got defeated: the checklist item correctly made a failed offline PLACEHOLDER non-blocking
+ * (`required:false`), while a separate ternary marked the same outcome `fail`, so every `/sidecoach craft
+ * <backdrop>` blocked the build on the deterministic stand-in a flow is FORCED to use because it cannot spend.
+ * Deriving the validation status from the checklist item closes that gap structurally:
+ *
+ *   - completed            -> 'pass'    (verified, or not-needed: nothing is wrong)
+ *   - required, not done   -> 'fail'    (a LIVE render that failed legibility, or a raster asked for and never
+ *                                         produced: a real blocker that must stop the build)
+ *   - not required, not done -> 'warning' (the offline placeholder whose contrast is prompt-hash luck, or an
+ *                                         operational "could not run" status - no key, no spend consent, over
+ *                                         budget, harness unavailable: named in the report, never build-blocking)
+ */
+function assetProductionValidationStatus(item) {
+    if (item.completed)
+        return 'pass';
+    return item.required ? 'fail' : 'warning';
 }
 //# sourceMappingURL=image-asset-production.js.map

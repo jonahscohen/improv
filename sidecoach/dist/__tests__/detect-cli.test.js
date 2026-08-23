@@ -134,7 +134,7 @@ function main() {
     for (const name of ['static-ban', 'static-check', 'objective', 'subjective']) {
         assert(defectLenses[name]?.attempted === true, `local .html must attempt the ${name} lens`);
     }
-    assert(defectLenses['static-ban'].findings > 0, 'the static ban lens is what catches gradient-text');
+    assert(defectLenses['static-check'].findings > 0, 'the static-check lens is what catches gradient-text (an anti-pattern rule)');
     // ---------------------------------------------------------------------
     // 4. e2e: known-good fixture -> clean, exit 0, and every lens actually ran.
     // ---------------------------------------------------------------------
@@ -199,9 +199,9 @@ function main() {
     // The defect fixture proves the blocking half end to end: its ban finding is 'blocking'
     // because the REGISTRY says major, and both engines agree on the verdict.
     const banFinding = defect.json.findings
-        .find((f) => f.lens === 'static-ban' && f.rule === 'ban.gradient-text');
-    assert(banFinding !== undefined, 'the static-ban lens must report ban.gradient-text on the defect fixture');
-    assert(banFinding.severity === 'blocking', `ban.gradient-text should map to blocking, got ${banFinding.severity}`);
+        .find((f) => f.lens === 'static-check' && f.rule === 'anti-pattern.gradient-text');
+    assert(banFinding !== undefined, 'the static-check lens must report anti-pattern.gradient-text on the defect fixture');
+    assert(banFinding.severity === 'blocking', `anti-pattern.gradient-text should map to blocking, got ${banFinding.severity}`);
     // ---------------------------------------------------------------------
     // 9. --render-url must not swallow the following option as its value. (Codex review P2.)
     // ---------------------------------------------------------------------

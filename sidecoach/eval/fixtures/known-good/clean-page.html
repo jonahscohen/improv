@@ -31,12 +31,18 @@
         color-scheme: light dark;
       }
       * { -webkit-font-smoothing: antialiased; }
-      /* A COMMITTED typeface (Inter, from the shipped fontshare vocabulary) leads the stack,
-         with system fallbacks behind it. Without this the page renders on the bare system
-         stack and the default-typeface taste rule fires - correctly. */
-      body { background: var(--c-page); color: var(--c-ink); font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.5; padding: 24px; }
-      h1 { text-wrap: balance; padding: 8px; font-size: 32px; line-height: 1.25; }
-      h2 { text-wrap: balance; padding: 8px; font-size: 22px; line-height: 1.35; }
+      /* A COMMITTED typeface leads the stack, with system fallbacks behind it. Without this the
+         page renders on the bare system stack and the default-typeface taste rule fires - correctly.
+         The family must also NOT be on the overused-families blocklist (Inter, Roboto, Geist, Sora,
+         Outfit and the rest of the SaaS-default set are), or the overused-font anti-pattern fires -
+         also correctly. General Sans is a committed fontshare family that is neither. */
+      body { background: var(--c-page); color: var(--c-ink); font-family: 'General Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.5; padding: 24px; }
+      /* A display family for headings, paired with the General Sans body above, so the page
+         carries a real display/body pairing - the single-font anti-pattern fires (correctly) on
+         one typeface used for everything. Cabinet Grotesk is a committed fontshare display face
+         and is not on the overused-families blocklist. */
+      h1 { font-family: 'Cabinet Grotesk', 'General Sans', sans-serif; text-wrap: balance; padding: 8px; font-size: 32px; line-height: 1.25; }
+      h2 { font-family: 'Cabinet Grotesk', 'General Sans', sans-serif; text-wrap: balance; padding: 8px; font-size: 22px; line-height: 1.35; }
       p, label, li { font-size: 16px; line-height: 1.5; }
       img { border: 1px solid rgba(0, 0, 0, 0.1); }
       .field-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

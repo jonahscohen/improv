@@ -97,6 +97,13 @@ const DESCRIPTIONS: Record<string, Desc> = {
     exits: '0 clean, 1 findings, 2 usage or IO error, 3 inconclusive',
     reachedBy: '/sidecoach audit',
   },
+  'sidecoach-qa-plan': {
+    purpose:
+      'Resolve the orchestrated QA gate - audit -> critique -> polish - for a target, printing each stage with the exact slash command and the flow chain it runs. It composes three existing verbs through the SAME router the session uses, so the sequence cannot drift from the registry; it adds no routing of its own. Fails LOUD (exit 2) if any stage becomes unroutable rather than printing a broken plan.',
+    invocation: 'node <sidecoach-repo>/bin/sidecoach-qa-plan.js [--target <target>] [--json]',
+    exits: '0 resolved, 2 usage / load error / an unresolvable gate stage',
+    reachedBy: 'claude/hooks/sidecoach-orchestrate-edit.sh (on a substantive design edit)',
+  },
   'sidecoach-drift': {
     purpose:
       "Report custom-property tokens that drifted off the project's committed DESIGN.md baseline (off-system colours, radii, spacings, easings, durations), each named with its value and file. A missing baseline fails closed and never reports 'no drift'.",

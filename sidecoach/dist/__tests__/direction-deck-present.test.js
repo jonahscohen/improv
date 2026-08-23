@@ -57,6 +57,7 @@ const direction_deck_present_1 = require("../direction-deck-present");
 const direction_deck_1 = require("../direction-deck");
 const SC = path.resolve(__dirname, '..', '..');
 const BIN = path.join(SC, 'bin', 'sidecoach-deck.js');
+const ROLL_BIN = path.join(SC, 'bin', 'sidecoach-roll.js');
 const MODULE_SRC = path.join(SC, 'src', 'direction-deck-present.ts');
 function assert(cond, msg) {
     if (!cond)
@@ -253,6 +254,44 @@ function testE2E() {
     const rollJson = JSON.stringify({ status: 'drawn', draw: { id: IDS[0] } });
     const piped = runCli(['--surface', 'text', '--quiet'], rollJson);
     assert(piped.code === 0 && piped.stdout.includes(IDS[0]), 'e2e stdin: a piped roll result is presented');
+    // (g) the REAL OS pipe, `sidecoach-roll | sidecoach-deck`, which is the tool's own advertised composition and
+    //     the one that actually broke. execFileSync's `input` (case f) buffers the whole payload before the child
+    //     reads, so it never exercised the timing that matters. A live two-process pipe does. The failure was a
+    //     race: readStdin accessed process.stdin.isTTY, which flipped fd 0 to non-blocking, so fs.readFileSync(0)
+    //     threw EAGAIN against a slower `node` producer and the deck reported "no directions". Run it several times
+    //     because the race was intermittent (a fast producer could win); every run must present the drawn direction.
+    const q = (s) => `'${s.replace(/'/g, `'\\''`)}'`;
+    const pipeCmd = `${q(process.execPath)} ${q(ROLL_BIN)} --seed 42 2>/dev/null | ${q(process.execPath)} ${q(BIN)} --surface text --quiet`;
+    for (let i = 0; i < 5; i++) {
+        let out = '';
+        let ok = true;
+        try {
+            out = (0, child_process_1.execSync)(pipeCmd, { encoding: 'utf8', cwd: SC, shell: '/bin/bash' });
+        }
+        catch (_e) {
+            ok = false;
+        }
+        assert(ok, `e2e real pipe (run ${i + 1}/5): sidecoach-roll | sidecoach-deck must exit 0`);
+        assert(out.includes('| # | Direction | Axis | Premise |') && !out.includes('no directions'), `e2e real pipe (run ${i + 1}/5): a rolled direction is presented, not dropped to "no directions"`);
+    }
+    // (h) DETERMINISTIC race proof: a producer that writes valid roll JSON only AFTER a delay guarantees fd 0 is
+    //     not-yet-ready at the moment the deck reads it. On the pre-fix code (process.stdin.isTTY, which flips fd 0
+    //     to non-blocking) this reliably threw EAGAIN and the deck reported "no directions"; on the fixed code
+    //     (tty.isatty, fd 0 stays blocking) the read simply waits for the bytes. This is stronger than (g): it does
+    //     not lean on the real roll happening to be slow, it forces the exact timing the bug needed.
+    const producer = 'setTimeout(() => process.stdout.write(JSON.stringify({status:"drawn",draw:{id:process.env.DECK_TEST_ID}})+"\\n", () => process.exit(0)), 120);';
+    const delayedCmd = `${q(process.execPath)} -e ${q(producer)} | ${q(process.execPath)} ${q(BIN)} --surface text --quiet`;
+    for (let i = 0; i < 3; i++) {
+        let out = '';
+        let ok = true;
+        try {
+            out = (0, child_process_1.execSync)(delayedCmd, { encoding: 'utf8', cwd: SC, shell: '/bin/bash', env: { ...process.env, DECK_TEST_ID: IDS[0] } });
+        }
+        catch (_e) {
+            ok = false;
+        }
+        assert(ok && out.includes(IDS[0]) && !out.includes('no directions'), `e2e delayed producer (run ${i + 1}/3): a slow producer's roll JSON is read and presented, not lost to a non-blocking-fd race`);
+    }
 }
 function main() {
     testResolve();

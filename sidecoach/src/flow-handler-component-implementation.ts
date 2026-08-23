@@ -12,6 +12,7 @@ import {
   runAssetProductionLens,
   assetProductionGuidance,
   assetProductionChecklistItem,
+  assetProductionValidationStatus,
   isOfferableAsset,
   type AssetProductionOutcome,
 } from './image-asset-production';
@@ -141,7 +142,8 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
       // `verified`, so a failed or unchecked asset is a blocker rather than a warning.
       // The second argument matters only when the lens did not run at all: a raster request that never reached the
       // step must not read as done. See assetProductionChecklistItem.
-      checklist.push(assetProductionChecklistItem(assetOutcome, briefWantsRaster(context.utterance || '')));
+      const assetChecklistItem = assetProductionChecklistItem(assetOutcome, briefWantsRaster(context.utterance || ''));
+      checklist.push(assetChecklistItem);
 
       // Citation helper for DESIGN.md token references
       const designContent = (context.metadata?.designContent as string) || '';
@@ -236,16 +238,16 @@ export class FlowGComponentImplementationHandler extends BaseFlowHandler {
         .addValidation('ARIA labels implemented', ariaLabelCount === componentStates.length ? 'pass' : 'warning', `${ariaLabelCount}/${componentStates.length}`)
         .addValidation('Keyboard navigation enabled', keyboardNavCount >= componentStates.length - 1 ? 'pass' : 'warning', `${keyboardNavCount}/${componentStates.length - 1} navigable`)
         .addValidation('Semantic copy appropriate', semanticCopyCount === 3 ? 'pass' : 'warning', `${semanticCopyCount}/3 states with copy`)
-        // Fail-closed in memory too. `verified` passes, `not-needed` and a lens that never ran are recorded as
-        // warnings with their reason, and every other state is a FAIL, so a later reader of this record cannot
-        // mistake an unchecked or missing asset for a passing one.
+        // Fail-closed in memory too, but PROVENANCE-AWARE, and in LOCKSTEP with the checklist item rather than a
+        // second ad-hoc severity. The aggregator turns this validation's `fail` into a blocking finding, so this
+        // is the surface where severity actually reaches the report: a LIVE render that failed legibility (or a
+        // raster asked for and never produced) blocks, while the deterministic offline PLACEHOLDER a flow is
+        // forced to use because it cannot spend is a non-blocking warning, and `verified`/`not-needed` pass.
+        // Deriving from the checklist item is what keeps the two surfaces from disagreeing. See
+        // assetProductionValidationStatus.
         .addValidation(
           'Raster asset produced and verified',
-          !assetOutcome || assetOutcome.status === 'not-needed'
-            ? 'warning'
-            : assetOutcome.status === 'verified'
-              ? 'pass'
-              : 'fail',
+          assetProductionValidationStatus(assetChecklistItem),
           assetOutcome ? assetOutcome.detail : 'asset lens did not run (no project path)',
         )
         .addArtifact('component-implementation', componentStates.length, ['flowH_motion_integration', 'flowI_motion_polish']);

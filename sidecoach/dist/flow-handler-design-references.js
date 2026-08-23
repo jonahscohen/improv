@@ -321,9 +321,13 @@ class FlowDReferenceSearchHandler extends flow_handler_1.BaseFlowHandler {
                 .addMetric('high-quality-references', lowSlopReferences.length, 'pass', references.length)
                 .addMetric('ai-slop-filtered', oversaturatedCount, 'pass')
                 .addValidation('Category-reflex AI slop detection', oversaturatedCount === 0 ? 'pass' : 'warning', `${oversaturatedCount} oversaturated categories`)
-                // Fail-closed: only a verified plate is a pass. A plate that failed or could not be checked is a fail,
-                // and a lens that did not run is a warning - never a silent pass.
-                .addValidation('Concept sketch verification', !sketch ? 'warning' : sketch.status === 'verified' ? 'pass' : sketch.status === 'unavailable' ? 'warning' : 'fail', sketch ? `${sketch.status}: ${sketch.detail}` : 'sketch lens did not run (no project path)')
+                // Fail-closed AND provenance-aware: only a verified plate is a pass; every other state is a non-blocking
+                // WARNING, never a silent pass and never a build blocker. The sketch is generated with `--provider
+                // offline` unconditionally (runConceptSketchLens), so a failed or unchecked plate is always the
+                // deterministic placeholder, whose colours come from a prompt hash - it flags the row, but it must not
+                // block a build the way a real render's legibility failure would. The aggregator turns a `fail` into a
+                // blocking finding, so grading the offline stand-in `fail` would stop the build on hash luck.
+                .addValidation('Concept sketch verification', sketch && sketch.status === 'verified' ? 'pass' : 'warning', sketch ? `${sketch.status}: ${sketch.detail}` : 'sketch lens did not run (no project path)')
                 .addReference('design-references', lowSlopReferences.length, 'design inspiration patterns')
                 .addArtifact('reference-patterns', lowSlopReferences.length, ['flowE_motion_patterns', 'flowG_component_implementation', 'flowN_design_refine']);
             const memory = memoryBuilder.build();

@@ -193,4 +193,28 @@ wantedRaster?: boolean): {
     description: string;
     completed: boolean;
 };
+/**
+ * The MEMORY-VALIDATION status for the asset step, kept in LOCKSTEP with the checklist item so the two surfaces
+ * can never disagree about severity.
+ *
+ * WHY THIS EXISTS, and it is the whole point. The build-report aggregator reads a flow's memory validations and
+ * turns a `fail` into a BLOCKING finding and a `warning` into a warning; the checklist, by contrast, is not read
+ * into findings at all. So the memory validation - not the checklist - is the surface where a severity decision
+ * actually reaches the report a human sees. Computing that severity a SECOND time, ad hoc, is exactly how the
+ * provenance rule got defeated: the checklist item correctly made a failed offline PLACEHOLDER non-blocking
+ * (`required:false`), while a separate ternary marked the same outcome `fail`, so every `/sidecoach craft
+ * <backdrop>` blocked the build on the deterministic stand-in a flow is FORCED to use because it cannot spend.
+ * Deriving the validation status from the checklist item closes that gap structurally:
+ *
+ *   - completed            -> 'pass'    (verified, or not-needed: nothing is wrong)
+ *   - required, not done   -> 'fail'    (a LIVE render that failed legibility, or a raster asked for and never
+ *                                         produced: a real blocker that must stop the build)
+ *   - not required, not done -> 'warning' (the offline placeholder whose contrast is prompt-hash luck, or an
+ *                                         operational "could not run" status - no key, no spend consent, over
+ *                                         budget, harness unavailable: named in the report, never build-blocking)
+ */
+export declare function assetProductionValidationStatus(item: {
+    required: boolean;
+    completed: boolean;
+}): 'pass' | 'warning' | 'fail';
 //# sourceMappingURL=image-asset-production.d.ts.map

@@ -254,6 +254,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/sprint5-force-flowid-bypass.test.ts', required: true },
   { rel: 'src/__tests__/slash-command.test.ts', required: true },
   { rel: 'src/__tests__/orchestrator-slash-command.test.ts', required: true },
+  { rel: 'src/__tests__/qa-gate.test.ts', required: true },                            // orchestrated QA gate (audit->critique->polish) resolves via the shared router; on-edit hook depends on it
   { rel: 'src/__tests__/sprint8-router-registry-branch.test.ts', required: true },
   { rel: 'src/__tests__/sprint8-verb-parity.test.ts', required: true },
   { rel: 'src/__tests__/sprint8-registry-shape.test.ts', required: true },
