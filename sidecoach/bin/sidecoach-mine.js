@@ -50,6 +50,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const EXIT_OK = 0;
@@ -426,6 +427,42 @@ function assembleCorpus(opts) {
     },
     entries, // flat, every entry carries sourceKind - what the lenses fan out over
   };
+}
+
+// Resolve a path to its real (symlink-followed) form even when it or its tail does not exist yet:
+// realpath the nearest existing ancestor, then re-append the not-yet-created segments. Lets us
+// decide containment against the REAL target (so a cursor symlink into the repo is caught) without
+// creating anything. Mirrors sidecoach-taste-ingest.js's realResolve.
+function realResolve(p) {
+  let probe = path.resolve(p);
+  const tail = [];
+  for (let i = 0; i < 4096; i++) {
+    try {
+      const real = fs.realpathSync(probe);
+      return tail.length ? path.join(real, ...tail) : real;
+    } catch (err) {
+      if (!err || err.code !== 'ENOENT') throw err;
+      const parent = path.dirname(probe);
+      if (parent === probe) return tail.length ? path.join(probe, ...tail) : probe;
+      tail.unshift(path.basename(probe));
+      probe = parent;
+    }
+  }
+  throw new Error(`could not resolve real path for ${p}`);
+}
+
+// A stable content signature of everything the miner consumes (beats + measured audit-history +
+// external expert content + rule stores). Excludes the volatile top-level generated_utc/commit;
+// hashes only corpus.entries, canonicalized by stringify-then-SORT so entry ORDER can never
+// spuriously flip the signature. Two runs over identical inputs produce the same sig; any real
+// input change flips it. Used by the precheck (run/skip) and advance (record) gate.
+function computeInputSignature() {
+  const registry = loadRegistry();
+  const guidance = loadGuidanceStores();
+  const corpus = assembleCorpus({ beatsDir: DEFAULT_BEATS_DIR, registry, guidance });
+  const parts = corpus.entries.map((e) => JSON.stringify(e)).sort();
+  const sig = crypto.createHash('sha256').update(parts.join('\n')).digest('hex');
+  return { sig, stats: corpus.stats };
 }
 
 // ---------------------------------------------------------------------------
@@ -992,6 +1029,7 @@ function parseArgs(argv) {
     else if (a === '--candidates-file') opts.candidatesFile = argv[++i];
     else if (a === '--beats-dir') opts.beatsDir = argv[++i];
     else if (a === '--beat-out-dir') opts.beatOutDir = argv[++i];
+    else if (a === '--cursor') opts.cursor = argv[++i];
     else if (a === '--date') opts.date = argv[++i];
     else if (a === '--help' || a === '-h') opts.help = true;
     else if (a.startsWith('--')) { const e = new Error(`unknown flag: ${a}`); e.exitCode = EXIT_USAGE; throw e; }
@@ -1007,6 +1045,8 @@ USAGE
   node bin/sidecoach-mine.js run [--findings <file>] [--dry-run] [--json]
                                  [--out-dir <dir>] [--candidates-file <file>]
                                  [--beats-dir <dir>] [--beat-out-dir <dir>] [--date YYYY-MM-DD]
+  node bin/sidecoach-mine.js precheck --cursor <file>
+  node bin/sidecoach-mine.js advance  --cursor <file>
   node bin/sidecoach-mine.js --help
 
 SUBCOMMANDS
@@ -1015,6 +1055,11 @@ SUBCOMMANDS
   run      Dedup + validate-in-isolation + emit INERT proposals. Candidate findings come from
            --findings (the lens/synthesis artifact) PLUS the deterministic measured-audit-history
            signal. --dry-run computes and prints the summary but writes nothing.
+  precheck The scheduled-miner run/skip gate (for sidecoach-mine-daily on the shared research
+           spine): prints "run" when the assembled corpus content differs from the cursor, else
+           "skip". Exits 0 with the decision; any internal error exits non-zero (fail loud).
+  advance  Record the current corpus signature into the cursor after a successful mine, so the
+           next precheck skips until the inputs change again.
 
 EXIT CODES
   0 success   2 usage   3 registry unavailable (run npm build)   4 write failure   5 bad --findings`;
@@ -1044,6 +1089,67 @@ function main() {
       const summary = runPipeline(opts);
       if (opts.json) process.stdout.write(JSON.stringify(summary, null, 2) + '\n');
       else printRunSummary(summary);
+      process.exit(EXIT_OK);
+    }
+    if (sub === 'precheck') {
+      // The scheduled-miner run/skip gate (SRR contract): print exactly "run" or "skip" and
+      // exit 0. "run" when the assembled corpus content differs from the cursor (new beats,
+      // new measured audit scans, freshly-ingested expert content, or a changed rule store);
+      // "skip" when identical. ANY internal failure exits non-zero (never a silent forever-skip).
+      if (!opts.cursor) { const e = new Error('precheck requires --cursor <file>'); e.exitCode = EXIT_USAGE; throw e; }
+      const current = computeInputSignature();
+      // ONLY a missing cursor (ENOENT) is a first run -> "run". A cursor that is truncated, a
+      // directory, unreadable, non-JSON, or missing its "sig" is CORRUPTION, not a first run:
+      // fail loud with NO decision rather than emitting a clean "run" that masks the corruption.
+      let prev = null;
+      let raw;
+      try { raw = fs.readFileSync(opts.cursor, 'utf8'); }
+      catch (err) {
+        if (err && err.code === 'ENOENT') { raw = null; }
+        else { const e = new Error(`cursor unreadable (${opts.cursor}): ${err && err.message}`); e.exitCode = EXIT_USAGE; throw e; }
+      }
+      if (raw !== null) {
+        let parsed;
+        try { parsed = JSON.parse(raw); }
+        catch (err) { const e = new Error(`cursor is not valid JSON (${opts.cursor}): ${err && err.message}`); e.exitCode = EXIT_USAGE; throw e; }
+        if (!parsed || typeof parsed.sig !== 'string') { const e = new Error(`cursor is missing a string "sig" (${opts.cursor})`); e.exitCode = EXIT_USAGE; throw e; }
+        prev = parsed.sig;
+      }
+      process.stdout.write((prev === current.sig ? 'skip' : 'run') + '\n');
+      process.exit(EXIT_OK);
+    }
+    if (sub === 'advance') {
+      // Record the current corpus signature so the next precheck skips until inputs change again.
+      // The cursor lives OUTSIDE the repo (the SRR runner mandates it) - written after a run succeeds.
+      if (!opts.cursor) { const e = new Error('advance requires --cursor <file>'); e.exitCode = EXIT_USAGE; throw e; }
+      // The cursor MUST live outside the repo checkout (the SRR runner's rule): refuse to write it
+      // anywhere inside REPO_ROOT so a stray/hostile --cursor override cannot turn `advance` into a
+      // write over a live repo file (the registry, a skill, ...). Use realResolve (NOT lexical
+      // path.resolve) so a cursor that is a SYMLINK - or sits under a symlinked dir - pointing back
+      // into the repo is caught (Codex review 2026-08-24); path.resolve alone missed that.
+      const resolvedCursor = realResolve(opts.cursor);
+      if (resolvedCursor === REPO_ROOT || resolvedCursor.startsWith(REPO_ROOT + path.sep)) {
+        const e = new Error(`refusing to write the cursor inside the repo (${resolvedCursor}); it must live outside the checkout, e.g. under ~/.claude`); e.exitCode = EXIT_USAGE; throw e;
+      }
+      const current = computeInputSignature();
+      const payload = {
+        schema: 'sidecoach-mine-cursor/v1',
+        sig: current.sig,
+        stats: current.stats,
+        advanced_utc: nowIso(),
+        commit: shortHead(),
+      };
+      fs.mkdirSync(path.dirname(resolvedCursor), { recursive: true });
+      // Write to the REAL resolved path, NOT the raw opts.cursor: the resolved path has already
+      // followed any ancestor symlinks, so swapping the original path's symlink after the check no
+      // longer changes where we write. O_NOFOLLOW then refuses a symlink at the FINAL component
+      // (a symlink whose target is outside the repo -> ELOOP -> advance fails loud). Irreducible
+      // residual (accepted, out of threat model): an ACTIVE same-uid attacker replacing the resolved
+      // parent dir itself with a symlink inside the check->open window - such a process can already
+      // write anywhere directly, and Node has no openat2(RESOLVE_NO_SYMLINKS) to close it fully.
+      const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | fs.constants.O_NOFOLLOW;
+      const fd = fs.openSync(resolvedCursor, flags, 0o600);
+      try { fs.writeSync(fd, JSON.stringify(payload, null, 2) + '\n'); } finally { fs.closeSync(fd); }
       process.exit(EXIT_OK);
     }
     const e = new Error(`unknown subcommand: ${sub}`); e.exitCode = EXIT_USAGE; throw e;
@@ -1084,7 +1190,7 @@ module.exports = {
   normalizeKey, slugify, parseFrontmatter,
   assembleBeats, assembleAuditHistory, assembleExternal, assembleRuleStores, assembleCorpus,
   buildDedupIndex, normalizeCandidate, classify, preflight, deriveMeasuredCandidates,
-  rankScore, loadRegistry, loadGuidanceStores, runPipeline, assertSafeWrite,
+  rankScore, loadRegistry, loadGuidanceStores, runPipeline, assertSafeWrite, computeInputSignature,
   SAFE_DATA_DIR, SAFE_MEMORY_DIR, REPO_ROOT, SIDECOACH_ROOT,
   EXIT_OK, EXIT_USAGE, EXIT_REGISTRY, EXIT_WRITE, EXIT_FINDINGS,
 };

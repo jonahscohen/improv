@@ -91,4 +91,10 @@ export SRR_SUCCESS_CMD='find "$SRR_REPO_ROOT/.claude/memory" -name "proposal_cmu
 # touch). A failure here is fatal (runner exit 6) so a stuck cursor cannot re-run forever.
 export SRR_ADVANCE_CMD='python3 "$SRR_REPO_ROOT/claude/cmux/cmux-tracker.py" advance --cursor "$SRR_CURSOR_FILE"'
 
+# PROPOSE-ONLY FENCE: ENFORCE (not just prompt) that this unattended run touches ONLY the inert
+# proposals dir + the dated queue beat. A flow that writes any OTHER repo file (a hook,
+# settings.json, a skill, cmux.version - e.g. via an injection in an untrusted changelog) fails
+# the run loud and rolls the cursor back, instead of being accepted because it also wrote a proposal.
+export SRR_ALLOWED_WRITE_ROOTS='claude/proposals/cmux-tracker .claude/memory'
+
 exec /bin/bash "$RUNNER"

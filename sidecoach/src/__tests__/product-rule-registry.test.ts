@@ -181,6 +181,12 @@ run();
     ap('anti-pattern.side-stripe-borders', 'anti-pattern/side-stripe-borders', 'side-stripe-borders', 'P1', 'major', 'file', 'css-rule'),
     ap('anti-pattern.hero-metric-template', 'anti-pattern/hero-metric-template', 'hero-metric-template', 'P1', 'minor', 'project', 'markup', OVERRIDE_REASON),
     ap('anti-pattern.modal-as-first-thought', 'anti-pattern/modal-as-first-thought', 'modal-as-first-thought', 'P2', 'minor', 'project', 'markup'),
+    // typography-motion-tells (commit 61860e5c): three static P2/minor informational tells, css-rule evidence.
+    // single-font is PAGE scope ("one typeface for the whole page" is a judgment over assembled source); the
+    // other two are file scope. All owned by anti-pattern.
+    ap('anti-pattern.overused-font', 'anti-pattern/overused-font', 'overused-font', 'P2', 'minor', 'file', 'css-rule'),
+    ap('anti-pattern.single-font', 'anti-pattern/single-font', 'single-font', 'P2', 'minor', 'page', 'css-rule'),
+    ap('anti-pattern.bounce-easing', 'anti-pattern/bounce-easing', 'bounce-easing', 'P2', 'minor', 'file', 'css-rule'),
   ];
 
   // owner page-quality (6): cherry-picked DOM-evidence Tier-2 keepers (Stage 2 convergence)
@@ -240,14 +246,14 @@ run();
     if (resolveSourceAlias(extended)?.canonicalRuleKey !== key) throw new Error(`bad alias ${extended}`);
   }
 
-  if (RULES.length !== 60) throw new Error(`expected 60 canonical rules, got ${RULES.length}`); // 59 -> 60: +polish.default-typeface (Stage 4a rendered-scan, 2026-07-23); 58 -> 59: +polish.marketing-buzzword (Stage 5a rendered-scan, 2026-06-25); 52 -> 58: +6 page-quality Tier-2 keepers (Stage 2, 2026-06-25); 41->52 = 11 more forms; 36->41 = first 5 forms; 31->36 = Stage 1 rendered
+  if (RULES.length !== 63) throw new Error(`expected 63 canonical rules, got ${RULES.length}`); // 60 -> 63: +3 anti-pattern typography-motion-tells (overused-font, single-font, bounce-easing) from 61860e5c; 59 -> 60: +polish.default-typeface (Stage 4a rendered-scan, 2026-07-23); 58 -> 59: +polish.marketing-buzzword (Stage 5a rendered-scan, 2026-06-25); 52 -> 58: +6 page-quality Tier-2 keepers (Stage 2, 2026-06-25); 41->52 = 11 more forms; 36->41 = first 5 forms; 31->36 = Stage 1 rendered
   const owners = (id: string) => RULES.filter((r) => r.ownerValidatorId === id);
   if (owners('polish-standard').length !== 24) throw new Error('polish-standard must own 24 rules');
   if (owners('static-a11y').length !== 7) throw new Error('static-a11y must own 7 rules');
   if (owners('forms').length !== 16) throw new Error('forms must own 16 absorbed forms-a11y rules'); // Stage 2 dedicated forms validator (5 + 11 batch 2)
   if (owners('page-quality').length !== 6) throw new Error('page-quality must own 6 Tier-2 keeper rules'); // Stage 2 cherry-picked DOM-evidence keepers
   if (owners('theming').length !== 2) throw new Error('theming must own 2 rules');
-  if (owners('anti-pattern').length !== 5) throw new Error('anti-pattern must own 5 rules'); // 6 -> 5: identical-card-grids DELETED (Stage-2)
+  if (owners('anti-pattern').length !== 8) throw new Error('anti-pattern must own 8 rules'); // 5 -> 8: +3 typography-motion-tells (overused-font, single-font, bounce-easing) from 61860e5c; 6 -> 5: identical-card-grids DELETED (Stage-2)
 
   const contrast = getRuleById('a11y.color-contrast');
   if (!contrast || contrast.ownerValidatorId !== 'static-a11y') throw new Error('color-contrast owned by static-a11y');

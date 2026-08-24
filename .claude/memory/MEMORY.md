@@ -9,6 +9,7 @@
 - [** ACTIVE REFERENCE ** ORACLE vs SIDECOACH SCORECARD - 0-5 across 8 dims: sidecoach MATCHES (33 vs 31) and SURPASSES on both enforcement boundaries + f…](reference_oracle_vs_sidecoach_scorecard.md)
 - [** ACTIVE FEEDBACK ** TEAMMATE TEARDOWN - NEVER kill a live teammate (respawns the pane WEDGED + unclosable); teardown is cooperative-s…](session_2026-08-23_teammate-teardown-kill-respawn-wedge.md)
 - [** ACTIVE DECISION ** PHASE 1+2 REVIEW OUTCOME - Codex + fresh-Claude review: safety core solid (all 5 invariants hold); 3 shore-up tasks (deploy dr…](session_2026-08-24_phase1-2-review-outcome.md)
+- [** ACTIVE ** TASTE MINER SCHEDULING BUILT - third spine adapter: sidecoach-mine precheck/advance (corpus-sig gate) + sidecoach-mine-daily wrapper/pli…](session_2026-08-24_miner-scheduling-built.md)
 - [** ACTIVE ** PHASE 1+2 SHORE-UP - ingest symlink-safe containment (realResolve + O_NOFOLLOW), consent overclaim comment fixed, install.sh 14c cmux wiring;…](session_2026-08-24_phase1-2-shoreup.md)
 - [** ACTIVE ** SIDECOACH FULL SUITE 3 PRE-EXISTING REDS - npm test exits 1 (task8-taxonomy, product-rule-registry, scanner-snapshot); red…](session_2026-08-24_sidecoach-fullsuite-preexisting-reds.md)
 - [** ACTIVE FEEDBACK ** APPROVE != EXIT (shutdown not reaped) - a teammate can return shutdown_response approved:true and STILL not be t…](session_2026-08-23_cooperative-shutdown-does-not-unwedge.md)

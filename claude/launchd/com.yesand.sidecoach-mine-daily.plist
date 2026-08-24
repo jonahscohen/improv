@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.yesand.sidecoach-mine-daily - daily unattended taste-miner run (the THIRD adapter on the
+  shared learning-researcher spine, alongside cc-tracker-daily and cmux-tracker-daily).
+
+  Instantiated from claude/launchd/com.yesand.scheduled-research.plist.template. Runs the repo
+  wrapper claude/hooks/sidecoach-mine-daily.sh, which exports the SRR_* params and execs the
+  shared runner (claude/hooks/lib/scheduled-research-run.sh). The runner's cheap pre-check
+  (sidecoach-mine.js precheck) hashes the assembled corpus (beats + measured audit-history +
+  external expert content + rule stores) and skips a no-change day near-free; only a real corpus
+  delta runs the headless /sidecoach mine flow. PROPOSE-ONLY: it writes inert proposals + a dated
+  taste_mine beat, never edits the registry, a live guidance store, or the harness.
+
+  NOT INSTALLED by this repo (the user's deploy step). The absolute paths below are this machine's;
+  install.sh / the lead templates the home dir and the checkout path for others. The wrapper
+  self-locates the repo + runner, so it also works if pointed at a copied path.
+
+  MISSED-FIRE ON WAKE: a StartCalendarInterval job whose scheduled time passes while the Mac is
+  asleep or off runs ONCE on the next wake/boot (launchd catch-up), which is why RunAtLoad is
+  false yet a closed laptop still gets its run. The corpus gate keeps that catch-up cheap.
+
+  FIRE TIME: 05:00 local, staggered off the weekly reflect run (Sun 09:00), the CC-tracker daily
+  (03:00), and the cmux-tracker daily (04:00) so two heavy headless claude runs never fire at once.
+
+  LOAD / UNLOAD (after any path templating):
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yesand.sidecoach-mine-daily.plist
+    launchctl bootout   gui/$(id -u)/com.yesand.sidecoach-mine-daily
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.yesand.sidecoach-mine-daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/spare3/Documents/Github/improv/claude/hooks/sidecoach-mine-daily.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>5</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/spare3/Documents/Github/improv</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>SRR_JOB_NAME</key>
+        <string>sidecoach-mine-daily</string>
+        <key>SRR_REPO_ROOT</key>
+        <string>/Users/spare3/Documents/Github/improv</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/spare3/.claude/logs/sidecoach-mine-daily.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/spare3/.claude/logs/sidecoach-mine-daily.launchd.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

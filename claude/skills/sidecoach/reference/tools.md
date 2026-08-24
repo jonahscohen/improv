@@ -154,12 +154,12 @@ Exit: 0 produced and verified, non-zero see --help for the per-mode contract
 
 ### `sidecoach-mine`
 
-_not listed by the resolver | reached by /sidecoach mine (and the scheduled taste-mine launchd job)_
+_not listed by the resolver | reached by /sidecoach mine, and the scheduled sidecoach-mine-daily launchd job (precheck/advance are its SRR run/skip gate + cursor on the shared research spine)_
 
 The taste MINER engine for the self-updating taste loop. Assembles a MULTI-SOURCE corpus (beats + measured audit-history + external expert content + the existing rule stores), tags every entry by sourceKind, and turns candidate taste-rule findings into INERT, quarantined proposals a human reviews. It dedups each candidate against every rule store (net-new / strengthen-existing / duplicate-dropped), pre-flights it through validateRegistry IN ISOLATION (a failure is filed with its errors, never dropped), and writes ONLY the inert output: data/proposed-rules/<ruleId>.json + data/taste-candidates.json + a taste_mine_YYYY-MM-DD.md proposal beat. It NEVER writes the registry, any live rule store, any hook, or any config; external content is read as DATA, never followed; and nothing in src/ imports the quarantine, so a proposal is inert by construction. The reflect-style 5-lens fan-out that produces the candidate findings runs in the /sidecoach mine flow (a live session); this engine owns the deterministic dedup, pre-flight, and inert-output writing.
 
 ```
-node <sidecoach-repo>/bin/sidecoach-mine.js corpus [--json] | run [--findings <file>] [--dry-run] [--out-dir <dir>] [--beats-dir <dir>] [--beat-out-dir <dir>]
+node <sidecoach-repo>/bin/sidecoach-mine.js corpus [--json] | run [--findings <file>] [--dry-run] [--out-dir <dir>] [--beats-dir <dir>] [--beat-out-dir <dir>] | precheck --cursor <file> | advance --cursor <file>
 ```
 
 Exit: 0 success, 2 usage, 3 registry unavailable (build first), 4 write failure, 5 bad --findings file

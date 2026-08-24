@@ -95,6 +95,9 @@
 #      SRR_ADVANCE_CMD, an un-touchable cursor, or (before anything mutable runs) a cursor that
 #      could not be snapshotted. Surfaced, never silently swallowed - a stuck cursor would make
 #      the job re-run forever. On any of these the cursor is rolled back to its pre-run state.
+#   7  PROPOSE-ONLY VIOLATED: SRR_ALLOWED_WRITE_ROOTS was armed and the flow touched a repo file
+#      outside those roots (a stray live edit), OR the fence is armed but the repo is not a git
+#      work tree (fail-closed). Cursor rolled back; the run is NOT accepted.
 #
 # CURSOR-INTEGRITY GUARANTEE: the cursor is snapshotted BEFORE the flow and advances ONLY on a
 # complete success. ANY other outcome (timeout, flow failure, no artifact, a failed/partial
@@ -117,6 +120,12 @@ SUCCESS_CMD="${SRR_SUCCESS_CMD:-}"
 PROMPT="${SRR_PROMPT:-}"
 FLOW_CMD="${SRR_FLOW_CMD:-}"
 ADVANCE_CMD="${SRR_ADVANCE_CMD:-}"
+# Optional propose-only write-fence: a space-separated list of repo-relative path prefixes (dirs
+# or exact files) the flow is ALLOWED to create/modify. When set, a clean flow that touched any
+# OTHER repo file fails the run loud (a headless flow runs with bypassPermissions, so this ENFORCES
+# the propose-only invariant instead of merely prompting it - e.g. against an injection in
+# untrusted content that tries to edit a live rule store, hook, skill, or settings.json).
+ALLOWED_WRITE_ROOTS="${SRR_ALLOWED_WRITE_ROOTS:-}"
 EXTRA_ARGS="${SRR_EXTRA_ARGS:-}"
 TIMEOUT_SECS="${SRR_TIMEOUT_SECS:-1800}"
 POLL_SECS="${SRR_POLL_SECS:-5}"
@@ -406,6 +415,35 @@ run_with_watchdog() {
   return "$rc"
 }
 
+# Propose-only write-fence, part 1 of 2: snapshot the FULL worktree BEFORE the flow (and fail
+# closed NOW if the fence is armed but the tree can't be inspected, rather than running an
+# unenforceable flow). We capture a git TREE of the whole worktree (tracked + untracked, content
+# hashed by git) via a TEMP index so the real index is never touched; after the flow we diff two
+# such trees. Content-aware (catches a re-modified already-dirty file, not just newly-dirtied
+# paths), untracked-inclusive, and NUL-safe - no mtime reliance and no path-string round-trip.
+srr_worktree_tree() { # print a git tree-ish of the entire worktree, or empty on failure
+  local idx="$RUN_TMP/fence-index"
+  rm -f "$idx" 2>/dev/null || true
+  ( cd "$REPO_ROOT" \
+      && GIT_INDEX_FILE="$idx" git add -A 2>/dev/null \
+      && GIT_INDEX_FILE="$idx" git write-tree 2>/dev/null )
+  local rc=$?
+  rm -f "$idx" 2>/dev/null || true
+  return $rc
+}
+FENCE_PRE_TREE=""
+if [ -n "$ALLOWED_WRITE_ROOTS" ]; then
+  if ! git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    restore_cursor
+    die 7 "propose-only fence armed (SRR_ALLOWED_WRITE_ROOTS) but $REPO_ROOT is not a git work tree; refusing an unverifiable run"
+  fi
+  FENCE_PRE_TREE="$(srr_worktree_tree)"
+  if [ -z "$FENCE_PRE_TREE" ]; then
+    restore_cursor
+    die 7 "propose-only fence armed but the pre-flow worktree snapshot failed; refusing an unverifiable run"
+  fi
+fi
+
 log_note "flow start (timeout=${TIMEOUT_SECS}s)"
 if [ -n "$FLOW_CMD" ]; then
   run_with_watchdog bash -c "$FLOW_CMD"
@@ -441,6 +479,37 @@ if [ "$RUN_RC" -ne 0 ]; then
   rm -rf "$RUN_TMP" 2>/dev/null || true
   restore_cursor
   die 4 "flow exited non-zero (rc=$RUN_RC); cursor left at its pre-run state"
+fi
+
+# --- propose-only write-fence, part 2 of 2: ENFORCE the invariant, do not just prompt it -----
+# A headless flow runs with bypassPermissions, so a confused model - or a prompt injection in the
+# untrusted content it reads - could edit a LIVE file (a rule store, a hook, a skill, settings.json)
+# instead of only the inert quarantine, then still write its beat and be marked "success". Diff the
+# post-flow worktree tree against the pre-flow one: every path that CHANGED (added/modified/deleted,
+# content-aware) must sit under an allowed root, else the run fails loud and the cursor rolls back,
+# so the stray edit is surfaced, uncommitted, and never accepted. NUL-delimited so a pathological
+# filename cannot split a record.
+if [ -n "$ALLOWED_WRITE_ROOTS" ]; then
+  FENCE_POST_TREE="$(srr_worktree_tree)"
+  if [ -z "$FENCE_POST_TREE" ]; then
+    rm -rf "$RUN_TMP" 2>/dev/null || true
+    restore_cursor
+    die 7 "propose-only fence armed but the post-flow worktree snapshot failed; refusing to accept an unverifiable run"
+  fi
+  fence_violations=""
+  while IFS= read -r -d '' rel; do
+    [ -z "$rel" ] && continue
+    allowed=0
+    for root in $ALLOWED_WRITE_ROOTS; do
+      case "$rel" in "$root"|"$root"/*) allowed=1; break;; esac
+    done
+    [ "$allowed" = "0" ] && fence_violations="$fence_violations $rel"
+  done < <(cd "$REPO_ROOT" && git diff -z --name-only "$FENCE_PRE_TREE" "$FENCE_POST_TREE" 2>/dev/null)
+  if [ -n "$fence_violations" ]; then
+    rm -rf "$RUN_TMP" 2>/dev/null || true
+    restore_cursor
+    die 7 "propose-only VIOLATED: the flow wrote repo files outside the allowed roots ($ALLOWED_WRITE_ROOTS):$fence_violations - cursor rolled back; run NOT accepted"
+  fi
 fi
 
 # Success predicate runs while START_MARKER still exists (it references $SRR_START_MARKER).

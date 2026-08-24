@@ -35,7 +35,7 @@ const verb_command_registry_1 = require("../verb-command-registry");
     // Every `/sidecoach <verb> - <text>` entry must carry a non-empty description after the
     // separator. This is the uncovered property: sprint8-list-and-help only checks the verb
     // NAME is present somewhere in the joined output.
-    const verbLines = guidance.filter((g) => /^\s*\/sidecoach\s+[a-z]+\s+-\s/.test(g));
+    const verbLines = guidance.filter((g) => /^\s*\/sidecoach\s+[a-z][a-z-]*\s+-\s/.test(g));
     // NON-VACUITY GUARD, tightened after Codex review 2026-07-28 (Medium). `verbLines.length > 0`
     // alone was too weak: a list that regressed to rendering ONE described verb would still have
     // satisfied "every rendered line has a description" and passed. The contract this file is
@@ -44,7 +44,7 @@ const verb_command_registry_1 = require("../verb-command-registry");
     // passing for the wrong reason.
     const registryVerbs = (0, verb_command_registry_1.getVerbList)();
     const renderedVerbs = verbLines
-        .map((g) => (g.match(/^\s*\/sidecoach\s+([a-z]+)\s+-\s/) || [])[1])
+        .map((g) => (g.match(/^\s*\/sidecoach\s+([a-z][a-z-]*)\s+-\s/) || [])[1])
         .filter(Boolean);
     const missing = registryVerbs.filter((v) => !renderedVerbs.includes(v));
     checks.push([
@@ -52,7 +52,7 @@ const verb_command_registry_1 = require("../verb-command-registry");
         registryVerbs.length > 0 && missing.length === 0,
     ]);
     const described = verbLines.filter((g) => {
-        const after = g.replace(/^\s*\/sidecoach\s+[a-z]+\s+-\s/, '').trim();
+        const after = g.replace(/^\s*\/sidecoach\s+[a-z][a-z-]*\s+-\s/, '').trim();
         return after.length > 0;
     });
     checks.push([
@@ -61,7 +61,7 @@ const verb_command_registry_1 = require("../verb-command-registry");
     ]);
     // The descriptions must be substantive, not a placeholder. 20 chars is well under the
     // shortest real entry and well over any stub, so it discriminates without being brittle.
-    const substantive = described.filter((g) => g.replace(/^\s*\/sidecoach\s+[a-z]+\s+-\s/, '').trim().length >= 20);
+    const substantive = described.filter((g) => g.replace(/^\s*\/sidecoach\s+[a-z][a-z-]*\s+-\s/, '').trim().length >= 20);
     checks.push([
         `T4: every description is substantive, not a stub (${substantive.length}/${verbLines.length})`,
         verbLines.length > 0 && substantive.length === verbLines.length,

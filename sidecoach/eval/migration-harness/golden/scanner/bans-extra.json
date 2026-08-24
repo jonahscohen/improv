@@ -4,7 +4,7 @@
     "rule": "glassmorphism-default",
     "severity": "P1",
     "file": "bans-extra.html",
-    "line": 1,
+    "line": 4,
     "matchedText": "<!doctype html>\n<!-- migration-harness INPUT (hand-authored compatibility fixture, NOT eval corpus): glassmorphism-default + hero-metric-template + modal-as-first-thought -->\n<html><head><style>\n.card { backdrop-filter: blur(...) + low-alpha background }",
     "reason": "Blurs and glass cards used decoratively rather than purposefully.",
     "rewriteOptions": [

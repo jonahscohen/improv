@@ -642,6 +642,70 @@ run_srr
 case "$LAST_OUT" in *"would run"*) pass "DRY_RUN -> printed the would-run preview";; *) fail "DRY_RUN -> should print would-run: '$LAST_OUT'";; esac
 
 # ---------------------------------------------------------------------------
+# PROPOSE-ONLY WRITE-FENCE (SRR_ALLOWED_WRITE_ROOTS): a clean flow that touches a repo file
+# outside the allowed roots fails the run (exit 7) and rolls the cursor back; a flow that writes
+# only inside them succeeds. Needs a git work tree (the fence inspects git's view); armed-but-not-
+# git fails closed.
+# ---------------------------------------------------------------------------
+echo "-- propose-only write-fence (SRR_ALLOWED_WRITE_ROOTS)"
+GREPO="$WORK/gitrepo"
+mkdir -p "$GREPO/allowed" "$GREPO/live"
+( cd "$GREPO" && git init -q && git config user.email t@t && git config user.name t \
+  && printf 'orig\n' > live/registry.txt && git add -A && git commit -qm init ) 2>/dev/null
+
+# compliant: flow writes ONLY under allowed/ -> exit 0, cursor advances
+FEN_CUR="$WORK/fen_cursor"; : > "$FEN_CUR"; touch -t 202001010000 "$FEN_CUR"; FEN_BEFORE="$(mtime "$FEN_CUR")"
+SRR_ENV=(
+  "SRR_JOB_NAME=fenok" "SRR_CURSOR_FILE=$FEN_CUR" "SRR_REPO_ROOT=$GREPO"
+  "SRR_LOG_FILE=$WORK/fenok_log" "SRR_PRECHECK_CMD=echo run"
+  "SRR_FLOW_CMD=printf x > $GREPO/allowed/proposal.md"
+  "SRR_SUCCESS_CMD=find $GREPO/allowed -name proposal.md -newer \"\$SRR_START_MARKER\" | grep -q ."
+  "SRR_ALLOWED_WRITE_ROOTS=allowed"
+)
+run_srr
+[ "$RC" = 0 ] && pass "fence: flow writes only inside allowed roots -> exit 0" || fail "fence compliant -> exit 0 (got $RC; stderr: $(cat "$WORK/stderr"))"
+[ "$(mtime "$FEN_CUR")" -gt "$FEN_BEFORE" ] && pass "fence: compliant run advances the cursor" || fail "fence compliant -> cursor should advance"
+
+# violation: flow ALSO edits a live file outside allowed roots -> exit 7, cursor NOT advanced
+FEV_CUR="$WORK/fev_cursor"; : > "$FEV_CUR"; touch -t 202001010000 "$FEV_CUR"; FEV_BEFORE="$(mtime "$FEV_CUR")"
+SRR_ENV=(
+  "SRR_JOB_NAME=fenbad" "SRR_CURSOR_FILE=$FEV_CUR" "SRR_REPO_ROOT=$GREPO"
+  "SRR_LOG_FILE=$WORK/fenbad_log" "SRR_PRECHECK_CMD=echo run"
+  "SRR_FLOW_CMD=printf y > $GREPO/allowed/p2.md; printf HACKED > $GREPO/live/registry.txt"
+  "SRR_SUCCESS_CMD=find $GREPO/allowed -name p2.md -newer \"\$SRR_START_MARKER\" | grep -q ."
+  "SRR_ALLOWED_WRITE_ROOTS=allowed"
+)
+run_srr
+[ "$RC" = 7 ] && pass "fence: a stray live-file write -> exit 7 (propose-only violated)" || fail "fence violation -> exit 7 (got $RC; stderr: $(cat "$WORK/stderr"))"
+[ "$(mtime "$FEV_CUR")" = "$FEV_BEFORE" ] && pass "fence: violation rolls the cursor back (not advanced)" || fail "fence violation -> cursor must not advance"
+
+# fail-closed: fence armed but SRR_REPO_ROOT is not a git work tree -> exit 7
+FEC_CUR="$WORK/fec_cursor"
+SRR_ENV=(
+  "SRR_JOB_NAME=fenfc" "SRR_CURSOR_FILE=$FEC_CUR" "SRR_REPO_ROOT=$FAKE_REPO"
+  "SRR_LOG_FILE=$WORK/fenfc_log" "SRR_PRECHECK_CMD=echo run"
+  "SRR_FLOW_CMD=true" "SRR_SUCCESS_CMD=exit 0" "SRR_ALLOWED_WRITE_ROOTS=allowed"
+)
+run_srr
+[ "$RC" = 7 ] && pass "fence: armed but non-git repo -> exit 7 (fail-closed)" || fail "fence fail-closed -> exit 7 (got $RC)"
+
+# content-aware: a live file ALREADY dirty before the flow, re-modified by the flow, is STILL
+# caught (a path-set diff would have skipped it; the worktree-tree diff sees the content change).
+( cd "$GREPO" && git checkout -q -- live/registry.txt 2>/dev/null )   # reset from the violation test
+FED_CUR="$WORK/fed_cursor"; : > "$FED_CUR"; touch -t 202001010000 "$FED_CUR"; FED_BEFORE="$(mtime "$FED_CUR")"
+printf 'locally-edited\n' > "$GREPO/live/registry.txt"   # DIRTY before the run
+SRR_ENV=(
+  "SRR_JOB_NAME=fendirty" "SRR_CURSOR_FILE=$FED_CUR" "SRR_REPO_ROOT=$GREPO"
+  "SRR_LOG_FILE=$WORK/fendirty_log" "SRR_PRECHECK_CMD=echo run"
+  "SRR_FLOW_CMD=printf z > $GREPO/allowed/p3.md; printf INJECTED >> $GREPO/live/registry.txt"
+  "SRR_SUCCESS_CMD=find $GREPO/allowed -name p3.md -newer \"\$SRR_START_MARKER\" | grep -q ."
+  "SRR_ALLOWED_WRITE_ROOTS=allowed"
+)
+run_srr
+[ "$RC" = 7 ] && pass "fence: a PRE-DIRTY live file re-modified by the flow -> exit 7 (content-aware)" || fail "fence pre-dirty re-mod -> exit 7 (got $RC; stderr: $(cat "$WORK/stderr"))"
+[ "$(mtime "$FED_CUR")" = "$FED_BEFORE" ] && pass "fence: pre-dirty violation rolls the cursor back" || fail "fence pre-dirty -> cursor must not advance"
+
+# ---------------------------------------------------------------------------
 echo
 echo "TALLY: $PASS passed, $FAIL failed"
 if [ "$FAIL" = 0 ]; then

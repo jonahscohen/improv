@@ -7652,6 +7652,66 @@ else
 fi
 
 # ============================================================
+# 14d. Taste miner schedule (sidecoach-mine-daily)
+# ============================================================
+# The THIRD adapter on the shared spine: a daily corpus-diff-gated run of the taste miner. Its
+# pre-check hashes the assembled corpus (beats + measured audit-history + external expert content
+# + rule stores) and skips a no-change day near-free; a real delta runs the headless /sidecoach
+# mine flow, which files INERT proposals + a dated taste_mine beat into the miner's own quarantine.
+# PROPOSE-ONLY; promotion into live guidance is a separate, human-typed, ledgered step.
+#
+# Same deploy shape as the two trackers: the wrapper + shared runner lib are copied; the miner
+# engine (sidecoach/bin/sidecoach-mine.js) runs from SRR_REPO_ROOT and is NOT copied. The wrapper
+# is launchd-scheduled, not a settings.json event hook, so it is absent from browser-tree.json /
+# app-wirings.json and excluded by hook-registry-guard.sh. The plist is PLACEMENT ONLY; activation
+# (launchctl bootstrap) is the user's step.
+info "Installing taste miner schedule (sidecoach-mine-daily)..."
+mkdir -p "$CLAUDE_DIR/hooks/lib" "$CLAUDE_DIR/logs" "$CLAUDE_DIR/sidecoach-mine"
+link_or_copy "$REPO_DIR/claude/hooks/sidecoach-mine-daily.sh" "$CLAUDE_DIR/hooks/sidecoach-mine-daily.sh"
+link_or_copy "$REPO_DIR/claude/hooks/lib/scheduled-research-run.sh" "$CLAUDE_DIR/hooks/lib/scheduled-research-run.sh"
+ok "sidecoach-mine-daily hook installed (engine runs from the repo via SRR_REPO_ROOT)"
+
+if [ "$(uname)" = "Darwin" ] && command -v python3 >/dev/null 2>&1; then
+  LA_DIR="$HOME/Library/LaunchAgents"
+  PLIST_SRC="$REPO_DIR/claude/launchd/com.yesand.sidecoach-mine-daily.plist"
+  PLIST_DST="$LA_DIR/com.yesand.sidecoach-mine-daily.plist"
+  mkdir -p "$LA_DIR"
+  if python3 - "$PLIST_SRC" "$PLIST_DST" "$HOME" "$REPO_DIR" <<'PYMINEPLIST'
+import re, sys
+from xml.sax.saxutils import escape
+src, dst, home, repo = sys.argv[1:5]
+with open(src, encoding="utf-8") as f:
+    text = f.read()
+# The author's paths are embedded verbatim in the committed plist. Extract them so the rewrite
+# still works if the repo is re-authored on a different machine. The plist runs the wrapper from
+# the REPO path (ProgramArguments + SRR_REPO_ROOT) and writes logs under $HOME/.claude.
+m_repo = re.search(r'<key>SRR_REPO_ROOT</key>\s*<string>([^<]+)</string>', text)
+m_home = re.search(r'<string>([^<]+)/\.claude/logs/sidecoach-mine-daily\.launchd\.log</string>', text)
+if not m_repo or not m_home:
+    sys.stderr.write("plist template: could not locate author paths\n")
+    sys.exit(1)
+author_repo, author_home = m_repo.group(1), m_home.group(1)
+# Substituted values land inside XML <string> nodes, so XML-escape the installing machine's paths.
+# Replace the repo root FIRST via a sentinel so a home-substring inside the repo path cannot be
+# double-rewritten by the home replacement.
+SENTINEL = "\x00SRR_REPO_ROOT\x00"
+text = text.replace(author_repo, SENTINEL)
+text = text.replace(author_home, escape(home))
+text = text.replace(SENTINEL, escape(repo))
+with open(dst, "w", encoding="utf-8") as f:
+    f.write(text)
+PYMINEPLIST
+  then
+    ok "launchd agent placed at $PLIST_DST (templated for $HOME / $REPO_DIR)"
+    info "To activate: launchctl bootstrap gui/\$(id -u) $PLIST_DST"
+  else
+    warn "Could not template the sidecoach-mine launchd plist - place it manually from $PLIST_SRC"
+  fi
+else
+  info "Skipping sidecoach-mine launchd agent (not macOS or python3 missing) - the hook is installed; schedule it by other means if needed."
+fi
+
+# ============================================================
 # 15. Task list (/task-list slash-command skill)
 # ============================================================
 

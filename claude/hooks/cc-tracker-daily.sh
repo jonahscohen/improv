@@ -108,6 +108,12 @@ export SRR_SUCCESS_CMD='find "$SRR_REPO_ROOT/claude/proposals/cc-tracker" -type 
 # ADVANCE: write the resolved latest into the cursor (only on complete success).
 export SRR_ADVANCE_CMD='python3 "$SRR_REPO_ROOT/claude/hooks/lib/cc-tracker.py" advance-cursor --cursor "$SRR_CURSOR_FILE"'
 
+# PROPOSE-ONLY FENCE: ENFORCE (not just prompt) that this unattended run touches ONLY the inert
+# proposals dir + any dated beat. A flow that writes any OTHER repo file (a hook, skill, setting,
+# agent, the installer - e.g. via an injection in an untrusted release note) fails the run loud
+# and rolls the cursor back, instead of being accepted because it also wrote a proposal.
+export SRR_ALLOWED_WRITE_ROOTS='claude/proposals/cc-tracker .claude/memory'
+
 export SRR_LOG_FILE="${SRR_LOG_FILE:-$HOME/.claude/logs/cc-tracker-daily.log}"
 
 # Sanity: the engine must exist (a manual run against a checkout without it should fail loud).

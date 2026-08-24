@@ -147,6 +147,12 @@ _is_excluded() {
     # settings.json event, so there is nothing to wire or toggle. install.sh deploys it (bare
     # link_or_copy) and the plist; the browser tree offers no toggle for a schedule.
     cc-tracker-daily) return 0 ;;
+    # LAUNCHD-SCHEDULED, not event-driven: the taste miner's daily wrapper (the THIRD adapter on
+    # the shared learning-researcher runner, run from com.yesand.sidecoach-mine-daily.plist). It
+    # exports SRR_* and execs claude/hooks/lib/scheduled-research-run.sh; it appears in no
+    # settings.json event, so there is nothing to wire or toggle - same class as the two trackers
+    # and beats-reflect-weekly. install.sh deploys it (bare link_or_copy) and the plist. Added 2026-08-24.
+    sidecoach-mine-daily) return 0 ;;
     # RETIRED, SUPERSEDED: a Stop-shaped hook (reads stdin, exits 1 to block) that was
     # never wired to any settings event, so every machine that installed the
     # question-discipline cluster got it and it did nothing, silently, forever. The live
