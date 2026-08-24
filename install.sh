@@ -7890,7 +7890,7 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
   # the SessionStart self-heal that reasserts this wiring every session thereafter; wiring
   # it HERE (atomically) is what guarantees its own registration lands so it can then keep
   # the rest whole. Keep this arg list identical to the consolidated line below.
-  install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh sidecoach-taste-promote-arm.sh
+  install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh sidecoach-taste-promote-arm.sh sidecoach-taste-enforce-arm.sh taste-blocking-toggle.sh taste-blocking-status.sh
 
   # The sidecoach MCP server was RETIRED (Jonah 2026-07-24, reversing the 2026-07-15
   # wire-up - the external surface was never consumed). It was built + registered here
@@ -8132,7 +8132,7 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 # decision_beats_hooks_stay_project_scoped.md).
 picked reflect      && install_app_hooks reflect-nudge.sh
 picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh plugin-node-hook-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh cmux-team-config-heal.sh teammate-relay-stop.sh
-picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh sidecoach-taste-promote-arm.sh
+picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh sidecoach-taste-promote-arm.sh sidecoach-taste-enforce-arm.sh taste-blocking-toggle.sh taste-blocking-status.sh
 picked fable        && install_app_hooks frontier-orchestrator-guard.sh
 # The confirm-arm hook powers the "confirm" override on BOTH the session-production
 # (fable) and agent-routing (model-routing) surfaces, so wire it if EITHER is picked -

@@ -605,5 +605,38 @@
     "timeout": 5
    }
   }
+ ],
+ "sidecoach-taste-enforce-arm.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-taste-enforce-arm.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "taste-blocking-toggle.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/taste-blocking-toggle.sh",
+    "timeout": 5
+   }
+  }
+ ],
+ "taste-blocking-status.sh": [
+  {
+   "event": "SessionStart",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/taste-blocking-status.sh",
+    "timeout": 5
+   }
+  }
  ]
 }

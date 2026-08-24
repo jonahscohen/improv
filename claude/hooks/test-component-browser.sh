@@ -158,7 +158,7 @@ browser_load "$TREE"
 # sidecoach-detect is the opt-in per-edit scanner (Stage 3b): fully packaged but shipped OPT-IN
 # via the default off-list seed in install.sh, so the browser shows and can toggle it while a
 # plain install leaves the per-edit scan unwired.
-[ "$(node_children 'sidecoach/Hooks')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-orchestrate-edit sidecoach-qa-gate-stop qa-gate-manual sidecoach-craft-floor sidecoach-postresponse sidecoach-heal sidecoach-detect sidecoach-taste-promote-arm" ] \
+[ "$(node_children 'sidecoach/Hooks')" = "sidecoach-sessionstart sidecoach-preamble sidecoach-postuserp sidecoach-keyword sidecoach-taste-gate sidecoach-orchestrate-edit sidecoach-qa-gate-stop qa-gate-manual sidecoach-craft-floor sidecoach-postresponse sidecoach-heal sidecoach-detect sidecoach-taste-promote-arm sidecoach-taste-enforce-arm taste-blocking-toggle taste-blocking-status" ] \
   && ok "sidecoach hook children" || bad "sidecoach hook children (got '$(node_children 'sidecoach/Hooks')')"
 # Every payload component has the same shape, and each leaf resolves as its owner's
 # master switch. A regression here is what re-hides the install affordance.

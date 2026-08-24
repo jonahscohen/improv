@@ -153,6 +153,23 @@ denies "$(emit_bash "vim $ARM" | bash "$BG")"                               && f
 denies "$(emit_bash "git add $ARM" | bash "$BG")"                           && fail "bash-guard: 'git add <arm>' wrongly blocked" || pass "bash-guard: staging the arm hook (git add) is allowed"
 denies "$(emit_bash "chmod +x $ARM" | bash "$BG")"                          && fail "bash-guard: 'chmod +x <arm>' wrongly blocked" || pass "bash-guard: chmod on the arm hook is allowed"
 
+echo; echo "===== Codex CRITICAL #1: promote arm-hook basename hidden in a VARIABLE still BLOCKS ====="
+# H=<arm>; bash claude/hooks/$H - the hooks-dir path-prefix rule (CASE B) catches the variable form.
+BYP1='H=sidecoach-taste-promote-arm.sh; bash claude/hooks/$H'
+BYP2='X=sidecoach-taste-promote-arm.sh; /bin/bash ~/.claude/hooks/$X'
+denies "$(emit_bash "$BYP1" | bash "$BG")" && pass "bash-guard: 'H=<promote-arm>; bash claude/hooks/\$H' BLOCKED" || fail "bash-guard: promote H-var arm exec NOT blocked"
+denies "$(emit_bash "$BYP2" | bash "$BG")" && pass "bash-guard: '/bin/bash ~/.claude/hooks/\$X' BLOCKED" || fail "bash-guard: promote homedir H-var NOT blocked"
+denies "$(emit_bash "bash claude/hooks/test-taste-promote.sh" | bash "$BG")" && fail "bash-guard: running the promote test script wrongly blocked" || pass "bash-guard: 'bash claude/hooks/test-*.sh' (no arm name) allowed"
+
+echo; echo "===== Codex CRITICAL #2: a STRING-CONSTRUCTED promote token/secret name still BLOCKS ====="
+CON1="node -e \"require('fs').writeFileSync(process.env.HOME+'/.claude/.taste'+'-rule-promote-consent','x')\""
+CON2="python3 -c \"open('.taste-rule-promote-cons'+'ent','w')\""
+CON3="node -e \"const s='.taste-promotion-ledger-sec'+'ret'\""
+denies "$(emit_bash "$CON1" | bash "$BG")" && pass "bash-guard: constructed .claude/.taste promote token path BLOCKED" || fail "bash-guard: constructed promote token path NOT blocked"
+denies "$(emit_bash "$CON2" | bash "$BG")" && pass "bash-guard: promote-token STEM (taste-rule-promote) BLOCKED" || fail "bash-guard: promote-token stem NOT blocked"
+denies "$(emit_bash "$CON3" | bash "$BG")" && pass "bash-guard: promote-secret STEM (taste-promotion-ledger) BLOCKED" || fail "bash-guard: promote-secret stem NOT blocked"
+denies "$(emit_bash "node $CLI list" | bash "$BG")" && fail "bash-guard: promote CLI run wrongly blocked by the stem fence" || pass "bash-guard: promote CLI run still allowed"
+
 echo; echo "===== approve is a helper, NOT a mint (no token produced) ====="
 write_candidate cand-app
 rm -f "$TOKEN"

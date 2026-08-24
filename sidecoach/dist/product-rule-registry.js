@@ -14,6 +14,8 @@ const source_support_matrix_1 = require("./validators/source-support-matrix");
 const checks_1 = require("./validators/checks");
 const pattern_interpreter_1 = require("./validators/checks/pattern-interpreter");
 const check_context_1 = require("./validators/check-context");
+const enforced_rules_generated_1 = require("./validators/enforced-rules.generated");
+const taste_blocking_toggle_1 = require("./validators/taste-blocking-toggle");
 // The shared HTML-structural-detector override reason (absolute-ban-detector.ts).
 // The heuristic markup ban (hero-metric-template) cites it.
 const STRUCTURAL_OVERRIDE_REASON = 'HTML-structural detector flags pattern shapes, not certainties; false positives are possible (absolute-ban-detector.ts:19-21). Demoted from the table default major to non-blocking minor.';
@@ -22,7 +24,7 @@ const STRUCTURAL_OVERRIDE_REASON = 'HTML-structural detector flags pattern shape
 // (computed-style/dom/contrast) are owned-but-non-required and surface inconclusive until the collector runs.
 // Rendered-scan rules (Stage 1 convergence: the 5 NEW classes) are promoted to required when a renderUrl is
 // present and read the live rendered scan (run-validator activateRenderedPolicy).
-const RAW_RULES = [
+const BUILTIN_RULES = [
     // ====================== owner polish-standard (23) ======================
     {
         ruleId: 'polish.scale-on-press',
@@ -847,6 +849,27 @@ const RAW_RULES = [
         applicability: 'not_applicable',
     },
 ];
+// Phase 3c: the LIVE, ledger-gated mined-taste rules from the certified generated module
+// (enforced-rules.generated.ts). The codegen (generate-enforced-rules.ts) fail-closes, so NOTHING
+// reaches ENFORCED_RULES without a verified enforcement-ledger entry + a passing precision proof - the
+// generated module is the ONLY source of mined-taste rules in RAW_RULES.
+//
+// OFF-BY-DEFAULT behind the GLOBAL user MASTER TOGGLE (Step C3): unless the user has flipped live
+// taste blocking ON (tasteBlockingEnabled, the ~/.claude/.taste-blocking-enabled flag), each certified
+// rule is downgraded to ADVISORY here - it still RUNS via the Phase 3a interpreter and REPORTS, but
+// does not BLOCK convergence. Flipping the toggle ON restores its certified blocking severity. This is
+// the user's ruling: a machine-learned rule must never block a faithful implementation of an approved
+// design, so blocking stays off by default and the user turns it on only when they want enforcement.
+// Read per invocation (each sidecoach CLI/hook/flow run is a fresh process), so a toggle flip takes
+// effect on the very next run - exactly the voice-toggle model.
+const MINED_ENFORCED_RULES = enforced_rules_generated_1.ENFORCED_RULES.map((r) => {
+    if ((0, taste_blocking_toggle_1.tasteBlockingEnabled)())
+        return r;
+    const reason = (r.severityOverrideReason ? r.severityOverrideReason + ' ' : '')
+        + '(taste blocking OFF: runs ADVISORY, non-blocking, until the user types "taste blocking on")';
+    return { ...r, severity: 'advisory', severityOverrideReason: reason };
+});
+const RAW_RULES = [...BUILTIN_RULES, ...MINED_ENFORCED_RULES];
 // Resolve the verdict fn for a rule. A hand-authored CHECKS entry wins. Otherwise a rule that
 // carries a patternSpec (a mined static-css-regex detector) resolves to the DATA-DRIVEN
 // interpreter - which executes no authored code. A rule with neither still resolves to

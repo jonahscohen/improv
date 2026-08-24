@@ -4,7 +4,7 @@ export type NormalizedErrorCategory = 'unreadable_input' | 'registry_fault' | 'v
 export type RuleStatus = 'pass' | 'fail' | 'not_applicable' | 'inconclusive';
 export type EvidenceKind = 'css-rule' | 'computed-style' | 'dom' | 'markup' | 'contrast' | 'rendered-scan';
 export type RuleScope = 'file' | 'component' | 'page' | 'project';
-export type SourceVocabulary = 'polish-extended-antipattern' | 'p012' | 'taste' | 'rendered-scanner' | 'extended-domain';
+export type SourceVocabulary = 'polish-extended-antipattern' | 'p012' | 'taste' | 'rendered-scanner' | 'extended-domain' | 'mined-taste';
 export interface SourceKindSupport {
     kind: string;
     level: 'full' | 'partial' | 'none';

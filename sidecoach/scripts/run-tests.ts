@@ -191,6 +191,8 @@ const SUITES: Suite[] = [
   { rel: 'eval/objective-label.test.mjs', runner: 'node', required: true },
   { rel: 'bin/__tests__/sidecoach-mine.test.js', runner: 'node', required: true },              // taste miner engine: dedup classify, in-isolation pre-flight, measured-signal, inert-output dry-run
   { rel: 'src/__tests__/pattern-interpreter.test.ts', required: true },                          // Phase 3a: static-css-regex interpreter + ReDoS screen (fires/clean/inconclusive fail-closed, catastrophic-backtrack bounded under a hard timeout)
+  { rel: 'src/__tests__/mined-taste-invariant.test.ts', required: true },                        // Phase 3b Step 7: a mined-taste rule at a blocking severity MUST have an enforcement-ledger entry + a passing precision record (RED on the ungated mutation, GREEN on the live registry + enforced tier)
+  { rel: 'src/__tests__/enforced-rules-generation.test.ts', required: true },                     // Phase 3c Step C1: the fail-closed ledger+precision gate deriveEnforcedRules (valid certifies at major; every tamper class rejected into errors -> build breaks)
   { rel: 'src/__tests__/copywriting-templates.test.ts', required: true },
   { rel: 'src/__tests__/design-md-parser.test.ts', required: true },
   { rel: 'src/__tests__/flow-composition-craft-landing.test.ts', required: true },

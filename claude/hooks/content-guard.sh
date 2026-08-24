@@ -117,6 +117,45 @@ if _sfp:
     except OSError:
         pass
 
+# The taste-rule ENFORCE consent token (~/.claude/.taste-rule-enforce-consent) is minted ONLY by the
+# user typed REPL confirm (sidecoach-taste-enforce-arm.sh). Writing it through Write/Edit/MultiEdit
+# would forge that confirm and self-flip a mined taste rule into a BUILD-BLOCKING detector the user
+# never approved. Match by resolved path or exact basename - never the CLI script. Byte-identical
+# fence to the promote consent-token block above. NO APOSTROPHES here.
+_efp = str(inp.get("file_path") or "")
+if _efp:
+    try:
+        _ec = os.path.expanduser(_efp)
+        if not os.path.isabs(_ec):
+            _ec = os.path.join(os.getcwd(), _ec)
+        _ec = os.path.realpath(_ec)
+        _etok = os.path.realpath(os.path.expanduser("~/.claude/.taste-rule-enforce-consent"))
+        if _ec == _etok or os.path.basename(_efp) == ".taste-rule-enforce-consent":
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: ~/.claude/.taste-rule-enforce-consent is the taste-rule ENFORCE consent token and may not be written through Write/Edit/MultiEdit. Doing so would forge the user typed enforce-confirm and self-flip a mined taste rule into a build-blocking detector they never approved. Only the user typed confirm may mint it - ask the user to sign off."}}))
+            sys.exit(0)
+    except OSError:
+        pass
+
+# The taste-ENFORCE ledger signing key (~/.claude/.taste-enforce-ledger-secret) is the HMAC key for
+# the tamper-evident ENFORCEMENT ledger (distinct from the promotion secret). Overwriting it through
+# Write/Edit/MultiEdit would let an agent install a known key and forge signed enforcement-ledger
+# entries (a blocking rule with no real human sign-off). Off-limits, same shape as the promote
+# secret block above (bash-guard covers the Bash vector). Match by resolved path or basename. NO
+# APOSTROPHES here.
+_esp = str(inp.get("file_path") or "")
+if _esp:
+    try:
+        _esc = os.path.expanduser(_esp)
+        if not os.path.isabs(_esc):
+            _esc = os.path.join(os.getcwd(), _esc)
+        _esc = os.path.realpath(_esc)
+        _estok = os.path.realpath(os.path.expanduser("~/.claude/.taste-enforce-ledger-secret"))
+        if _esc == _estok or os.path.basename(_esp) == ".taste-enforce-ledger-secret":
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: ~/.claude/.taste-enforce-ledger-secret is the taste-ENFORCEMENT ledger HMAC signing key and may not be written through Write/Edit/MultiEdit. Overwriting it would let you forge signed enforcement-ledger entries and self-enforce a mined rule to blocking. sidecoach-taste-enforce signs the ledger itself; you never need to touch this file."}}))
+            sys.exit(0)
+    except OSError:
+        pass
+
 if tool == "Write":
     content = inp.get("content", "")
 elif tool == "Edit":
