@@ -94,9 +94,15 @@ function ledgerFile() {
 function ledgerHeadFile() { return ledgerFile() + '.head'; }
 
 // ---------------------------------------------------------------------------
-// Secret + HMAC. Machine-local, 0600, created O_EXCL. An agent is hook-blocked from reading
-// OR writing it (bash-guard + content-guard fence the secret path); without it a ledger/token
-// signature cannot be forged.
+// Secret + HMAC. Machine-local, 0600, created O_EXCL. Without it a ledger/token signature
+// cannot be forged. The bash-guard + content-guard fences RAISE THE BAR on touching the secret
+// path, but they match the literal basename, so they stop careless/accidental access - NOT a
+// determined same-uid agent that constructs the path dynamically (glob, string-concat) or copies
+// the arm hook's bytes. That residual is a fundamental limit of any name-based fence on a
+// same-user file and is ACCEPTED for the current GUIDANCE (advisory) tier: a forged promotion
+// only yields advice, and the ledger still records it. Phase 3 (build-blocking enforcement)
+// raises the stakes and must add its own human-signed, precision-gated second gate rather than
+// leaning on this secret alone. See session_2026-08-24_phase1-2-review-outcome.
 // ---------------------------------------------------------------------------
 function getSecret() {
   const f = secretFile();

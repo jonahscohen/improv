@@ -36,6 +36,7 @@ const mod = require(BIN) as {
     violations: Array<{ source: string; path: string; reason: string }>;
   };
   assertWithin: (root: string, dest: string) => string;
+  writeFileNoFollow: (dest: string, content: string) => void;
   loadManifest: (p: string) => { manifest?: unknown; error?: string };
   wrapUntrusted: (body: string, meta: Record<string, string>) => string;
   yamlScalar: (v: unknown) => string;
@@ -138,6 +139,43 @@ function main(): void {
   let threw = false;
   try { mod.assertWithin(root, path.join(root, '..', 'escape')); } catch { threw = true; }
   assert(threw, 'a path escaping the quarantine root must throw');
+
+  // 1d-symlink: a pre-placed SYMLINK inside the tree cannot smuggle a write outside the root.
+  // Regression for the Codex review finding: lexical path.resolve() missed symlink escapes, so
+  // skills/x -> ../outside would pass the check and writeFileSync would follow it into a live path.
+  const symRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'taste-sym-'));
+  const quarantine = path.join(symRoot, 'quarantine');
+  const outside = path.join(symRoot, 'outside');
+  fs.mkdirSync(quarantine, { recursive: true });
+  fs.mkdirSync(outside, { recursive: true });
+  fs.writeFileSync(path.join(outside, 'target.md'), 'outside');
+  fs.symlinkSync(outside, path.join(quarantine, 'skills')); // escaping DIRECTORY symlink
+  let symDirThrew = false;
+  try { mod.assertWithin(quarantine, path.join(quarantine, 'skills', 'x', 'SKILL.md')); } catch { symDirThrew = true; }
+  assert(symDirThrew, 'a destination reached through an escaping directory symlink must throw');
+  fs.symlinkSync(path.join(outside, 'target.md'), path.join(quarantine, 'evil.md')); // escaping FILE symlink -> real target
+  let symFileThrew = false;
+  try { mod.assertWithin(quarantine, path.join(quarantine, 'evil.md')); } catch { symFileThrew = true; }
+  assert(symFileThrew, 'a destination that is itself a symlink escaping the root must throw');
+  assert(mod.assertWithin(quarantine, path.join(quarantine, 'ok', 'SKILL.md')).length > 0, 'a normal in-root path still resolves under the symlink-safe check');
+
+  // 1d-hardlink: a pre-placed HARD LINK at a dest must not truncate the outside target's inode.
+  // O_NOFOLLOW stops symlinks but not hard links (Codex review 2026-08-24); writeFileNoFollow
+  // unlinks the name first then O_EXCL-creates a fresh inode, so the shared outside inode is left
+  // intact and the new content lands on a new inode at dest.
+  const precious = path.join(outside, 'live.md');
+  fs.writeFileSync(precious, 'PRECIOUS');
+  const hardlink = path.join(quarantine, 'hardlink.md');
+  fs.linkSync(precious, hardlink); // hard link inside quarantine -> outside inode (nlink=2)
+  mod.writeFileNoFollow(hardlink, 'REPLACED');
+  assert(fs.readFileSync(precious, 'utf8') === 'PRECIOUS', 'a hard-linked outside inode must NOT be truncated by the write');
+  assert(fs.readFileSync(hardlink, 'utf8') === 'REPLACED', 'the quarantine dest must receive the new content on a fresh inode');
+  assert(fs.statSync(precious).ino !== fs.statSync(hardlink).ino, 'dest must be a new inode, no longer sharing the outside file');
+  // and writeFileNoFollow refuses to write THROUGH a symlink (final-component protection)
+  const symDest = path.join(quarantine, 'sym.md');
+  fs.symlinkSync(precious, symDest);
+  mod.writeFileNoFollow(symDest, 'VIASYM');
+  assert(fs.readFileSync(precious, 'utf8') === 'PRECIOUS', 'a symlinked dest must NOT write through to its target');
 
   // ---------------------------------------------------------------------
   // 1e. Redirect/SSRF guard: only https + allowlisted GitHub hosts are contactable.

@@ -7593,6 +7593,65 @@ else
 fi
 
 # ============================================================
+# 14c. cmux feature-tracker (cmux-tracker-daily)
+# ============================================================
+# The daily version+capabilities-diff-gated researcher for cmux: it discovers new local cmux
+# features and files INERT, human-gated proposals into its own quarantine queue. The second
+# adapter on the same shared spine as cc-tracker (Phase 2). PROPOSE-ONLY.
+#
+# Same deploy shape as cc-tracker (14b): the wrapper + the shared runner lib are copied; the
+# engine (claude/cmux/cmux-tracker.py) is run from SRR_REPO_ROOT by the wrapper, so it is NOT
+# copied (there is no ~/.claude fallback path for it). The wrapper is launchd-scheduled, not a
+# settings.json event hook, so it is intentionally absent from browser-tree.json /
+# app-wirings.json and excluded by hook-registry-guard.sh - same as cc-tracker / reflect-weekly.
+# The plist is PLACEMENT ONLY; activation (launchctl bootstrap) is the user's step.
+info "Installing cmux feature-tracker (cmux-tracker-daily)..."
+mkdir -p "$CLAUDE_DIR/hooks/lib" "$CLAUDE_DIR/logs" "$CLAUDE_DIR/cmux-tracker"
+link_or_copy "$REPO_DIR/claude/hooks/cmux-tracker-daily.sh" "$CLAUDE_DIR/hooks/cmux-tracker-daily.sh"
+link_or_copy "$REPO_DIR/claude/hooks/lib/scheduled-research-run.sh" "$CLAUDE_DIR/hooks/lib/scheduled-research-run.sh"
+ok "cmux-tracker-daily hook installed (engine runs from the repo via SRR_REPO_ROOT)"
+
+if [ "$(uname)" = "Darwin" ] && command -v python3 >/dev/null 2>&1; then
+  LA_DIR="$HOME/Library/LaunchAgents"
+  PLIST_SRC="$REPO_DIR/claude/launchd/com.yesand.cmux-tracker-daily.plist"
+  PLIST_DST="$LA_DIR/com.yesand.cmux-tracker-daily.plist"
+  mkdir -p "$LA_DIR"
+  if python3 - "$PLIST_SRC" "$PLIST_DST" "$HOME" "$REPO_DIR" <<'PYCMUXPLIST'
+import re, sys
+from xml.sax.saxutils import escape
+src, dst, home, repo = sys.argv[1:5]
+with open(src, encoding="utf-8") as f:
+    text = f.read()
+# The author's paths are embedded verbatim in the committed plist. Extract them so the rewrite
+# still works if the repo is re-authored on a different machine. The cmux plist runs the wrapper
+# from the REPO path (ProgramArguments + SRR_REPO_ROOT), and writes logs under $HOME/.claude.
+m_repo = re.search(r'<key>SRR_REPO_ROOT</key>\s*<string>([^<]+)</string>', text)
+m_home = re.search(r'<string>([^<]+)/\.claude/logs/cmux-tracker-daily\.launchd\.log</string>', text)
+if not m_repo or not m_home:
+    sys.stderr.write("plist template: could not locate author paths\n")
+    sys.exit(1)
+author_repo, author_home = m_repo.group(1), m_home.group(1)
+# Substituted values land inside XML <string> nodes, so XML-escape the installing machine's
+# paths. Replace the repo root FIRST via a sentinel so a home-substring inside the repo path
+# cannot be double-rewritten by the home replacement.
+SENTINEL = "\x00SRR_REPO_ROOT\x00"
+text = text.replace(author_repo, SENTINEL)
+text = text.replace(author_home, escape(home))
+text = text.replace(SENTINEL, escape(repo))
+with open(dst, "w", encoding="utf-8") as f:
+    f.write(text)
+PYCMUXPLIST
+  then
+    ok "launchd agent placed at $PLIST_DST (templated for $HOME / $REPO_DIR)"
+    info "To activate: launchctl bootstrap gui/\$(id -u) $PLIST_DST"
+  else
+    warn "Could not template the cmux-tracker launchd plist - place it manually from $PLIST_SRC"
+  fi
+else
+  info "Skipping cmux-tracker launchd agent (not macOS or python3 missing) - the hook is installed; schedule it by other means if needed."
+fi
+
+# ============================================================
 # 15. Task list (/task-list slash-command skill)
 # ============================================================
 

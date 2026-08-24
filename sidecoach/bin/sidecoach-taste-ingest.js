@@ -150,15 +150,62 @@ function guardSource(slug) {
   return { ok: true };
 }
 
-// Assert a resolved destination stays inside the quarantine root. Defense in depth on top
-// of guardPath + guardSource: even if a check were bypassed, a write outside the root fails.
+// Resolve a path to its real (symlink-followed) form even when it or its tail does not exist
+// yet: realpath the nearest existing ancestor, then re-append the not-yet-created segments.
+// This lets containment be decided against real (post-symlink) paths without creating anything.
+function realResolve(p) {
+  let probe = path.resolve(p);
+  const tail = [];
+  for (let i = 0; i < 4096; i++) {
+    try {
+      const real = fs.realpathSync(probe);
+      return tail.length ? path.join(real, ...tail) : real;
+    } catch (err) {
+      if (!err || err.code !== 'ENOENT') throw err;
+      const parent = path.dirname(probe);
+      if (parent === probe) return tail.length ? path.join(probe, ...tail) : probe;
+      tail.unshift(path.basename(probe));
+      probe = parent;
+    }
+  }
+  throw { class: 'io', message: `could not resolve real path for ${p}` };
+}
+
+// Assert a destination stays inside the quarantine root. Defense in depth on top of guardPath +
+// guardSource: even if a check were bypassed, a write outside the root fails. Uses realResolve
+// (NOT a lexical path.resolve) so a pre-placed SYMLINK anywhere in the tree - e.g.
+// skills/x -> ../../claude/skills/sidecoach - cannot smuggle an untrusted body into a live
+// instruction path: the real (post-symlink) destination is checked and returned.
 function assertWithin(rootDir, dest) {
-  const root = path.resolve(rootDir);
-  const resolved = path.resolve(dest);
+  const root = realResolve(rootDir);
+  const resolved = realResolve(dest);
   if (resolved !== root && !resolved.startsWith(root + path.sep)) {
     throw { class: 'allowlist', message: `refusing to write outside quarantine: ${resolved}` };
   }
   return resolved;
+}
+
+// Write a file to an assertWithin-checked destination without ever writing THROUGH a symlink
+// or into a HARD-LINKED outside inode. Two steps:
+//  1. unlink any existing entry first. unlink drops only THIS name - it never follows a symlink
+//     (it removes the link itself) and never truncates a hard link's shared inode (it just
+//     decrements that inode's link count, leaving an outside file's content intact). This defeats
+//     the hard-link-truncation escape that O_TRUNC alone allowed (Codex review 2026-08-24).
+//  2. create a FRESH inode with O_EXCL|O_NOFOLLOW, so we never open an existing symlink and never
+//     reuse a shared inode. On a clean tree this is a plain create; on re-ingest it overwrites.
+// Residual (accepted, out of the untrusted-REMOTE-content threat model): an ACTIVE same-uid local
+// process racing us could swap an intermediate DIRECTORY to a symlink between assertWithin and
+// open - but such a process can already write anywhere directly, so this is not a boundary we can
+// or need to hold here.
+function writeFileNoFollow(dest, content) {
+  try { fs.unlinkSync(dest); } catch (err) { if (!err || err.code !== 'ENOENT') throw err; }
+  const flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW;
+  const fd = fs.openSync(dest, flags, 0o600);
+  try {
+    fs.writeSync(fd, content);
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 // Guard an entire manifest: every source slug must be a safe directory name, and every
@@ -505,11 +552,11 @@ async function ingestSource(src, opts) {
         // Containment check: the resolved destination must stay inside the source dir.
         const dest = assertWithin(sourceDir, path.join(sourceDir, rel));
         fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.writeFileSync(dest, wrapUntrusted(f.body, f.meta), 'utf8');
+        writeFileNoFollow(dest, wrapUntrusted(f.body, f.meta));
         provenance.push(f.meta);
         hashes[f.path] = f.sha256;
       }
-      writeJson(path.join(sourceDir, 'provenance.json'), {
+      writeJson(assertWithin(sourceDir, path.join(sourceDir, 'provenance.json')), {
         source: src.source,
         repo_url: src.repo_url,
         license: src.license || 'MIT',
@@ -518,7 +565,7 @@ async function ingestSource(src, opts) {
         commit_sha,
         files: provenance,
       });
-      writeJson(path.join(sourceDir, 'snapshot.json'), {
+      writeJson(assertWithin(sourceDir, path.join(sourceDir, 'snapshot.json')), {
         source: src.source,
         commit_sha,
         updated_utc: retrieved_utc,
@@ -540,7 +587,7 @@ async function ingestSource(src, opts) {
 }
 
 function writeJson(p, obj) {
-  fs.writeFileSync(p, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+  writeFileNoFollow(p, JSON.stringify(obj, null, 2) + '\n');
 }
 
 // ---- CLI ------------------------------------------------------------------------
@@ -772,6 +819,7 @@ module.exports = {
   guardSource,
   guardManifest,
   assertWithin,
+  writeFileNoFollow,
   loadManifest,
   parseRepo,
   wrapUntrusted,
