@@ -135,6 +135,18 @@ _is_excluded() {
     # ~/Library/LaunchAgents/com.yesand.beats-reflect-weekly.plist. Appears in no
     # settings.json event, so there is nothing to wire or toggle. Verified 2026-07-16.
     beats-reflect-weekly) return 0 ;;
+    # LAUNCHD-SCHEDULED, not event-driven: the cmux feature-tracker's per-job WRAPPER, run
+    # from ~/Library/LaunchAgents/com.yesand.cmux-tracker-daily.plist (it exports the SRR_*
+    # params and execs the shared runner lib). Appears in no settings.json event, so there is
+    # nothing to wire or toggle - same class as beats-reflect-weekly. Added 2026-08-23.
+    cmux-tracker-daily) return 0 ;;
+    # LAUNCHD-SCHEDULED, not event-driven: the Claude Code feature-tracker's daily wrapper,
+    # run from ~/Library/LaunchAgents/com.yesand.cc-tracker-daily.plist on the shared
+    # learning-researcher runner. Same shape as beats-reflect-weekly - it is a thin wrapper that
+    # exports SRR_* and execs claude/hooks/lib/scheduled-research-run.sh; it appears in no
+    # settings.json event, so there is nothing to wire or toggle. install.sh deploys it (bare
+    # link_or_copy) and the plist; the browser tree offers no toggle for a schedule.
+    cc-tracker-daily) return 0 ;;
     # RETIRED, SUPERSEDED: a Stop-shaped hook (reads stdin, exits 1 to block) that was
     # never wired to any settings event, so every machine that installed the
     # question-discipline cluster got it and it did nothing, silently, forever. The live

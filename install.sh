@@ -7535,6 +7535,64 @@ PYPLIST
 fi
 
 # ============================================================
+# 14b. Claude Code feature-tracker (learning-researcher Phase 2, scheduled)
+# ============================================================
+# The daily version-diff-gated researcher: it discovers new Claude Code releases and files
+# INERT, human-gated proposals against our harness. PROPOSE-ONLY - it never edits the harness.
+#
+# Deployed unconditionally (foundation): the thin wrapper cc-tracker-daily.sh, the deterministic
+# engine cc-tracker.py, and the shared runner lib it execs (scheduled-research-run.sh). The
+# wrapper is a LAUNCHD-SCHEDULED runner, not a settings.json event hook, so it is deliberately
+# NOT in browser-tree.json / app-wirings.json (there is no event to toggle) and is deployed with
+# a bare link_or_copy - exactly like beats-reflect-weekly. hook-registry-guard.sh excludes it for
+# the same reason. The plist is PLACEMENT ONLY; activation (launchctl bootstrap) is the user's step.
+info "Installing Claude Code feature-tracker (cc-tracker-daily)..."
+mkdir -p "$CLAUDE_DIR/hooks/lib" "$CLAUDE_DIR/logs"
+link_or_copy "$REPO_DIR/claude/hooks/cc-tracker-daily.sh" "$CLAUDE_DIR/hooks/cc-tracker-daily.sh"
+link_or_copy "$REPO_DIR/claude/hooks/lib/cc-tracker.py" "$CLAUDE_DIR/hooks/lib/cc-tracker.py"
+link_or_copy "$REPO_DIR/claude/hooks/lib/scheduled-research-run.sh" "$CLAUDE_DIR/hooks/lib/scheduled-research-run.sh"
+ok "cc-tracker-daily hook + engine installed"
+
+if [ "$(uname)" = "Darwin" ] && command -v python3 >/dev/null 2>&1; then
+  LA_DIR="$HOME/Library/LaunchAgents"
+  PLIST_SRC="$REPO_DIR/claude/launchd/com.yesand.cc-tracker-daily.plist"
+  PLIST_DST="$LA_DIR/com.yesand.cc-tracker-daily.plist"
+  mkdir -p "$LA_DIR"
+  if python3 - "$PLIST_SRC" "$PLIST_DST" "$HOME" "$REPO_DIR" <<'PYCCPLIST'
+import re, sys
+from xml.sax.saxutils import escape
+src, dst, home, repo = sys.argv[1:5]
+with open(src, encoding="utf-8") as f:
+    text = f.read()
+# The author's paths are embedded verbatim in the committed plist. Extract them so the rewrite
+# still works if the repo is re-authored on a different machine.
+m_repo = re.search(r'<key>SRR_REPO_ROOT</key>\s*<string>([^<]+)</string>', text)
+m_home = re.search(r'<string>([^<]+)/\.claude/hooks/cc-tracker-daily\.sh</string>', text)
+if not m_repo or not m_home:
+    sys.stderr.write("plist template: could not locate author paths\n")
+    sys.exit(1)
+author_repo, author_home = m_repo.group(1), m_home.group(1)
+# Substituted values land inside XML <string> nodes, so XML-escape the installing machine's
+# paths. Replace the repo root FIRST via a sentinel so a home-substring inside the repo path
+# cannot be double-rewritten by the home replacement.
+SENTINEL = "\x00SRR_REPO_ROOT\x00"
+text = text.replace(author_repo, SENTINEL)
+text = text.replace(author_home, escape(home))
+text = text.replace(SENTINEL, escape(repo))
+with open(dst, "w", encoding="utf-8") as f:
+    f.write(text)
+PYCCPLIST
+  then
+    ok "launchd agent placed at $PLIST_DST (templated for $HOME / $REPO_DIR)"
+    info "To activate: launchctl bootstrap gui/\$(id -u) $PLIST_DST"
+  else
+    warn "Could not template the cc-tracker launchd plist - place it manually from $PLIST_SRC"
+  fi
+else
+  info "Skipping cc-tracker launchd agent (not macOS or python3 missing) - the hook is installed; schedule it by other means if needed."
+fi
+
+# ============================================================
 # 15. Task list (/task-list slash-command skill)
 # ============================================================
 
@@ -7713,7 +7771,7 @@ with open(p, 'w') as f: json.dump(d, f, indent=2); f.write('\n')
   # the SessionStart self-heal that reasserts this wiring every session thereafter; wiring
   # it HERE (atomically) is what guarantees its own registration lands so it can then keep
   # the rest whole. Keep this arg list identical to the consolidated line below.
-  install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh
+  install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh sidecoach-taste-promote-arm.sh
 
   # The sidecoach MCP server was RETIRED (Jonah 2026-07-24, reversing the 2026-07-15
   # wire-up - the external surface was never consumed). It was built + registered here
@@ -7955,7 +8013,7 @@ picked memory       && install_app_hooks memory-approve.sh memory-nudge.sh memor
 # decision_beats_hooks_stay_project_scoped.md).
 picked reflect      && install_app_hooks reflect-nudge.sh
 picked cmux         && install_app_hooks agent-teams-guard.sh node-shim-heal.sh plugin-node-hook-heal.sh resume-guard.sh resume-toggle.sh team-reaper.sh cmux-close-guard.sh cmux-teammate-shim-heal.sh cmux-team-config-heal.sh teammate-relay-stop.sh
-picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh
+picked sidecoach    && install_app_hooks sidecoach-sessionstart.sh sidecoach-preamble.sh sidecoach-postuserp.sh sidecoach-keyword.sh sidecoach-taste-gate.sh sidecoach-orchestrate-edit.sh sidecoach-qa-gate-stop.sh qa-gate-manual.sh sidecoach-craft-floor.sh sidecoach-postresponse.sh sidecoach-heal.sh sidecoach-detect.sh sidecoach-taste-promote-arm.sh
 picked fable        && install_app_hooks frontier-orchestrator-guard.sh
 # The confirm-arm hook powers the "confirm" override on BOTH the session-production
 # (fable) and agent-routing (model-routing) surfaces, so wire it if EITHER is picked -

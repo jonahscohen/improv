@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.yesand.cmux-tracker-daily - daily unattended cmux feature-tracker run.
+
+  Instantiated from claude/launchd/com.yesand.scheduled-research.plist.template. Runs the
+  repo wrapper claude/hooks/cmux-tracker-daily.sh, which exports the SRR_* params and execs
+  the shared runner (claude/hooks/lib/scheduled-research-run.sh). The runner's cheap pre-check
+  (cmux-tracker.py precheck) gates on a LOCAL cmux version+capabilities diff, so a featureless
+  day is two CLI calls + a set-compare and near-free; only a real capability delta runs the
+  headless /cmux-track flow. PROPOSE-ONLY: it writes inert proposals + a queue beat, never
+  edits the harness or cmux.version.
+
+  NOT INSTALLED by this repo (the user's deploy step). The absolute paths below are this
+  machine's; install.sh / the lead templates the home dir and the checkout path for others.
+  The wrapper self-locates the repo + runner, so it also works if pointed at a copied path.
+
+  MISSED-FIRE ON WAKE: a StartCalendarInterval job whose scheduled time passes while the Mac
+  is asleep or off runs ONCE on the next wake/boot (launchd catch-up), which is why RunAtLoad
+  is false yet a closed laptop still gets its run. The version gate keeps that catch-up cheap.
+
+  FIRE TIME: 04:00 local, staggered off the weekly reflect run (Sun 09:00) and the CC-tracker
+  daily (03:00) so two heavy headless claude runs never fire at once.
+
+  LOAD / UNLOAD (after any path templating):
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yesand.cmux-tracker-daily.plist
+    launchctl bootout   gui/$(id -u)/com.yesand.cmux-tracker-daily
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.yesand.cmux-tracker-daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/spare3/Documents/Github/improv/claude/hooks/cmux-tracker-daily.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>4</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/spare3/Documents/Github/improv</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>SRR_JOB_NAME</key>
+        <string>cmux-tracker-daily</string>
+        <key>SRR_REPO_ROOT</key>
+        <string>/Users/spare3/Documents/Github/improv</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/spare3/.claude/logs/cmux-tracker-daily.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/spare3/.claude/logs/cmux-tracker-daily.launchd.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

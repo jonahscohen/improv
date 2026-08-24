@@ -1,0 +1,72 @@
+{
+  "_note": "SAMPLE inventory - the shape the /cc-track flow produces and hands to `cc-tracker.py propose`. It is a fixture used to generate the committed example proposals in claude/proposals/cc-tracker/ and is exercised by claude/hooks/test-cc-tracker.sh. Imported/executed by nothing. The worked examples (native Concise output style; SessionEnd hook event) are real Claude Code features drawn from the design beat.",
+  "version_range": {"from": "2.1.236", "to": "2.1.241"},
+  "source": {
+    "primary": "https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md",
+    "npm": "https://registry.npmjs.org/@anthropic-ai/claude-code/latest",
+    "generated_utc": "2026-08-23T00:00:00Z"
+  },
+  "features": [
+    {
+      "id": "concise-2.1.237",
+      "version": "2.1.237",
+      "date": "2026-xx-xx",
+      "raw_text": "Added a native \"Concise\" output style, selectable with /output-style",
+      "feature_class": "slash-command-or-skill",
+      "capability": "native Concise output style",
+      "enables": "select a concise output mode natively, with no custom hook cluster to maintain",
+      "confidence": "high"
+    },
+    {
+      "id": "sessionend-2.1.239",
+      "version": "2.1.239",
+      "date": "2026-xx-xx",
+      "raw_text": "Added a SessionEnd hook event that fires when a session terminates",
+      "feature_class": "hook-event",
+      "capability": "SessionEnd hook event",
+      "enables": "run teardown/cleanup deterministically at session end instead of relying on a prose mandate",
+      "confidence": "high"
+    }
+  ],
+  "opportunities": [
+    {
+      "feature_ref": "concise-2.1.237",
+      "version": "2.1.237",
+      "direction": "redundant",
+      "slug": "concise-output-style-retire",
+      "opportunity": "The native Concise output style (2.1.237) may subsume our concise-mode hook cluster (concise-mandate.sh + concise-detect-stop.sh + concise-toggle.sh, ported from a third-party MIT repo). Evaluate retiring or migrating the cluster to the native style.",
+      "harness_surfaces": [
+        "claude/hooks/concise-mandate.sh",
+        "claude/hooks/concise-detect-stop.sh",
+        "claude/hooks/concise-toggle.sh",
+        "claude/settings.json"
+      ],
+      "effort": "medium",
+      "risk": "low",
+      "plan": [
+        {"step": "Enable the native Concise output style and A/B it against the hook cluster across 5 real sessions", "verify": "compare brevity + behavior; native matches or beats the cluster"},
+        {"step": "If parity holds, remove the three concise hooks from settings.json, install.sh, and browser-tree.json, and add the exclusion/retire notes", "verify": "bash claude/hooks/test-hook-registry.sh and bash claude/hooks/test-component-browser.sh stay green"},
+        {"step": "Record the retirement in a decision beat with the A/B evidence", "verify": "grep the beat for the measured comparison"}
+      ],
+      "draft_patch": "--- a/claude/settings.json\n+++ b/claude/settings.json\n@@ concise cluster -> native output style @@\n-  \"concise\": { \"hooks\": [\"concise-mandate\", \"concise-detect-stop\", \"concise-toggle\"] }\n+  \"outputStyle\": \"concise\""
+    },
+    {
+      "feature_ref": "sessionend-2.1.239",
+      "version": "2.1.239",
+      "direction": "additive",
+      "slug": "sessionend-teardown-mechanize",
+      "opportunity": "A SessionEnd hook event lets us mechanize teardown that is prose-only today (Teammate Teardown, Browser Tab Hygiene). A real session-end boundary is exactly the trigger the escalation ladder wants for turning a repeated mandate into a hook.",
+      "harness_surfaces": [
+        "claude/hooks/chrome-tabgroup-stop.sh",
+        "CLAUDE.md Teammate Teardown",
+        "CLAUDE.md Browser Tab Hygiene"
+      ],
+      "effort": "low",
+      "risk": "low",
+      "plan": [
+        {"step": "Add a SessionEnd hook that closes orphaned Claude-in-Chrome tab groups the session opened", "verify": "open a group, end the session, confirm the group is gone via tabs_context on the next session"},
+        {"step": "Wire it in browser-tree.json + app-wirings.json + install.sh (it IS event-wired, unlike a launchd runner)", "verify": "bash claude/hooks/test-component-browser.sh stays green"}
+      ]
+    }
+  ]
+}

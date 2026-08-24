@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.yesand.cc-tracker-daily.plist - the launchd user-agent for the Claude Code
+  feature-tracker (Phase 2 of the learning-researcher framework). Instantiated from
+  claude/launchd/com.yesand.scheduled-research.plist.template. It runs the thin wrapper
+  claude/hooks/cc-tracker-daily.sh, which exports the SRR_* params and execs the shared
+  runner claude/hooks/lib/scheduled-research-run.sh.
+
+  DAILY at 03:00 local, off-peak, RunAtLoad false, ProcessType Background. Daily is safe
+  because the runner's version-diff pre-check makes a featureless day a near-free no-op
+  (one npm GET, then "skip").
+
+  PROPOSE-ONLY: this job DISCOVERS + PROPOSES and never edits the harness. It writes only
+  inert proposals a human reviews, plus its log + version cursor under ~/.claude.
+
+  This committed copy carries THIS machine's absolute paths (like the reflect plist);
+  install.sh rewrites the author's $HOME and repo root to the installing machine's paths
+  before placing the copy in ~/Library/LaunchAgents. PLACEMENT ONLY - activation is the
+  user's step; this file is NOT bootstrapped by the build.
+
+  LOAD / UNLOAD (the user's deploy step, not the build's)
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yesand.cc-tracker-daily.plist
+    launchctl bootout   gui/$(id -u)/com.yesand.cc-tracker-daily
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.yesand.cc-tracker-daily</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/spare3/.claude/hooks/cc-tracker-daily.sh</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/spare3/Documents/Github/improv</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>SRR_JOB_NAME</key>
+        <string>cc-tracker-daily</string>
+        <key>SRR_REPO_ROOT</key>
+        <string>/Users/spare3/Documents/Github/improv</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/spare3/.claude/logs/cc-tracker-daily.launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/spare3/.claude/logs/cc-tracker-daily.launchd.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
