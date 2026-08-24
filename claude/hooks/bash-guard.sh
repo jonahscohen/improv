@@ -1539,6 +1539,89 @@ if [ -z "$REASON" ] && printf '%s' "$CMD" | grep -qF '.frontier-confirm'; then
   REASON="BLOCKED: ~/.claude/.frontier-confirm is the frontier-model confirm token and is off-limits to the Bash tool. Writing it would forge the user's 'confirm' and route work onto a frontier model they never approved. Only the user's typed 'confirm' may arm it. If you need a frontier model, ask the user and let them confirm."
 fi
 
+# The taste-rule promote consent token (~/.claude/.taste-rule-promote-consent) is minted
+# ONLY by the user's typed TTY confirm in sidecoach-taste-promote ("approve"). It is
+# off-limits to the Bash tool: authoring, moving, or copying it yourself would forge the
+# user's promotion consent and self-promote a mined taste rule into the guidance store the
+# user never approved. The literal ".taste-rule-promote-consent" (leading dot) matches the
+# token, never the sidecoach-taste-promote.js CLI (no such basename). Byte-identical fence
+# to the .frontier-confirm token above; proportionate to the threat model (a lazy
+# self-opt-out, not a determined forger).
+if [ -z "$REASON" ] && printf '%s' "$CMD" | grep -qF '.taste-rule-promote-consent'; then
+  REASON="BLOCKED: ~/.claude/.taste-rule-promote-consent is the taste-rule promotion consent token and is off-limits to the Bash tool. Writing/moving/copying it would forge the user's typed 'approve' confirm and self-promote a mined taste rule into the guidance store they never approved. Only the user's TTY confirm (sidecoach-taste-promote approve <candidateId>) may mint it. Ask the user to approve; do not reach for the token file."
+fi
+
+# The taste-promotion ledger signing key (~/.claude/.taste-promotion-ledger-secret) is the
+# HMAC key for the tamper-evident promotion ledger. Off-limits to the Bash tool: reading it
+# would let you forge signed ledger entries (a promotion with no real human sign-off), and
+# you never need to touch it - sidecoach-taste-promote signs the ledger itself. Same shape
+# as the .fidelity-secret block above.
+if [ -z "$REASON" ] && printf '%s' "$CMD" | grep -qF '.taste-promotion-ledger-secret'; then
+  REASON="BLOCKED: ~/.claude/.taste-promotion-ledger-secret is the taste-promotion ledger's HMAC signing key and is off-limits to the Bash tool. Reading it would let you forge signed promotion-ledger entries and self-bless a mined rule. sidecoach-taste-promote signs the ledger itself; you never need to touch this file."
+fi
+
+# The consent-arming hook (sidecoach-taste-promote-arm.sh) MINTS the promotion consent token.
+# It runs ONLY as the Claude Code UserPromptSubmit hook, on the user's own typed
+# "promote-confirm ..." prompt - a channel an agent cannot drive. An agent running it via the
+# Bash tool would forge the user's approval and self-promote a mined rule. We block EXECUTION of
+# it while leaving read/edit/git (cat/vim/git/chmod ...arm.sh) alone. A regex proved too narrow
+# (path-qualified interpreters like /bin/bash, $PWD/ and ~/ paths, and env/PATH/command prefixes
+# all slipped past - Codex round 5), so this TOKENIZES each simple command in CMD_CODE (quotes/
+# heredocs already stripped) and blocks only when the hook is the command being run: as a direct
+# program (any path form, after env-assignments/command/exec/nohup/time/env/sudo/xargs), or as the
+# argument of an interpreter (bash/sh/zsh/dash/ksh/source/., bare or path-qualified). A bare
+# mention as a non-command argument (git add, cat, chmod) is allowed.
+if [ -z "$REASON" ] && printf '%s' "$CMD_CODE" | grep -qF 'sidecoach-taste-promote-arm.sh'; then
+  _ARM_EXEC=$(ARM_CMDCODE="$CMD_CODE" python3 -c '
+import os, re
+code = os.environ.get("ARM_CMDCODE","")
+HOOK = "sidecoach-taste-promote-arm.sh"
+# ALLOWLIST, not blocklist: enumerating every way to EXECUTE a script (bash, /bin/bash, env,
+# timeout, xargs, find -exec, ...) is an endless arms race (Codex rounds 4-5). Instead we allow
+# the hook to appear ONLY as data to a known-safe read/inspect/edit/VCS verb; ANY other command
+# in a segment that names the hook is treated as execution and BLOCKED (fail-closed). Runners and
+# env-assignment prefixes are peeled first so "sudo cat <arm>" is still read (cat), while
+# "sudo bash <arm>", "timeout 5 bash <arm>", "/bin/bash <arm>", "$PWD/<arm>" all block.
+SAFE = {"cat","bat","less","more","head","tail","view","vim","vi","nano","emacs","code","subl",
+        "git","ls","stat","file","wc","grep","egrep","fgrep","rg","ag","diff","cmp","colordiff",
+        "chmod","chown","cp","mv","rm","ln","realpath","readlink","dirname","basename","touch",
+        "md5","md5sum","shasum","sha256sum","sha1sum","od","xxd","hexdump","strings","tree"}
+RUNNERS = {"command","exec","nohup","time","timeout","sudo","xargs","stdbuf","setsid","nice",
+           "ionice","env","watch","doas"}
+def base(t): return t.rsplit("/",1)[-1]
+blocked = False
+# Split on command separators but NOT bare parens: splitting "(...)" would separate an executor
+# from the hook (e.g. `source <(cat <arm>)` or `{ bash <arm>; }`). Instead we strip leading
+# group/negation punctuation from each segment so the real command surfaces. $()-substitution and
+# backticks are already re-emitted as their own lines by the top CMD_CODE normalizer.
+for seg in re.split(r"[;\n]|\|\|?|&&?|`|\$\(", code):
+    if HOOK not in seg: continue          # only judge segments that actually name the hook
+    toks = seg.split()
+    while toks:                           # peel leading "(", "{", "!" grouping/negation tokens
+        toks[0] = toks[0].lstrip("({")
+        if toks[0] == "" or toks[0] == "!": toks.pop(0)
+        else: break
+    i = 0
+    while i < len(toks):
+        t = toks[i]
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t): i += 1; continue   # env-assignment prefix
+        if base(t) in RUNNERS:
+            i += 1
+            # peel a runner and any of its option/assignment/duration args before the real command
+            while i < len(toks) and (toks[i].startswith("-") or re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", toks[i]) or re.match(r"^[0-9]", toks[i])):
+                i += 1
+            continue
+        break
+    if i >= len(toks): continue
+    if base(toks[i]) not in SAFE:          # the command naming the hook is not a safe read/edit verb
+        blocked = True; break
+print("BLOCK" if blocked else "")
+' 2>/dev/null)
+  if [ "$_ARM_EXEC" = "BLOCK" ]; then
+    REASON="BLOCKED: sidecoach-taste-promote-arm.sh mints the taste-promotion consent token and may run ONLY as the Claude Code UserPromptSubmit hook, on the user's own typed 'promote-confirm <id> <store> <digest>'. Executing it (any interpreter, wrapper, or path form) would forge the user's approval and self-promote a mined taste rule. Do not run the arm hook; ask the user to type the confirm phrase. Reading/editing/staging it (cat, vim, git, chmod ...) is allowed."
+  fi
+fi
+
 # Legacy model IDs in any command.
 #
 # This used `grep -qP` with a PCRE negative lookahead. BSD grep - which is what

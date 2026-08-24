@@ -189,6 +189,7 @@ const SUITES: Suite[] = [
   // + the stale craft-length test are handled separately.)
   { rel: 'eval/dev-corpus-disjoint.test.mjs', runner: 'node', required: true },
   { rel: 'eval/objective-label.test.mjs', runner: 'node', required: true },
+  { rel: 'bin/__tests__/sidecoach-mine.test.js', runner: 'node', required: true },              // taste miner engine: dedup classify, in-isolation pre-flight, measured-signal, inert-output dry-run
   { rel: 'src/__tests__/copywriting-templates.test.ts', required: true },
   { rel: 'src/__tests__/design-md-parser.test.ts', required: true },
   { rel: 'src/__tests__/flow-composition-craft-landing.test.ts', required: true },

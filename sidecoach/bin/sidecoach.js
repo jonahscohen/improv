@@ -315,6 +315,25 @@ function helpForTarget(target) {
     return 0;
   }
 
+  // Taste miner - a front-door command handled by main(), not a verb or a STANDALONE_BINS entry
+  // (its sibling pipeline tools taste-ingest / taste-promote are likewise reached by a hook/schedule,
+  // not listed by the resolver). `sidecoach mine ...` delegates to the sidecoach-mine engine.
+  if (name === 'mine' || name === 'sidecoach-mine') {
+    console.log('command: mine   (taste miner - self-updating taste loop, Phase 1)');
+    console.log('');
+    console.log('Assembles a multi-source corpus (beats + measured audit-history + external experts + the');
+    console.log('rule stores), dedups candidate taste rules, pre-flights each through validateRegistry in');
+    console.log('isolation, and writes ONLY inert proposals (data/proposed-rules/ + data/taste-candidates.json');
+    console.log('+ a taste_mine beat). It never enforces, never promotes, never writes the registry.');
+    console.log('');
+    console.log('  $ sidecoach mine corpus [--json]');
+    console.log('  $ sidecoach mine run [--findings <file>] [--dry-run]');
+    console.log('');
+    console.log('Run `node bin/sidecoach-mine.js --help` for the full options and exit-code contract.');
+    console.log('The `/sidecoach mine` flow (reflect-style 5-lens fan-out) runs it in a session.');
+    return 0;
+  }
+
   console.error(`sidecoach: no verb or tool named "${target}".`);
   console.error(`Valid verbs: ${verbList().join(', ')}`);
   return 1;
@@ -483,6 +502,17 @@ function main() {
   // Stage 1c: provider-specific defect counter-rules (you name the provider).
   if (cmd === 'counter-rules' || cmd === 'counter_rules' || cmd === 'counterrules') {
     process.exit(printCounterRules(argv[1]));
+  }
+
+  // Taste miner (self-updating taste loop). The heavy lifting lives in the sidecoach-mine engine;
+  // this front door just delegates so `sidecoach mine ...` and the standalone bin behave identically.
+  // The miner only ever writes INERT proposals (data/proposed-rules/ + data/taste-candidates.json +
+  // a proposal beat) - it never enforces, promotes, or touches the registry.
+  if (cmd === 'mine') {
+    const { spawnSync } = require('child_process');
+    const mineBin = require('path').join(__dirname, 'sidecoach-mine.js');
+    const r = spawnSync(process.execPath, [mineBin, ...argv.slice(1)], { stdio: 'inherit' });
+    process.exit(r.status == null ? 1 : r.status);
   }
 
   // Per-verb help: `sidecoach craft --help` / `-h`.

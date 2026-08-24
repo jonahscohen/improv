@@ -78,6 +78,45 @@ if _ffp:
     except OSError:
         pass
 
+# The taste-rule promote consent token (~/.claude/.taste-rule-promote-consent) is minted
+# ONLY by the user typed TTY confirm in sidecoach-taste-promote (approve). Writing it
+# through Write/Edit/MultiEdit would forge that confirm and self-promote a mined taste rule
+# into the guidance store the user never approved. Match the token by resolved path or exact
+# basename - never the CLI script. Byte-identical fence to the frontier token block above.
+# NO APOSTROPHES here.
+_tfp = str(inp.get("file_path") or "")
+if _tfp:
+    try:
+        _tc = os.path.expanduser(_tfp)
+        if not os.path.isabs(_tc):
+            _tc = os.path.join(os.getcwd(), _tc)
+        _tc = os.path.realpath(_tc)
+        _ttok = os.path.realpath(os.path.expanduser("~/.claude/.taste-rule-promote-consent"))
+        if _tc == _ttok or os.path.basename(_tfp) == ".taste-rule-promote-consent":
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: ~/.claude/.taste-rule-promote-consent is the taste-rule promotion consent token and may not be written through Write/Edit/MultiEdit. Doing so would forge the user typed approve confirm and self-promote a mined taste rule into the guidance store they never approved. Only the user typed confirm may mint it - ask the user to approve."}}))
+            sys.exit(0)
+    except OSError:
+        pass
+
+# The taste-promotion ledger signing key (~/.claude/.taste-promotion-ledger-secret) is the HMAC
+# key for the tamper-evident promotion ledger. Overwriting it through Write/Edit/MultiEdit would
+# let an agent install a known key and then forge signed ledger/token entries (a promotion with
+# no real human sign-off). Off-limits, same shape as the consent-token block above (bash-guard
+# covers the Bash vector). Match by resolved path or exact basename. NO APOSTROPHES here.
+_sfp = str(inp.get("file_path") or "")
+if _sfp:
+    try:
+        _sc = os.path.expanduser(_sfp)
+        if not os.path.isabs(_sc):
+            _sc = os.path.join(os.getcwd(), _sc)
+        _sc = os.path.realpath(_sc)
+        _stok = os.path.realpath(os.path.expanduser("~/.claude/.taste-promotion-ledger-secret"))
+        if _sc == _stok or os.path.basename(_sfp) == ".taste-promotion-ledger-secret":
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "BLOCKED: ~/.claude/.taste-promotion-ledger-secret is the taste-promotion ledger HMAC signing key and may not be written through Write/Edit/MultiEdit. Overwriting it would let you forge signed promotion-ledger entries and self-bless a mined rule. sidecoach-taste-promote signs the ledger itself; you never need to touch this file."}}))
+            sys.exit(0)
+    except OSError:
+        pass
+
 if tool == "Write":
     content = inp.get("content", "")
 elif tool == "Edit":

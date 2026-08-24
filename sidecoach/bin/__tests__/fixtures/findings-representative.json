@@ -1,0 +1,85 @@
+{
+  "minedBy": "sidecoach-mine synthesis (representative fixture of 5-lens output)",
+  "candidates": [
+    {
+      "title": "Focus ring color drifts across interactive states",
+      "minedBy": "convention-extractor",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Multiple expert sources require a single, consistent focus-ring token; our registry has focus-visible presence but no color-consistency rule.",
+      "evidence": [
+        "reference/_extracted/external/vercel-web-interface-guidelines/NAVIGATION-STATE.md: focus ring must be one consistent token",
+        "reference/_extracted/external/bencium-design/ACCESSIBILITY.md: keep focus indicators consistent"
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "a11y/focus-ring-consistency",
+        "findingClass": "a11y",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Gradient text is banned",
+      "minedBy": "efficacy-archaeologist",
+      "sourceKind": "measured-audit-history",
+      "confidence": "high",
+      "forceStrengthen": true,
+      "rationale": "gradient-text keeps recurring; propose raising it from major to blocker.",
+      "evidence": ["eval/corpus/defect-distribution.json: gradient-text is a top provider defect"],
+      "proposedRule": {
+        "canonicalRuleKey": "anti-pattern/gradient-text",
+        "findingClass": "anti-pattern",
+        "severity": "blocker",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Gradient text on headings",
+      "minedBy": "recurring-defect",
+      "sourceKind": "beat",
+      "confidence": "low",
+      "rationale": "Restatement of the existing gradient-text ban at the SAME severity - a duplicate.",
+      "evidence": ["some-beat.md: avoid gradient text"],
+      "proposedRule": {
+        "canonicalRuleKey": "anti-pattern/gradient-text",
+        "findingClass": "anti-pattern",
+        "severity": "major",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "One accent color per view",
+      "minedBy": "convention-extractor",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Design-judgment prose has this rule but the registry has no enforced/registry entry; propose formalizing it as a candidate.",
+      "evidence": ["claude/skills/sidecoach/reference/design-judgment-rules.md: One accent color per view"],
+      "proposedRule": {
+        "canonicalRuleKey": "theming/one-accent-per-view",
+        "findingClass": "theming",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "page"
+      }
+    },
+    {
+      "title": "Malformed candidate with an un-normalizable source severity",
+      "minedBy": "currency-drift",
+      "sourceKind": "speculative",
+      "confidence": "low",
+      "rationale": "Deliberately malformed to prove a failing candidate is FILED with its validateRegistry errors, never silently dropped.",
+      "evidence": ["(none)"],
+      "proposedRule": {
+        "canonicalRuleKey": "polish/malformed-preflight-demo",
+        "findingClass": "polish",
+        "severity": "minor",
+        "sourceSeverity": "P9-not-a-real-tier",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    }
+  ]
+}

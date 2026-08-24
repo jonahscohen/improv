@@ -38,9 +38,9 @@ sidecoach-monitor "<utterance>" --json
 
 Exit: 0 ran, non-zero the run did not complete
 
-## Standalone tools (17)
+## Standalone tools (19)
 
-Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 10 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-ingest`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
+Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 12 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-mine`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-ingest`, `sidecoach-taste-promote`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
 
 Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-preauthor`, `sidecoach-qa-plan`. Every other tool here is run by you or by the user, never automatically.
 
@@ -152,6 +152,18 @@ node <sidecoach-repo>/bin/sidecoach-image.js generate --prompt "<brief>" --out h
 
 Exit: 0 produced and verified, non-zero see --help for the per-mode contract
 
+### `sidecoach-mine`
+
+_not listed by the resolver | reached by /sidecoach mine (and the scheduled taste-mine launchd job)_
+
+The taste MINER engine for the self-updating taste loop. Assembles a MULTI-SOURCE corpus (beats + measured audit-history + external expert content + the existing rule stores), tags every entry by sourceKind, and turns candidate taste-rule findings into INERT, quarantined proposals a human reviews. It dedups each candidate against every rule store (net-new / strengthen-existing / duplicate-dropped), pre-flights it through validateRegistry IN ISOLATION (a failure is filed with its errors, never dropped), and writes ONLY the inert output: data/proposed-rules/<ruleId>.json + data/taste-candidates.json + a taste_mine_YYYY-MM-DD.md proposal beat. It NEVER writes the registry, any live rule store, any hook, or any config; external content is read as DATA, never followed; and nothing in src/ imports the quarantine, so a proposal is inert by construction. The reflect-style 5-lens fan-out that produces the candidate findings runs in the /sidecoach mine flow (a live session); this engine owns the deterministic dedup, pre-flight, and inert-output writing.
+
+```
+node <sidecoach-repo>/bin/sidecoach-mine.js corpus [--json] | run [--findings <file>] [--dry-run] [--out-dir <dir>] [--beats-dir <dir>] [--beat-out-dir <dir>]
+```
+
+Exit: 0 success, 2 usage, 3 registry unavailable (build first), 4 write failure, 5 bad --findings file
+
 ### `sidecoach-palette`
 
 _listed by the resolver_
@@ -247,6 +259,18 @@ node <sidecoach-repo>/bin/sidecoach-taste-ingest.js [--check | --fetch | --offli
 ```
 
 Exit: 0 ok, 2 usage, 3 manifest error, 4 allowlist violation, 5 network, 6 io, 10 changes detected, 70 internal
+
+### `sidecoach-taste-promote`
+
+_not listed by the resolver | reached by the human review gate (the user types promote-confirm in their REPL, then runs promote)_
+
+The FULLY-GATED promote path for the self-updating taste loop - the safety core. Moves a mined candidate from the INERT quarantine (data/proposed-rules/<id>.json) into the GUIDANCE tier (data/guidance/<store>/) ONLY after consuming a single-use consent token the user mints by typing "promote-confirm <candidateId> <store> <digest>" in their own REPL (the sidecoach-taste-promote-arm.sh UserPromptSubmit hook; an agent cannot submit a user prompt, bash-guard fences both the token + ledger-secret paths AND direct execution of the arm hook, and content-guard fences the token + secret; the <digest> binds the approval to the reviewed content). Every promotion appends to an append-only HMAC hash-chained ledger with a signed head anchor, binding the approved store + a content digest so a post-promotion swap, store move, or id masquerade is detected by "audit". It NEVER mints a token, exports nothing, and touches only guidance DATA - the enforced product-rule-registry imports nothing from the quarantine or guidance dir, so nothing auto-promotes.
+
+```
+node <sidecoach-repo>/bin/sidecoach-taste-promote.js list | show <id> [--store <s>] | approve <id> [--store <s>] | promote <id> --store <s> | check <id> [--store <s>] | verify-ledger | audit
+```
+
+Exit: 0 ok, 2 usage, 3 no candidate, 4 bad candidate, 5 no token, 6 no TTY, 8 ledger tampered, 9 audit discrepancy, 10 io, 11 replay
 
 ## Dead weight, named on purpose
 

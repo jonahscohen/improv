@@ -594,5 +594,16 @@
     "timeout": 5
    }
   }
+ ],
+ "sidecoach-taste-promote-arm.sh": [
+  {
+   "event": "UserPromptSubmit",
+   "matcher": null,
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/sidecoach-taste-promote-arm.sh",
+    "timeout": 5
+   }
+  }
  ]
 }

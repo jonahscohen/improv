@@ -104,7 +104,8 @@
             "sidecoach-craft-floor",
             "sidecoach-postresponse",
             "sidecoach-heal",
-            "sidecoach-detect"
+            "sidecoach-detect",
+            "sidecoach-taste-promote-arm"
           ]
         }
       ]
@@ -597,7 +598,8 @@
     "sidecoach-heal": "Repairs Sidecoach's own wiring at the start of each session: re-creates any missing hook symlink so it resolves and fires, and re-adds any registration that was stripped from settings.json. It only adds, never removes, and stays silent when nothing needs fixing.",
     "voice-mandate": "Decides at the start of each session whether spoken output may be used, based on whether it is installed and whether you muted it. It says one of three things: allowed, muted, or nothing at all when it is not installed.",
     "voice-toggle": "Switches spoken output on or off when you type voice on, voice off, voice toggle or voice status. It writes the flag at ~/.claude/.voice-enabled, which the other two voice entries in this list read to decide what is allowed.",
-    "plugin-node-hook-heal": "Points any plugin hook that starts Node by bare name at Node's full location instead. cmux-launched sessions give hooks a stripped-down search path with no Node on it, so those hooks were silently failing every time (the Codex end-of-session review among them). Re-applies itself each session so a plugin update cannot quietly undo it."
+    "plugin-node-hook-heal": "Points any plugin hook that starts Node by bare name at Node's full location instead. cmux-launched sessions give hooks a stripped-down search path with no Node on it, so those hooks were silently failing every time (the Codex end-of-session review among them). Re-applies itself each session so a plugin update cannot quietly undo it.",
+    "sidecoach-taste-promote-arm": "Mints the single-use taste-rule promotion consent token when you type, as your whole prompt, \"promote-confirm <candidateId> <store> <digest>\" (the digest, from approve/show, binds the approval to the reviewed content). Nothing else arms it, and an agent cannot submit a prompt, so only your typed confirm can approve promoting a mined taste rule into the guidance store."
   },
   "hook_note": {
     "model-router-guard": "Recommendation: designed to keep Anthropic from routing away from Fable 5 if erroneously detects unsafe behavior, but prevents Claude from routing agents based on LOE. Do not activate."
@@ -691,7 +693,8 @@
     "sidecoach-heal": "sidecoach",
     "voice-mandate": "voice-output",
     "voice-toggle": "voice-output",
-    "plugin-node-hook-heal": "cmux"
+    "plugin-node-hook-heal": "cmux",
+    "sidecoach-taste-promote-arm": "sidecoach"
   },
   "pinned_hooks": [
     "beats-rebuild",

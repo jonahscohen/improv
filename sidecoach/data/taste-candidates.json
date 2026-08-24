@@ -1,0 +1,23 @@
+{
+  "schema": "sidecoach-taste-candidates/v1",
+  "generated_utc": "2026-08-23T23:10:34.009Z",
+  "commit": "cdb530f2",
+  "minedBy": "sidecoach-mine",
+  "note": "INERT proposal queue. Nothing here is enforced. Promotion is a separate, human-gated step (Phase 1 gate). No source file imports data/proposed-rules/.",
+  "corpusStats": {
+    "beat": 0,
+    "measured-audit-history": 0,
+    "totalScans": 0,
+    "lastScanUtc": null,
+    "expert-external": 15,
+    "rule-store-for-dedup": 210
+  },
+  "counts": {
+    "netNew": 0,
+    "strengthenExisting": 0,
+    "duplicateDropped": 0,
+    "preflightFailed": 0
+  },
+  "candidates": [],
+  "dropped": []
+}
