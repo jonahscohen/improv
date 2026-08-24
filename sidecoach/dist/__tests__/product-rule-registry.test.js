@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // sidecoach/src/__tests__/product-rule-registry.test.ts
 const product_rule_types_1 = require("../product-rule-types");
 const product_rule_registry_1 = require("../product-rule-registry");
+const checks_1 = require("../validators/checks");
 const source_support_matrix_1 = require("../validators/source-support-matrix");
 const objective_rendered_scanner_1 = require("../validators/objective-rendered-scanner");
 const subjective_rendered_scanner_1 = require("../validators/subjective-rendered-scanner");
@@ -376,5 +377,65 @@ run();
         }
     }
     console.log('product-rule-registry (Stage 3c rendered manifest - no orphan / no phantom / behaviour lock): OK');
+}
+// --- Phase 3a: patternSpec -> interpreter resolution (Step 3) ---
+{
+    // A rule that carries a patternSpec and has NO hand-authored CHECKS entry must resolve to the
+    // data-driven interpreter, FIRE on a matching input through the exact path run-validator uses
+    // (def.checkProduct), and carry the rule's stamped severity/findingClass.
+    const spec = {
+        specVersion: 1,
+        engine: 'static-css-regex',
+        applicability: { anyOf: ['transition\\s*:', 'animation\\s*:'], scope: 'css' },
+        defect: {
+            anyOf: [{ pattern: 'cubic-bezier\\([^)]*\\)', flags: 'i' }],
+            numericGuard: { predicateId: 'cubic-bezier-overshoot', threshold: 0.1 },
+        },
+        message: 'bounce/elastic overshoot easing',
+        evidenceScope: 'css',
+    };
+    const seeded = {
+        ruleId: 'mined.seeded-bounce-test',
+        sourceRuleAliases: ['mined:seeded-bounce-test'],
+        canonicalRuleKey: 'mined/seeded-bounce-test', // deliberately absent from CHECKS
+        ownerValidatorId: 'polish-standard',
+        sourceVocabulary: 'taste',
+        sourceSeverity: 'medium',
+        severity: 'minor',
+        findingClass: 'polish',
+        registryScope: 'mined-seeded-bounce-test',
+        evidenceRequirements: ['css-rule'],
+        supportedSourceKinds: (0, source_support_matrix_1.supportedKindsFor)('css-rule'),
+        scope: 'file',
+        narrowTargetBehavior: 'evaluate_expanded_context',
+        applicability: 'not_applicable',
+        patternSpec: spec,
+    };
+    // resolution: a spec'd, check-less rule resolves to the interpreter (NOT missingCheck).
+    if ((0, product_rule_registry_1.resolveCheckFn)(seeded) === checks_1.missingCheck)
+        throw new Error('a patternSpec-carrying rule must resolve to the interpreter, not missingCheck');
+    const fileCtx = (css) => ({
+        cssText: css, markup: '',
+        files: [{ path: 'styles.css', sourceKind: 'css', cssText: css, markup: '', evidenceKindsPresent: ['css'] }],
+    });
+    const fireRes = (0, product_rule_registry_1.buildCheckProduct)(seeded)(fileCtx('.x { transition: transform .3s cubic-bezier(0.5, 1.6, 0.4, 1); }'));
+    if (fireRes.status !== 'fail')
+        throw new Error(`seeded patternSpec rule must FIRE via checkProduct, got ${fireRes.status}`);
+    if (fireRes.severity !== 'minor' || fireRes.findingClass !== 'polish')
+        throw new Error('the fired result must carry the rule stamped severity/findingClass');
+    if (fireRes.ruleId !== 'mined.seeded-bounce-test')
+        throw new Error('the fired result must carry the rule id');
+    const cleanRes = (0, product_rule_registry_1.buildCheckProduct)(seeded)(fileCtx('.x { transition: transform .3s ease; }'));
+    if (cleanRes.status !== 'pass')
+        throw new Error(`seeded patternSpec rule must be CLEAN when no defect matches, got ${cleanRes.status}`);
+    // A rule with NEITHER a patternSpec NOR a CHECKS entry stays inconclusive - NEVER a false pass.
+    const bare = { ...seeded, ruleId: 'mined.bare-no-detector', canonicalRuleKey: 'mined/bare-no-detector', sourceRuleAliases: ['mined:bare-no-detector'], registryScope: 'mined-bare' };
+    delete bare.patternSpec;
+    if ((0, product_rule_registry_1.resolveCheckFn)(bare) !== checks_1.missingCheck)
+        throw new Error('a rule with no patternSpec and no CHECKS entry must resolve to missingCheck');
+    const bareRes = (0, product_rule_registry_1.buildCheckProduct)(bare)(fileCtx('.x { transition: transform .3s cubic-bezier(0.5, 1.6, 0.4, 1); }'));
+    if (bareRes.status !== 'inconclusive')
+        throw new Error(`a detector-less rule must be inconclusive (no false pass), got ${bareRes.status}`);
+    console.log('product-rule-registry (Phase 3a patternSpec -> interpreter resolution: fires / clean / no-false-pass): OK');
 }
 //# sourceMappingURL=product-rule-registry.test.js.map

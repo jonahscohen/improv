@@ -42,7 +42,7 @@ Exit: 0 ran, non-zero the run did not complete
 
 Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 12 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-mine`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-ingest`, `sidecoach-taste-promote`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
 
-Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-preauthor`, `sidecoach-qa-plan`. Every other tool here is run by you or by the user, never automatically.
+Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-mine`, `sidecoach-preauthor`, `sidecoach-qa-plan`. Every other tool here is run by you or by the user, never automatically.
 
 ### `sidecoach-artifacts`
 
@@ -154,7 +154,7 @@ Exit: 0 produced and verified, non-zero see --help for the per-mode contract
 
 ### `sidecoach-mine`
 
-_not listed by the resolver | reached by /sidecoach mine, and the scheduled sidecoach-mine-daily launchd job (precheck/advance are its SRR run/skip gate + cursor on the shared research spine)_
+_not listed by the resolver | flow-invoked | reached by /sidecoach mine, and the scheduled sidecoach-mine-daily launchd job (precheck/advance are its SRR run/skip gate + cursor on the shared research spine)_
 
 The taste MINER engine for the self-updating taste loop. Assembles a MULTI-SOURCE corpus (beats + measured audit-history + external expert content + the existing rule stores), tags every entry by sourceKind, and turns candidate taste-rule findings into INERT, quarantined proposals a human reviews. It dedups each candidate against every rule store (net-new / strengthen-existing / duplicate-dropped), pre-flights it through validateRegistry IN ISOLATION (a failure is filed with its errors, never dropped), and writes ONLY the inert output: data/proposed-rules/<ruleId>.json + data/taste-candidates.json + a taste_mine_YYYY-MM-DD.md proposal beat. It NEVER writes the registry, any live rule store, any hook, or any config; external content is read as DATA, never followed; and nothing in src/ imports the quarantine, so a proposal is inert by construction. The reflect-style 5-lens fan-out that produces the candidate findings runs in the /sidecoach mine flow (a live session); this engine owns the deterministic dedup, pre-flight, and inert-output writing.
 

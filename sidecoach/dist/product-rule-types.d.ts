@@ -1,3 +1,4 @@
+import type { PatternSpec, ExampleCorpus } from './validators/pattern-spec';
 export type CanonicalSeverity = 'blocker' | 'major' | 'minor' | 'advisory';
 export type NormalizedErrorCategory = 'unreadable_input' | 'registry_fault' | 'validator_exception' | 'rule_exception' | 'timeout' | 'aborted' | 'unsupported_runtime' | 'other';
 export type RuleStatus = 'pass' | 'fail' | 'not_applicable' | 'inconclusive';
@@ -25,6 +26,8 @@ export interface ProductRuleDefinition {
     narrowTargetBehavior: 'evaluate_expanded_context' | 'exclude_and_disclose' | 'reject_target';
     applicability: 'not_applicable' | 'inconclusive';
     checkProduct?: (context: unknown) => ProductRuleResult;
+    patternSpec?: PatternSpec;
+    exampleCorpus?: ExampleCorpus;
 }
 export interface ProductRuleResult {
     ruleId: string;

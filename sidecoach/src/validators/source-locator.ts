@@ -90,6 +90,13 @@ export function markupRegionOf(file: CollectedFile): SourceRegion | undefined {
   return { path: file.path, text: file.markup, startLine: 1 };
 }
 
+/** EXPORTED region accessor for callers that must scan source themselves (e.g. the patternSpec
+ *  interpreter, which runs UNTRUSTED regexes through re2 rather than a native RegExp and so cannot
+ *  use locate()). Same regions locate() uses, so reported lines stay consistent. */
+export function sourceRegions(ctx: ProductCheckContext, scope: LocationScope): SourceRegion[] {
+  return regionsFor(ctx, scope);
+}
+
 function regionsFor(ctx: ProductCheckContext, scope: LocationScope): SourceRegion[] {
   const files = Array.isArray(ctx.files) ? ctx.files : [];
   const out: SourceRegion[] = [];

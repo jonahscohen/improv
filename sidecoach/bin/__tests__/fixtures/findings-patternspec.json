@@ -1,0 +1,84 @@
+{
+  "candidates": [
+    {
+      "title": "Bounce/elastic overshoot easing (mined)",
+      "minedBy": "pattern-lens",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Overshoot cubic-bezier curves read as a generated-UI bounce tell; the interpreter confirms the y control points travel past the destination.",
+      "evidence": ["pos-1.html uses cubic-bezier(0.34, 1.56, 0.64, 1)"],
+      "proposedRule": {
+        "canonicalRuleKey": "mined/bounce-easing-overshoot",
+        "findingClass": "anti-pattern",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file",
+        "patternSpec": {
+          "specVersion": 1,
+          "engine": "static-css-regex",
+          "applicability": { "anyOf": ["transition\\s*:", "animation\\s*:"], "scope": "css" },
+          "defect": {
+            "anyOf": [{ "pattern": "cubic-bezier\\([^)]*\\)", "flags": "i" }],
+            "numericGuard": { "predicateId": "cubic-bezier-overshoot", "threshold": 0.1 }
+          },
+          "message": "bounce/elastic overshoot easing - real objects decelerate, they do not spring back",
+          "remediation": "use a decelerating curve, e.g. cubic-bezier(0.16, 1, 0.3, 1)",
+          "evidenceScope": "css"
+        },
+        "exampleCorpus": {
+          "positives": [
+            { "id": "bounce-pos-1", "file": "bin/__tests__/fixtures/patternspec-examples/pos-1.html", "label": "fires", "labeledBy": "codex", "split": "tune", "provenance": { "source": "hand-authored fixture", "why": "overshoot curve" } }
+          ],
+          "negatives": [
+            { "id": "bounce-neg-1", "file": "bin/__tests__/fixtures/patternspec-examples/neg-1.html", "label": "clean", "labeledBy": "codex", "split": "heldout", "provenance": { "source": "hand-authored fixture", "why": "decelerating curve" } }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Malformed detector - catastrophic defect regex",
+      "minedBy": "pattern-lens",
+      "sourceKind": "speculative",
+      "confidence": "low",
+      "rationale": "A candidate whose defect regex would backtrack catastrophically must be filed with preflight errors, never admitted.",
+      "proposedRule": {
+        "canonicalRuleKey": "mined/bad-regex-demo",
+        "findingClass": "polish",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file",
+        "patternSpec": {
+          "specVersion": 1,
+          "engine": "static-css-regex",
+          "applicability": { "anyOf": ["transition\\s*:"], "scope": "css" },
+          "defect": { "anyOf": [{ "pattern": "(a+)+$" }] },
+          "message": "unsafe defect"
+        }
+      }
+    },
+    {
+      "title": "Malformed detector - unknown numeric predicate",
+      "minedBy": "pattern-lens",
+      "sourceKind": "speculative",
+      "confidence": "low",
+      "rationale": "A candidate whose numericGuard names a predicate outside the fixed allowlist must be filed with preflight errors.",
+      "proposedRule": {
+        "canonicalRuleKey": "mined/bad-predicate-demo",
+        "findingClass": "polish",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file",
+        "patternSpec": {
+          "specVersion": 1,
+          "engine": "static-css-regex",
+          "applicability": { "anyOf": ["transition\\s*:"], "scope": "css" },
+          "defect": {
+            "anyOf": [{ "pattern": "cubic-bezier\\([^)]*\\)", "flags": "i" }],
+            "numericGuard": { "predicateId": "not-in-the-allowlist", "threshold": 1 }
+          },
+          "message": "unknown predicate"
+        }
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ exports.lineOfOffset = lineOfOffset;
 exports.fileLineOf = fileLineOf;
 exports.cssRegionsOf = cssRegionsOf;
 exports.markupRegionOf = markupRegionOf;
+exports.sourceRegions = sourceRegions;
 exports.locate = locate;
 exports.locateFirst = locateFirst;
 exports.locateWhere = locateWhere;
@@ -54,6 +55,12 @@ function markupRegionOf(file) {
     if (!file.markup)
         return undefined;
     return { path: file.path, text: file.markup, startLine: 1 };
+}
+/** EXPORTED region accessor for callers that must scan source themselves (e.g. the patternSpec
+ *  interpreter, which runs UNTRUSTED regexes through re2 rather than a native RegExp and so cannot
+ *  use locate()). Same regions locate() uses, so reported lines stay consistent. */
+function sourceRegions(ctx, scope) {
+    return regionsFor(ctx, scope);
 }
 function regionsFor(ctx, scope) {
     const files = Array.isArray(ctx.files) ? ctx.files : [];

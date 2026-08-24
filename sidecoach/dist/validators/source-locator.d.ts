@@ -22,6 +22,10 @@ export declare function fileLineOf(region: SourceRegion, offsetInRegion: number)
 export declare function cssRegionsOf(file: CollectedFile): SourceRegion[];
 /** The markup region of one collected file (the whole file), or none for a pure CSS file. */
 export declare function markupRegionOf(file: CollectedFile): SourceRegion | undefined;
+/** EXPORTED region accessor for callers that must scan source themselves (e.g. the patternSpec
+ *  interpreter, which runs UNTRUSTED regexes through re2 rather than a native RegExp and so cannot
+ *  use locate()). Same regions locate() uses, so reported lines stay consistent. */
+export declare function sourceRegions(ctx: ProductCheckContext, scope: LocationScope): SourceRegion[];
 /**
  * Every `path:line` where `re` matches, across the requested scope, capped at `limit`.
  *

@@ -3,6 +3,8 @@ import type { ProductRuleDefinition, ProductRuleResult, CanonicalSeverity } from
 import { isBlocking } from './product-rule-types';
 import { supportedKindsFor } from './validators/source-support-matrix';
 import { CHECKS, missingCheck } from './validators/checks';
+import type { CheckFn } from './validators/checks';
+import { interpreterFor } from './validators/checks/pattern-interpreter';
 import { stampResult } from './validators/check-context';
 import type { ProductCheckContext } from './validators/check-context';
 
@@ -847,15 +849,27 @@ const RAW_RULES: ProductRuleDefinition[] = [
   },
 ];
 
-// Attach the four-status checkProduct to every definition. The wrapper looks up the
-// verdict fn by canonicalRuleKey, stamps per-rule metadata from the definition, and
-// CATCHES a throwing rule check as inconclusive + rule_exception (spec 479-483). The
-// generated file is unaffected: deriveValidator reads identity/owner fields and
-// JSON.stringify drops functions.
-export const RULES: ProductRuleDefinition[] = RAW_RULES.map((def) => ({
-  ...def,
-  checkProduct: (context: unknown): ProductRuleResult => {
-    const fn = CHECKS[def.canonicalRuleKey] ?? missingCheck;
+// Resolve the verdict fn for a rule. A hand-authored CHECKS entry wins. Otherwise a rule that
+// carries a patternSpec (a mined static-css-regex detector) resolves to the DATA-DRIVEN
+// interpreter - which executes no authored code. A rule with neither still resolves to
+// missingCheck, so an un-backed rule is inconclusive, never a false pass. Exported so the
+// resolution is a single named, testable seam (product-rule-registry.test.ts seeds a spec'd rule
+// and asserts it FIRES, and a spec-less/check-less rule stays inconclusive).
+export function resolveCheckFn(def: ProductRuleDefinition): CheckFn {
+  const explicit = CHECKS[def.canonicalRuleKey];
+  if (explicit) return explicit;
+  if (def.patternSpec) return interpreterFor(def);
+  return missingCheck;
+}
+
+// Build the four-status checkProduct for one definition: it resolves the verdict fn
+// (resolveCheckFn), stamps per-rule metadata from the definition, and CATCHES a throwing rule
+// check as inconclusive + rule_exception (spec 479-483). Exported so a seeded rule (e.g. a
+// patternSpec-backed one in product-rule-registry.test.ts) can be exercised through the EXACT
+// path run-validator uses (run-validator calls def.checkProduct).
+export function buildCheckProduct(def: ProductRuleDefinition): (context: unknown) => ProductRuleResult {
+  return (context: unknown): ProductRuleResult => {
+    const fn = resolveCheckFn(def);
     try {
       return stampResult(def, fn(context as ProductCheckContext));
     } catch (e) {
@@ -865,7 +879,14 @@ export const RULES: ProductRuleDefinition[] = RAW_RULES.map((def) => ({
         normalizedErrorCategory: 'rule_exception',
       });
     }
-  },
+  };
+}
+
+// Attach checkProduct to every definition. The generated file is unaffected: deriveValidator
+// reads identity/owner fields and JSON.stringify drops functions.
+export const RULES: ProductRuleDefinition[] = RAW_RULES.map((def) => ({
+  ...def,
+  checkProduct: buildCheckProduct(def),
 }));
 
 export function getRule(canonicalRuleKey: string): ProductRuleDefinition | null {

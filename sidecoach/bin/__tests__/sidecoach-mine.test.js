@@ -181,7 +181,14 @@ if (prevEnv === undefined) delete process.env.SIDECOACH_AUDIT_HISTORY; else proc
 // --- runPipeline dry-run over the representative fixture (writes nothing) ------
 const fixture = path.resolve(__dirname, 'fixtures', 'findings-representative.json');
 const beforeProposed = safeList(path.resolve(__dirname, '..', '..', 'data', 'proposed-rules'));
+// HERMETIC: pin the audit-history to a nonexistent file so this dry-run counts ONLY the fixture's
+// candidates. Without this it reads the real, mutable data/audit-history.jsonl, which a CONCURRENT
+// scheduled miner can grow mid-suite - crossing rules' fire thresholds and inflating the measured
+// strengthen count (a test-isolation bug, not a code bug). The counts below describe fixture-only.
+const _prevAH = process.env.SIDECOACH_AUDIT_HISTORY;
+process.env.SIDECOACH_AUDIT_HISTORY = path.join(tmp, 'no-such-audit-history.jsonl');
 const summary = M.runPipeline({ findings: fixture, dryRun: true, beatsDir: tmp });
+if (_prevAH === undefined) delete process.env.SIDECOACH_AUDIT_HISTORY; else process.env.SIDECOACH_AUDIT_HISTORY = _prevAH;
 // focus-ring (net-new), one-accent (net-new, resembles guidance), malformed (net-new, preflight-fail);
 // gradient-text@blocker (strengthen); gradient-text@major (duplicate, dropped).
 eq(summary.counts.netNew, 3, 'dry-run: 3 net-new (incl. the guidance-resemblance and the malformed)');
@@ -194,11 +201,118 @@ eq(JSON.stringify(afterProposed), JSON.stringify(beforeProposed), 'dry-run wrote
 function safeList(dir) { try { return fs.readdirSync(dir).sort(); } catch (_e) { return []; } }
 try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (_e) { /* best-effort */ }
 
-// --- report -------------------------------------------------------------------
-if (failures.length) {
-  process.stderr.write(`sidecoach-mine.test: ${passed} passed, ${failures.length} FAILED\n`);
-  for (const f of failures) process.stderr.write(`  x ${f}\n`);
-  process.exit(1);
-}
-process.stdout.write(`sidecoach-mine.test: all ${passed} assertions passed\n`);
-process.exit(0);
+// ============================================================================
+// PHASE 3a: patternSpec + exampleCorpus carry-through, preflight screen, freeze
+// ============================================================================
+const POS_1 = path.resolve(__dirname, 'fixtures', 'patternspec-examples', 'pos-1.html');
+const NEG_1 = path.resolve(__dirname, 'fixtures', 'patternspec-examples', 'neg-1.html');
+
+const goodSpec = {
+  specVersion: 1,
+  engine: 'static-css-regex',
+  applicability: { anyOf: ['transition\\s*:', 'animation\\s*:'], scope: 'css' },
+  defect: { anyOf: [{ pattern: 'cubic-bezier\\([^)]*\\)', flags: 'i' }], numericGuard: { predicateId: 'cubic-bezier-overshoot', threshold: 0.1 } },
+  message: 'bounce/elastic overshoot easing',
+  evidenceScope: 'css',
+};
+const goodCorpus = {
+  positives: [{ id: 'p1', file: POS_1, label: 'fires', labeledBy: 'codex', split: 'tune', provenance: { source: 'fixture' } }],
+  negatives: [{ id: 'n1', file: NEG_1, label: 'clean', labeledBy: 'codex', split: 'heldout', provenance: { source: 'fixture' } }],
+};
+
+// carry-through: normalizeCandidate copies patternSpec + exampleCorpus onto the def.
+const specCand = M.normalizeCandidate({
+  title: 'Bounce overshoot', sourceKind: 'expert-external', confidence: 'medium',
+  proposedRule: { canonicalRuleKey: 'mined/bounce-overshoot', findingClass: 'anti-pattern', severity: 'minor', evidenceRequirements: ['css-rule'], scope: 'file', patternSpec: goodSpec, exampleCorpus: goodCorpus },
+}, norm);
+ok(specCand.def.patternSpec && specCand.def.patternSpec.engine === 'static-css-regex', 'normalizeCandidate carries patternSpec onto the def');
+ok(specCand.def.exampleCorpus && Array.isArray(specCand.def.exampleCorpus.positives), 'normalizeCandidate carries exampleCorpus onto the def');
+
+// freezeExampleCorpus: valid corpus -> frozen records with content sha + recordHash.
+const fr = M.freezeExampleCorpus(goodCorpus);
+eq(fr.errors.length, 0, 'freezeExampleCorpus over readable files reports no errors');
+ok(fr.frozen.positives.length === 1 && /^[0-9a-f]{64}$/.test(fr.frozen.positives[0].contentSha256), 'frozen positive carries a real content sha256');
+ok(/^[0-9a-f]{64}$/.test(fr.frozen.positives[0].recordHash), 'frozen positive carries a canonical recordHash');
+// a missing file is FILED as an error, never thrown/dropped.
+const frBad = M.freezeExampleCorpus({ positives: [{ id: 'x', file: '/no/such/file-xyz.html', label: 'fires', labeledBy: 'codex', split: 'tune' }], negatives: [] });
+ok(frBad.errors.some((e) => e.includes('unreadable')), 'freezeExampleCorpus files a missing example file as an error (not a throw)');
+
+// preflight: a good spec passes AND carries a frozen corpus; a bad regex / bad predicate is FILED.
+const preGood = M.preflight(specCand, M.classify(specCand, dedup), reg, baseSet);
+eq(preGood.ok, true, 'a valid patternSpec + readable corpus passes preflight');
+ok(preGood.frozenCorpus && preGood.frozenCorpus.positives.length === 1, 'preflight attaches the frozen corpus');
+ok(preGood.spec && preGood.spec.ok === true, 'preflight records the spec screen result');
+
+const badRegexCand = M.normalizeCandidate({
+  title: 'Bad regex', sourceKind: 'speculative', confidence: 'low',
+  proposedRule: { canonicalRuleKey: 'mined/bad-regex', findingClass: 'polish', severity: 'minor', evidenceRequirements: ['css-rule'], patternSpec: { specVersion: 1, engine: 'static-css-regex', applicability: { anyOf: ['transition\\s*:'], scope: 'css' }, defect: { anyOf: [{ pattern: '(a+)+$' }] }, message: 'unsafe' } },
+}, norm);
+const preBadRegex = M.preflight(badRegexCand, M.classify(badRegexCand, dedup), reg, baseSet);
+eq(preBadRegex.ok, false, 'a candidate with a catastrophic-backtrack defect regex FAILS preflight (filed, not dropped)');
+ok(preBadRegex.errors.some((e) => /unsafe regex|star-height|backtracking/i.test(e)), 'bad-regex preflight error names the ReDoS screen rejection');
+
+const badPredCand = M.normalizeCandidate({
+  title: 'Bad predicate', sourceKind: 'speculative', confidence: 'low',
+  proposedRule: { canonicalRuleKey: 'mined/bad-predicate', findingClass: 'polish', severity: 'minor', evidenceRequirements: ['css-rule'], patternSpec: { specVersion: 1, engine: 'static-css-regex', applicability: { anyOf: ['transition\\s*:'], scope: 'css' }, defect: { anyOf: [{ pattern: 'cubic-bezier\\([^)]*\\)' }], numericGuard: { predicateId: 'nope-not-real', threshold: 1 } }, message: 'bad pred' } },
+}, norm);
+const preBadPred = M.preflight(badPredCand, M.classify(badPredCand, dedup), reg, baseSet);
+eq(preBadPred.ok, false, 'a candidate whose numericGuard names an unknown predicate FAILS preflight (filed, not dropped)');
+ok(preBadPred.errors.some((e) => /allowlist|predicateId/i.test(e)), 'bad-predicate preflight error names the predicate allowlist');
+
+// Fold 2: a spec with a malformed flags value is FILED (never silently dropped -> would be a
+// false pass at runtime). An unsupported char 'g' and a non-string 123 are both rejected.
+const badFlagsCand = M.normalizeCandidate({
+  title: 'Bad flags', sourceKind: 'speculative', confidence: 'low',
+  proposedRule: { canonicalRuleKey: 'mined/bad-flags', findingClass: 'polish', severity: 'minor', evidenceRequirements: ['css-rule'], patternSpec: { specVersion: 1, engine: 'static-css-regex', applicability: { anyOf: ['transition\\s*:'], scope: 'css' }, defect: { anyOf: [{ pattern: 'cubic-bezier\\([^)]*\\)', flags: 'g' }] }, message: 'bad flags' } },
+}, norm);
+const preBadFlags = M.preflight(badFlagsCand, M.classify(badFlagsCand, dedup), reg, baseSet);
+eq(preBadFlags.ok, false, 'a candidate with an unsupported flag char (g) FAILS preflight (filed, not silently dropped)');
+ok(preBadFlags.errors.some((e) => /unsupported regex flag|flags must be a string/i.test(e)), 'bad-flags preflight error names the flag rejection');
+const badFlagsNumCand = M.normalizeCandidate({
+  title: 'Non-string flags', sourceKind: 'speculative', confidence: 'low',
+  proposedRule: { canonicalRuleKey: 'mined/bad-flags-num', findingClass: 'polish', severity: 'minor', evidenceRequirements: ['css-rule'], patternSpec: { specVersion: 1, engine: 'static-css-regex', applicability: { anyOf: ['transition\\s*:'], scope: 'css' }, defect: { anyOf: [{ pattern: 'cubic-bezier\\([^)]*\\)', flags: 123 }] }, message: 'non-string flags' } },
+}, norm);
+const preBadFlagsNum = M.preflight(badFlagsNumCand, M.classify(badFlagsNumCand, dedup), reg, baseSet);
+eq(preBadFlagsNum.ok, false, 'a candidate with a non-string flags value FAILS preflight');
+ok(preBadFlagsNum.errors.some((e) => /flags must be a string/i.test(e)), 'non-string-flags preflight error names the rejection');
+
+// full runPipeline over the committed fixture, written to a TEMP quarantine (never the real one).
+const mtmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mine-p3-'));
+const fixtureP3 = path.resolve(__dirname, 'fixtures', 'findings-patternspec.json');
+M.runPipeline({ findings: fixtureP3, proposedDir: path.join(mtmp, 'proposed'), candidatesFile: path.join(mtmp, 'candidates.json'), beatsDir: tmp, beatOutDir: path.join(mtmp, 'beats'), date: '2026-08-24' });
+const goodRec = JSON.parse(fs.readFileSync(path.join(mtmp, 'proposed', 'mined.bounce-easing-overshoot.json'), 'utf8'));
+ok(goodRec.rule.patternSpec && goodRec.rule.patternSpec.engine === 'static-css-regex', 'quarantine JSON carries a valid patternSpec on rule');
+ok(goodRec.frozenCorpus && goodRec.frozenCorpus.positives[0].recordHash && goodRec.frozenCorpus.negatives[0].recordHash, 'quarantine JSON carries a frozen corpus (recordHash per example)');
+eq(goodRec.preflight.ok, true, 'the well-formed spec candidate preflights clean in the quarantine');
+const badRegexRec = JSON.parse(fs.readFileSync(path.join(mtmp, 'proposed', 'mined.bad-regex-demo.json'), 'utf8'));
+eq(badRegexRec.preflight.ok, false, 'the bad-regex candidate is FILED in the quarantine with preflight.ok false');
+ok(badRegexRec.preflight.errors.some((e) => /unsafe regex|star-height|backtracking/i.test(e)), 'quarantined bad-regex record names the screen rejection');
+try { fs.rmSync(mtmp, { recursive: true, force: true }); } catch (_e) { /* best-effort */ }
+
+// --- report (async tail: corpus-tool parity uses a dynamic import) ------------
+(async () => {
+  // REUSE PARITY: the miner's example-corpus freeze must produce the SAME recordHash as
+  // eval/corpus-tool.mjs canonicalRecord/recordHash for an equivalent case. corpus-tool is ESM and
+  // the miner is sync CJS, so the freeze MIRRORS those two pure functions and this test pins the
+  // mirror to the source (a drift in either breaks this assertion).
+  try {
+    const { pathToFileURL } = require('url');
+    const CT = await import(pathToFileURL(path.resolve(__dirname, '..', '..', 'eval', 'corpus-tool.mjs')).href);
+    const sha = 'a'.repeat(64);
+    const ref = { id: 'x1', file: 'foo.html', label: 'fires', labeledBy: 'codex', split: 'tune', provenance: { source: 's' } };
+    const mineHash = M.recordHashOf(M.canonicalExampleRecord(ref, sha));
+    const ctCase = { id: 'x1', split: 'tune', file: 'foo.html', provenance: { source: 's' }, labels: [{ class: 'fires', labeledBy: 'codex' }] };
+    const ctHash = CT.recordHash(CT.canonicalRecord(ctCase, sha));
+    ok(mineHash === ctHash, 'miner freeze recordHash mirrors corpus-tool canonicalRecord/recordHash EXACTLY');
+  } catch (e) {
+    failures.push('corpus-tool parity check could not run: ' + (e && e.message ? e.message : String(e)));
+  }
+
+  if (failures.length) {
+    process.stderr.write(`sidecoach-mine.test: ${passed} passed, ${failures.length} FAILED\n`);
+    for (const f of failures) process.stderr.write(`  x ${f}\n`);
+    process.exit(1);
+  }
+  process.stdout.write(`sidecoach-mine.test: all ${passed} assertions passed\n`);
+  process.exit(0);
+})();

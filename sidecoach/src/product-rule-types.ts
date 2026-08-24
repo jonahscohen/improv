@@ -1,4 +1,6 @@
 // sidecoach/src/product-rule-types.ts
+import type { PatternSpec, ExampleCorpus } from './validators/pattern-spec';
+
 export type CanonicalSeverity = 'blocker' | 'major' | 'minor' | 'advisory';
 export type NormalizedErrorCategory =
   | 'unreadable_input' | 'registry_fault' | 'validator_exception' | 'rule_exception'
@@ -32,6 +34,14 @@ export interface ProductRuleDefinition {
   // checkProduct(context) -> ProductRuleResult is OPTIONAL here and ATTACHED in
   // P4a-2 (validator adaptation). The P4a-1 registry is purely declarative.
   checkProduct?: (context: unknown) => ProductRuleResult;
+  // Phase 3a (self-updating taste). BOTH OPTIONAL, so every existing rule and validateRegistry
+  // are unaffected. `patternSpec` carries the DATA a mined rule's static-css-regex detector runs
+  // (compiled by the interpreter, never executed as code); `exampleCorpus` carries the labeled
+  // fires/clean examples the future held-out precision gate measures against. A rule with a
+  // patternSpec and no hand-authored CHECKS entry resolves to the interpreter; one with neither
+  // still resolves to missingCheck (inconclusive).
+  patternSpec?: PatternSpec;
+  exampleCorpus?: ExampleCorpus;
 }
 
 export interface ProductRuleResult {

@@ -191,13 +191,16 @@ function listFilesRec(dir, ext) {
 // registry / rule-store loading (dist). Fails LOUD (exit 3) if unavailable.
 // ---------------------------------------------------------------------------
 function loadRegistry() {
-  let reg, vg, fvc, ssm, prt;
+  let reg, vg, fvc, ssm, prt, psp;
   try {
     reg = require(path.join(DIST, 'product-rule-registry'));
     vg = require(path.join(DIST, 'validator-generation'));
     fvc = require(path.join(DIST, 'flow-validation-capabilities'));
     ssm = require(path.join(DIST, 'validators', 'source-support-matrix'));
     prt = require(path.join(DIST, 'product-rule-types'));
+    // Phase 3a: the SAME ReDoS screen + predicate allowlist the interpreter uses, so a candidate
+    // cannot enter the quarantine carrying an un-screened regex or an unknown predicateId.
+    psp = require(path.join(DIST, 'validators', 'pattern-spec'));
   } catch (err) {
     const e = new Error('compiled registry unavailable (run `npm run build` in sidecoach/): ' + (err && err.message ? err.message : String(err)));
     e.exitCode = EXIT_REGISTRY;
@@ -205,6 +208,11 @@ function loadRegistry() {
   }
   if (!Array.isArray(reg.RULES) || typeof vg.validateRegistry !== 'function' || typeof ssm.supportedKindsFor !== 'function') {
     const e = new Error('compiled registry loaded but is missing RULES / validateRegistry / supportedKindsFor');
+    e.exitCode = EXIT_REGISTRY;
+    throw e;
+  }
+  if (!psp || typeof psp.screenPatternSpec !== 'function') {
+    const e = new Error('compiled pattern-spec unavailable (run `npm run build` in sidecoach/): missing screenPatternSpec');
     e.exitCode = EXIT_REGISTRY;
     throw e;
   }
@@ -221,6 +229,7 @@ function loadRegistry() {
     rendered: [...(vg.RENDERED_BACKED_RULE_IDS || [])],
     supportedKindsFor: ssm.supportedKindsFor,
     knownEvidenceKinds,
+    screenPatternSpec: psp.screenPatternSpec,
   };
 }
 
@@ -526,6 +535,64 @@ const DEFAULT_KNOWN_EVIDENCE = ['css-rule', 'computed-style', 'dom', 'markup', '
 
 function ownerForClass(cls) { return OWNER_FOR_CLASS[cls] || 'polish-standard'; }
 
+// ---------------------------------------------------------------------------
+// example-corpus FREEZE (mirrors eval/corpus-tool.mjs canonicalRecord/recordHash EXACTLY)
+// ---------------------------------------------------------------------------
+// The miner is synchronous CommonJS and corpus-tool.mjs is ESM, so rather than take a runtime
+// ESM dependency in this hot path we MIRROR corpus-tool's two pure functions here byte-for-byte
+// (same field order, same trim+lowercase norm, same sha256-of-JSON hash) and PIN the parity with
+// a test that dynamically imports corpus-tool and asserts identical recordHashes. The result is a
+// tamper-evident frozen record per example: its id/label/split/provenance/file and the file's
+// content are all bound into recordHash, so any later edit is detectable.
+function normLower(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+function sha256File(abs) { return crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex'); }
+function recordHashOf(rec) { return crypto.createHash('sha256').update(JSON.stringify(rec)).digest('hex'); }
+
+// The canonical record for one ExampleRef, structurally identical to corpus-tool.canonicalRecord.
+function canonicalExampleRecord(ref, contentSha256) {
+  const labels = [{ class: normLower(ref.label), labeledBy: normLower(ref.labeledBy) }]
+    .sort((a, b) => (a.class + a.labeledBy).localeCompare(b.class + b.labeledBy));
+  return { id: ref.id, split: ref.split, labels, file: ref.file, contentSha256, provenance: ref.provenance || {} };
+}
+
+/**
+ * Freeze an exampleCorpus: for each positive/negative ExampleRef, read the referenced file,
+ * compute its content sha256, and bind a canonical recordHash. A missing/unreadable file or a
+ * declared-vs-actual sha mismatch is recorded as an ERROR (the candidate is FILED with it, never
+ * dropped). Relative file paths resolve against baseDir. Never throws.
+ */
+function freezeExampleCorpus(exampleCorpus, baseDir) {
+  const errors = [];
+  const frozen = { positives: [], negatives: [] };
+  if (!exampleCorpus || typeof exampleCorpus !== 'object') {
+    return { frozen, errors: ['exampleCorpus is not an object'] };
+  }
+  for (const bucket of ['positives', 'negatives']) {
+    const raw = exampleCorpus[bucket];
+    if (raw === undefined) continue;
+    if (!Array.isArray(raw)) { errors.push(`exampleCorpus.${bucket} must be an array`); continue; }
+    const expectedLabel = bucket === 'positives' ? 'fires' : 'clean';
+    for (let i = 0; i < raw.length; i++) {
+      const ref = raw[i] || {};
+      const label = ref.label || expectedLabel;
+      if (ref.label && ref.label !== expectedLabel) errors.push(`exampleCorpus.${bucket}[${i}] label '${ref.label}' does not match bucket (expected '${expectedLabel}')`);
+      if (!ref.file || typeof ref.file !== 'string') { errors.push(`exampleCorpus.${bucket}[${i}] is missing a string 'file'`); continue; }
+      const abs = path.isAbsolute(ref.file) ? ref.file : path.join(baseDir || SIDECOACH_ROOT, ref.file);
+      let contentSha256;
+      try { contentSha256 = sha256File(abs); }
+      catch (e) { errors.push(`exampleCorpus.${bucket}[${i}] file unreadable (${ref.file}): ${e && e.message ? e.message : String(e)}`); continue; }
+      if (ref.contentSha256 && ref.contentSha256 !== contentSha256) errors.push(`exampleCorpus.${bucket}[${i}] declared contentSha256 does not match the file (${ref.file})`);
+      const split = ref.split === 'heldout' ? 'heldout' : 'tune';
+      const canonical = canonicalExampleRecord({ id: safeStr(ref.id, `${bucket}-${i}`) || `${bucket}-${i}`, file: ref.file, label, labeledBy: safeStr(ref.labeledBy, 'unknown') || 'unknown', split, provenance: ref.provenance || {} }, contentSha256);
+      frozen[bucket].push({
+        id: canonical.id, file: ref.file, label, labeledBy: canonical.labels[0].labeledBy,
+        split, provenance: ref.provenance || {}, contentSha256, recordHash: recordHashOf(canonical),
+      });
+    }
+  }
+  return { frozen, errors };
+}
+
 function normalizeCandidate(c, opts) {
   const pr = (c && c.proposedRule) || {};
   const title = safeStr(c && c.title ? c.title : (pr.canonicalRuleKey || pr.ruleId), 'untitled taste rule') || 'untitled taste rule';
@@ -579,6 +646,11 @@ function normalizeCandidate(c, opts) {
     applicability: pr.applicability || (allStatic ? 'not_applicable' : 'inconclusive'),
   };
   if (pr.severityOverrideReason) def.severityOverrideReason = pr.severityOverrideReason;
+  // Phase 3a: carry the OPTIONAL runnable-detector DATA onto the def so it flows into the
+  // quarantine record's `rule` field. These are DATA only - preflight screens them (regex ReDoS
+  // screen + predicate allowlist) and freezes the corpus; nothing here executes them.
+  if (pr.patternSpec !== undefined) def.patternSpec = pr.patternSpec;
+  if (pr.exampleCorpus !== undefined) def.exampleCorpus = pr.exampleCorpus;
 
   const detectable = evidenceRequirements.some((e) => STATIC_EVIDENCE.has(e) || e === 'rendered-scan');
   return {
@@ -678,8 +750,31 @@ function preflight(cand, cls, reg, baselineErrorSet) {
   } catch (err) {
     return { ok: false, errors: [`validateRegistry threw on this candidate: ${err && err.message ? err.message : String(err)}`] };
   }
-  const delta = (res.errors || []).filter((e) => !baselineErrorSet.has(e));
-  return { ok: delta.length === 0, errors: delta };
+  const errors = (res.errors || []).filter((e) => !baselineErrorSet.has(e));
+
+  // Phase 3a preflight extensions (all fail-with-filing, never throw):
+  //   (a) screen every patternSpec regex under the ReDoS budget + (b) reject any predicateId not
+  //   in the allowlist (both via the SAME screenPatternSpec the interpreter's module exports), and
+  //   (c) freeze the exampleCorpus (content sha + canonical recordHash). A malformed spec or corpus
+  //   adds errors here, so the candidate is FILED with them rather than dropped.
+  let spec = null;
+  let frozenCorpus = null;
+  if (def.patternSpec !== undefined) {
+    if (typeof reg.screenPatternSpec === 'function') {
+      const s = reg.screenPatternSpec(def.patternSpec);
+      spec = { ok: !!s.ok, errors: s.errors || [] };
+      for (const e of (s.errors || [])) errors.push(`patternSpec: ${e}`);
+    } else {
+      errors.push('patternSpec present but the compiled screen is unavailable');
+    }
+  }
+  if (def.exampleCorpus !== undefined) {
+    const f = freezeExampleCorpus(def.exampleCorpus, reg.corpusBaseDir);
+    frozenCorpus = f.frozen;
+    for (const e of f.errors) errors.push(`exampleCorpus: ${e}`);
+  }
+
+  return { ok: errors.length === 0, errors, spec, frozenCorpus };
 }
 
 // ---------------------------------------------------------------------------
@@ -802,7 +897,10 @@ function writeInertOutput(processed, corpus, reg, opts) {
       rank: p.rank,
       rule: p.cand.def,
       provenance,
-      preflight: { ok: p.pre.ok, errors: p.pre.errors, validatedAgainst: commit },
+      preflight: { ok: p.pre.ok, errors: p.pre.errors, validatedAgainst: commit, spec: p.pre.spec || null },
+      // Phase 3a: the tamper-evident freeze of the labeled example corpus (content sha + canonical
+      // recordHash per example). null when the candidate carries no exampleCorpus.
+      frozenCorpus: p.pre.frozenCorpus || null,
       quarantine: 'INERT DATA - reviewed by a human before any promotion; imported by no source file.',
     };
     const outFile = path.join(proposedDir, `${sanitizeId(p.cand.def.ruleId)}.json`);
@@ -1191,6 +1289,7 @@ module.exports = {
   assembleBeats, assembleAuditHistory, assembleExternal, assembleRuleStores, assembleCorpus,
   buildDedupIndex, normalizeCandidate, classify, preflight, deriveMeasuredCandidates,
   rankScore, loadRegistry, loadGuidanceStores, runPipeline, assertSafeWrite, computeInputSignature,
+  freezeExampleCorpus, canonicalExampleRecord, recordHashOf,
   SAFE_DATA_DIR, SAFE_MEMORY_DIR, REPO_ROOT, SIDECOACH_ROOT,
   EXIT_OK, EXIT_USAGE, EXIT_REGISTRY, EXIT_WRITE, EXIT_FINDINGS,
 };

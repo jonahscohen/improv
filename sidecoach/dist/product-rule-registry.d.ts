@@ -1,4 +1,7 @@
-import type { ProductRuleDefinition, CanonicalSeverity } from './product-rule-types';
+import type { ProductRuleDefinition, ProductRuleResult, CanonicalSeverity } from './product-rule-types';
+import type { CheckFn } from './validators/checks';
+export declare function resolveCheckFn(def: ProductRuleDefinition): CheckFn;
+export declare function buildCheckProduct(def: ProductRuleDefinition): (context: unknown) => ProductRuleResult;
 export declare const RULES: ProductRuleDefinition[];
 export declare function getRule(canonicalRuleKey: string): ProductRuleDefinition | null;
 export declare function getRuleById(ruleId: string): ProductRuleDefinition | null;
