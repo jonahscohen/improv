@@ -29,11 +29,14 @@ VISUAL_EXTS = {".css", ".scss", ".sass", ".less",
 # Non-app dev/test/scratch DIRECTORIES and test-probe basenames - the SAME notion the arm side
 # uses in is_exempt (Jonah 2026-07-26). A visual-extension file that is a DELETION, or lives under
 # one of these, renders no product surface and cannot be screenshotted, so it is not "visual
-# evidence" and must not keep the gate blocking. _NON_APP_DIR_RE is kept BYTE-IDENTICAL to the copy
-# in verify-before-done.sh and bash-guard.sh so the arm site and this re-derivation agree;
-# test-verify-visual-gate.sh asserts the three literals match.
+# evidence" and must not keep the gate blocking. The [A-Za-z0-9._-]*corpus segment (Jonah
+# 2026-08-25) exempts any detector-corpus dir - data/taste-corpus/, eval/corpus/, any future
+# *-corpus - of planted .css/.html inputs; those untracked fixtures sitting in the tree were what
+# corroborated an armed flag and false-blocked the tokens-count builder at Stop. _NON_APP_DIR_RE is
+# kept BYTE-IDENTICAL to the copy in verify-before-done.sh and bash-guard.sh so the arm site and
+# this re-derivation agree; test-verify-visual-gate.sh asserts the three literals match.
 _NON_APP_DIR_RE = re.compile(
-    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/")
+    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/")
 _TEST_SPEC_RE = re.compile(r"\.(test|spec)\.[A-Za-z0-9]+$")
 
 # Hard bound on how much status output we will reason about. Hitting it means we could not

@@ -204,13 +204,71 @@ D_REALADD=$(gmk realadd); mkdir -p "$D_REALADD/src/components"; printf 'x' > "$D
 chk_stop "untracked real src/components/Card.css BLOCKS (recall)"           "block" "$D_REALADD"
 
 echo ""
+echo "===== DETECTOR-CORPUS dirs are fixtures, NOT product UI (2026-08-25) ====="
+# A planted .css/.html under a *-corpus detector-input dir renders no product surface. Writing one
+# must NOT arm the VISUAL gate: it false-armed on data/taste-corpus writes and then false-blocked the
+# tokens-count builder at Stop when those untracked corpus files corroborated the flag. Fully exempt,
+# like eval/fixtures - it arms NOTHING. Real product UI OUTSIDE a corpus dir still arms + blocks.
+armvis() { rm -f "$FLAG"; feed "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$1\"}}" "$VBD"; flag; }
+chk "data/taste-corpus/*.css arms NOTHING"        "(absent)" "$(armvis /p/sidecoach/data/taste-corpus/motion.x/pos-01.css)"
+chk "data/taste-corpus/*.html arms NOTHING"       "(absent)" "$(armvis /p/sidecoach/data/taste-corpus/motion.x/pos-02.html)"
+chk "eval/corpus/*.css arms NOTHING"              "(absent)" "$(armvis /p/sidecoach/eval/corpus/dev/a.css)"
+chk "a bare corpus/*.html arms NOTHING"           "(absent)" "$(armvis /p/proj/corpus/card.html)"
+# RECALL / precision: real UI and segment look-alikes STILL arm visual.
+chk "real src/App.css STILL arms visual"          "visual"   "$(armvis /p/proj/src/App.css)"
+chk "look-alike corpus-viewer/App.tsx STILL arms visual (not a *corpus segment)" "visual" "$(armvis /p/proj/corpus-viewer/App.tsx)"
+# BOUNDED BYPASS (Codex review 2026-08-25, finding 1): only a SEGMENT ending in "corpus" is exempt -
+# the exemption is NOT a blanket data/ hole. A visual file under data/ but NOT under a *corpus dir
+# STILL arms, so the bypass cannot swallow arbitrary product UI that merely lives beside a corpus.
+# ACCEPTED RESIDUAL, asserted deliberately: a *corpus segment anywhere is treated as detector data,
+# so a (nonexistent-today) genuine UI dir literally named "*-corpus" would be exempt - the same
+# name-anywhere policy the existing docs//reference//fixtures/ entries already carry.
+chk "data/ visual file NOT under a corpus dir STILL arms" "visual" "$(armvis /p/sidecoach/data/theme.css)"
+# STOP side: a tree whose ONLY visual files are detector-corpus fixtures must ALLOW the stop -
+# THE reported false-block, reproduced.
+D_CORP=$(gmk taste-corpus-tree); mkdir -p "$D_CORP/data/taste-corpus/motion.x"
+printf 'a{}' > "$D_CORP/data/taste-corpus/motion.x/pos-01.css"; printf '<i>' > "$D_CORP/data/taste-corpus/motion.x/pos-02.html"
+chk_stop "tree of ONLY data/taste-corpus visual files -> allow"  "allow" "$D_CORP"
+mkdir -p "$D_CORP/src"; printf 'b{}' > "$D_CORP/src/theme.css"
+chk_stop "same tree + a real src/theme.css -> BLOCKS (recall)"   "block" "$D_CORP"
+
+echo ""
+echo "===== the REPORTED false-positive change set never arms VISUAL (2026-08-25) ====="
+# The tokens-count builder touched only: .ts logic, a *.test.ts, scripts/run-tests.ts, a hook .sh,
+# compiled dist/*.js + *.d.ts (+ *.map), and .md beats. None renders pixels; the sequence must never
+# reach the "visual" flag (it lands at "code" - the non-visual demand, cleared by running its tests).
+# NOTE (Codex review 2026-08-25, finding 2): this row is a change-set REGRESSION GUARD on the
+# extension classifier, NOT proof of the *corpus regex - it passes with or without the corpus fix
+# because the set holds no corpus files. The corpus arm/Stop/look-alike rows above are that proof.
+rm -f "$FLAG"
+for fp in \
+  /p/sidecoach/src/flow-handler-design-tokens.ts \
+  /p/sidecoach/src/__tests__/design-tokens-count.test.ts \
+  /p/sidecoach/scripts/run-tests.ts \
+  /p/claude/hooks/run-tests-helper.sh \
+  /p/sidecoach/dist/flow-handler-design-tokens.js \
+  /p/sidecoach/dist/flow-handler-design-tokens.d.ts \
+  /p/sidecoach/dist/flow-handler-design-tokens.d.ts.map \
+  /p/sidecoach/dist/__tests__/design-tokens-count.test.js \
+  /p/.claude/memory/session_2026-08-25_x.md ; do
+  feed "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$fp\"}}" "$VBD"
+done
+chk "reported non-visual change set never arms visual (flag != visual)" "yes" "$([ "$(flag)" != "visual" ] && echo yes || echo no)"
+# CONTROL: a genuine .html + .css + .tsx change set DOES still arm visual.
+rm -f "$FLAG"
+for fp in /p/proj/index.html /p/proj/src/styles.css /p/proj/src/components/Card.tsx ; do
+  feed "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$fp\"}}" "$VBD"
+done
+chk "genuine .html/.css/.tsx change set DOES arm visual (recall)" "visual" "$(flag)"
+
+echo ""
 echo "===== 3-WAY NON-APP EXEMPTION LITERALS AGREE (arm / stop / commit) ====="
 # The arm hook, the Stop corroboration, and the bash-guard commit gate each carry their OWN copy of
 # the non-app dir pattern. If they drift, the three gates disagree on what is product UI and a false
 # fire creeps back into one of them. Assert the literal is byte-identical in all three.
 NON_APP_SYNC=$(python3 - "$HOOK_DIR/verify-before-done.sh" "$HOOK_DIR/verify-before-done-stop.sh" "$HOOK_DIR/bash-guard.sh" <<'PY'
 import re, sys
-want = r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/"
+want = r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/"
 hits = [want in open(p).read() for p in sys.argv[1:]]
 print("ok" if all(hits) else "MISSING:" + ",".join(p for p, h in zip(sys.argv[1:], hits) if not h))
 PY

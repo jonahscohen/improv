@@ -164,11 +164,18 @@ _EVAL_DATA_RE = re.compile(r"(^|/)eval/(fixtures|corpus)/")
 # anchoring discipline _EVAL_DATA_RE uses. "dependency-map" is the lead-named dev-doc graph; it
 # already sits under docs/ in practice but is listed so a bare dependency-map/ is covered too.
 #
+# [A-Za-z0-9._-]*corpus matches any SEGMENT ending in "corpus" - a DETECTOR/TRAINING corpus of
+# planted .css/.html/.tsx inputs, never a rendered product surface (Jonah 2026-08-25). It covers
+# data/taste-corpus/ (the taste-rule corpus that false-armed VISUAL and then false-blocked the
+# tokens-count builder at Stop) and eval/corpus/ alike, plus any future *-corpus. It is a FULL-
+# segment match, so a real UI dir that merely ends in the letters - "corpus-viewer/" - stays ARMED
+# ("corpus-viewer" does not end in "corpus"); only a segment that IS "*corpus" is exempt.
+#
 # Kept BYTE-IDENTICAL to the copies in verify-before-done-stop.sh (tree_has_visual_evidence) and
 # bash-guard.sh (the commit gate) so the ARM site and the two re-derivations AGREE on what is not
 # product UI; test-verify-visual-gate.sh asserts the three literals match.
 _NON_APP_DIR_RE = re.compile(
-    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/")
+    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/")
 
 # A basename carrying a ".test." or ".spec." infix before its final extension is a test probe.
 # Foo.test.tsx / Bar.spec.tsx would otherwise arm VISUAL (.tsx is a visual ext) and trip the Stop
