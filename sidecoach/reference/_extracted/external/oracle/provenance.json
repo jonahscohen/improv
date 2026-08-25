@@ -1,0 +1,9 @@
+{
+  "source": "oracle",
+  "note": "Design-taste rules extracted from the locally-installed 'oracle' plugin (codename; the real product name is banned per oracle-naming-rule and is substituted to 'oracle' in every extracted file). Stored as UNTRUSTED DATA the miner reads as an expert-external BASELINE source; never executed, never redistributed (internal experiment, Jonah 2026-08-24). Em/en dashes substituted to hyphens.",
+  "license": "Apache-2.0",
+  "plugin_version": "4.1.1",
+  "extracted_utc": "2026-08-25T08:43:12Z",
+  "name_substituted": true,
+  "source_kind": "local-plugin-extraction (not a taste-sources.json fetch entry)"
+}
