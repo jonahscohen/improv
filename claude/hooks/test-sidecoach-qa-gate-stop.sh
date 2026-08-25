@@ -412,6 +412,47 @@ FH="$(newhome)"
 chk "valid JSON of the wrong shape (a list) -> allow" allow "$(blocked "$(printf '[1,2,3]' | HOME="$FH" bash "$HOOK" 2>/dev/null)")"
 
 echo
+echo "=== END-TO-END ARM: a REAL substantive design edit arms the gate; Stop blocks until all three stages run ==="
+# ITEM 11 (PARTIAL-HARNESS): a PostToolUse hook cannot run the multi-step
+# audit -> critique -> polish review, so the 3-stage gate cannot fire automatically -
+# the agent must run it. The MAX close is the write-boundary ARM + the finish-boundary
+# BLOCK. This capstone drives the REAL arm hook (sidecoach-orchestrate-edit.sh) with a
+# genuine substantive design edit (not a hand-written flag), proves it ARMS the flag,
+# then proves Stop BLOCKS until the three sidecoach QA Skill uses are present and CLEARS
+# once they are. This is the end-to-end proof the two boundaries actually interlock.
+FH="$(newhome)"; T="$FH/t.jsonl"; D="$(gmk "$FH" e2e)"
+mkdir -p "$D/src/components"
+HERO="$D/src/components/Hero.tsx"
+cat > "$HERO" <<'TSX'
+export default function Hero() {
+  return (
+    <section className="hero">
+      <h1 className="hero-title">Launch faster</h1>
+      <p className="hero-sub">Ship your product with a polished, considered interface built to convert.</p>
+      <button className="hero-cta">Get started</button>
+    </section>
+  );
+}
+TSX
+CD_ARM="$(mktemp -u)"
+ARM_PAYLOAD="$(python3 - "$SID" "$HERO" <<'PY'
+import json, sys
+sid, fp = sys.argv[1], sys.argv[2]
+print(json.dumps({"tool_name": "Write", "session_id": sid,
+                  "tool_input": {"file_path": fp, "content": open(fp).read()}}))
+PY
+)"
+printf '%s' "$ARM_PAYLOAD" | HOME="$FH" SIDECOACH_ORCHESTRATE_COOLDOWN_FILE="$CD_ARM" bash "$ARM" >/dev/null 2>&1
+chk "real substantive .tsx edit -> ARM hook armed the QA-gate flag" present "$(present "$(flag_path "$FH" "$SID")")"
+chk "  ...arm flag body is the edited file's basename" "Hero.tsx" "$(cat "$(flag_path "$FH" "$SID")" 2>/dev/null)"
+transcript "$T" no
+chk "  armed by the real edit + dirty tree + no evidence -> Stop BLOCKS" block "$(blocked "$(run "$FH" "$T" "$D")")"
+transcript "$T" multi "audit,critique,polish"
+chk "  after audit+critique+polish Skill tool_uses -> Stop ALLOWS" allow "$(blocked "$(run "$FH" "$T" "$D")")"
+chk "  ...arm flag cleared after the full three-stage gate" absent "$(present "$(flag_path "$FH" "$SID")")"
+rm -f "$CD_ARM"
+
+echo
 echo "=== COUPLING: shared literals must not drift across the arm/stop/verify sides ==="
 # The arm side (DESIGN_EXT tuple) and this Stop gate (DESIGN_EXTS set) must agree on
 # what counts as a design file. If the arm can arm on an extension the Stop tree-scan
@@ -436,7 +477,7 @@ chk "Stop DESIGN_EXTS is a superset of the arm side DESIGN_EXT" ok "$EXT_SYNC"
 # If they drift, the two gates disagree on what is product UI. Assert byte-identity.
 NON_APP_SYNC=$(python3 - "$HOOK" "$HERE/verify-before-done-stop.sh" <<'PY'
 import sys
-want = r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/"
+want = r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|__tests__|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/"
 hits = [want in open(p).read() for p in sys.argv[1:] if p]
 print("ok" if hits and all(hits) else "DRIFT")
 PY

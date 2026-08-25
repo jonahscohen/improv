@@ -504,6 +504,184 @@ fi
 rm -f "$healthy_cd" "${healthy_cd}.2" 2>/dev/null
 
 echo ""
+echo "===== sidecoach-keyword: MAX-close - natural-language self-start emits an ACTIONABLE route directive ====="
+# ITEM 10 (PARTIAL-HARNESS): a UserPromptSubmit hook cannot call the Skill tool, so
+# true self-start (a raw prompt auto-running the flow) is NOT achievable - the model
+# must still choose to invoke. The MAX close is that a natural design/diagnosis prompt
+# injects a strong, imperative ROUTE DIRECTIVE naming a concrete first step, not a soft
+# "would it help?" self-question. These pin that stronger shape (the proof of the MAX
+# close, not of autonomy).
+assert_intent_contains() {
+  local label="$1" prompt="$2" needle="$3"
+  local cd; cd=$(mktemp -u /tmp/sc-cd-XXXXXX)
+  local out; out=$(intent_out "$prompt" "$cd"); rm -f "$cd"
+  if echo "$out" | grep -qF "$needle"; then
+    echo "PASS: $label"; ((PASS++))
+  else
+    echo "FAIL: $label (expected to contain '$needle', got: $out)"; FAIL_LABELS+=("$label"); ((FAIL++))
+  fi
+}
+# BUILD prompt -> an imperative route directive, not a soft nudge.
+assert_intent_contains "build: routes imperatively"    "design a landing page for the new product" "ROUTE it through sidecoach now"
+assert_intent_contains "build: not an optional nudge"  "design a landing page for the new product" "route directive, not an optional"
+assert_intent_contains "build: names the load step"    "redesign the navigation, it feels clunky"   "load the sidecoach skill and run the flow"
+# DIAGNOSE prompt -> an audit-first directive.
+assert_intent_contains "diag: audit is the FIRST step" "what's wrong with the homepage" "/sidecoach audit <target> as the FIRST step"
+
+echo ""
+echo "===== sidecoach-keyword: MAX-close - verb match emits a concrete run directive ====="
+# The verb-match injection is now an actionable route directive: it names the flow to
+# load and run and forbids hand-coding, replacing the old terse "Route accordingly.".
+assert_contains     "verb: names the run step"        "polish the hero" "Load the sidecoach skill and run its 'polish' flow now"
+assert_contains     "verb: forbids hand-coding"       "polish the hero" "Do not hand-code this or ask which flow"
+assert_not_contains "verb: no soft route accordingly" "polish the hero" "Route accordingly."
+
+echo ""
+echo "===== sidecoach-keyword: MAX-close - broadened lexicon fires on natural design phrasings ====="
+assert_intent_fires  "lex: modernize + design target" "modernize the dashboard"
+assert_intent_fires  "lex: beautify + design target"  "beautify the hero"
+assert_intent_fires  "lex: spruce up + design target" "spruce up the landing page"
+assert_intent_fires  "lex: modernize the homepage"    "modernize the homepage"
+assert_intent_fires  "lex: beautify pricing section"  "beautify the pricing section"
+assert_intent_fires  "lex: look and feel"             "improve the look and feel of the app"
+assert_intent_fires  "lex: visual hierarchy"          "the visual hierarchy is off"
+assert_intent_fires  "lex: design language"           "we need a consistent design language"
+
+# COSMETIC-VERB TARGET GATING (Codex 2026-08-25, findings 2+3). The clean fix: the
+# cosmetic verbs (modernize/beautify/spruce up/facelift) are ALL target-gated to a
+# POSITIVE design-surface allowlist (page/screen/hero/button/component/layout/ui/...).
+# 'facelift' is NOT a standalone any more - it fires only with a design target present.
+# There is NO prompt-wide backend blocklist (that over-suppressed legit UI prompts that
+# merely mention a backend word). A design target present = fire; a backend object = no
+# design target = no fire.
+# FIRE - the object is a design surface (button/hero/page/... are all in the allowlist):
+assert_intent_fires  "gate: facelift + button"        "give the button a facelift"
+assert_intent_fires  "gate: facelift + hero"          "give the hero a facelift"
+assert_intent_fires  "gate: modernize landing page"   "modernize the landing page"
+assert_intent_fires  "gate: beautify hero"            "beautify the hero"
+assert_intent_fires  "gate: modernize guide page"     "modernize the migration guide page"
+assert_intent_fires  "gate: settings page + ds"       "modernize the settings page and align it with the design system"
+# SILENT - the object is a backend surface, so no design target is present:
+assert_intent_silent "gate: facelift API endpoint"    "give the API endpoint a facelift"
+assert_intent_silent "gate: facelift graphql resolver" "give the GraphQL resolver a facelift"
+assert_intent_silent "gate: facelift auth flow"       "give the auth flow a facelift"
+assert_intent_silent "gate: facelift CLI parser"      "give the CLI command parser a facelift"
+assert_intent_silent "gate: modernize db table schema" "modernize the database table schema"
+assert_intent_silent "gate: modernize TS interface"   "modernize the TypeScript interface definitions"
+# Carve-out guards: design-overloaded UI nouns still fire; a design action with no design
+# target is simply silent.
+assert_intent_fires  "gate: pricing table is UI"      "modernize the pricing table"
+assert_intent_fires  "gate: user interface is UI"     "modernize the user interface"
+assert_intent_silent "gate: no design target"         "modernize the auth token refresh logic"
+
+echo ""
+echo "===== sidecoach-keyword: MAX-close - input sanitizer is LINEAR (tag-flood ReDoS guard) ====="
+# Codex 2026-08-25 finding 1: the XML tag-body strip was quadratic - a flood of open tags
+# with no close made re.sub rescan to EOF from every open-tag position (N=8000 -> 19s,
+# N=16000 -> timeout). Bounding the body to [^<]*? linearizes it. A quadratic regression
+# would blow far past this ceiling (>30s / timeout); a linear hook finishes in well under
+# a second on the 16k-tag flood.
+FLOOD_PROMPT=$(python3 -c 'print("<tag>"*16000 + " modernize the database table schema")')
+FLOOD_INPUT=$(python3 -c 'import json,sys; print(json.dumps({"prompt": sys.argv[1]}))' "$FLOOD_PROMPT")
+FLOOD_CD=$(mktemp -u /tmp/sc-cd-XXXXXX)
+FLOOD_ELAPSED=$(python3 -c '
+import subprocess, sys, time, os
+inp = sys.argv[1]; hook = sys.argv[2]; cd = sys.argv[3]
+env = dict(os.environ); env["SIDECOACH_INTENT_COOLDOWN_FILE"] = cd
+t = time.time()
+subprocess.run(["bash", hook], input=inp.encode(), stdout=subprocess.DEVNULL,
+               stderr=subprocess.DEVNULL, env=env)
+print("%.3f" % (time.time() - t))
+' "$FLOOD_INPUT" "$HOOK" "$FLOOD_CD")
+rm -f "$FLOOD_CD"
+if python3 -c "import sys; sys.exit(0 if float('$FLOOD_ELAPSED') < 3.0 else 1)"; then
+  echo "PASS: tag-flood x16000 sanitizes in ${FLOOD_ELAPSED}s (linear, < 3s ceiling)"; ((PASS++))
+else
+  echo "FAIL: tag-flood x16000 took ${FLOOD_ELAPSED}s (quadratic ReDoS regression)"; FAIL_LABELS+=("tag-flood redos"); ((FAIL++))
+fi
+# Structural guard: the tag-body strip must use the bounded [^<] body, never a [\s\S]/[^]
+# any-char body (which reintroduces the quadratic rescan).
+if grep -qF '[^<]*?</\1' "$HOOK"; then
+  echo "PASS: tag-body strip uses the bounded [^<] body"; ((PASS++))
+else
+  echo "FAIL: tag-body strip is not the bounded [^<] form (ReDoS risk)"; FAIL_LABELS+=("tag-body bound"); ((FAIL++))
+fi
+if grep -qF '[\s\S]*?</\1' "$HOOK"; then
+  echo "FAIL: tag-body strip still contains the quadratic [\\s\\S] any-char body"; FAIL_LABELS+=("tag-body quadratic"); ((FAIL++))
+else
+  echo "PASS: no quadratic [\\s\\S] any-char tag body remains"; ((PASS++))
+fi
+
+# Codex 2026-08-25 finding 1 (second vector): MALFORMED UNCLOSED open tags ("<tag<tag...")
+# were superlinear because the tag-open matcher [^>]* scanned to EOF from every '<' (8k=3.5s,
+# 16k=12s). Bounding it to [^<>]* (stops at the next '<' or '>') makes each position O(1).
+UFLOOD_PROMPT=$(python3 -c 'print("<tag"*16000 + " modernize the database table schema")')
+UFLOOD_INPUT=$(python3 -c 'import json,sys; print(json.dumps({"prompt": sys.argv[1]}))' "$UFLOOD_PROMPT")
+UFLOOD_CD=$(mktemp -u /tmp/sc-cd-XXXXXX)
+UFLOOD_ELAPSED=$(python3 -c '
+import subprocess, sys, time, os
+inp, hook, cd = sys.argv[1], sys.argv[2], sys.argv[3]
+env = dict(os.environ); env["SIDECOACH_INTENT_COOLDOWN_FILE"] = cd
+t = time.time()
+subprocess.run(["bash", hook], input=inp.encode(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+print("%.3f" % (time.time() - t))
+' "$UFLOOD_INPUT" "$HOOK" "$UFLOOD_CD")
+rm -f "$UFLOOD_CD"
+if python3 -c "import sys; sys.exit(0 if float('$UFLOOD_ELAPSED') < 3.0 else 1)"; then
+  echo "PASS: unclosed-tag flood x16000 in ${UFLOOD_ELAPSED}s (linear, < 3s ceiling)"; ((PASS++))
+else
+  echo "FAIL: unclosed-tag flood x16000 took ${UFLOOD_ELAPSED}s (superlinear regression)"; FAIL_LABELS+=("unclosed-tag flood"); ((FAIL++))
+fi
+# Codex 2026-08-25 finding 2 (final): the tag OPENER had adjacent overlapping quantifiers -
+# the name capture ([a-zA-Z][\w:-]*) and the following [^<>]* both consume word chars, so a
+# long mismatched close ("<"+a*N+">x</"+a*N+"b>") had O(N) name/attr splits and backtracked
+# catastrophically (pattern-level 32k=2.4s). The non-overlapping form (?:[\s/][^<>]*)? makes
+# the split unique. Assert the 64k mismatched-close input stays fast (a quadratic would be
+# ~9s pattern-level alone, far past this whole-hook ceiling).
+MISCLOSE_PROMPT=$(python3 -c 'print("<" + "a"*64000 + ">x</" + "a"*64000 + "b> modernize the dashboard")')
+MISCLOSE_INPUT=$(python3 -c 'import json,sys; print(json.dumps({"prompt": sys.argv[1]}))' "$MISCLOSE_PROMPT")
+MISCLOSE_CD=$(mktemp -u /tmp/sc-cd-XXXXXX)
+MISCLOSE_ELAPSED=$(python3 -c '
+import subprocess, sys, time, os
+inp, hook, cd = sys.argv[1], sys.argv[2], sys.argv[3]
+env = dict(os.environ); env["SIDECOACH_INTENT_COOLDOWN_FILE"] = cd
+t = time.time()
+subprocess.run(["bash", hook], input=inp.encode(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+print("%.3f" % (time.time() - t))
+' "$MISCLOSE_INPUT" "$HOOK" "$MISCLOSE_CD")
+rm -f "$MISCLOSE_CD"
+if python3 -c "import sys; sys.exit(0 if float('$MISCLOSE_ELAPSED') < 3.0 else 1)"; then
+  echo "PASS: 64k mismatched-close in ${MISCLOSE_ELAPSED}s (linear, no name/attr backtracking)"; ((PASS++))
+else
+  echo "FAIL: 64k mismatched-close took ${MISCLOSE_ELAPSED}s (catastrophic backtracking regression)"; FAIL_LABELS+=("mismatched-close redos"); ((FAIL++))
+fi
+# Structural guard: the tag matchers must be the LINEAR, NON-OVERLAPPING forms.
+# (a) stray-tag + open matchers are [^<>]-bounded (not [^>]); (b) the tag-body opener is the
+# non-overlapping (?:[\s/][^<>]*)? form; (c) the ambiguous name+attr overlap is GONE.
+if grep -qF '(?:[\s/][^<>]*)?>[^<]*?</\1' "$HOOK" && grep -qF '<[a-zA-Z!/][^<>]*>' "$HOOK"; then
+  echo "PASS: tag-body opener is the non-overlapping [\\s/]-separated form; stray tag is [^<>]-bounded"; ((PASS++))
+else
+  echo "FAIL: tag matchers are not the non-overlapping linear form"; FAIL_LABELS+=("tag matcher bound"); ((FAIL++))
+fi
+if grep -qF '[\w:-]*)[^<>]*>[^<]*?</\1' "$HOOK"; then
+  echo "FAIL: ambiguous name+attr overlap ([\\w:-]*)[^<>]*> still present (backtracking ReDoS)"; FAIL_LABELS+=("tag opener overlap"); ((FAIL++))
+else
+  echo "PASS: no ambiguous name+attr quantifier overlap in the tag opener"; ((PASS++))
+fi
+
+echo ""
+echo "===== sidecoach-keyword: MAX-close - sanitizer is behavior-preserving on NESTED XML ====="
+# Codex 2026-08-25 finding 2: a single [^<]*? body pass leaked the OUTER body of a nested
+# tag - "<example><code>x</code> polish the hero</example>" left "polish the hero" and fired
+# the verb route on pasted XML. The fixpoint blanks the whole construct, so nested pasted XML
+# never leaks a verb/design signal into intent-matching, while plain prose still routes.
+assert_silent "nested xml: verb does not leak"   "<example><code>x</code> polish the hero</example>"
+assert_intent_silent "nested xml: design nudge does not leak" "<example><code>x</code> modernize the dashboard</example>"
+# Control: the same verb/design phrasings with NO surrounding tags still route (not over-blanked).
+assert_fires  "control: plain verb still routes"  "polish the hero"                                   "polish"
+assert_intent_fires "control: plain design still nudges" "modernize the dashboard"
+
+echo ""
 echo "============================================================"
 echo "RESULTS: $PASS passed, $FAIL failed"
 if [ "$FAIL" -gt 0 ]; then

@@ -224,6 +224,58 @@ echo "$OUT" | grep -q "boom-in-scanner" && ok "carries the detector's abort reas
 [ "$(printf '%s' "$OUT" | tr -d '[:space:]')" = "{}" ] && bad "mid-scan abort must NOT be silent" || ok "mid-scan abort is not silent"
 rm -rf "$STUB"
 
+# ---------------------------------------------------------------------------
+# STATIC-FAMILY BROADENING (ITEM 11). The gate now runs detect's static lenses on the
+# whole set of sources detect can statically scan (scanned=true): the CSS family
+# (.scss/.sass/.less) and component templates (.vue/.svelte/.jsx/.tsx), not only
+# .html/.css. These are browser-independent (they run without the rendered lane), so
+# they assert unconditionally. .astro/.styl (scanned=false in detect) stay OUT of scope.
+# ---------------------------------------------------------------------------
+echo "[12] broadening: .scss with an absolute ban (browser-independent)"
+cat > "$PROJ/main.scss" <<'SCSS'
+.hero-title {
+  background: linear-gradient(90deg, #7c3aed, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+SCSS
+OUT="$(run "$PROJ/main.scss")"
+echo "$OUT" | grep -q "gradient-text" && ok ".scss gradient-text ban flagged (detect ran on a non-.css stylesheet)" || bad "expected gradient-text on .scss; got: $OUT"
+echo "$OUT" | grep -q "MUST FIX" && ok ".scss ban grouped under MUST FIX (blocking)" || bad "expected MUST FIX on .scss; got: $OUT"
+echo "$OUT" | grep -q "NOT CHECKED" && bad ".scss must NOT emit a rendered coverage-gap note (static-only source)" || ok ".scss emits no rendered gap note (correct: no renderable target)"
+
+echo "[13] broadening: .vue with a ban inside its <style> block"
+cat > "$PROJ/App.vue" <<'VUE'
+<template><h1 class="hero-title">Hi</h1></template>
+<style>
+.hero-title { background: linear-gradient(90deg,#7c3aed,#ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; }
+</style>
+VUE
+OUT="$(run "$PROJ/App.vue")"
+echo "$OUT" | grep -q "gradient-text" && ok ".vue gradient-text ban flagged (detect scanned the <style> block)" || bad "expected gradient-text on .vue; got: $OUT"
+
+echo "[14] broadening: .svelte with a ban inside its <style> block"
+cat > "$PROJ/Card.svelte" <<'SVELTE'
+<h1 class="hero-title">Hi</h1>
+<style>
+.hero-title { background: linear-gradient(90deg,#7c3aed,#ec4899); -webkit-background-clip: text; background-clip: text; color: transparent; }
+</style>
+SVELTE
+OUT="$(run "$PROJ/Card.svelte")"
+echo "$OUT" | grep -q "gradient-text" && ok ".svelte gradient-text ban flagged" || bad "expected gradient-text on .svelte; got: $OUT"
+
+echo "[15] exclusion boundary: extensions detect cannot statically scan stay silent"
+# .astro / .styl report scanned=false in detect - broadening onto them would fire a
+# fail-closed 'unverified' note on every edit with no finding behind it, so the gate
+# leaves them OUT of scope entirely (silent), exactly like a non-design file.
+cp "$PROJ/main.scss" "$PROJ/page.astro"
+OUT="$(run "$PROJ/page.astro")"
+[ "$(printf '%s' "$OUT" | tr -d '[:space:]')" = "{}" ] && ok ".astro is out of scope -> silent (not fail-closed)" || bad "expected .astro silent; got: $OUT"
+printf 'export const x = 1;\n' > "$PROJ/util.ts"
+OUT="$(run "$PROJ/util.ts")"
+[ "$(printf '%s' "$OUT" | tr -d '[:space:]')" = "{}" ] && ok ".ts non-design source -> silent" || bad "expected .ts silent; got: $OUT"
+
 echo
 echo "PASS=$PASS FAIL=$FAIL SKIP=$SKIP"
 [ "$FAIL" = 0 ] || exit 1

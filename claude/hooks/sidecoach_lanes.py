@@ -81,8 +81,28 @@ def sanitize(text):
     text = re.sub(r"```[\s\S]*?```", _blank, text)
     text = re.sub(r"`[^`\n]*`", _blank, text)
     text = re.sub(r"\b(?:https?|file|ftp)://\S+", _blank, text, flags=re.IGNORECASE)
-    text = re.sub(r"<([a-zA-Z][\w:-]*)[^>]*>[\s\S]*?</\1\s*>", _blank, text)
-    text = re.sub(r"<[a-zA-Z!/][^>]*>", _blank, text)
+    # Tag bodies: iterate to a FIXPOINT so NESTED bodies are fully blanked (a single [^<]*?
+    # pass leaves the outer body's text and leaks it into scoring - Codex 2026-08-25
+    # finding 2). Each pass turns one nesting level into spaces, so the next pass sees an
+    # outer body with no '<' left and blanks the whole construct. THREE linearity guards
+    # (Codex findings 1+2, final): (a) the body is [^<]*? (cannot cross into the next tag);
+    # (b) the tag-open matcher stops at the next '<'/'>' NOT [^>]* (which rescans to EOF on
+    # an unclosed "<tag<tag..." flood); (c) the name capture and the attribute run do NOT
+    # share characters - in <([a-zA-Z][\w:-]*)[^<>]*> both consume word chars, so a long
+    # mismatched close (`<`+a*N+`>x</`+a*N+`b>`) has O(N) name/attr splits and backtracks
+    # catastrophically (32k -> 2.4s). Requiring the attribute run to BEGIN with a separator
+    # [\s/] (a real tag name is always followed by whitespace, '/', or '>') makes the split
+    # UNIQUE, so no name/attr backtracking (128k -> 0.004s). The optional (?:[\s/][^<>]*)?
+    # still matches attributes and self-close. Length-preserving throughout (_blank ->
+    # same-length spaces). The 30-pass cap bounds runtime (deep-nesting residual documented
+    # in the report). Same fix as sidecoach-keyword.sh sanitize().
+    _tag_body = re.compile(r"<([a-zA-Z][\w:-]*)(?:[\s/][^<>]*)?>[^<]*?</\1\s*>")
+    for _ in range(30):
+        _new = _tag_body.sub(_blank, text)
+        if _new == text:
+            break
+        text = _new
+    text = re.sub(r"<[a-zA-Z!/][^<>]*>", _blank, text)
     text = re.sub(r"\[(?:MAGIC KEYWORD|TURN\s+(?:\d+|N))[^\]]*\]", _blank, text,
                   flags=re.IGNORECASE)
     return text

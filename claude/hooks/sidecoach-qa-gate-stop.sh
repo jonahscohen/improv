@@ -151,7 +151,7 @@ VISUAL_EXTS = {".css", ".scss", ".sass", ".less",
 # Non-app dev/test/scratch paths - the SAME notion the arm/verify sides use. Kept
 # byte-identical to the copies in verify-before-done-stop.sh.
 _NON_APP_DIR_RE = re.compile(
-    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/")
+    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|__tests__|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/")
 _TEST_SPEC_RE = re.compile(r"\.(test|spec)\.[A-Za-z0-9]+$")
 
 MAX_STATUS_ENTRIES = 20000

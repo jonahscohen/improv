@@ -193,14 +193,32 @@ def sanitize(text: str) -> str:
     text = re.sub(r"`[^`\n]*`", " ", text)
     # 3. URLs: http://, https://, file://, ftp://
     text = re.sub(r"\b(?:https?|file|ftp)://\S+", " ", text, flags=re.IGNORECASE)
-    # 4. XML tag bodies: <tag>...</tag>
-    text = re.sub(
-        r"<([a-zA-Z][\w:-]*)[^>]*>[\s\S]*?</\1\s*>",
-        " ",
-        text,
-    )
-    # 5. Stray XML tags (open/self-closing)
-    text = re.sub(r"<[a-zA-Z!/][^>]*>", " ", text)
+    # 4. XML tag bodies: <tag>...</tag>. Iterate to a FIXPOINT so NESTED bodies are fully
+    # blanked, not just the innermost. A single [^<]*? pass is NOT behavior-preserving - it
+    # leaves the outer body's text (e.g. the verb in
+    # "<example><code>x</code> polish the hero</example>" would leak and fire: Codex
+    # 2026-08-25 finding 2). Each pass strips one nesting level and turns it into a space, so
+    # the next pass sees an outer body with no '<' left and blanks the whole construct.
+    # THREE linearity guards (Codex findings 1+2, final): (a) the body is [^<]*? (cannot
+    # cross into the next tag); (b) the tag-open matcher stops at the next '<'/'>' - NOT
+    # [^>]*, which on an unclosed "<tag<tag..." flood rescans to EOF from every '<'; (c) the
+    # name capture and the attribute run do NOT share characters. In <([a-zA-Z][\w:-]*)[^<>]*>
+    # both quantifiers consume word chars, so a long mismatched close (`<`+a*N+`>x</`+a*N+`b>`)
+    # has O(N) name/attr splits and backtracks catastrophically (32k -> 2.4s). Requiring the
+    # attribute run to BEGIN with a separator [\s/] (a real tag name is always followed by
+    # whitespace, '/', or '>') makes the split UNIQUE, so there is no name/attr backtracking:
+    # the same 128k input is 0.004s. The optional (?:[\s/][^<>]*)? still matches attributes
+    # (`<div class="x">`) and self-close (`<br/>`). Fixpoint blanks NESTED bodies fully; the
+    # 30-pass cap bounds runtime (see the deep-nesting residual documented in the report).
+    _tag_body = re.compile(r"<([a-zA-Z][\w:-]*)(?:[\s/][^<>]*)?>[^<]*?</\1\s*>")
+    for _ in range(30):
+        _new = _tag_body.sub(" ", text)
+        if _new == text:
+            break
+        text = _new
+    # 5. Stray XML tags (open/self-closing). [^<>]* (not [^>]*) keeps this linear on an
+    # unclosed-tag flood too.
+    text = re.sub(r"<[a-zA-Z!/][^<>]*>", " ", text)
     # 6. Transcript markers: [MAGIC KEYWORD: foo], [TURN 5: bar], [TURN N: ...]
     text = re.sub(
         r"\[(?:MAGIC KEYWORD|TURN\s+(?:\d+|N))[^\]]*\]",
@@ -280,6 +298,8 @@ def _intent_eligible():
     if not intent:
         return False
     actions = intent.get("actions", []) or []
+    design_actions = intent.get("design_actions", []) or []
+    design_action_targets = intent.get("design_action_targets", []) or []
     diagnose = intent.get("diagnose", []) or []
     diag_targets = intent.get("diagnose_targets", []) or []
     targets = intent.get("substantive_targets", []) or []
@@ -315,12 +335,32 @@ def _intent_eligible():
     has_standalone = len(subst(standalone)) > 0
     has_exempt = len(mlist(exempt)) > 0
     has_new_build = len(mlist(new_build)) > 0
-    # A BUILD action (+ any substantive target) OR a DIAGNOSE signal (+ a non-
-    # cross-domain target) fires the nudge. Diagnosis ("what's wrong with the
-    # homepage", "diagnose the dashboard") is the canonical /sidecoach audit case
-    # but carries no build verb; the target gate keeps non-UI diagnosis silent
-    # ("what's wrong with the db query", "inspect the packet header").
-    fires = has_standalone or (has_action and has_target) or (has_diagnose and has_diag_target)
+    # DESIGN_ACTIONS (modernize/beautify/spruce up/facelift) are cosmetic verbs held OUT
+    # of the generic ACTIONS list because they overlap with backend nouns through the FULL
+    # substantive_targets list ("modernize the database TABLE", "the TS INTERFACE"). They
+    # fire ONLY when a DESIGN_ACTION_TARGET is present - a POSITIVE allowlist of design
+    # surfaces (page/screen/hero/button/component/card/layout/ui/... + the design-canonical
+    # section/nav/form/modal/... nouns) that deliberately omits the overloaded cross-domain
+    # nouns (table/interface/view/grid/site/header). This positive gate IS the whole guard:
+    # a backend object (api endpoint / graphql resolver / auth flow / cli parser / database
+    # table / typescript interface) is simply not in the allowlist, so there is no design
+    # target and no fire - no prompt-wide backend BLOCKLIST is used, because a blocklist
+    # over-suppresses legit UI prompts that merely mention a backend word (Codex 2026-08-25,
+    # findings 2+3: 'modernize the settings PAGE and align it with the design system schema'
+    # must still fire - its object is a PAGE). 'facelift' is gated exactly like the others:
+    # 'give the button a facelift' fires (button is a surface); 'give the API endpoint a
+    # facelift' stays silent (endpoint is not).
+    has_design_action = len(mlist(design_actions)) > 0
+    has_design_action_target = len(subst(design_action_targets)) > 0
+    # A BUILD action (+ any substantive target) OR a DIAGNOSE signal (+ a non-cross-domain
+    # target) OR a DESIGN action (+ a design-surface target) fires the nudge. Diagnosis
+    # ("what's wrong with the homepage", "diagnose the dashboard") is the canonical
+    # /sidecoach audit case but carries no build verb; the target gate keeps non-UI
+    # diagnosis silent ("what's wrong with the db query", "inspect the packet header").
+    fires = (has_standalone
+             or (has_action and has_target)
+             or (has_diagnose and has_diag_target)
+             or (has_design_action and has_design_action_target))
     # A genuine diagnosis is not a trivial tweak, so an incidental EXEMPT word does
     # not silence it (only a tweak with no build/standalone/diagnosis signal stays mute).
     if has_exempt and not has_new_build and not has_standalone and not has_diagnose:
@@ -374,7 +414,9 @@ if lane_registry is not None and sidecoach_lanes is not None:
         diag = (f" (Lane signal '{diag_label}' noted as a non-routing diagnostic; "
                 f"do not auto-expand it into a lane.)") if diag_label else ""
         context = (
-            f"User intends to invoke the sidecoach <verb>{verb}</verb> flow. Route accordingly.{diag}"
+            f"User intends to invoke the sidecoach <verb>{verb}</verb> flow. Load the sidecoach skill "
+            f"and run its '{verb}' flow now: announce the '{verb}' pass in one sentence and take its "
+            f"first step. Do not hand-code this or ask which flow - the route is decided.{diag}"
         )
         touch_cooldown()
     elif outcome == "NUDGE_ELIGIBLE":
@@ -409,7 +451,10 @@ if matched_verbs:
     chosen_name = matched_verbs[0].get("verb", "")
     touch_cooldown()
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
-        "additionalContext": f"User intends to invoke the sidecoach <verb>{chosen_name}</verb> flow. Route accordingly."}}))
+        "additionalContext": (f"User intends to invoke the sidecoach <verb>{chosen_name}</verb> flow. "
+                              f"Load the sidecoach skill and run its '{chosen_name}' flow now: announce "
+                              f"the '{chosen_name}' pass in one sentence and take its first step. Do not "
+                              f"hand-code this or ask which flow - the route is decided.")}}))
     sys.exit(0)
 
 # NOTE: the legacy intent tier was folded into the lane-classifier dispatch

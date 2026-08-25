@@ -14,9 +14,14 @@
 #       detectors fire on write: marketing-buzzword (v4 gate, held-out precision 1.000),
 #       tiny-text, nested-cards, low-contrast, skipped-heading, broken-image, justified-text,
 #       plus the 5 absolute bans over raw source.
-#   - a .css edit    -> static-ban + static-check only. A lone stylesheet has no renderable
-#       target, so the rendered lenses correctly report `skip` and the edit gets the ban sweep
-#       + the static polish/theming rules. This matches "a CSS-only edit gets the ban sweep".
+#   - a STATIC-ONLY source edit (.css/.scss/.sass/.less/.vue/.svelte/.jsx/.tsx)
+#       -> static-ban + static-check only, run with --no-render. These have no renderable
+#       file:// target, so the rendered lenses do not apply; the edit gets the 5 absolute bans
+#       + the static polish/theming rules over its raw source (and any <style> / CSS-in-source
+#       block). The scope is exactly what detect can statically scan (scanned=true): the CSS
+#       family plus component templates. .astro/.styl are excluded (detect reports scanned=false
+#       on them, so a fail-closed note would fire on every edit with no finding behind it).
+#       This is the "broaden coverage WHERE A HOOK CAN RUN DETECT" boundary.
 #
 # This SUPERSEDES the previous gate, which ran only the 5 static bans plus an older structural
 # taste-validator and could NEVER reach marketing-buzzword/tiny-text/nested-cards/low-contrast
@@ -68,9 +73,21 @@ if data.get("tool_name") not in ("Write", "Edit", "MultiEdit"):
     print("{}"); sys.exit(0)
 
 fp = (data.get("tool_input", {}) or {}).get("file_path", "") or ""
-is_html = fp.endswith(".html") or fp.endswith(".htm")
-is_css = fp.endswith(".css")
-if not (is_html or is_css) or not os.path.isfile(fp):
+low = fp.lower()
+is_html = low.endswith(".html") or low.endswith(".htm")
+# STATIC-ONLY design sources. detect runs its static ban + static-check lenses on
+# these (verified 2026-08-25: scanned=true, well-formed lenses map, real findings) but
+# they have NO renderable file:// target, so the rendered taste lane never applies and
+# no rendered coverage-gap note is owed for them. Scope = the CSS family
+# (.css/.scss/.sass/.less) plus component templates (.vue/.svelte/.jsx/.tsx) whose
+# <style> / CSS-in-source blocks the ban+static lenses scan. Deliberately EXCLUDES
+# .astro and .styl, on which detect reports scanned=false (nothing to scan): broadening
+# onto those would fail-closed on every edit with no real finding behind it. This is the
+# "broaden coverage WHERE A HOOK CAN RUN DETECT" boundary - detect's own scannability,
+# not a guess.
+STATIC_EXTS = (".css", ".scss", ".sass", ".less", ".vue", ".svelte", ".jsx", ".tsx")
+is_static = low.endswith(STATIC_EXTS)
+if not (is_html or is_static) or not os.path.isfile(fp):
     print("{}"); sys.exit(0)
 # Never gate the engine's own source, deps, dist, or memory.
 if any(seg in fp for seg in ("/node_modules/", "/sidecoach/", "/dist/", "/.claude/")):
@@ -152,9 +169,16 @@ if not sc:
 # stdout as the only machine signal (detect always writes a result JSON to stdout for a scan).
 detect = os.path.join(sc, "bin", "sidecoach-detect.js")
 abspath = os.path.abspath(fp)
-rerun = "node " + shlex.quote(detect) + " " + shlex.quote(abspath)
+# HTML renders its file:// URL (the rendered taste lane). A STATIC-ONLY source has no
+# renderable target, so pass --no-render: detect runs the static ban + static-check
+# lenses only - fast (~0.05s) and with no browser dependency. (detect already skips
+# render for non-html even without the flag; passing it makes the intent explicit and
+# guarantees no accidental render.)
+extra = [] if is_html else ["--no-render"]
+detect_argv = [abspath] + extra + ["--quiet"]
+rerun = "node " + shlex.quote(detect) + " " + shlex.quote(abspath) + "".join(" " + a for a in extra)
 try:
-    out = subprocess.run(["node", detect, abspath, "--quiet"],
+    out = subprocess.run(["node", detect] + detect_argv,
                          capture_output=True, text=True, timeout=120)
 except subprocess.TimeoutExpired:
     not_run("the detector timed out after 120s", "re-run manually: " + rerun)

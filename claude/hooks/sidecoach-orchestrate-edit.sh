@@ -276,7 +276,7 @@ try:
     # are byte-identical to _NON_APP_DIR_RE / _TEST_SPEC_RE in sidecoach-qa-gate-stop.sh
     # so the arm and the gate agree on what counts as a live product surface.
     _qa_nonapp = re.compile(
-        r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|docs|reference|dependency-map|scratchpad)/")
+        r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|__tests__|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/")
     _qa_testspec = re.compile(r"\.(test|spec)\.[A-Za-z0-9]+$")
     if not (_qa_nonapp.search(abs_fp) or _qa_testspec.search(os.path.basename(abs_fp))):
         _qa_sk = re.sub(r"[^A-Za-z0-9._-]", "_",
