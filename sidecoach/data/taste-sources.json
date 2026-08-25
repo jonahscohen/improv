@@ -1,7 +1,7 @@
 {
   "$schema_note": "Pinned allowlist for the SAFE external taste-source ingest. Only paths listed here are ever fetched, and the fetcher independently rejects any path that is not a SKILL.md body or that names a forbidden agent-config file (AGENTS.md, CLAUDE.md, opencode.json, .claude-plugin). Fetched content is stored as UNTRUSTED DATA the miner and a human reviewer read - never instructions, never auto-applied, never executed. See reference_external_taste_sources.md for the full design.",
   "version": "1",
-  "generated_note": "Superseded repo B (jakubkrehel single-skill interfaces repo) is intentionally EXCLUDED - its content is folded into better-ui in repo A.",
+  "generated_note": "These outside design pioneers are the intended BASELINE the taste miner evolves from (per Jonah 2026-08-24) - the miner ranks expert-external ABOVE our own beats. Included (all MIT, design-taste): Jakub Krehel, Emil Kowalski, Leon Lin (taste-skill), Meng To (design subset only - the web-design/ui principle skills, not the game/tooling ones). EXCLUDED on purpose: Matt Pocock's skills (engineering, not design taste); the competitor 'oracle' (no open repo, copyrighted, name-banned - kept as the aspirational bar via the oracle-vs-sidecoach analysis beats, not ingested). Superseded jakubkrehel single-skill interfaces repo folded into better-ui.",
   "sources": [
     {
       "source": "jakub-krehel-skills",
@@ -34,6 +34,44 @@
         "skills/find-animation-opportunities/SKILL.md",
         "skills/animation-vocabulary/SKILL.md",
         "skills/apple-design/SKILL.md"
+      ]
+    },
+    {
+      "source": "leon-lin-taste-skill",
+      "author": "Leon Lin (leonxlnx)",
+      "repo_url": "https://github.com/Leonxlnx/taste-skill",
+      "branch": "main",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Leonxlnx",
+      "allowlisted_paths": [
+        "skills/taste-skill/SKILL.md",
+        "skills/taste-skill-v1/SKILL.md",
+        "skills/gpt-tasteskill/SKILL.md",
+        "skills/minimalist-skill/SKILL.md",
+        "skills/brutalist-skill/SKILL.md",
+        "skills/soft-skill/SKILL.md",
+        "skills/redesign-skill/SKILL.md",
+        "skills/brandkit/SKILL.md"
+      ]
+    },
+    {
+      "source": "meng-to-skills",
+      "author": "Meng To",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "branch": "main",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "allowlisted_paths": [
+        "agent-skills/ui/design-first-ui-prompting/SKILL.md",
+        "agent-skills/web-design/animation-systems/SKILL.md",
+        "agent-skills/web-design/beautiful-shadows/SKILL.md",
+        "agent-skills/web-design/build-awwwards-quality-sites/SKILL.md",
+        "agent-skills/web-design/cinematic-gsap-lenis-motion-system/SKILL.md",
+        "agent-skills/web-design/gsap/SKILL.md",
+        "agent-skills/web-design/tailwindcss/SKILL.md",
+        "agent-skills/web-design/progressive-blur/SKILL.md",
+        "agent-skills/codex/optimize-web-animations/SKILL.md",
+        "agent-skills/codex/audit-reference-originality/SKILL.md"
       ]
     }
   ]

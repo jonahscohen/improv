@@ -1,0 +1,15 @@
+{
+  "source": "leon-lin-taste-skill",
+  "commit_sha": "ccbc15639c97057cbfcf32ecebc38ef716e4bb37",
+  "updated_utc": "2026-08-25T06:53:30.297Z",
+  "hashes": {
+    "skills/taste-skill/SKILL.md": "aa194351b246b8b4799099d4ed7b033d29eab6e6e3d58d8d2172978be7b3ec89",
+    "skills/taste-skill-v1/SKILL.md": "033d45af1ed23832730642f95f40ab49db7fb5222848489a6c5656144bfc6dae",
+    "skills/gpt-tasteskill/SKILL.md": "2e64c269953f2656c21bf5a0fa6b4568e82fe0c72b36e8f84758e090349966a5",
+    "skills/minimalist-skill/SKILL.md": "36bc7328f085405f43b476938e62460fa573bf7e984e949e072bcf014831a44c",
+    "skills/brutalist-skill/SKILL.md": "fffbaac8597f07679e9d87145533567658aedba3b5eca6f16a7075a333048caa",
+    "skills/soft-skill/SKILL.md": "e1e32f5e2d420872c6c7332b53d5ff7721946766b78c4822b424c2d512c8fdbc",
+    "skills/redesign-skill/SKILL.md": "98ad3e5b051bfb71b2795f7e8a6aa0d32b51ee095606c098a4b2822ac07926c9",
+    "skills/brandkit/SKILL.md": "b0c4837e1bd140ca816ae54948754ddd2ac1e2a4d3619363777a80caf00b2ede"
+  }
+}

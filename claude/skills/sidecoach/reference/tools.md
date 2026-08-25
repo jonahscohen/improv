@@ -38,11 +38,11 @@ sidecoach-monitor "<utterance>" --json
 
 Exit: 0 ran, non-zero the run did not complete
 
-## Standalone tools (19)
+## Standalone tools (20)
 
-Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 12 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-mine`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-ingest`, `sidecoach-taste-promote`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
+Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 13 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-mine`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-enforce`, `sidecoach-taste-ingest`, `sidecoach-taste-promote`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
 
-Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-mine`, `sidecoach-preauthor`, `sidecoach-qa-plan`. Every other tool here is run by you or by the user, never automatically.
+Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-mine`, `sidecoach-preauthor`, `sidecoach-qa-plan`, `sidecoach-taste-enforce`. Every other tool here is run by you or by the user, never automatically.
 
 ### `sidecoach-artifacts`
 
@@ -247,6 +247,18 @@ wired from claude/hooks/sidecoach-taste-gate.sh
 ```
 
 Exit: 0 clean, non-zero a ban fired
+
+### `sidecoach-taste-enforce`
+
+_not listed by the resolver | flow-invoked | reached by the human enforce gate (the user types enforce-confirm in their REPL, then runs enforce)_
+
+The SECOND, precision-gated, human-signed gate - the security-critical half of the self-updating taste loop. It is the ONLY sanctioned way a mined rule that is ALREADY guidance-promoted crosses from advisory GUIDANCE to a BUILD-BLOCKING detector. It re-measures the detector's HELD-OUT precision FRESH (eval/taste-enforce-precision.mjs over the frozen patternSpec + held-out corpus + a shared negative pool) and REFUSES unless it clears the two-gate bar (P >= threshold AND a minimum-denominator FLOOR - under floor is a refusal, not a pass). Only then does it consume a single-use consent token the user mints by typing "enforce-confirm <ruleId> <precision-digest>" in their own REPL (the sidecoach-taste-enforce-arm.sh UserPromptSubmit hook; the digest binds the sign-off to the measured precision, so a spec/corpus/build swap or a precision drift is caught; an agent cannot submit a user prompt, bash-guard fences the token + ledger-secret paths AND direct execution of the arm hook, content-guard fences the token + secret). It appends to a SEPARATE data/enforcement-ledger.jsonl (its OWN HMAC hash-chain + signed head anchor, distinct secret + distinct chain from the promotion ledger), flips the rule into the INERT enforced tier (data/enforced-rules/<ruleId>.json at a blocking severity), and runs npm run build (validateRegistry + --check + tsc) as a gate, rolling back on failure. Two-key: the promote token (content digest) and the enforce token (precision digest) are DISTINCT tokens, arm hooks, ledgers, and secrets - nothing auto-crosses either boundary. Blocking ships OFF-BY-DEFAULT behind a per-project opt-in even after enforce, and the mined-taste-invariant test fails the build loud if any blocking mined-taste rule lacks its enforcement-ledger entry + passing precision record.
+
+```
+node <sidecoach-repo>/bin/sidecoach-taste-enforce.js list | approve <ruleId> | enforce <ruleId> | check <ruleId> | verify-ledger | audit
+```
+
+Exit: 0 ok, 2 usage, 3 no rule, 4 bad rule, 5 no token, 6 no TTY, 7 precision refused, 8 ledger tampered, 9 audit discrepancy, 10 io, 11 replay, 12 not guidance-promoted, 13 build failed
 
 ### `sidecoach-taste-ingest`
 

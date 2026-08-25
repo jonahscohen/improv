@@ -1,0 +1,110 @@
+{
+  "source": "meng-to-skills",
+  "repo_url": "https://github.com/MengTo/Skills",
+  "license": "MIT",
+  "upstream_copyright": "Copyright (c) 2026 Meng To",
+  "retrieved_utc": "2026-08-25T06:53:31.480Z",
+  "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+  "files": [
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/ui/design-first-ui-prompting/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "5e3d4db0eb0ea983f2bedb90f28f358901c292388a7889e2f66ac133ceff743c"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/web-design/animation-systems/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "ae1e51b8eede6f4d05fda5388f61bbc1d29ea88b7a5d7a488c3ecfed5f18e262"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/web-design/beautiful-shadows/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "10b6cc0964919118218ffe0845e4a00954f39788d89d4ec29827d100f254e135"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/web-design/build-awwwards-quality-sites/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "1568e003d112e72df0ea2ec925829a5039b762c27174e063c192d7ccf7f4f9e6"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/web-design/cinematic-gsap-lenis-motion-system/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "7b8f5745f34ef4ba507e19fabd6acf9cd3b8d70efda81746d0f4090af0f84e06"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/web-design/gsap/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "eb9a0a84f0747fa19ce693cf776328945aebee1205ddc42c518c133c2ab6cb42"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/web-design/tailwindcss/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "90d2150c24c7453d3f75914791d5356c87606a7c1b933d3371a6120624720c4e"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/web-design/progressive-blur/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "202004db5ff37fb8add044cf00288d984c9a680c2fb07e4bb2dacc3df90ac2a1"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/codex/optimize-web-animations/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "37a8f512bb22a4f2112e4ed388068c0cd184d312d64ee00a993da5bf04ded947"
+    },
+    {
+      "source": "meng-to-skills",
+      "repo_url": "https://github.com/MengTo/Skills",
+      "commit_sha": "4c716b516b6b0143f3037631306b3730d2832344",
+      "retrieved_utc": "2026-08-25T06:53:31.480Z",
+      "path": "agent-skills/codex/audit-reference-originality/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Meng To",
+      "sha256": "8b8b5e6c6174ff790f08541e444fe64b48f8d078b1f5783b36c3204a690616b6"
+    }
+  ]
+}

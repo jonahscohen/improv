@@ -13,6 +13,7 @@
 - [** ACTIVE ** PHASE 3a LEAD ACCEPTANCE - verified security core; fixed a non-hermetic dry-run test the concurrent miner exposed; ReDoS ambiguous-alte…](session_2026-08-24_phase3a-lead-acceptance.md)
 - [** ACTIVE ** PHASE 3b ENFORCE GATE BUILT - second precision-gated human-signed gate (distinct token/arm/ledger/secret from promote) + held-out pr…](session_2026-08-24_phase3b-enforce-gate-built.md)
 - [** ACTIVE ** PHASE 3c LIVE-BLOCKING CODEGEN - build-time codegen crosses a CERTIFIED enforced rule into RAW_RULES fail-closed; src imports GEN…](session_2026-08-24_phase3c-live-blocking-codegen.md)
+- [** ACTIVE DECISION ** TASTE SOURCES = OUTSIDE PIONEERS AS BASELINE - +Leon Lin +Meng To (MIT); SOURCE_RANK expert-external is the baseline a…](session_2026-08-25_taste-sources-pioneers-baseline.md)
 - [** ACTIVE DECISION ** PHASE 3 DESIGN - mined rule -> build-blocking detector via DATA-DRIVEN interpreter (NOT codegen), held-out precision gate (P>=0.90 + min…](session_2026-08-24_phase3-design.md)
 - [** ACTIVE ** TASTE MINER SCHEDULING BUILT - third spine adapter: sidecoach-mine precheck/advance (corpus-sig gate) + sidecoach-mine-daily wrapper/pli…](session_2026-08-24_miner-scheduling-built.md)
 - [** ACTIVE ** PHASE 1+2 SHORE-UP - ingest symlink-safe containment (realResolve + O_NOFOLLOW), consent overclaim comment fixed, install.sh 14c cmux wiring;…](session_2026-08-24_phase1-2-shoreup.md)

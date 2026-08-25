@@ -1,0 +1,70 @@
+{
+  "source": "jakub-krehel-skills",
+  "repo_url": "https://github.com/jakubkrehel/skills",
+  "license": "MIT",
+  "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+  "retrieved_utc": "2026-08-25T06:53:29.105Z",
+  "commit_sha": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+  "files": [
+    {
+      "source": "jakub-krehel-skills",
+      "repo_url": "https://github.com/jakubkrehel/skills",
+      "commit_sha": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+      "retrieved_utc": "2026-08-25T06:53:29.105Z",
+      "path": "skills/better-ui/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+      "sha256": "21cf641dc53e926eccaf523f2f834e970058bd59af4617d8bdd3393f10641553"
+    },
+    {
+      "source": "jakub-krehel-skills",
+      "repo_url": "https://github.com/jakubkrehel/skills",
+      "commit_sha": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+      "retrieved_utc": "2026-08-25T06:53:29.105Z",
+      "path": "skills/better-typography/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+      "sha256": "a5d9e3560ee84087f65443aad266e62bfd9c9d4143c48424c5046624ac5b631d"
+    },
+    {
+      "source": "jakub-krehel-skills",
+      "repo_url": "https://github.com/jakubkrehel/skills",
+      "commit_sha": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+      "retrieved_utc": "2026-08-25T06:53:29.105Z",
+      "path": "skills/better-colors/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+      "sha256": "765d1dc6ff9bdd82b130c81c77095df21150f2c3fc8467ae429638a52e995f6d"
+    },
+    {
+      "source": "jakub-krehel-skills",
+      "repo_url": "https://github.com/jakubkrehel/skills",
+      "commit_sha": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+      "retrieved_utc": "2026-08-25T06:53:29.105Z",
+      "path": "skills/better-accessibility/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+      "sha256": "d59f56116485ea09f6c94f86ad2dc0adfa98aefbace52df56c9ee4ac0c3ddf17"
+    },
+    {
+      "source": "jakub-krehel-skills",
+      "repo_url": "https://github.com/jakubkrehel/skills",
+      "commit_sha": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+      "retrieved_utc": "2026-08-25T06:53:29.105Z",
+      "path": "skills/better-layout/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+      "sha256": "658f42ba16a656be37ec7b8e337ba94ae50e123815f264e68319d07943e05737"
+    },
+    {
+      "source": "jakub-krehel-skills",
+      "repo_url": "https://github.com/jakubkrehel/skills",
+      "commit_sha": "ca483852de23d48ab4f4ea71da37dad12bd70a95",
+      "retrieved_utc": "2026-08-25T06:53:29.105Z",
+      "path": "skills/better-writing/SKILL.md",
+      "license": "MIT",
+      "upstream_copyright": "Copyright (c) 2026 Jakub Krehel",
+      "sha256": "344a18f178634b5004277f45b7e817f89fb42025cd646d44d71d3ba7a929fd28"
+    }
+  ]
+}

@@ -267,6 +267,17 @@ function loadGuidanceStores() {
 // ---------------------------------------------------------------------------
 // corpus assembly (each entry carries sourceKind)
 // ---------------------------------------------------------------------------
+// De-weight our own beats (Jonah 2026-08-24: the outside pioneers are the BASELINE; "not our work
+// as a baseline"). The .claude/memory corpus is overwhelmingly build/infra/session notes that are
+// irrelevant to design taste; keep ONLY the design/taste-relevant beats as minor context beneath
+// the expert baseline and the measured-defect signal. A beat qualifies if its filename, name,
+// description, or type mentions a design-taste concept.
+const DESIGN_BEAT_RE = /\b(design|taste|typograph|typeface|font|color|colour|contrast|layout|spacing|whitespace|grid|motion|animat|easing|visual|aesthetic|polish|brand|\bui\b|\bux\b|a11y|accessib|hierarchy|readab|shadow|gradient|css|component|page-?quality|marketing-?buzz|anti-?pattern)\b/i;
+function beatIsDesignRelevant(fm, f) {
+  const hay = `${f} ${fm.name || ''} ${fm.description || ''} ${fm.type || ''}`;
+  return DESIGN_BEAT_RE.test(hay);
+}
+
 function assembleBeats(beatsDir) {
   const entries = [];
   let files;
@@ -275,6 +286,7 @@ function assembleBeats(beatsDir) {
     const raw = readTextSafe(path.join(beatsDir, f));
     if (raw == null) continue;
     const { fm, body } = parseFrontmatter(raw);
+    if (!beatIsDesignRelevant(fm, f)) continue; // de-weight: our non-design beats are not the baseline
     entries.push({
       sourceKind: 'beat',
       file: f,
@@ -817,9 +829,12 @@ function deriveMeasuredCandidates(corpus, reg) {
 }
 
 // ---------------------------------------------------------------------------
-// ranking (measured > expert > speculative; detectable outranks vibe)
+// ranking (expert-external is the BASELINE > our measured data > our beats > speculative;
+// detectable outranks vibe). The outside design pioneers set the taste baseline the miner
+// evolves FROM; our own beats are de-weighted to minor context, never the baseline (Jonah
+// 2026-08-24 - "their pioneering ... should be our baseline; not our work as a baseline").
 // ---------------------------------------------------------------------------
-const SOURCE_RANK = { 'measured-audit-history': 3, 'expert-external': 2, beat: 1, speculative: 0 };
+const SOURCE_RANK = { 'expert-external': 3, 'measured-audit-history': 2, beat: 1, speculative: 0 };
 const CONF_RANK = { high: 2, medium: 1, low: 0 };
 function rankScore(cand) {
   return (SOURCE_RANK[cand.sourceKind] != null ? SOURCE_RANK[cand.sourceKind] : 0) * 10
