@@ -1,0 +1,3 @@
+/* Tactile press feedback */
+.btn { transition: transform 160ms ease-out; }
+.btn:active { transform: scale(0.96); }

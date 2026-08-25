@@ -1,0 +1,7 @@
+/* Toast enter: slide + subtle scale, no pop-from-nothing */
+.toast {
+  transform: translateY(8px) scale(0.98);
+  opacity: 0;
+  transition: transform 180ms ease-out, opacity 180ms ease-out;
+}
+.toast.shown { transform: translateY(0) scale(1); opacity: 1; }

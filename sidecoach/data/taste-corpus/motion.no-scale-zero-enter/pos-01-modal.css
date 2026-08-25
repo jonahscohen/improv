@@ -1,0 +1,10 @@
+/* Modal enter animation - overlay content springs up from nothing */
+.modal__panel {
+  transform: scale(0);
+  opacity: 0;
+  animation: modal-in 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes modal-in {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}

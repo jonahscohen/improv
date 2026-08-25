@@ -1,0 +1,5 @@
+.menu { transform-origin: top; animation: menu-open 150ms ease-out; }
+@keyframes menu-open {
+  0%   { transform: scale(0.97); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

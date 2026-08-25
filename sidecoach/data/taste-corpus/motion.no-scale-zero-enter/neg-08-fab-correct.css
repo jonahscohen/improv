@@ -1,0 +1,7 @@
+.fab {
+  -webkit-transform: scale(0.9);
+  transform: scale(0.9);
+  opacity: 0;
+  transition: -webkit-transform 200ms ease, transform 200ms ease, opacity 200ms ease;
+}
+.fab.ready { transform: scale(1); opacity: 1; }

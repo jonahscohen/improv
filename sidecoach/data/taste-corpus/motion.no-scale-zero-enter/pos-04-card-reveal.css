@@ -1,0 +1,7 @@
+/* Card grid reveal on scroll into view */
+.card {
+  transform: scale(0);
+  transition: transform 300ms ease, opacity 300ms ease;
+  opacity: 0;
+}
+.card.is-visible { transform: scale(1); opacity: 1; }

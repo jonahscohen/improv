@@ -1,0 +1,8 @@
+/* Exit animation collapses the element to nothing - the same scale-to-zero tell as enter */
+.dialog--leaving {
+  animation: dialog-out 180ms ease-in forwards;
+}
+@keyframes dialog-out {
+  from { transform: scale(1); opacity: 1; }
+  to   { transform: scale(0); opacity: 0; }
+}

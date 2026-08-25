@@ -1,0 +1,6 @@
+.notification {
+  transform: scale( 0 );
+  opacity: 0;
+  animation: notif-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes notif-in { to { transform: scale(1); opacity: 1; } }
