@@ -1,0 +1,101 @@
+{
+  "note": "Hand-labeled precision fixture for the consolidation engine's TYPING (the risk gate). Each pair carries full provenance and the type the live flow would propose; the test runs each member through normalizeDistilled (the provenance gate) and then classifyContradiction, and compares to `expected`. A deterministic engine must score 16/16. `expected: null` means no contradiction should be flagged. Case gate-demotes-nondirection proves the provenance gate: without it, bencium's design-direction claim would be kept and mis-typed as a direction-pair.",
+  "pairs": [
+    {
+      "label": "direction-pair: oracle bolder vs quieter",
+      "expected": "direction-pair",
+      "a": { "source": "oracle", "sourceFile": "reference/_extracted/external/oracle/bolder.md", "type": "design-direction", "concept": "accent-intensity", "axisSubject": "accent-intensity", "claim": "push saturated accents" },
+      "b": { "source": "oracle", "sourceFile": "reference/_extracted/external/oracle/quieter.md", "type": "design-direction", "concept": "accent-intensity", "axisSubject": "accent-intensity", "claim": "restrained near-monochrome" }
+    },
+    {
+      "label": "direction-pair: leon minimalist vs brutalist",
+      "expected": "direction-pair",
+      "a": { "source": "leon-lin-taste-skill", "sourceFile": "reference/_extracted/external/leon-lin-taste-skill/skills/minimalist-skill/SKILL.md", "type": "design-direction", "concept": "visual-density", "axisSubject": "visual-density", "claim": "strip to essentials, whitespace-led" },
+      "b": { "source": "leon-lin-taste-skill", "sourceFile": "reference/_extracted/external/leon-lin-taste-skill/skills/brutalist-skill/SKILL.md", "type": "design-direction", "concept": "visual-density", "axisSubject": "visual-density", "claim": "raw exposed structure, hard edges" }
+    },
+    {
+      "label": "direction-pair: taste-skill named-vibe vs leon soft",
+      "expected": "direction-pair",
+      "a": { "source": "taste-skill", "sourceFile": "reference/_extracted/external/taste-skill/named-vibe-variants.md", "type": "design-direction", "concept": "corner-treatment", "axisSubject": "corner-treatment", "claim": "sharp editorial corners for the Precise vibe" },
+      "b": { "source": "leon-lin-taste-skill", "sourceFile": "reference/_extracted/external/leon-lin-taste-skill/skills/soft-skill/SKILL.md", "type": "design-direction", "concept": "corner-treatment", "axisSubject": "corner-treatment", "claim": "generous rounding, gentle friendliness" }
+    },
+    {
+      "label": "hard-vs-hard: Inter ban vs Inter mandate",
+      "expected": "hard-vs-hard",
+      "a": { "source": "leon-lin-taste-skill", "sourceFile": "reference/_extracted/external/leon-lin-taste-skill/skills/taste-skill/SKILL.md", "type": "hard-prohibitive", "polarity": "ban", "concept": "typeface-inter", "axisSubject": "typeface-inter", "claim": "never ship Inter" },
+      "b": { "source": "refactoring-ui", "sourceFile": "reference/_extracted/external/refactoring-ui/SKILL.md", "type": "hard-prohibitive", "polarity": "mandate", "concept": "typeface-inter", "axisSubject": "typeface-inter", "claim": "Inter is a safe UI default" }
+    },
+    {
+      "label": "hard-vs-hard: serif ban vs serif mandate",
+      "expected": "hard-vs-hard",
+      "a": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/SKILL.md", "type": "hard-prohibitive", "polarity": "ban", "concept": "serif-on-ui", "axisSubject": "serif-on-ui", "claim": "never set UI body in a serif" },
+      "b": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md", "type": "hard-prohibitive", "polarity": "mandate", "concept": "serif-on-ui", "axisSubject": "serif-on-ui", "claim": "a serif body reads as considered and editorial" }
+    },
+    {
+      "label": "standard-calibration: radius 8-12 vs 0",
+      "expected": "standard-calibration",
+      "a": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-ui/SKILL.md", "type": "standard-measurement", "concept": "border-radius", "axisSubject": "border-radius", "claim": "8-12px", "measured": { "property": "border-radius", "value": 8, "unit": "px", "range": [8, 12] } },
+      "b": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/SKILL.md", "type": "standard-measurement", "concept": "border-radius", "axisSubject": "border-radius", "claim": "0px hard edges", "measured": { "property": "border-radius", "value": 0, "unit": "px" } }
+    },
+    {
+      "label": "standard-calibration: easing overshoot vs standard",
+      "expected": "standard-calibration",
+      "a": { "source": "emil-kowalski-skills", "sourceFile": "reference/_extracted/external/emil-kowalski-skills/skills/animate/SKILL.md", "type": "standard-measurement", "concept": "easing-curve", "axisSubject": "easing-curve", "claim": "overshoot spring", "measured": { "property": "easing", "value": "cubic-bezier(.34,1.56,.64,1)" } },
+      "b": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/MOTION-SPEC.md", "type": "standard-measurement", "concept": "easing-curve", "axisSubject": "easing-curve", "claim": "standard ease", "measured": { "property": "easing", "value": "cubic-bezier(.4,0,.2,1)" } }
+    },
+    {
+      "label": "cross-type: serif-for-Elegant direction vs serif ban",
+      "expected": "cross-type",
+      "a": { "source": "taste-skill", "sourceFile": "reference/_extracted/external/taste-skill/named-vibe-variants.md", "type": "design-direction", "concept": "serif-family", "axisSubject": "serif-family", "claim": "Elegant archetype prescribes a serif" },
+      "b": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md", "type": "hard-prohibitive", "polarity": "ban", "concept": "serif-family", "axisSubject": "serif-family", "claim": "never set UI body in a serif" }
+    },
+    {
+      "label": "cross-type: radius ban vs radius standard",
+      "expected": "cross-type",
+      "a": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/SKILL.md", "type": "hard-prohibitive", "polarity": "ban", "concept": "card-radius", "axisSubject": "card-radius", "claim": "never round card corners" },
+      "b": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-ui/SKILL.md", "type": "standard-measurement", "concept": "card-radius", "axisSubject": "card-radius", "claim": "8px cards", "measured": { "property": "border-radius", "value": 8, "unit": "px" } }
+    },
+    {
+      "label": "null: unrelated axes (Inter ban vs radius standard)",
+      "expected": null,
+      "a": { "source": "leon-lin-taste-skill", "sourceFile": "reference/_extracted/external/leon-lin-taste-skill/skills/taste-skill/SKILL.md", "type": "hard-prohibitive", "polarity": "ban", "concept": "typeface-inter", "axisSubject": "typeface-inter", "claim": "never ship Inter" },
+      "b": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-ui/SKILL.md", "type": "standard-measurement", "concept": "border-radius", "axisSubject": "border-radius", "claim": "8px", "measured": { "property": "border-radius", "value": 8, "unit": "px" } }
+    },
+    {
+      "label": "null: two same-polarity bans agree",
+      "expected": null,
+      "a": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/SKILL.md", "type": "hard-prohibitive", "polarity": "ban", "concept": "drop-shadow", "axisSubject": "drop-shadow", "claim": "no heavy drop shadows" },
+      "b": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-ui/SKILL.md", "type": "hard-prohibitive", "polarity": "ban", "concept": "drop-shadow", "axisSubject": "drop-shadow", "claim": "avoid drop shadows for elevation" }
+    },
+    {
+      "label": "null: identical measurements agree",
+      "expected": null,
+      "a": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-ui/SKILL.md", "type": "standard-measurement", "concept": "input-radius", "axisSubject": "input-radius", "claim": "8px inputs", "measured": { "property": "border-radius", "value": 8, "unit": "px" } },
+      "b": { "source": "meng-to-skills", "sourceFile": "reference/_extracted/external/meng-to-skills/agent-skills/web-design/beautiful-shadows/SKILL.md", "type": "standard-measurement", "concept": "input-radius", "axisSubject": "input-radius", "claim": "8px inputs", "measured": { "property": "border-radius", "value": 8, "unit": "px" } }
+    },
+    {
+      "label": "null: direction vs soft principle",
+      "expected": null,
+      "a": { "source": "oracle", "sourceFile": "reference/_extracted/external/oracle/quieter.md", "type": "design-direction", "concept": "whitespace", "axisSubject": "whitespace", "claim": "let whitespace lead" },
+      "b": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/SKILL.md", "type": "principle-guidance", "concept": "whitespace", "axisSubject": "whitespace", "claim": "prefer breathing room" }
+    },
+    {
+      "label": "null: hard-vs-hard missing polarity is never fabricated",
+      "expected": null,
+      "a": { "source": "leon-lin-taste-skill", "sourceFile": "reference/_extracted/external/leon-lin-taste-skill/skills/taste-skill/SKILL.md", "type": "hard-prohibitive", "concept": "all-caps", "axisSubject": "all-caps", "claim": "all-caps for labels" },
+      "b": { "source": "refactoring-ui", "sourceFile": "reference/_extracted/external/refactoring-ui/SKILL.md", "type": "hard-prohibitive", "polarity": "mandate", "concept": "all-caps", "axisSubject": "all-caps", "claim": "always title-case labels" }
+    },
+    {
+      "label": "null: two soft principles",
+      "expected": null,
+      "a": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/ACCESSIBILITY.md", "type": "principle-guidance", "concept": "contrast", "axisSubject": "contrast", "claim": "aim for comfortable contrast" },
+      "b": { "source": "jakub-krehel-skills", "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md", "type": "principle-guidance", "concept": "contrast", "axisSubject": "contrast", "claim": "keep contrast legible" }
+    },
+    {
+      "label": "gate-demotes-nondirection: a design-direction claim from a NON-direction source is demoted, so it cannot mis-pair as a direction-pair",
+      "expected": null,
+      "a": { "source": "oracle", "sourceFile": "reference/_extracted/external/oracle/bolder.md", "type": "design-direction", "concept": "accent-intensity", "axisSubject": "accent-intensity", "claim": "push saturated accents" },
+      "b": { "source": "bencium-design", "sourceFile": "reference/_extracted/external/bencium-design/SKILL.md", "type": "design-direction", "concept": "accent-intensity", "axisSubject": "accent-intensity", "claim": "bencium says go bold too" }
+    }
+  ]
+}

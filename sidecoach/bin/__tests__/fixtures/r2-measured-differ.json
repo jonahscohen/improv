@@ -1,0 +1,4 @@
+{"distilled":[
+{"source":"oracle","sourceFile":"reference/_extracted/external/oracle/reference/bolder.md","type":"design-direction","measured":{"property":"border-radius","value":8,"unit":"px"},"concept":"radius","axisSubject":"card-radius","claim":"8px"},
+{"source":"oracle","sourceFile":"reference/_extracted/external/oracle/reference/quieter.md","type":"design-direction","measured":{"property":"border-radius","value":0,"unit":"px"},"concept":"radius","axisSubject":"card-radius","claim":"0px"}
+]}

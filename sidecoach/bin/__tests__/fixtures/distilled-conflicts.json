@@ -1,0 +1,94 @@
+{
+  "note": "Acceptance fixture for sidecoach-consolidate map. Hand-built distilled rules that produce EXACTLY one direction-pair (oracle bolder vs quieter), one hard-vs-hard (Inter ban vs mandate), and one standard-calibration (border-radius 8-12 vs 0), plus a covered single-member cluster (gradient-text). The engine re-types every contradiction from the structured fields and gates directionLabel from provenance, so this file only supplies the typed inputs.",
+  "distilled": [
+    {
+      "id": "oracle-bolder-accent",
+      "sourceKind": "expert-external",
+      "source": "oracle",
+      "sourceFile": "reference/_extracted/external/oracle/bolder.md",
+      "type": "design-direction",
+      "concept": "accent-intensity",
+      "axisSubject": "accent-intensity",
+      "claim": "Push saturated, high-energy accent color and large confident type.",
+      "evidence": ["oracle/bolder.md"],
+      "confidence": "medium"
+    },
+    {
+      "id": "oracle-quieter-accent",
+      "sourceKind": "expert-external",
+      "source": "oracle",
+      "sourceFile": "reference/_extracted/external/oracle/quieter.md",
+      "type": "design-direction",
+      "concept": "accent-intensity",
+      "axisSubject": "accent-intensity",
+      "claim": "Restrained, near-monochrome accents; let whitespace carry the page.",
+      "evidence": ["oracle/quieter.md"],
+      "confidence": "medium"
+    },
+    {
+      "id": "taste-skill-inter-ban",
+      "sourceKind": "expert-external",
+      "source": "leon-lin-taste-skill",
+      "sourceFile": "reference/_extracted/external/leon-lin-taste-skill/skills/taste-skill/SKILL.md",
+      "type": "hard-prohibitive",
+      "polarity": "ban",
+      "concept": "typeface-inter",
+      "axisSubject": "typeface-inter",
+      "claim": "Never ship Inter; it is the default-slop tell of an unconsidered UI.",
+      "evidence": ["leon-lin-taste-skill/skills/taste-skill/SKILL.md"],
+      "confidence": "high"
+    },
+    {
+      "id": "refactoring-ui-inter-mandate",
+      "sourceKind": "expert-external",
+      "source": "refactoring-ui",
+      "sourceFile": "reference/_extracted/external/refactoring-ui/SKILL.md",
+      "type": "hard-prohibitive",
+      "polarity": "mandate",
+      "concept": "typeface-inter",
+      "axisSubject": "typeface-inter",
+      "claim": "Inter is a safe, recommended UI typeface for body and interface text.",
+      "evidence": ["refactoring-ui/SKILL.md"],
+      "confidence": "high"
+    },
+    {
+      "id": "jakub-radius-8-12",
+      "sourceKind": "expert-external",
+      "source": "jakub-krehel-skills",
+      "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-ui/SKILL.md",
+      "type": "standard-measurement",
+      "concept": "border-radius",
+      "axisSubject": "border-radius",
+      "claim": "Cards and controls use an 8-12px corner radius.",
+      "measured": { "property": "border-radius", "value": 8, "unit": "px", "range": [8, 12] },
+      "evidence": ["jakub-krehel-skills/skills/better-ui/SKILL.md"],
+      "confidence": "medium"
+    },
+    {
+      "id": "bencium-radius-0",
+      "sourceKind": "expert-external",
+      "source": "bencium-design",
+      "sourceFile": "reference/_extracted/external/bencium-design/SKILL.md",
+      "type": "standard-measurement",
+      "concept": "border-radius",
+      "axisSubject": "border-radius",
+      "claim": "Zero corner radius; hard edges as a stylistic commitment.",
+      "measured": { "property": "border-radius", "value": 0, "unit": "px" },
+      "evidence": ["bencium-design/SKILL.md"],
+      "confidence": "medium"
+    },
+    {
+      "id": "jakub-gradient-text-ban",
+      "sourceKind": "expert-external",
+      "source": "jakub-krehel-skills",
+      "sourceFile": "reference/_extracted/external/jakub-krehel-skills/skills/better-ui/SKILL.md",
+      "type": "hard-prohibitive",
+      "polarity": "ban",
+      "concept": "gradient-text",
+      "axisSubject": "gradient-text",
+      "claim": "Never fill body or heading text with a gradient.",
+      "evidence": ["jakub-krehel-skills/skills/better-ui/SKILL.md"],
+      "confidence": "high"
+    }
+  ]
+}

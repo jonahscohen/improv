@@ -1,0 +1,4 @@
+{"note":"Codex final F1: unknown type + differing measured (no polarity) must surface standard-calibration.","distilled":[
+{"source":"src-a","type":"not-a-real-type","measured":{"property":"border-radius","value":8,"unit":"px"},"concept":"radius","axisSubject":"card-radius","claim":"8px"},
+{"source":"src-b","type":"not-a-real-type","measured":{"property":"border-radius","value":0,"unit":"px"},"concept":"radius","axisSubject":"card-radius","claim":"0px"}
+]}

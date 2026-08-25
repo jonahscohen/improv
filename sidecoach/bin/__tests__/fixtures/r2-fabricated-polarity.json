@@ -1,0 +1,4 @@
+{"distilled":[
+{"source":"not-oracle","sourceFile":"reference/_extracted/external/oracle/reference/bolder.md","type":"design-direction","polarity":"ban","concept":"inter","axisSubject":"inter-font","claim":"Never use Inter"},
+{"source":"oracle-fake","sourceFile":"reference/_extracted/external/oracle/reference/quieter.md","type":"design-direction","polarity":"mandate","concept":"inter","axisSubject":"inter-font","claim":"Always use Inter"}
+]}

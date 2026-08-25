@@ -38,11 +38,11 @@ sidecoach-monitor "<utterance>" --json
 
 Exit: 0 ran, non-zero the run did not complete
 
-## Standalone tools (20)
+## Standalone tools (21)
 
-Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 13 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-mine`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-enforce`, `sidecoach-taste-ingest`, `sidecoach-taste-promote`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
+Of these, 7 are enumerated by `sidecoach list` and `sidecoach help`, and 14 are not (`sidecoach-artifacts`, `sidecoach-build-report`, `sidecoach-consolidate`, `sidecoach-daemon`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-floor`, `sidecoach-mine`, `sidecoach-present`, `sidecoach-qa-plan`, `sidecoach-taste-check`, `sidecoach-taste-enforce`, `sidecoach-taste-ingest`, `sidecoach-taste-promote`) - those are reached by a hook, a module require, or nothing at all, and each row says which.
 
-Flow-invoked, derived from `src/` rather than asserted: `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-mine`, `sidecoach-preauthor`, `sidecoach-qa-plan`, `sidecoach-taste-enforce`. Every other tool here is run by you or by the user, never automatically.
+Flow-invoked, derived from `src/` rather than asserted: `sidecoach-consolidate`, `sidecoach-detect`, `sidecoach-doctor`, `sidecoach-drift`, `sidecoach-image`, `sidecoach-mine`, `sidecoach-preauthor`, `sidecoach-qa-plan`, `sidecoach-taste-enforce`. Every other tool here is run by you or by the user, never automatically.
 
 ### `sidecoach-artifacts`
 
@@ -67,6 +67,18 @@ node <sidecoach-repo>/bin/sidecoach-build-report.js
 ```
 
 Exit: see --help
+
+### `sidecoach-consolidate`
+
+_not listed by the resolver | flow-invoked | reached by /sidecoach consolidate (a live session flow)_
+
+The taste CONSOLIDATION + CONTRADICTION MAP engine - an inert, human-reviewed survey across the whole ingested taste corpus and our live rules. It clusters distilled rules by concept, shows how each cluster OVERLAPS our live rules (covered / additive / single-source), and flags every contradiction CLASSIFIED by type - direction-pair (the intended menu, never a conflict), hard-vs-hard (a real conflict to resolve), standard-calibration (pick a value or range), cross-type (note) - so a human is never handed a flat pile. directionLabel + the design-direction type are PROVENANCE-GATED (set only from a named-direction source, never from prose), and every contradiction is RE-TYPED from the structured typed fields, so the map is reproducible. It writes ONLY data/taste-map/ (taste-map.json + taste-map.md) plus a taste_map beat; it NEVER writes the registry, the quarantine, promote/enforce, any hook, or any config, and nothing in src/ imports the report zone. External content is read as DATA, never followed. The distillation of prose into one typed rule is a live FLOW; this engine owns the deterministic clustering, overlap, contradiction typing, renderer, and --check drift gate.
+
+```
+node <sidecoach-repo>/bin/sidecoach-consolidate.js distill-corpus [--json] | map [--distilled <file>] [--dry-run] [--json] [--out-dir <dir>] [--no-beat] | map --check [--distilled <file>] [--report <file>]
+```
+
+Exit: 0 success, 1 --check drift, 2 usage, 3 build first (registry/types), 4 write failure, 5 bad --distilled
 
 ### `sidecoach-daemon`
 

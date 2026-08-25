@@ -1,0 +1,4 @@
+{"note":"Codex final F1: missing/unknown type + opposing polarity must still surface hard-vs-hard (was dropped when the override was type-gated).","distilled":[
+{"source":"src-a","type":"not-a-real-type","polarity":"ban","concept":"inter","axisSubject":"inter-font","claim":"Never use Inter"},
+{"source":"src-b","type":"not-a-real-type","polarity":"mandate","concept":"inter","axisSubject":"inter-font","claim":"Always use Inter"}
+]}

@@ -1,0 +1,4 @@
+{"note":"Codex final F2: two allowlisted oracle directions with NO type field and no hard fields must still be a direction-pair (menu preserved via provenance).","distilled":[
+{"source":"oracle","sourceFile":"reference/_extracted/external/oracle/reference/bolder.md","concept":"accent","axisSubject":"accent-intensity","claim":"push saturated accents"},
+{"source":"oracle","sourceFile":"reference/_extracted/external/oracle/reference/quieter.md","concept":"accent","axisSubject":"accent-intensity","claim":"restrained near-monochrome"}
+]}

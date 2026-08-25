@@ -1,0 +1,86 @@
+{
+  "schema": "sidecoach-taste-map/v1",
+  "generated_utc": "2026-08-25T10:11:10.517Z",
+  "commit": "d1c9be59",
+  "note": "INERT taste consolidation + contradiction map. Nothing here is enforced or auto-applied. It feeds a human review and the existing consent-gated promote/enforce path. No source file imports data/taste-map/.",
+  "inputs": {
+    "distilled": 0,
+    "ruleStore": 210,
+    "distilledFile": null
+  },
+  "counts": {
+    "distilledClusters": 0,
+    "covered": 0,
+    "additive": 0,
+    "singleSource": 0,
+    "realConflicts": 0,
+    "calibration": 0,
+    "crossType": 0,
+    "directionMenu": 0,
+    "liveRules": 210,
+    "normalizationWarnings": 0
+  },
+  "corpusStats": {
+    "beat": 435,
+    "measured-audit-history": 3,
+    "totalScans": 36,
+    "lastScanUtc": "2026-08-25T09:57:19.284Z",
+    "expert-external": 82,
+    "rule-store-for-dedup": 210
+  },
+  "overlap": {
+    "covered": [],
+    "additive": [],
+    "singleSource": []
+  },
+  "contradictionsByType": {
+    "direction-pair": [],
+    "hard-vs-hard": [],
+    "standard-calibration": [],
+    "cross-type": []
+  },
+  "clusters": [],
+  "measuredContext": {
+    "totalScans": 36,
+    "lastUtc": "2026-08-25T09:57:19.284Z",
+    "entries": [
+      {
+        "sourceKind": "measured-audit-history",
+        "rule": "polish.text-wrap-balance",
+        "fires": 9,
+        "bySeverity": {
+          "warning": 9
+        },
+        "byLens": {
+          "static-check": 9
+        },
+        "lastUtc": "2026-08-25T09:57:16.702Z"
+      },
+      {
+        "sourceKind": "measured-audit-history",
+        "rule": "polish.typography-rhythm",
+        "fires": 9,
+        "bySeverity": {
+          "warning": 9
+        },
+        "byLens": {
+          "static-check": 9
+        },
+        "lastUtc": "2026-08-25T09:57:16.702Z"
+      },
+      {
+        "sourceKind": "measured-audit-history",
+        "rule": "anti-pattern.gradient-text",
+        "fires": 9,
+        "bySeverity": {
+          "blocking": 9
+        },
+        "byLens": {
+          "static-check": 9
+        },
+        "lastUtc": "2026-08-25T09:57:16.702Z"
+      }
+    ]
+  },
+  "normalizationWarnings": []
+}
