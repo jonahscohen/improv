@@ -288,6 +288,7 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/sprint3-orchestrator-enrich-before-canexecute.test.ts', required: true },
   { rel: 'src/__tests__/t12-model-routing.test.ts', required: true },
   { rel: 'src/__tests__/t9-retry-control.test.ts', required: true },
+  { rel: 'src/__tests__/design-tokens-count.test.ts', required: true },                   // Flow F design-tokens: real parsed token count, not a Math.random placeholder (drive-to-green item 6)
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.

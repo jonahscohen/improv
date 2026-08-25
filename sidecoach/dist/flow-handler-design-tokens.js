@@ -47,24 +47,114 @@ class FlowFDesignTokensHandler extends flow_handler_1.BaseFlowHandler {
                 // Parse YAML frontmatter to extract token sections
                 const yamlMatch = designMdContent.match(/^---\n([\s\S]*?)\n---/);
                 if (yamlMatch) {
-                    // Heuristic: look for token section keywords in YAML
-                    const yamlContent = yamlMatch[1];
-                    const sectionMatches = yamlContent.match(/^\s*(\w+):\s*$/gm);
-                    if (sectionMatches) {
-                        sectionMatches.forEach((match) => {
-                            const section = match.trim().replace(':', '');
-                            tokenSections.push(section);
-                            tokenDefinitions.push({
-                                section,
-                                tokenCount: Math.floor(Math.random() * 20) + 5, // Placeholder
-                                examples: [
-                                    `${section}.primary`,
-                                    `${section}.secondary`,
-                                    `${section}.neutral`,
-                                ],
-                            });
+                    const yamlLines = yamlMatch[1].split('\n');
+                    // Strict section header: a bare `key:` line with nothing after the
+                    // colon (a mapping node). Preserves the exact section set the prior
+                    // regex (/^\s*(\w+):\s*$/gm) selected, so tokenSections.length is
+                    // unchanged for every downstream consumer.
+                    const sectionHeader = (line) => {
+                        const m = line.match(/^(\s*)(\w+):\s*$/);
+                        return m ? { indent: m[1].length, key: m[2] } : null;
+                    };
+                    // Lenient nested header (allows a trailing comment) used only while
+                    // walking a subtree, so example dotted paths keep their full prefix.
+                    const nestedHeader = (line) => {
+                        const m = line.match(/^(\s*)(\w+):\s*(#.*)?$/);
+                        return m ? { indent: m[1].length, key: m[2] } : null;
+                    };
+                    // A real token: `key: value` with a non-empty, non-comment value.
+                    const leafToken = (line) => {
+                        const m = line.match(/^(\s*)("[\w.-]+"|'[\w.-]+'|[\w.-]+):\s+(.+)$/);
+                        if (!m)
+                            return null;
+                        const value = m[3].trim();
+                        if (!value || value.startsWith('#'))
+                            return null;
+                        return { indent: m[1].length, key: m[2].replace(/['"]/g, '') };
+                    };
+                    // A list-item leaf: `- key: value` (the first key on a `- ` sequence
+                    // entry). Its key lives one level deeper than the dash, so continuation
+                    // keys of the same map entry (plain `key: value` lines below it) resolve
+                    // as siblings under the same parent. Without this, token sections
+                    // written as a YAML list of maps are undercounted.
+                    const listLeaf = (line) => {
+                        const m = line.match(/^(\s*)(-\s+)("[\w.-]+"|'[\w.-]+'|[\w.-]+):\s+(.+)$/);
+                        if (!m)
+                            return null;
+                        const value = m[4].trim();
+                        if (!value || value.startsWith('#'))
+                            return null;
+                        return { indent: m[1].length + m[2].length, key: m[3].replace(/['"]/g, '') };
+                    };
+                    // A list-item header: `- key:` (a sequence entry that opens a nested
+                    // map). Pushes onto the path stack at the key's indent so its children
+                    // keep the full dotted prefix.
+                    const listHeader = (line) => {
+                        const m = line.match(/^(\s*)(-\s+)(\w+):\s*(#.*)?$/);
+                        return m ? { indent: m[1].length + m[2].length, key: m[3] } : null;
+                    };
+                    // A bare-scalar sequence entry: `- <value>` with NO `key:` after the
+                    // dash (e.g. `- 320px`). Each entry is one leaf value under its parent
+                    // section. Checked AFTER listLeaf/listHeader so `- key: value` and
+                    // `- key:` map entries never fall through to here.
+                    const scalarListLeaf = (line) => {
+                        const m = line.match(/^(\s*)-\s+(\S.*)$/);
+                        if (!m)
+                            return null;
+                        const content = m[2].trim();
+                        if (!content || content.startsWith('#'))
+                            return null;
+                        // Exclude map entries (`- key: value`, `- key:`) - those are leaves
+                        // and headers handled above, not scalars.
+                        if (/^("[\w.-]+"|'[\w.-]+'|[\w.-]+):(\s|$)/.test(content))
+                            return null;
+                        return { indent: m[1].length };
+                    };
+                    yamlLines.forEach((line, i) => {
+                        const header = sectionHeader(line);
+                        if (!header)
+                            return;
+                        // Walk this section's subtree, counting real leaf tokens and
+                        // recording their dotted paths relative to the section root.
+                        const pathStack = [];
+                        const leafPaths = [];
+                        const scalarIndex = new Map(); // parent path -> next [n]
+                        for (let j = i + 1; j < yamlLines.length; j++) {
+                            const cur = yamlLines[j];
+                            const trimmed = cur.trim();
+                            if (!trimmed || trimmed.startsWith('#'))
+                                continue;
+                            const curIndent = cur.length - cur.trimStart().length;
+                            if (curIndent <= header.indent)
+                                break; // walked out of the subtree
+                            while (pathStack.length && pathStack[pathStack.length - 1].indent >= curIndent) {
+                                pathStack.pop();
+                            }
+                            const leaf = leafToken(cur) || listLeaf(cur);
+                            if (leaf) {
+                                const rel = [...pathStack.map((p) => p.key), leaf.key].join('.');
+                                leafPaths.push(`${header.key}.${rel}`);
+                            }
+                            else if (scalarListLeaf(cur)) {
+                                // A bare scalar entry is a leaf indexed within its parent list.
+                                const parent = [header.key, ...pathStack.map((p) => p.key)].join('.');
+                                const idx = scalarIndex.get(parent) ?? 0;
+                                scalarIndex.set(parent, idx + 1);
+                                leafPaths.push(`${parent}[${idx}]`);
+                            }
+                            else {
+                                const sub = nestedHeader(cur) || listHeader(cur);
+                                if (sub)
+                                    pathStack.push({ indent: sub.indent, key: sub.key });
+                            }
+                        }
+                        tokenSections.push(header.key);
+                        tokenDefinitions.push({
+                            section: header.key,
+                            tokenCount: leafPaths.length,
+                            examples: leafPaths.slice(0, 3),
                         });
-                    }
+                    });
                 }
             }
             // Validate tokens against all 7 design domains
