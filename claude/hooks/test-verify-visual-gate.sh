@@ -210,10 +210,18 @@ echo "===== DETECTOR-CORPUS dirs are fixtures, NOT product UI (2026-08-25) =====
 # tokens-count builder at Stop when those untracked corpus files corroborated the flag. Fully exempt,
 # like eval/fixtures - it arms NOTHING. Real product UI OUTSIDE a corpus dir still arms + blocks.
 armvis() { rm -f "$FLAG"; feed "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"$1\"}}" "$VBD"; flag; }
-chk "data/taste-corpus/*.css arms NOTHING"        "(absent)" "$(armvis /p/sidecoach/data/taste-corpus/motion.x/pos-01.css)"
-chk "data/taste-corpus/*.html arms NOTHING"       "(absent)" "$(armvis /p/sidecoach/data/taste-corpus/motion.x/pos-02.html)"
+chk "data/taste-corpus/pos-*.html arms NOTHING"   "(absent)" "$(armvis /p/sidecoach/data/taste-corpus/motion.x/pos-03-tooltip.html)"
+chk "data/taste-corpus/neg-*.css arms NOTHING"    "(absent)" "$(armvis /p/sidecoach/data/taste-corpus/motion.x/neg-02-button.css)"
 chk "eval/corpus/*.css arms NOTHING"              "(absent)" "$(armvis /p/sidecoach/eval/corpus/dev/a.css)"
 chk "a bare corpus/*.html arms NOTHING"           "(absent)" "$(armvis /p/proj/corpus/card.html)"
+# Other test-fixture DIRECTORY segments the gate must also treat as non-rendered DATA, not UI
+# (team-lead 2026-08-25): a .css/.scss/.sass/.less/.html under /fixtures/, /__tests__/, /eval/, or a
+# /test-corpus/ is a detector INPUT / test snapshot, never a served page. Extension is .html/.css but
+# the PATH proves it is data.
+chk "fixtures/*.css arms NOTHING"                 "(absent)" "$(armvis /p/proj/fixtures/card.css)"
+chk "__tests__/*.html arms NOTHING"              "(absent)" "$(armvis /p/sidecoach/src/__tests__/example.html)"
+chk "__tests__/*.scss arms NOTHING"              "(absent)" "$(armvis /p/sidecoach/src/__tests__/theme.scss)"
+chk "test-corpus/*.html arms NOTHING"            "(absent)" "$(armvis /p/proj/test-corpus/sample.html)"
 # RECALL / precision: real UI and segment look-alikes STILL arm visual.
 chk "real src/App.css STILL arms visual"          "visual"   "$(armvis /p/proj/src/App.css)"
 chk "look-alike corpus-viewer/App.tsx STILL arms visual (not a *corpus segment)" "visual" "$(armvis /p/proj/corpus-viewer/App.tsx)"
@@ -229,6 +237,10 @@ chk "data/ visual file NOT under a corpus dir STILL arms" "visual" "$(armvis /p/
 D_CORP=$(gmk taste-corpus-tree); mkdir -p "$D_CORP/data/taste-corpus/motion.x"
 printf 'a{}' > "$D_CORP/data/taste-corpus/motion.x/pos-01.css"; printf '<i>' > "$D_CORP/data/taste-corpus/motion.x/pos-02.html"
 chk_stop "tree of ONLY data/taste-corpus visual files -> allow"  "allow" "$D_CORP"
+# STOP side: a tree whose only visual file is a __tests__ / fixtures snippet must ALLOW too.
+D_TSTDIR=$(gmk tests-dir-tree); mkdir -p "$D_TSTDIR/src/__tests__" "$D_TSTDIR/proj/fixtures"
+printf '<i>' > "$D_TSTDIR/src/__tests__/example.html"; printf 'a{}' > "$D_TSTDIR/proj/fixtures/card.css"
+chk_stop "tree of ONLY __tests__/fixtures snippets -> allow"     "allow" "$D_TSTDIR"
 mkdir -p "$D_CORP/src"; printf 'b{}' > "$D_CORP/src/theme.css"
 chk_stop "same tree + a real src/theme.css -> BLOCKS (recall)"   "block" "$D_CORP"
 
@@ -268,7 +280,7 @@ echo "===== 3-WAY NON-APP EXEMPTION LITERALS AGREE (arm / stop / commit) ====="
 # fire creeps back into one of them. Assert the literal is byte-identical in all three.
 NON_APP_SYNC=$(python3 - "$HOOK_DIR/verify-before-done.sh" "$HOOK_DIR/verify-before-done-stop.sh" "$HOOK_DIR/bash-guard.sh" <<'PY'
 import re, sys
-want = r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/"
+want = r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|__tests__|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/"
 hits = [want in open(p).read() for p in sys.argv[1:]]
 print("ok" if all(hits) else "MISSING:" + ",".join(p for p, h in zip(sys.argv[1:], hits) if not h))
 PY

@@ -36,7 +36,7 @@ VISUAL_EXTS = {".css", ".scss", ".sass", ".less",
 # kept BYTE-IDENTICAL to the copy in verify-before-done.sh and bash-guard.sh so the arm site and
 # this re-derivation agree; test-verify-visual-gate.sh asserts the three literals match.
 _NON_APP_DIR_RE = re.compile(
-    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/")
+    r"(^|/)(eval|fixtures|__fixtures__|test-fixtures|__tests__|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/")
 _TEST_SPEC_RE = re.compile(r"\.(test|spec)\.[A-Za-z0-9]+$")
 
 # Hard bound on how much status output we will reason about. Hitting it means we could not

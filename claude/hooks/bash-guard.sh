@@ -1759,7 +1759,7 @@ if [ -z "$REASON" ] && is_real_git_commit; then
       # step with the arm side (verify-before-done.sh is_exempt) and the Stop re-derivation so all
       # three agree on what is not a rendered surface (Jonah 2026-07-26). This regex is asserted
       # byte-identical to the Python _NON_APP_DIR_RE copies by test-verify-visual-gate.sh.
-      if echo "$file" | grep -qE '(^|/)(eval|fixtures|__fixtures__|test-fixtures|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/|\.(test|spec)\.[A-Za-z0-9]+$'; then
+      if echo "$file" | grep -qE '(^|/)(eval|fixtures|__fixtures__|test-fixtures|__tests__|[A-Za-z0-9._-]*corpus|docs|reference|dependency-map|scratchpad)/|\.(test|spec)\.[A-Za-z0-9]+$'; then
         continue
       # Documentation files: skip verification requirement
       elif echo "$file" | grep -qE '\.md$|SKILL\.md|DESIGN\.md|README|CHANGELOG'; then
