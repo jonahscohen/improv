@@ -17,6 +17,25 @@ export interface PanelChecklistItem {
   done: boolean;
 }
 
+// GREEN MEANS CHECKED (honesty line). A coverage classification DERIVED from the existing verdict/
+// gate - never a new verdict state. 'verified-clean' is the only certified pass and demands positive
+// evidence a COMPLETE run ACTUALLY RAN (validators present and run / both lenses available) and found
+// nothing; 'checked' ran fully and found findings; 'partially-checked' scanned but a lens/check did
+// not run (incomplete coverage); 'not-fully-checked' is the downgrade for a run that cannot be
+// certified at all (inconclusive/error gate, zero validators, or an in-progress snapshot). A run that
+// measured nothing carries no verdict, so it gets no coverage (undefined) and the card makes no claim
+// at all - its `notice` states that instead.
+export type PanelCoverage = 'verified-clean' | 'checked' | 'partially-checked' | 'not-fully-checked';
+
+// A terminal verdict maps to a coverage banner; an absent verdict (in-progress or measured-nothing)
+// maps to undefined, so the card shows no coverage claim until there is a real one to make. This is
+// the FULL-COVERAGE mapping only - callers downgrade to 'not-fully-checked' when a run is partial or
+// its gate was inconclusive/error (see assemblePanelModel and laneStepToPanelModel).
+export function coverageForVerdict(verdict?: 'clean' | 'warnings-only' | 'blocked'): PanelCoverage | undefined {
+  if (!verdict) return undefined;
+  return verdict === 'clean' ? 'verified-clean' : 'checked';
+}
+
 export interface SidecoachPanelModel {
   verb?: string; // the verb/phase the user invoked, if any (header subtitle)
   flowName: string; // headline flow human name, e.g. "Multi-Lens Audit"
@@ -36,6 +55,11 @@ export interface SidecoachPanelModel {
   // audit" with no hint that no page was opened, so a clean read was still INFERABLE. The
   // notice removes the inference.
   notice?: string;
+  // Whether the clean/quiet card is a CERTIFIED pass ('verified-clean'), a complete run that carries
+  // findings ('checked'), or an incomplete/partial/inconclusive run that cannot be certified
+  // ('not-fully-checked'). Undefined when the run measured nothing - the card then makes no coverage
+  // claim at all (its `notice` states that instead).
+  coverage?: PanelCoverage;
 }
 
 // The three QA gates the panel shows, matched against BuildReport findings by a
@@ -67,6 +91,14 @@ export interface AssemblePanelInput {
   headlineFlowId?: string;
   /** Force the partial flag; defaults to "no report yet". */
   partial?: boolean;
+  /**
+   * The underlying rendered audit could not scan every lens (a detection lens did not run), so its
+   * coverage is INCOMPLETE even though it produced a verdict. Codex 2026-08-25 (Med): the panel is
+   * built from the BuildReport alone and cannot see audit.unavailableReasons, so a partial audit was
+   * rendering an unqualified CHECKED. When set, the panel downgrades to 'partially-checked'. The
+   * orchestrator passes `audit.unavailableReasons.length > 0` here for a rendered audit.
+   */
+  auditPartial?: boolean;
   /** Whether the QA gates have executed; when false (and no report), gates render as pending. */
   ranGates?: boolean;
   /** Loud line printed above the card when this run measured nothing (see model.notice). */
@@ -108,6 +140,22 @@ export function assemblePanelModel(input: AssemblePanelInput): SidecoachPanelMod
     return { name: g.name, ok: input.ranGates ? true : null };
   });
 
+  // Codex 2026-08-25: coverage must never certify without positive evidence of a COMPLETE run.
+  //  - auditPartial (Med): a rendered audit that scanned but a lens did not run -> 'partially-checked'
+  //    (incomplete coverage, never an unqualified CHECKED), even when it produced findings.
+  //  - forced/partial snapshot (Med): an INCOMPLETE snapshot with a clean verdict is not proof both
+  //    lenses ran clean -> 'not-fully-checked', never 'verified-clean'.
+  //  - a run with no verdict at all makes no claim (undefined).
+  const isPartial = input.partial ?? !report;
+  let coverage: PanelCoverage | undefined;
+  if (input.auditPartial && report?.verdict) {
+    coverage = 'partially-checked';
+  } else if (isPartial) {
+    coverage = report?.verdict ? 'not-fully-checked' : undefined;
+  } else {
+    coverage = coverageForVerdict(report?.verdict);
+  }
+
   return {
     verb: input.verb,
     flowName,
@@ -120,8 +168,9 @@ export function assemblePanelModel(input: AssemblePanelInput): SidecoachPanelMod
     verdict: report?.verdict,
     grade: report?.overallGrade,
     findings,
-    partial: input.partial ?? !report,
+    partial: isPartial,
     notice: input.notice,
+    coverage,
   };
 }
 
@@ -151,13 +200,28 @@ export function laneStepToPanelModel(step: LaneStepLike): SidecoachPanelModel {
   let gates: PanelGate[];
   let verdict: SidecoachPanelModel['verdict'];
   let findings: number | undefined;
+  let coverage: PanelCoverage | undefined;
   if (g && Array.isArray(g.validators)) {
     gates = GATE_DEFS.map((def) => {
       const v = g.validators!.find((x) => def.match.test(x.validatorId));
       return { name: def.name, ok: v ? v.status === 'pass' : null };
     });
-    const anyFail = g.validators.some((v) => /fail|error/i.test(v.status));
-    verdict = g.status === 'pass' ? 'clean' : anyFail ? 'blocked' : 'warnings-only';
+    // GateStatus is clean|findings|inconclusive|error (lane-types.ts). Codex 2026-08-25: VERIFIED
+    // CLEAN requires positive evidence that checks ACTUALLY RAN and found nothing.
+    //  - (High) an inconclusive OR error gate did NOT complete a check -> no verdict, 'not-fully-checked'.
+    //  - (High) a 'clean' gate with ZERO validators ran NOTHING (e.g. `shape` -> flowA_brand_verify has
+    //    no product validators; the lane aggregates an empty list as 'clean'). An empty run is "nothing
+    //    was measured", never verified-clean -> no verdict, 'not-fully-checked'. verified-clean demands
+    //    validators.length > 0 AND all clean. Err toward not certifying.
+    const gateStatus = String(g.status || '');
+    if (gateStatus === 'inconclusive' || gateStatus === 'error' || g.validators.length === 0) {
+      verdict = undefined;
+      coverage = 'not-fully-checked';
+    } else {
+      const anyFail = g.validators.some((v) => /fail|error|inconclusive/i.test(v.status));
+      verdict = gateStatus === 'pass' || gateStatus === 'clean' ? 'clean' : anyFail ? 'blocked' : 'warnings-only';
+      coverage = coverageForVerdict(verdict);
+    }
     findings = Array.isArray(g.findings)
       ? g.findings.length
       : Array.isArray(step.convergence?.findings)
@@ -177,5 +241,6 @@ export function laneStepToPanelModel(step: LaneStepLike): SidecoachPanelModel {
     verdict,
     findings,
     partial: !g,
+    coverage,
   };
 }

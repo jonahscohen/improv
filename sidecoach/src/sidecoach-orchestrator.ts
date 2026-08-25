@@ -2205,7 +2205,9 @@ export class FlowExecutionEngine {
       guidance: [...partialNote, ...(findingLines.length ? findingLines : [`No findings - ${audit.renderUrl} scanned clean across objective a11y + taste lenses.`])],
       buildReport: report,
       audit: { ...auditSummary, grade: letter },
-      panel: renderSidecoachPanel(assemblePanelModel({ flowResults: [flowResult], report, confidence: 1.0 })),
+      // auditPartial threads the rendered audit's incomplete-coverage signal into the panel so a
+      // partial scan reads PARTIALLY CHECKED, not an unqualified CHECKED (Codex 2026-08-25, Med).
+      panel: renderSidecoachPanel(assemblePanelModel({ flowResults: [flowResult], report, confidence: 1.0, auditPartial: audit.unavailableReasons.length > 0 })),
     };
   }
 

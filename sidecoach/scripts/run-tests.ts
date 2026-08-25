@@ -293,6 +293,7 @@ const SUITES: Suite[] = [
   { rel: 'bin/__tests__/consolidate-frontdoor.test.js', runner: 'node', required: true },  // drive-to-green item 1: consolidate front-door delegates real args to the engine, bare prints the plan
   { rel: 'bin/__tests__/sidecoach-doctor.test.js', runner: 'node', required: true },       // drive-to-green item 5: doctor excludes test files from the capability inventory, keeps all real tools
   { rel: 'src/__tests__/flowk-drift-theming-escalation.test.ts', required: true },         // drive-to-green item 7: the active multi-lens handler escalates the Theming dimension on real token drift
+  { rel: 'src/__tests__/coverage-honesty.test.ts', required: true },                        // drive-to-green item 2: a clean/quiet result never claims VERIFIED CLEAN without both-lenses-ran positive evidence
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.

@@ -118,6 +118,15 @@ function renderAuditReport(a) {
   const lenses = a.lenses || { objective: { available: false, findings: 0 }, subjective: { available: false, findings: 0 } };
   const vt = a.verdict || 'inconclusive';
 
+  // COVERAGE headline (GREEN MEANS CHECKED): the FIRST line of every audit report states whether
+  // this run is verified-clean, checked-with-findings, or not fully checked - so a quiet result
+  // is never read as a certified pass. Same three-valued state the body consumes, surfaced up top.
+  const cov = coverageState(a);
+  const covMark = cov.ok === true ? c.green(GLYPH.ok) : cov.ok === null ? c.faint(GLYPH.dot) : c.orange('!');
+  const covTone = cov.ok === true ? c.green : cov.ok === null ? c.fg : c.orange;
+  L.push('  ' + covMark + ' ' + c.dim('coverage ') + covTone(cov.banner));
+  L.push('');
+
   // INCONCLUSIVE: the audit could not certify the page - say so, why, and the fix. No findings.
   if (vt === 'inconclusive') {
     const partial = !!a.rendered; // a lens DID run, just not all of them
@@ -397,14 +406,61 @@ function joinList(arr) {
 }
 function lensRank(lens) { return lens === 'objective' ? 0 : 1; }
 function lensCategory(lens) { return lens === 'objective' ? 'accessibility' : 'taste'; }
-// Coverage was partial if a reason is recorded OR either lens is explicitly unavailable.
-// "clean" is a certification, so both signals must be checked before certifying (a lens
-// object can say available:false without a matching unavailableReasons entry).
+// Coverage was partial unless BOTH lenses are PRESENT and available:true. VERIFIED CLEAN is a
+// certification that requires positive evidence both lenses actually ran, so a recorded reason, a
+// lens flagged available:false, OR a lens that is simply ABSENT from a.lenses (undefined) all count
+// as partial. Codex 2026-08-25 (Med): the old `x && x.available === false` missed the absent-lens
+// case - `{objective:{available:true,findings:0}}` with no subjective key certified clean. Err
+// toward not certifying: a missing lens is unproven coverage, never proven-clean coverage.
 function coveragePartial(a) {
   if ((a.unavailableReasons || []).length > 0) return true;
   const ls = a.lenses || {};
-  return [ls.objective, ls.subjective].some((x) => x && x.available === false);
+  return [ls.objective, ls.subjective].some((x) => !x || x.available !== true);
 }
+
+// GREEN MEANS CHECKED (honesty line). A clean or quiet result must never read as VERIFIED when it
+// was only UNCHECKED. Every executive report - and the ANSI audit report - opens with a required
+// coverage line stating, verbatim, which of the engine's EXISTING states this run reached:
+//   VERIFIED CLEAN    - both lenses actually scanned and found nothing (the only certified pass)
+//   CHECKED           - both lenses scanned; findings are listed
+//   PARTIALLY CHECKED - a detection lens did not run, so the page is not fully verified
+//   NOT FULLY CHECKED - inconclusive: the page could not be certified at all
+// Derived from the SAME signals the body already consumes (a.verdict, coveragePartial, a.totalFindings).
+// No new verdict state is invented - `inconclusive` is surfaced here, never collapsed into clean.
+const COVERAGE_VERIFIED_CLEAN = 'VERIFIED CLEAN';
+const COVERAGE_CHECKED = 'CHECKED';
+const COVERAGE_PARTIAL = 'PARTIALLY CHECKED';
+const COVERAGE_UNVERIFIED = 'NOT FULLY CHECKED';
+
+// ok: true = verified-clean, null = fully checked but findings exist, false = NOT a verified-clean result.
+function coverageState(a) {
+  a = a || {};
+  const vt = a.verdict || 'inconclusive';
+  const partial = coveragePartial(a);
+  const n = a.totalFindings || 0;
+  if (vt === 'clean' && !partial) return { banner: COVERAGE_VERIFIED_CLEAN, ok: true };
+  if (vt === 'inconclusive') return { banner: COVERAGE_UNVERIFIED, ok: false };
+  if (partial) return { banner: COVERAGE_PARTIAL, ok: false };
+  if (n === 0) return { banner: COVERAGE_UNVERIFIED, ok: false };
+  return { banner: COVERAGE_CHECKED, ok: null };
+}
+
+// Markdown coverage line for the executive AUDIT report - the first line, above the #### blocks.
+function auditCoverageLine(a, host) {
+  const { banner } = coverageState(a);
+  if (banner === COVERAGE_VERIFIED_CLEAN) return 'Coverage: ' + banner + ' - both lenses scanned ' + host + ' and found nothing.';
+  if (banner === COVERAGE_CHECKED) return 'Coverage: ' + banner + ' - both lenses scanned ' + host + '; findings are listed below.';
+  if (banner === COVERAGE_PARTIAL) return 'Coverage: ' + banner + ' - a detection lens did not run, so ' + host + ' is not fully verified.';
+  return 'Coverage: ' + banner + ' - ' + host + ' could not be certified, so this is not a verified-clean result.';
+}
+
+// Markdown coverage line for the executive BUILD/POLISH report. A build has no lens split, so its
+// coverage is binary: a no-findings pass is verified clean, otherwise it was checked with findings.
+function buildCoverageLine(findingCount) {
+  if (!findingCount) return 'Coverage: ' + COVERAGE_VERIFIED_CLEAN + ' - checks ran with no blocking or warning findings.';
+  return 'Coverage: ' + COVERAGE_CHECKED + ' - checks ran; findings are listed below.';
+}
+
 function groupSeverityRank(g) {
   return g.some((f) => f.severity === 'blocking') ? 2 : g.some((f) => f.severity === 'warning') ? 1 : 0;
 }
@@ -415,6 +471,11 @@ function auditExecutive(a) {
   const host = String(a.renderUrl || 'the page').replace(/^https?:\/\//, '');
   const vt = a.verdict || 'inconclusive';
   const L = [];
+
+  // Required coverage line, above every branch: VERIFIED CLEAN vs NOT FULLY CHECKED / PARTIALLY
+  // CHECKED / CHECKED. Placed here so an inconclusive run can never render as an unqualified clean.
+  L.push(auditCoverageLine(a, host));
+  L.push('');
 
   // INCONCLUSIVE: the audit could not certify the page. Say so, why, and the fix.
   if (vt === 'inconclusive') {
@@ -517,6 +578,25 @@ function buildExecutive(result) {
   const grade = report.overallGrade || '';
   const L = [];
 
+  // A real measurement happened only if a BuildReport with actual CONTENT was attached. A non-measuring
+  // command (/sidecoach list, /sidecoach help) attaches none, so `result.buildReport` is undefined and
+  // `report` above is a synthesized empty {}; an empty {} (no verdict, no findings) is treated the same.
+  // Codex 2026-08-25 (High): the coverage line and the "Checks passed" line below are POSITIVE
+  // certifications, and neither may be emitted without a real report - `/sidecoach list` was printing
+  // "Coverage: VERIFIED CLEAN ... Checks passed. 0 findings." for a command that measured nothing. Err
+  // toward not certifying: no real report -> no claim. (Keyed on report content, not object presence,
+  // so an attached-but-empty {} cannot smuggle a false pass through.)
+  const measured = !!(result.buildReport && (report.verdict || findings.length));
+
+  // Required coverage line, above every branch (measured runs only): a no-findings pass reads as
+  // VERIFIED CLEAN, a run with findings as CHECKED. An unmeasured result makes NO coverage claim,
+  // mirroring the panel's unrendered-target behavior. (Page-shaped targets that never rendered are
+  // routed to auditExecutive, which reports NOT FULLY CHECKED.)
+  if (measured) {
+    L.push(buildCoverageLine(findings.length));
+    L.push('');
+  }
+
   // NOTHING WAS MEASURED is not the same as NOTHING WAS WRONG.
   //
   // Codex review 2026-07-28 (High): `const verdict = report.verdict || 'clean'` above synthesizes
@@ -546,13 +626,31 @@ function buildExecutive(result) {
   // commands that return before the target guard, which is what actually closed the original
   // hole. renderExecutiveReport routes anything carrying `result.audit` to auditExecutive, which
   // has always reported inconclusive correctly. So a result that reaches THIS function made no
-  // claim about a page, and the clean-pass wording below is the right answer for it.
-  // Asserted end-to-end (not against a synthetic fixture) in flow-target-render.test.ts.
+  // claim about a PAGE - but per Codex 2026-08-25 it must also make no claim about CHECKS unless a
+  // real BuildReport was attached: a measured clean build reads as a pass, an unmeasured command
+  // (list/help) reads as "nothing measured", never a pass. Both cases asserted end-to-end in
+  // flow-target-render.test.ts.
 
-  // No findings: name what ran, then a clean pass. (Covers clean builds and routing-only flows.)
+  // No findings.
   if (!findings.length) {
     const flows = Array.isArray(result.flowResults) ? result.flowResults : [];
     const ran = flows.map((f) => humanize(f.flowId)).filter(Boolean);
+    // NOT MEASURED: no BuildReport was attached, so nothing was checked - never a pass (Codex High).
+    if (!measured) {
+      L.push('#### ' + (report.composite ? cap(report.composite) : 'Result'));
+      L.push('');
+      L.push('| Item | Status |');
+      L.push('| --- | --- |');
+      L.push('| ' + cell(ran.length ? joinList(ran) + ' ran' : 'no checks run') + ' | ' + cell('nothing was measured') + ' |');
+      L.push('');
+      L.push(ran.length
+        ? cap(joinList(ran)) + ' ran, but this result carries no measurement to certify.'
+        : 'This command runs no checks, so nothing was measured.');
+      L.push('');
+      L.push('No measurement - nothing was checked, nothing certified.');
+      return L.join('\n');
+    }
+    // MEASURED clean build (or routing-only flow that produced a report): name what ran, then a pass.
     L.push('#### ' + (report.composite ? cap(report.composite) : 'Result'));
     L.push('');
     L.push('| Before | After |');

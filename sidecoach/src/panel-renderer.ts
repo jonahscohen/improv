@@ -64,6 +64,26 @@ export function renderSidecoachPanel(model: SidecoachPanelModel, opts: PanelRend
     push();
   }
 
+  // COVERAGE line (GREEN MEANS CHECKED): an explicit top-line so a clean card reads as VERIFIED,
+  // never merely unchecked. Only a terminal run sets model.coverage; a run with no verdict (in
+  // progress, or one that measured nothing) leaves it undefined, so nothing here implies a
+  // verification that did not happen - the notice above carries that case.
+  if (model.coverage) {
+    const covLabel =
+      model.coverage === 'verified-clean' ? 'VERIFIED CLEAN'
+        : model.coverage === 'partially-checked' ? 'PARTIALLY CHECKED'
+          : model.coverage === 'not-fully-checked' ? 'NOT FULLY CHECKED'
+            : 'CHECKED';
+    const covTint = model.coverage === 'verified-clean' ? green : model.coverage === 'checked' ? fg : orange;
+    const covTail =
+      model.coverage === 'verified-clean' ? ' - both checks ran, no findings'
+        : model.coverage === 'partially-checked' ? ' - a lens did not run; coverage incomplete'
+          : model.coverage === 'not-fully-checked' ? ' - a check did not complete; not certified'
+            : ' - checks ran; findings below';
+    push(`${dim('coverage')} ${covTint(covLabel)}${faint(covTail)}`);
+    push();
+  }
+
   // route + flow chain
   const conf = typeof model.confidence === 'number' ? dim(` ${G.dot} conf ${model.confidence.toFixed(2)}`) : '';
   push(`${dim('route')}   ${fg(model.flowName)} ${dim(`${G.dot} ${model.flowId}`)}${conf}`);
