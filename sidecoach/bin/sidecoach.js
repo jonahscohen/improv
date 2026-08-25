@@ -334,6 +334,25 @@ function helpForTarget(target) {
     return 0;
   }
 
+  // Taste consolidation + contradiction map - a front-door command handled by main() (delegates to the
+  // sidecoach-consolidate engine), like mine. Not a verb or a STANDALONE_BINS entry.
+  if (name === 'consolidate' || name === 'sidecoach-consolidate') {
+    console.log('command: consolidate   (taste consolidation + contradiction map - self-updating taste loop)');
+    console.log('');
+    console.log('Surveys the whole ingested taste corpus against our live rules and produces an INERT,');
+    console.log('human-reviewed MAP: which distilled rules we already cover, which multiple sources agree on');
+    console.log('that we lack, and every contradiction CLASSIFIED by type (direction-pair / hard-vs-hard /');
+    console.log('standard-calibration / cross-type). It writes ONLY data/taste-map/; it never enforces,');
+    console.log('promotes, or touches the registry.');
+    console.log('');
+    console.log('  $ sidecoach consolidate distill-corpus [--json]');
+    console.log('  $ sidecoach consolidate map [--distilled <file>] [--dry-run]');
+    console.log('');
+    console.log('Run `node bin/sidecoach-consolidate.js --help` for the full options and exit-code contract.');
+    console.log('The `/sidecoach consolidate` flow (distill -> map -> review) runs it in a session.');
+    return 0;
+  }
+
   console.error(`sidecoach: no verb or tool named "${target}".`);
   console.error(`Valid verbs: ${verbList().join(', ')}`);
   return 1;
@@ -512,6 +531,40 @@ function main() {
     const { spawnSync } = require('child_process');
     const mineBin = require('path').join(__dirname, 'sidecoach-mine.js');
     const r = spawnSync(process.execPath, [mineBin, ...argv.slice(1)], { stdio: 'inherit' });
+    process.exit(r.status == null ? 1 : r.status);
+  }
+
+  // Taste consolidation + contradiction MAP (self-updating taste loop). Front door onto the
+  // sidecoach-consolidate engine (which stays FROZEN - never reimplemented here). `sidecoach consolidate`
+  // with no subcommand RESOLVES and prints the plan (exit 0); a real engine subcommand (distill-corpus /
+  // map) delegates to the engine via spawn. The engine writes ONLY an inert report (data/taste-map/);
+  // it never enforces, promotes, or touches the registry.
+  if (cmd === 'consolidate') {
+    const rest = argv.slice(1);
+    // ONLY the bare `sidecoach consolidate` (zero args) resolves + prints the plan (exit 0). ANY argument -
+    // a subcommand (distill-corpus / map) OR a flag (--help, --dry-run, --bogus) - delegates to the engine,
+    // which OWNS the subcommand/flag contract: an unknown flag is a usage failure there, never a silently
+    // dropped arg that exits 0 with the no-flow resolver text (Codex F2).
+    if (rest.length === 0) process.exit(resolveAndPrint('consolidate', ''));
+    const { spawnSync } = require('child_process');
+    const consolidateBin = require('path').join(__dirname, 'sidecoach-consolidate.js');
+    const r = spawnSync(process.execPath, [consolidateBin, ...rest], { stdio: 'inherit' });
+    process.exit(r.status == null ? 1 : r.status);
+  }
+
+  // Front doors onto two standalone helper bins, so `sidecoach artifacts` / `sidecoach build-report`
+  // actually invoke them (each stays its own CLI - never reimplemented here). This is the "wire" side of
+  // the wire-or-retire call: they were reachable by nothing, now they are reachable from the resolver.
+  if (cmd === 'artifacts') {
+    const { spawnSync } = require('child_process');
+    const artifactsBin = require('path').join(__dirname, 'sidecoach-artifacts.js');
+    const r = spawnSync(process.execPath, [artifactsBin, ...argv.slice(1)], { stdio: 'inherit' });
+    process.exit(r.status == null ? 1 : r.status);
+  }
+  if (cmd === 'build-report' || cmd === 'build_report') {
+    const { spawnSync } = require('child_process');
+    const buildReportBin = require('path').join(__dirname, 'sidecoach-build-report.js');
+    const r = spawnSync(process.execPath, [buildReportBin, ...argv.slice(1)], { stdio: 'inherit' });
     process.exit(r.status == null ? 1 : r.status);
   }
 

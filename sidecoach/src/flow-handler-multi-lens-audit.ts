@@ -23,8 +23,10 @@ interface AuditDimension {
   issues: string[];
 }
 
-/** What the token-drift lens contributes to the Theming dimension. */
-interface DriftOutcome {
+/** What the token-drift lens contributes to the Theming dimension. Exported so the ACTIVE flowK
+ *  handler (flow-handlers-tier3-tier4.ts, the one the orchestrator registers) can invoke the same
+ *  fail-closed token-drift lens without duplicating it. */
+export interface DriftOutcome {
   status: 'pass' | 'warning' | 'fail';
   issue: string;
   check: string;
@@ -41,7 +43,7 @@ interface DriftOutcome {
  * emits JSON (drift=1, inconclusive=3) is a real verdict, not a failure.
  * FAIL-CLOSED: an "inconclusive" verdict maps to a warning, never a false pass.
  */
-function runTokenDriftCheck(projectPath: string | undefined): DriftOutcome | null {
+export function runTokenDriftCheck(projectPath: string | undefined): DriftOutcome | null {
   if (!projectPath) return null;
   const bin = path.resolve(__dirname, '..', 'bin', 'sidecoach-drift.js');
   let stdout = '';

@@ -289,6 +289,10 @@ const SUITES: Suite[] = [
   { rel: 'src/__tests__/t12-model-routing.test.ts', required: true },
   { rel: 'src/__tests__/t9-retry-control.test.ts', required: true },
   { rel: 'src/__tests__/design-tokens-count.test.ts', required: true },                   // Flow F design-tokens: real parsed token count, not a Math.random placeholder (drive-to-green item 6)
+  { rel: 'src/__tests__/consolidate-mine-router.test.ts', required: true },                // drive-to-green item 1: consolidate/mine routable via the slash router
+  { rel: 'bin/__tests__/consolidate-frontdoor.test.js', runner: 'node', required: true },  // drive-to-green item 1: consolidate front-door delegates real args to the engine, bare prints the plan
+  { rel: 'bin/__tests__/sidecoach-doctor.test.js', runner: 'node', required: true },       // drive-to-green item 5: doctor excludes test files from the capability inventory, keeps all real tools
+  { rel: 'src/__tests__/flowk-drift-theming-escalation.test.ts', required: true },         // drive-to-green item 7: the active multi-lens handler escalates the Theming dimension on real token drift
 ];
 
 // Pin Playwright to the SHARED real-home browser cache BEFORE we isolate HOME below.

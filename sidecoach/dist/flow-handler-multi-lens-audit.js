@@ -36,6 +36,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowKMultiLensAuditHandler = void 0;
+exports.runTokenDriftCheck = runTokenDriftCheck;
 exports.createFlowKHandler = createFlowKHandler;
 const flow_handler_1 = require("./flow-handler");
 const flow_memory_schema_1 = require("./flow-memory-schema");

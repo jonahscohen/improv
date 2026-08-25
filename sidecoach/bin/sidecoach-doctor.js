@@ -197,7 +197,18 @@ function collectSource(dir, matcher, out, depth) {
 
 const srcFiles = collectSource(path.join(REPO, 'src'), (n) => /\.ts$/.test(n) && !/\.test\.ts$/.test(n), [], 0);
 const testFiles = collectSource(path.join(REPO, 'src', '__tests__'), (n) => /\.ts$/.test(n), [], 0);
-const binFiles = collectSource(path.join(REPO, 'bin'), (n) => /\.(js|mjs|sh)$/.test(n), [], 0);
+// collectSource walks bin/ RECURSIVELY, so without this filter it descends into bin/__tests__/ and
+// treats every test file (sidecoach-consolidate.test.js, sidecoach-mine.test.js, ...) as a shipped
+// "capability" - producing phantom capability-unreached / -unnamed / not-in-resolver findings for files
+// that are TEST COVERAGE, not user-facing tools. Excluding bin/__tests__/ and any *.test.{js,mjs} is a
+// CORRECTNESS fix (it makes the inventory honest), NOT a weakening: every real bin is still inventoried,
+// and generate-tool-index already excludes these the same way (its inventory is non-recursive).
+const binFiles = collectSource(path.join(REPO, 'bin'), (n) => /\.(js|mjs|sh)$/.test(n), [], 0).filter((f) => {
+  const rel = path.relative(path.join(REPO, 'bin'), f.path);
+  if (rel.split(path.sep).includes('__tests__')) return false;   // anything under bin/__tests__/
+  if (/\.test\.(js|mjs)$/.test(path.basename(f.path))) return false; // a stray *.test.{js,mjs} elsewhere
+  return true;
+});
 const hookTests = collectSource(path.join(IMPROV_ROOT, 'claude', 'hooks'), (n) => /^test-.*\.sh$/.test(n), [], 0);
 const hookFiles = collectSource(path.join(IMPROV_ROOT, 'claude', 'hooks'), (n) => /\.(sh|py|json)$/.test(n), [], 0);
 const mutationChecks = collectSource(REPO, (n) => /^mutation-check.*\.sh$/.test(n), [], 0);

@@ -10,6 +10,10 @@ import * as path from 'path';
 
 import { applyModelSelection } from './model-routing';
 import { flowCraft, craftGuidanceBlock } from './craft-flow';
+// The Theming token-drift lens (invokes bin/sidecoach-drift.js, fail-closed) lives in the sibling
+// multi-lens-audit module; the ACTIVE flowK handler below invokes it so a real drift verdict escalates
+// the Theming dimension. Single source of the lens - no duplication.
+import { runTokenDriftCheck } from './flow-handler-multi-lens-audit';
 // TIER 3: POLISH/QA FLOWS
 
 /**
@@ -293,23 +297,56 @@ export class FlowKMultiLensAuditHandler extends BaseFlowHandler {
       guidance.push(`Note: Could not run anti-pattern validation (${error instanceof Error ? error.message : 'unknown error'})`);
     }
 
+    // Theming token-drift lens: fold a REAL fail-closed token-drift verdict from bin/sidecoach-drift.js
+    // into the Theming dimension. A PROVEN drift ESCALATES Theming to failing (rewrites the Dimension 3
+    // line, surfaces the drifted tokens, and adds a required remediation); an inconclusive verdict is a
+    // fail-closed warning, and clean is an audited pass note. The lens is FULLY CONTAINED (null on any
+    // failure -> the static Theming line stays), so the audit never crashes. Same lens the sibling
+    // multi-lens module owns - imported, not duplicated - so the ACTIVE handler runs it too.
+    let themingDrift: 'fail' | 'warning' | 'pass' | null = null;
+    const drift = runTokenDriftCheck(projectPath);
+    if (drift) {
+      themingDrift = drift.status === 'fail' ? 'fail' : drift.status === 'warning' ? 'warning' : 'pass';
+      const themingIdx = guidance.findIndex((g) => g.startsWith('Dimension 3: Theming'));
+      if (drift.status === 'fail') {
+        if (themingIdx !== -1) {
+          guidance[themingIdx] = 'Dimension 3: Theming [FAIL - token drift] (color system consistency, CSS variable usage, dark mode)';
+        }
+        guidance.push('---');
+        guidance.push(`Theming lens ESCALATED by token drift: ${drift.issue}`);
+      }
+      guidance.push(drift.check);
+      if (enhancedContext?.flowMetadata) {
+        enhancedContext.flowMetadata.customData = {
+          ...(enhancedContext.flowMetadata.customData || {}),
+          'theming-drift': themingDrift,
+        };
+      }
+    }
+
+    const checklistItems = [
+      { label: 'Run Lighthouse audit (a11y, performance, best practices)', required: true },
+      { label: 'Run axe accessibility audit', required: true },
+      { label: 'Check bundle size and code splitting', required: true },
+      { label: 'Verify CSS variable usage (no hardcoded colors)', required: true },
+      { label: 'Test responsive breakpoints', required: true },
+      { label: 'Check for deprecated APIs or console warnings', required: true },
+      { label: 'Address all Critical findings from anti-pattern validation', required: true },
+      { label: 'Address all High findings from anti-pattern validation', required: true },
+      { label: 'Document trade-offs for Medium findings', required: false },
+    ];
+    // A proven token drift is a hard, required remediation - the theming dimension is escalated.
+    if (themingDrift === 'fail' && drift) {
+      checklistItems.push({ label: `Resolve token drift vs DESIGN.md (sidecoach-drift): ${drift.issue}`, required: true });
+    }
+
     return {
       flowId: this.flowId,
       flowName: this.getFlowName(),
       status: 'success',
       message: 'Running 5-dimension technical audit (28-rule anti-pattern detection included)',
       guidance,
-      checklist: this.createChecklist([
-        { label: 'Run Lighthouse audit (a11y, performance, best practices)', required: true },
-        { label: 'Run axe accessibility audit', required: true },
-        { label: 'Check bundle size and code splitting', required: true },
-        { label: 'Verify CSS variable usage (no hardcoded colors)', required: true },
-        { label: 'Test responsive breakpoints', required: true },
-        { label: 'Check for deprecated APIs or console warnings', required: true },
-        { label: 'Address all Critical findings from anti-pattern validation', required: true },
-        { label: 'Address all High findings from anti-pattern validation', required: true },
-        { label: 'Document trade-offs for Medium findings', required: false },
-      ]),
+      checklist: this.createChecklist(checklistItems),
       artifacts: artifacts.length > 0 ? artifacts : undefined,
     };
   }

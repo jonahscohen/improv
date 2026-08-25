@@ -134,6 +134,25 @@ export function parseSlashCommand(utterance: string): CommandMatch {
     };
   }
 
+  // MAINTENANCE / PIPELINE COMMANDS, not flows. `mine` (the taste miner) and `consolidate` (the taste
+  // consolidation + contradiction MAP) are self-updating-taste-loop tools with no design flow chain, so
+  // they are recognized here beside `doctor` rather than given a fabricated chain in VERB_REGISTRY. The CLI
+  // (bin/sidecoach.js) dispatches them to their engines (sidecoach-mine.js / sidecoach-consolidate.js);
+  // in-session they resolve like any no-flow maintenance command. Without this branch the router returned
+  // isCommand:false ("Unknown command") for both.
+  if (command === 'mine' || command === 'consolidate') {
+    return {
+      isCommand: true,
+      command,
+      flowIds: [],
+      target,
+      reason:
+        command === 'mine'
+          ? 'Taste miner: surface inert taste-rule proposals from the multi-source corpus (never enforces or promotes)'
+          : 'Taste consolidation + contradiction map: survey the ingested corpus against the live rules as an inert, human-reviewed report',
+    };
+  }
+
   // Sprint 8 T8: /sidecoach help <verb> command - returns details from registry.
   // Matched BEFORE the verb registry branch because 'help' is not itself a
   // verb in VERB_REGISTRY; the verb is the target.
