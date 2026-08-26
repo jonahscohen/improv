@@ -111,6 +111,16 @@
             "type": "command",
             "command": "~/.claude/hooks/sidecoach-keyword.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/sidecoach-taste-promote-arm.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/sidecoach-taste-enforce-arm.sh",
+            "timeout": 5
           }
         ]
       }
