@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# sidecoach-schedule - one command to run (or stop) the daily taste-miner discovery daemon.
+#
+# The daily job runs the reflect-style discovery pass on its own and writes INERT proposals
+# for human review; it never enforces anything. This wrapper does the two-step launchd dance
+# (place the plist, then load it) so you do not have to remember the paths.
+#
+#   sidecoach-schedule on       place + load the daily agent (idempotent)
+#   sidecoach-schedule off      unload + remove it
+#   sidecoach-schedule status   is it loaded?
+#
+# Committed in the improv dotfiles; reachable because ~/.claude/cmux (on PATH) symlinks here.
+# Cross-machine plist templating is install.sh's job; on this machine the committed plist paths
+# are already correct, so a plain copy is enough.
+set -euo pipefail
+
+LABEL="com.yesand.sidecoach-mine-daily"
+UID_NUM="$(id -u)"
+DEST_PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+
+# Resolve the repo root from this script's REAL location (it is symlinked onto PATH):
+# .../improv/claude/cmux/sidecoach-schedule -> repo is .../improv
+_real="$(readlink "$0" 2>/dev/null || echo "$0")"
+case "$_real" in /*) : ;; *) _real="$(cd "$(dirname "$0")" && pwd)/$(basename "$_real")" ;; esac
+# pwd -P resolves the ~/.claude/cmux dir symlink to the real improv/claude/cmux path,
+# so REPO points at the actual repo and not the symlink location.
+_dir="$(cd "$(dirname "$_real")" && pwd -P)"
+REPO="${_dir%/claude/cmux}"
+SRC_PLIST="$REPO/claude/launchd/$LABEL.plist"
+
+cmd="${1:-status}"
+case "$cmd" in
+  on|install|start)
+    if [ ! -f "$SRC_PLIST" ]; then
+      echo "sidecoach-schedule: cannot find the plist at $SRC_PLIST" >&2
+      echo "  (expected the improv repo at $REPO) - run from a machine with the repo installed." >&2
+      exit 1
+    fi
+    mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.claude/logs"
+    cp "$SRC_PLIST" "$DEST_PLIST"
+    # idempotent: if a stale copy is already loaded, unload it before loading the fresh one
+    launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
+    launchctl bootstrap "gui/$UID_NUM" "$DEST_PLIST"
+    if launchctl list | grep -q "$LABEL"; then
+      echo "sidecoach-schedule: ON"
+      echo "  the daily discovery daemon is loaded ($LABEL)"
+      echo "  it proposes candidates only - it never enforces; review them with the promote path"
+      echo "  log: $HOME/.claude/logs/sidecoach-mine-daily.launchd.log"
+    else
+      echo "sidecoach-schedule: bootstrap ran but $LABEL is not listed - check the log above." >&2
+      exit 1
+    fi
+    ;;
+  off|uninstall|stop)
+    launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true
+    rm -f "$DEST_PLIST"
+    echo "sidecoach-schedule: OFF - the daily daemon is unloaded and its plist removed."
+    ;;
+  status)
+    if launchctl list | grep -q "$LABEL"; then
+      echo "sidecoach-schedule: ON ($LABEL is loaded)"
+    else
+      echo "sidecoach-schedule: OFF (not loaded)"
+    fi
+    if [ -f "$DEST_PLIST" ]; then echo "  plist: $DEST_PLIST"; else echo "  plist: not placed"; fi
+    if [ -f "$SRC_PLIST" ]; then echo "  source: $SRC_PLIST (found)"; else echo "  source: $SRC_PLIST (NOT FOUND - repo resolution failed)"; fi
+    ;;
+  *)
+    echo "usage: sidecoach-schedule on|off|status" >&2
+    exit 2
+    ;;
+esac
