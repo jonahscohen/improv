@@ -1,0 +1,72 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "color.p3-no-srgb-fallback",
+  "title": "Display-P3 color declared with no sRGB fallback ahead of the color-gamut guard",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 36,
+  "rule": {
+    "ruleId": "color.p3-no-srgb-fallback",
+    "sourceRuleAliases": [
+      "mined:color.p3-no-srgb-fallback"
+    ],
+    "canonicalRuleKey": "color/p3-no-srgb-fallback",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "color",
+    "registryScope": "mined-display-p3-color-declared-with-no-srgb-fallback-",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "color-systematist",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "color-systematist",
+    "rationale": "Net-new: theming has color-scheme-dark but nothing about wide-gamut fallbacks. Jakub Krehel: a P3 color needs the sRGB value declared first, then overridden inside @media (color-gamut: p3), or non-P3 displays get an undefined color. Presence signal on a color(display-p3 ...) declaration lacking a preceding sRGB fallback; medium precision.",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-colors/SKILL.md: P3 color with no sRGB fallback -> Declare the sRGB value first, then override inside `@media (color-gamut: p3)`."
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

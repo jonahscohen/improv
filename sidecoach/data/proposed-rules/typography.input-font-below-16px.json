@@ -1,0 +1,72 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "typography.input-font-below-16px",
+  "title": "Text input smaller than 16px, which triggers iOS Safari page zoom on focus",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 36,
+  "rule": {
+    "ruleId": "typography.input-font-below-16px",
+    "sourceRuleAliases": [
+      "mined:typography.input-font-below-16px"
+    ],
+    "canonicalRuleKey": "typography/input-font-below-16px",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "typography",
+    "registryScope": "mined-text-input-smaller-than-16px-which-triggers-ios-",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "typography-lens",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "typography-lens",
+    "rationale": "Net-new: tiny-text flags sub-threshold body text generally, but nothing targets the specific mobile bug where an input under 16px makes iOS Safari zoom the whole page on focus. Jakub Krehel documents the 16px input floor explicitly. Detectable css-rule signal correlating an input/textarea/select selector with a font-size below 16px; medium precision.",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: iOS Safari zooms the whole page when an input's text is smaller than `16px` ... Inputs still need `16px` on mobile."
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

@@ -1,0 +1,73 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "layout.physical-inset-not-logical",
+  "title": "Physical directional inset (margin-left/right, padding-left/right) where a logical property belongs",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 35,
+  "rule": {
+    "ruleId": "layout.physical-inset-not-logical",
+    "sourceRuleAliases": [
+      "mined:layout.physical-inset-not-logical"
+    ],
+    "canonicalRuleKey": "layout/physical-inset-not-logical",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "layout",
+    "registryScope": "mined-physical-directional-inset-margin-left-right-pad",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "layout-lens",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "layout-lens",
+    "rationale": "Net-new: the registry has no logical-property / RTL rule. Jakub Krehel: use logical properties for direction-dependent layout and reserve physical left/right for genuinely physical geometry, or the layout breaks when mirrored for RTL. Deliberately low confidence: this is a broad presence signal (physical directional props are common and often legitimate in LTR-only work), so it is a human-gated candidate that only earns enforcement in an RTL-targeting project.",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-layout/SKILL.md: Use logical properties for direction-dependent layout: `padding-inline-start`, `margin-inline-end`. Reserve physical left and right for genuinely physical geometry.",
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-layout/SKILL.md: `margin-left` / `padding-right` in a localizable layout -> `margin-inline-start` / `padding-inline-end`."
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "low",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

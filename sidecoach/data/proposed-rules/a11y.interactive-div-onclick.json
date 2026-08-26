@@ -1,0 +1,73 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "a11y.interactive-div-onclick",
+  "title": "A div (or other non-interactive element) used as a control via onClick instead of a real button or link",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 36,
+  "rule": {
+    "ruleId": "a11y.interactive-div-onclick",
+    "sourceRuleAliases": [
+      "mined:a11y.interactive-div-onclick"
+    ],
+    "canonicalRuleKey": "a11y/interactive-div-onclick",
+    "ownerValidatorId": "static-a11y",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "high",
+    "severity": "major",
+    "findingClass": "a11y",
+    "registryScope": "mined-a-div-or-other-non-interactive-element-used-as-a",
+    "evidenceRequirements": [
+      "markup"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "html",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "jsx",
+        "level": "partial"
+      },
+      {
+        "kind": "vue",
+        "level": "partial"
+      },
+      {
+        "kind": "svelte",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "convention-extractor",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "convention-extractor",
+    "rationale": "Net-new: no registry rule covers the div-onClick anti-pattern. Two pioneers converge: Jakub Krehel says never <div onClick>, and the Vercel guidelines say anything that navigates must be a real <a>, not a div/button with onClick. Markup presence signal (onClick bound to a div/span), medium precision because it is framework-flavored (jsx/tsx).",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: The first rule of ARIA: don't use ARIA when a native element exists. `<button>` for actions, `<a href>` for navigation, never `<div onClick>`.",
+      "reference/_extracted/external/vercel-web-interface-guidelines/NAVIGATION-STATE.md: Anything that navigates must be an `<a>` (or framework `<Link>`), not a `<div>`/`<button>` with an onClick."
+    ],
+    "suggestedSeverity": "major",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

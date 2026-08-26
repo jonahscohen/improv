@@ -1,0 +1,73 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "motion.ease-in-on-ui",
+  "title": "ease-in easing on a UI transition or animation",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 37,
+  "rule": {
+    "ruleId": "motion.ease-in-on-ui",
+    "sourceRuleAliases": [
+      "mined:motion.ease-in-on-ui"
+    ],
+    "canonicalRuleKey": "motion/ease-in-on-ui",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "motion",
+    "registryScope": "mined-ease-in-easing-on-a-ui-transition-or-animation",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "motion-analyst",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "motion-analyst",
+    "rationale": "Net-new: the registry has bounce-easing (overshoot curves) and the pending no-scale-zero-enter, but NO rule against ease-in timing on UI. Emil Kowalski flags ease-in as an on-sight block because it delays the exact moment the user is watching. High-precision presence signal: the literal token ease-in in a transition/animation timing function.",
+    "evidence": [
+      "reference/_extracted/external/emil-kowalski-skills/skills/animate/SKILL.md: Never `ease-in` on UI. It starts slow, delaying the exact moment the user is watching. `ease-out` at 200ms feels faster than `ease-in` at 200ms.",
+      "reference/_extracted/external/emil-kowalski-skills/skills/review-animations/SKILL.md: `ease-in` on UI is a block - it delays the moment the user watches most."
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "high",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

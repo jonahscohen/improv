@@ -1,0 +1,73 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "typography.thin-weight-text",
+  "title": "Thin/light font weight (under 300) applied to text-size copy",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 36,
+  "rule": {
+    "ruleId": "typography.thin-weight-text",
+    "sourceRuleAliases": [
+      "mined:typography.thin-weight-text"
+    ],
+    "canonicalRuleKey": "typography/thin-weight-text",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "typography",
+    "registryScope": "mined-thin-light-font-weight-under-300-applied-to-text",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "typography-lens",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "typography-lens",
+    "rationale": "Net-new: the registry has no font-weight rule. Jakub Krehel: below 18px stay at weight 400 or heavier, and weights under 300 are display-only and disappear at text sizes. Presence signal on font-weight: 100/200/300; medium precision because 300 at large display sizes is legitimate, so the detector should favor the 100/200 tell.",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: Below `18px`, stay at weight `400` or heavier. Weights under `300` are display-only at `28px`+; they disappear at text sizes.",
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: Thin/Light weight on `14px` UI text -> Weight `400`+ below `18px`; thin weights are display-only."
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

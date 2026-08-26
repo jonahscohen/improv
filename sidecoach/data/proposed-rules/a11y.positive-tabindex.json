@@ -1,0 +1,72 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "a11y.positive-tabindex",
+  "title": "Positive tabindex value (tabindex greater than 0)",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 37,
+  "rule": {
+    "ruleId": "a11y.positive-tabindex",
+    "sourceRuleAliases": [
+      "mined:a11y.positive-tabindex"
+    ],
+    "canonicalRuleKey": "a11y/positive-tabindex",
+    "ownerValidatorId": "static-a11y",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "high",
+    "severity": "major",
+    "findingClass": "a11y",
+    "registryScope": "mined-positive-tabindex-value-tabindex-greater-than-0",
+    "evidenceRequirements": [
+      "markup"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "html",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "jsx",
+        "level": "partial"
+      },
+      {
+        "kind": "vue",
+        "level": "partial"
+      },
+      {
+        "kind": "svelte",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "accessibility-lens",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "accessibility-lens",
+    "rationale": "Net-new: the registry has no tabindex rule at all. Jakub Krehel: only tabindex=0 and tabindex=-1 are legitimate; any positive value breaks the natural tab order. High-precision markup presence signal (tabindex=\"1\" and up).",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: Use only `tabindex=\"0\"` to join the natural tab order and `tabindex=\"-1\"` for programmatic focus. Positive values break that order."
+    ],
+    "suggestedSeverity": "major",
+    "confidence": "high",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

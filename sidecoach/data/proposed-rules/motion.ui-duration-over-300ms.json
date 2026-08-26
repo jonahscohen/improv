@@ -1,0 +1,73 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "motion.ui-duration-over-300ms",
+  "title": "UI transition or animation duration over 300ms with no stated reason",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 36,
+  "rule": {
+    "ruleId": "motion.ui-duration-over-300ms",
+    "sourceRuleAliases": [
+      "mined:motion.ui-duration-over-300ms"
+    ],
+    "canonicalRuleKey": "motion/ui-duration-over-300ms",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "motion",
+    "registryScope": "mined-ui-transition-or-animation-duration-over-300ms-w",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "motion-analyst",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "motion-analyst",
+    "rationale": "Net-new: the registry has no motion-duration bound. Emil Kowalski holds UI motion under 300ms; anything slower is a finding unless justified (marketing/explanatory is the documented exception). A value-threshold signal, not a pure presence token, so medium: a css-rule detector reads transition/animation duration values above 300ms.",
+    "evidence": [
+      "reference/_extracted/external/emil-kowalski-skills/skills/animate/SKILL.md: UI animations stay under 300ms. A 180ms dropdown feels more responsive than a 400ms one.",
+      "reference/_extracted/external/emil-kowalski-skills/skills/review-animations/SKILL.md: Sub-300ms UI. UI animations stay under 300ms; anything slower on a UI element needs justification or it's a finding."
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

@@ -1,0 +1,67 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "typography.measure-uncapped",
+  "title": "Long-form text with no capped measure (line length runs past ~75 characters)",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 36,
+  "rule": {
+    "ruleId": "typography.measure-uncapped",
+    "sourceRuleAliases": [
+      "mined:typography.measure-uncapped"
+    ],
+    "canonicalRuleKey": "typography/measure-uncapped",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "typography",
+    "registryScope": "mined-long-form-text-with-no-capped-measure-line-lengt",
+    "evidenceRequirements": [
+      "rendered-scan"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "rendered-scan",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "none"
+      },
+      {
+        "kind": "html",
+        "level": "none"
+      }
+    ],
+    "scope": "page",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "inconclusive"
+  },
+  "provenance": {
+    "source": "typography-lens",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "typography-lens",
+    "rationale": "Net-new: the registry has text-wrap-balance and typography-rhythm but no rule on the reading measure. Two pioneers converge on a 45-75 / 60-75 character cap; long lines make the eye lose the next line. A rendered-scan rule (measuring rendered line length on prose blocks); medium because it needs the rendered pass, not a static token.",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: Cap the measure. Long lines make it hard for the eye to find the next one. Cap long-form text around 60-75 characters per line.",
+      "reference/_extracted/external/oracle/reference/typeset.md: Keep prose in the 45-75ch range. Tune line height inversely with measure."
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": false,
+    "errors": [
+      "rule typography.measure-uncapped declares rendered-scan evidence but is missing from RENDERED_BACKED_RULE_IDS (it would never be promoted-required or fail-closed)"
+    ],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

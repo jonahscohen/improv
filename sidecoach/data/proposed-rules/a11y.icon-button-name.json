@@ -1,0 +1,72 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "a11y.icon-button-name",
+  "title": "Icon-only button with no accessible name (missing aria-label)",
+  "disposition": "net-new",
+  "matchedExisting": null,
+  "resembles": null,
+  "rank": 36,
+  "rule": {
+    "ruleId": "a11y.icon-button-name",
+    "sourceRuleAliases": [
+      "mined:a11y.icon-button-name"
+    ],
+    "canonicalRuleKey": "a11y/icon-button-name",
+    "ownerValidatorId": "static-a11y",
+    "sourceVocabulary": "mined-taste",
+    "sourceSeverity": "high",
+    "severity": "major",
+    "findingClass": "a11y",
+    "registryScope": "mined-icon-only-button-with-no-accessible-name-missing",
+    "evidenceRequirements": [
+      "markup"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "html",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "jsx",
+        "level": "partial"
+      },
+      {
+        "kind": "vue",
+        "level": "partial"
+      },
+      {
+        "kind": "svelte",
+        "level": "partial"
+      }
+    ],
+    "scope": "page",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "accessibility-lens",
+    "sourceKind": "expert-external",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "accessibility-lens",
+    "rationale": "Net-new: button-label-specific (COPY_003) flags generic label TEXT like 'click here'; this is the distinct defect of a button whose only child is an icon and which carries NO accessible name at all. Jakub Krehel: icon-only buttons need a descriptive aria-label. Markup-structural, medium precision (a button containing only an svg/icon and no aria-label / text).",
+    "evidence": [
+      "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: Icon-only buttons need a descriptive `aria-label`. Visible label text must appear in the accessible name."
+    ],
+    "suggestedSeverity": "major",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

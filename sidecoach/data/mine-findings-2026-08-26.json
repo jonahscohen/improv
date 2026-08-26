@@ -1,0 +1,233 @@
+{
+  "minedBy": "sidecoach reflect-style 5-lens distillation of the ingested pioneer corpus",
+  "candidates": [
+    {
+      "title": "ease-in easing on a UI transition or animation",
+      "minedBy": "motion-analyst",
+      "sourceKind": "expert-external",
+      "confidence": "high",
+      "rationale": "Net-new: the registry has bounce-easing (overshoot curves) and the pending no-scale-zero-enter, but NO rule against ease-in timing on UI. Emil Kowalski flags ease-in as an on-sight block because it delays the exact moment the user is watching. High-precision presence signal: the literal token ease-in in a transition/animation timing function.",
+      "evidence": [
+        "reference/_extracted/external/emil-kowalski-skills/skills/animate/SKILL.md: Never `ease-in` on UI. It starts slow, delaying the exact moment the user is watching. `ease-out` at 200ms feels faster than `ease-in` at 200ms.",
+        "reference/_extracted/external/emil-kowalski-skills/skills/review-animations/SKILL.md: `ease-in` on UI is a block - it delays the moment the user watches most."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "motion/ease-in-on-ui",
+        "findingClass": "motion",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Animating a layout property (width, height, top, left, margin, padding) instead of transform/opacity",
+      "minedBy": "motion-analyst",
+      "sourceKind": "expert-external",
+      "confidence": "high",
+      "rationale": "Net-new: the registry's no-transition-all bans the `all` keyword but does NOT catch a transition/animation that names a specific layout property. Emil Kowalski treats animating width/height/margin/padding/top/left as a performance finding because those trigger layout+paint off the GPU. Presence signal: a transition-property or transition/animation shorthand naming a geometry property.",
+      "evidence": [
+        "reference/_extracted/external/emil-kowalski-skills/skills/animate/SKILL.md: `transform` and `opacity` only. They skip layout and paint and run on the GPU. `width`/`height`/`margin`/`padding`/`top`/`left` trigger all three.",
+        "reference/_extracted/external/emil-kowalski-skills/skills/review-animations/SKILL.md: GPU-only properties. Animate `transform` and `opacity` only. Animating `width`/`height`/`margin`/`padding`/`top`/`left` is a performance finding."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "motion/animate-layout-property",
+        "findingClass": "motion",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "UI transition or animation duration over 300ms with no stated reason",
+      "minedBy": "motion-analyst",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Net-new: the registry has no motion-duration bound. Emil Kowalski holds UI motion under 300ms; anything slower is a finding unless justified (marketing/explanatory is the documented exception). A value-threshold signal, not a pure presence token, so medium: a css-rule detector reads transition/animation duration values above 300ms.",
+      "evidence": [
+        "reference/_extracted/external/emil-kowalski-skills/skills/animate/SKILL.md: UI animations stay under 300ms. A 180ms dropdown feels more responsive than a 400ms one.",
+        "reference/_extracted/external/emil-kowalski-skills/skills/review-animations/SKILL.md: Sub-300ms UI. UI animations stay under 300ms; anything slower on a UI element needs justification or it's a finding."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "motion/ui-duration-over-300ms",
+        "findingClass": "motion",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "outline: none (or outline: 0) removing the focus indicator with no verified replacement",
+      "minedBy": "accessibility-lens",
+      "sourceKind": "expert-external",
+      "confidence": "high",
+      "rationale": "Net-new: focus-visible checks that a focus STYLE is present; this catches the opposite defect, an explicit outline: none / outline: 0 that STRIPS the default indicator. Jakub Krehel: never remove the outline without a verified replacement. High-precision presence token independent of the focus-visible rule.",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: Never use `outline: none` without a verified replacement, and preserve system colors in forced-colors mode."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "a11y/outline-none-no-replacement",
+        "findingClass": "a11y",
+        "severity": "major",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Positive tabindex value (tabindex greater than 0)",
+      "minedBy": "accessibility-lens",
+      "sourceKind": "expert-external",
+      "confidence": "high",
+      "rationale": "Net-new: the registry has no tabindex rule at all. Jakub Krehel: only tabindex=0 and tabindex=-1 are legitimate; any positive value breaks the natural tab order. High-precision markup presence signal (tabindex=\"1\" and up).",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: Use only `tabindex=\"0\"` to join the natural tab order and `tabindex=\"-1\"` for programmatic focus. Positive values break that order."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "a11y/positive-tabindex",
+        "findingClass": "a11y",
+        "severity": "major",
+        "evidenceRequirements": ["markup"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Viewport meta locks zoom (user-scalable=no or maximum-scale capping pinch-zoom)",
+      "minedBy": "accessibility-lens",
+      "sourceKind": "expert-external",
+      "confidence": "high",
+      "rationale": "Net-new: no registry rule inspects the viewport meta. Jakub Krehel: never let the viewport meta cap how far the reader can zoom, since the page must survive 200% zoom. High-precision markup presence signal on the meta viewport content string.",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: The page must work at 200% zoom and reflow at 320px width without horizontal scrolling ... never let the viewport meta cap how far the reader can zoom."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "a11y/viewport-zoom-locked",
+        "findingClass": "a11y",
+        "severity": "major",
+        "evidenceRequirements": ["markup"],
+        "scope": "page"
+      }
+    },
+    {
+      "title": "Icon-only button with no accessible name (missing aria-label)",
+      "minedBy": "accessibility-lens",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Net-new: button-label-specific (COPY_003) flags generic label TEXT like 'click here'; this is the distinct defect of a button whose only child is an icon and which carries NO accessible name at all. Jakub Krehel: icon-only buttons need a descriptive aria-label. Markup-structural, medium precision (a button containing only an svg/icon and no aria-label / text).",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: Icon-only buttons need a descriptive `aria-label`. Visible label text must appear in the accessible name."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "a11y/icon-button-name",
+        "findingClass": "a11y",
+        "severity": "major",
+        "evidenceRequirements": ["markup"],
+        "scope": "page"
+      }
+    },
+    {
+      "title": "A div (or other non-interactive element) used as a control via onClick instead of a real button or link",
+      "minedBy": "convention-extractor",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Net-new: no registry rule covers the div-onClick anti-pattern. Two pioneers converge: Jakub Krehel says never <div onClick>, and the Vercel guidelines say anything that navigates must be a real <a>, not a div/button with onClick. Markup presence signal (onClick bound to a div/span), medium precision because it is framework-flavored (jsx/tsx).",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-accessibility/SKILL.md: The first rule of ARIA: don't use ARIA when a native element exists. `<button>` for actions, `<a href>` for navigation, never `<div onClick>`.",
+        "reference/_extracted/external/vercel-web-interface-guidelines/NAVIGATION-STATE.md: Anything that navigates must be an `<a>` (or framework `<Link>`), not a `<div>`/`<button>` with an onClick."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "a11y/interactive-div-onclick",
+        "findingClass": "a11y",
+        "severity": "major",
+        "evidenceRequirements": ["markup"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Text input smaller than 16px, which triggers iOS Safari page zoom on focus",
+      "minedBy": "typography-lens",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Net-new: tiny-text flags sub-threshold body text generally, but nothing targets the specific mobile bug where an input under 16px makes iOS Safari zoom the whole page on focus. Jakub Krehel documents the 16px input floor explicitly. Detectable css-rule signal correlating an input/textarea/select selector with a font-size below 16px; medium precision.",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: iOS Safari zooms the whole page when an input's text is smaller than `16px` ... Inputs still need `16px` on mobile."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "typography/input-font-below-16px",
+        "findingClass": "typography",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Long-form text with no capped measure (line length runs past ~75 characters)",
+      "minedBy": "typography-lens",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Net-new: the registry has text-wrap-balance and typography-rhythm but no rule on the reading measure. Two pioneers converge on a 45-75 / 60-75 character cap; long lines make the eye lose the next line. A rendered-scan rule (measuring rendered line length on prose blocks); medium because it needs the rendered pass, not a static token.",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: Cap the measure. Long lines make it hard for the eye to find the next one. Cap long-form text around 60-75 characters per line.",
+        "reference/_extracted/external/oracle/reference/typeset.md: Keep prose in the 45-75ch range. Tune line height inversely with measure."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "typography/measure-uncapped",
+        "findingClass": "typography",
+        "severity": "minor",
+        "evidenceRequirements": ["rendered-scan"],
+        "scope": "page"
+      }
+    },
+    {
+      "title": "Thin/light font weight (under 300) applied to text-size copy",
+      "minedBy": "typography-lens",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Net-new: the registry has no font-weight rule. Jakub Krehel: below 18px stay at weight 400 or heavier, and weights under 300 are display-only and disappear at text sizes. Presence signal on font-weight: 100/200/300; medium precision because 300 at large display sizes is legitimate, so the detector should favor the 100/200 tell.",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: Below `18px`, stay at weight `400` or heavier. Weights under `300` are display-only at `28px`+; they disappear at text sizes.",
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-typography/SKILL.md: Thin/Light weight on `14px` UI text -> Weight `400`+ below `18px`; thin weights are display-only."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "typography/thin-weight-text",
+        "findingClass": "typography",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Display-P3 color declared with no sRGB fallback ahead of the color-gamut guard",
+      "minedBy": "color-systematist",
+      "sourceKind": "expert-external",
+      "confidence": "medium",
+      "rationale": "Net-new: theming has color-scheme-dark but nothing about wide-gamut fallbacks. Jakub Krehel: a P3 color needs the sRGB value declared first, then overridden inside @media (color-gamut: p3), or non-P3 displays get an undefined color. Presence signal on a color(display-p3 ...) declaration lacking a preceding sRGB fallback; medium precision.",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-colors/SKILL.md: P3 color with no sRGB fallback -> Declare the sRGB value first, then override inside `@media (color-gamut: p3)`."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "color/p3-no-srgb-fallback",
+        "findingClass": "color",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    },
+    {
+      "title": "Physical directional inset (margin-left/right, padding-left/right) where a logical property belongs",
+      "minedBy": "layout-lens",
+      "sourceKind": "expert-external",
+      "confidence": "low",
+      "rationale": "Net-new: the registry has no logical-property / RTL rule. Jakub Krehel: use logical properties for direction-dependent layout and reserve physical left/right for genuinely physical geometry, or the layout breaks when mirrored for RTL. Deliberately low confidence: this is a broad presence signal (physical directional props are common and often legitimate in LTR-only work), so it is a human-gated candidate that only earns enforcement in an RTL-targeting project.",
+      "evidence": [
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-layout/SKILL.md: Use logical properties for direction-dependent layout: `padding-inline-start`, `margin-inline-end`. Reserve physical left and right for genuinely physical geometry.",
+        "reference/_extracted/external/jakub-krehel-skills/skills/better-layout/SKILL.md: `margin-left` / `padding-right` in a localizable layout -> `margin-inline-start` / `padding-inline-end`."
+      ],
+      "proposedRule": {
+        "canonicalRuleKey": "layout/physical-inset-not-logical",
+        "findingClass": "layout",
+        "severity": "minor",
+        "evidenceRequirements": ["css-rule"],
+        "scope": "file"
+      }
+    }
+  ]
+}
