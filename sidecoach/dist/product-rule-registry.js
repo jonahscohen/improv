@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RULES = void 0;
+exports.RULES = exports.BUILTIN_RULES = void 0;
 exports.resolveCheckFn = resolveCheckFn;
 exports.buildCheckProduct = buildCheckProduct;
 exports.getRule = getRule;
@@ -24,7 +24,7 @@ const STRUCTURAL_OVERRIDE_REASON = 'HTML-structural detector flags pattern shape
 // (computed-style/dom/contrast) are owned-but-non-required and surface inconclusive until the collector runs.
 // Rendered-scan rules (Stage 1 convergence: the 5 NEW classes) are promoted to required when a renderUrl is
 // present and read the live rendered scan (run-validator activateRenderedPolicy).
-const BUILTIN_RULES = [
+exports.BUILTIN_RULES = [
     // ====================== owner polish-standard (23) ======================
     {
         ruleId: 'polish.scale-on-press',
@@ -869,7 +869,7 @@ const MINED_ENFORCED_RULES = enforced_rules_generated_1.ENFORCED_RULES.map((r) =
         + '(taste blocking OFF: runs ADVISORY, non-blocking, until the user types "taste blocking on")';
     return { ...r, severity: 'advisory', severityOverrideReason: reason };
 });
-const RAW_RULES = [...BUILTIN_RULES, ...MINED_ENFORCED_RULES];
+const RAW_RULES = [...exports.BUILTIN_RULES, ...MINED_ENFORCED_RULES];
 // Resolve the verdict fn for a rule. A hand-authored CHECKS entry wins. Otherwise a rule that
 // carries a patternSpec (a mined static-css-regex detector) resolves to the DATA-DRIVEN
 // interpreter - which executes no authored code. A rule with neither still resolves to

@@ -20,7 +20,7 @@ const STRUCTURAL_OVERRIDE_REASON =
 // (computed-style/dom/contrast) are owned-but-non-required and surface inconclusive until the collector runs.
 // Rendered-scan rules (Stage 1 convergence: the 5 NEW classes) are promoted to required when a renderUrl is
 // present and read the live rendered scan (run-validator activateRenderedPolicy).
-const BUILTIN_RULES: ProductRuleDefinition[] = [
+export const BUILTIN_RULES: ProductRuleDefinition[] = [
   // ====================== owner polish-standard (23) ======================
   {
     ruleId: 'polish.scale-on-press',

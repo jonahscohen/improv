@@ -12,7 +12,7 @@
 //     when it is blocking but NOT mined-taste (the invariant is scoped to mined-taste blocking rules).
 import * as fs from 'fs';
 import * as path from 'path';
-import { RULES } from '../product-rule-registry';
+import { RULES, BUILTIN_RULES } from '../product-rule-registry';
 import { ENFORCED_RULE_IDS } from '../validators/enforced-rules.generated';
 import {
   minedTasteBlockingViolations, isMinedTaste, isBlockingSeverity, MINED_TASTE_VOCABULARY,
@@ -84,7 +84,10 @@ ok(liveViolations.length === 0, `LIVE registry + enforced tier hold the invarian
 // No registry rule is tagged mined-taste today (they cross the gate into the enforced DATA tier,
 // never into RAW_RULES), so the live check above is a real assertion, not a tautology once the tier
 // fills. Prove the scoping predicates behave.
-ok(!RULES.some((r) => isMinedTaste(r.sourceVocabulary)), 'no hard-coded registry rule is tagged mined-taste');
+// Scope to the HARD-CODED builtins: once the enforced tier fills, RULES legitimately contains the
+// gated mined rules (via MINED_ENFORCED_RULES), so the "no mined-taste hard-coded rule" invariant is
+// about BUILTIN_RULES, not the merged RULES. The gated mined rules are covered by the LIVE check above.
+ok(!BUILTIN_RULES.some((r) => isMinedTaste(r.sourceVocabulary)), 'no hard-coded registry rule is tagged mined-taste');
 ok(isBlockingSeverity('blocker') && isBlockingSeverity('major'), 'blocker/major are blocking');
 ok(!isBlockingSeverity('minor') && !isBlockingSeverity('advisory'), 'minor/advisory are NOT blocking');
 

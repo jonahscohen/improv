@@ -1,5 +1,6 @@
 import type { ProductRuleDefinition, ProductRuleResult, CanonicalSeverity } from './product-rule-types';
 import type { CheckFn } from './validators/checks';
+export declare const BUILTIN_RULES: ProductRuleDefinition[];
 export declare function resolveCheckFn(def: ProductRuleDefinition): CheckFn;
 export declare function buildCheckProduct(def: ProductRuleDefinition): (context: unknown) => ProductRuleResult;
 export declare const RULES: ProductRuleDefinition[];
