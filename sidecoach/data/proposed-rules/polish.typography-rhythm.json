@@ -1,0 +1,66 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "polish.typography-rhythm",
+  "title": "polish/typography-rhythm",
+  "disposition": "strengthen-existing",
+  "matchedExisting": "product-rule-registry:polish.typography-rhythm",
+  "resembles": null,
+  "rank": 21,
+  "rule": {
+    "ruleId": "polish.typography-rhythm",
+    "sourceRuleAliases": [
+      "polish-standard:16",
+      "POLISH_016",
+      "mined:strengthen:polish.typography-rhythm"
+    ],
+    "canonicalRuleKey": "polish/typography-rhythm",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "polish-extended-antipattern",
+    "sourceSeverity": "high",
+    "severity": "major",
+    "findingClass": "polish",
+    "registryScope": "polished-vertical-rhythm",
+    "evidenceRequirements": [
+      "computed-style"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "computed-style",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "none"
+      },
+      {
+        "kind": "html",
+        "level": "none"
+      }
+    ],
+    "scope": "component",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "inconclusive"
+  },
+  "provenance": {
+    "source": "recurring-defect",
+    "sourceKind": "measured-audit-history",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "recurring-defect",
+    "rationale": "Rule polish.typography-rhythm fired 17x across our own audits (severities {\"warning\":17}); measured recurrence suggests reviewing whether minor is strong enough.",
+    "evidence": [
+      "data/audit-history.jsonl: polish.typography-rhythm fired 17x, last 2026-08-25T21:54:31.542Z"
+    ],
+    "suggestedSeverity": "major",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

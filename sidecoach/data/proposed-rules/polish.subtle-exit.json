@@ -1,0 +1,74 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "polish.subtle-exit",
+  "title": "polish/subtle-exit",
+  "disposition": "strengthen-existing",
+  "matchedExisting": "product-rule-registry:polish.subtle-exit",
+  "resembles": null,
+  "rank": 26,
+  "rule": {
+    "ruleId": "polish.subtle-exit",
+    "sourceRuleAliases": [
+      "polish-standard:10",
+      "POLISH_010",
+      "mined:strengthen:polish.subtle-exit"
+    ],
+    "canonicalRuleKey": "polish/subtle-exit",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "polish-extended-antipattern",
+    "sourceSeverity": "high",
+    "severity": "major",
+    "findingClass": "polish",
+    "registryScope": "polished-exit-choreography",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "recurring-defect",
+    "sourceKind": "measured-audit-history",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "recurring-defect",
+    "rationale": "Rule polish.subtle-exit fired 6x across our own audits (severities {\"warning\":6}); measured recurrence suggests reviewing whether minor is strong enough.",
+    "evidence": [
+      "data/audit-history.jsonl: polish.subtle-exit fired 6x, last 2026-08-25T22:42:40.099Z"
+    ],
+    "suggestedSeverity": "major",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

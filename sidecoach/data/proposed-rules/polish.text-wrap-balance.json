@@ -1,0 +1,74 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "polish.text-wrap-balance",
+  "title": "polish/text-wrap-balance",
+  "disposition": "strengthen-existing",
+  "matchedExisting": "product-rule-registry:polish.text-wrap-balance",
+  "resembles": null,
+  "rank": 27,
+  "rule": {
+    "ruleId": "polish.text-wrap-balance",
+    "sourceRuleAliases": [
+      "polish-standard:8",
+      "POLISH_008",
+      "mined:strengthen:polish.text-wrap-balance"
+    ],
+    "canonicalRuleKey": "polish/text-wrap-balance",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "polish-extended-antipattern",
+    "sourceSeverity": "medium",
+    "severity": "minor",
+    "findingClass": "polish",
+    "registryScope": "polished-heading-balance",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "recurring-defect",
+    "sourceKind": "measured-audit-history",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "recurring-defect",
+    "rationale": "Rule polish.text-wrap-balance fired 45x across our own audits (severities {\"warning\":45}); measured recurrence suggests reviewing whether advisory is strong enough.",
+    "evidence": [
+      "data/audit-history.jsonl: polish.text-wrap-balance fired 45x, last 2026-08-25T21:54:40.069Z"
+    ],
+    "suggestedSeverity": "minor",
+    "confidence": "high",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

@@ -1,3 +1,4 @@
+- [** ACTIVE HOOK-FIX ** VISUAL-VERIFY GATE false-fired on detector corpus - untracked data/taste-corpus/*.css/.html armed+corroborated the…](session_2026-08-25_visual-verify-gate-corpus-falsefire.md)
 - [** ACTIVE ** TASTE MINER built (Phase 1 D) - /sidecoach mine + sidecoach-mine engine: multi-source tagged corpus (beat/measured-audit-history/expert-exter…](session_2026-08-23_taste-miner-built.md)
 - [** ACTIVE ** GATED PROMOTE PATH BUILT (Phase 1 E) - TTY-gated promote CLI + single-use consent token (agent hook-fenced) + HMAC hash-chained head-a…](session_2026-08-23_gated-promote-path-built.md)
 - [** ACTIVE ** SRR CODEX FINDINGS FOLDED - 4 CONFIRMED Codex findings folded into the scheduled-research runner (unambiguous pre-check run/skip cont…](session_2026-08-23_srr-codex-findings-folded.md)
@@ -14,6 +15,7 @@
 - [** ACTIVE ** PHASE 3b ENFORCE GATE BUILT - second precision-gated human-signed gate (distinct token/arm/ledger/secret from promote) + held-out pr…](session_2026-08-24_phase3b-enforce-gate-built.md)
 - [** ACTIVE ** PHASE 3c LIVE-BLOCKING CODEGEN - build-time codegen crosses a CERTIFIED enforced rule into RAW_RULES fail-closed; src imports GEN…](session_2026-08-24_phase3c-live-blocking-codegen.md)
 - [** ACTIVE CAMPAIGN ** SIDECOACH DRIVE-TO-GREEN - fix every non-green audit item to green; fan out builders, audit author re-grades, honest about hu…](session_2026-08-25_sidecoach-drive-to-green.md)
+- [** ACTIVE ** BUILDER-C: design-tokens real count + config portability - Item 6 replaced Math.random token count with a determinist…](session_2026-08-25_builder-c-tokens-count-config-portability.md)
 - [** ACTIVE DECISION ** CONSOLIDATION + CONTRADICTION MAP - upfront survey across all sources + live rules; contradictions classified by rul…](session_2026-08-25_consolidation-contradiction-model.md)
 - [** ACTIVE ** CONSOLIDATION MAP BUILT (inert engine) - sidecoach-consolidate.js + taste-map-types.ts to the blueprint: cluster by concept, overlap vs…](session_2026-08-25_consolidation-map-built.md)
 - [** ACTIVE ** ORACLE RULES = MINER'S #1 BASELINE - corrected my wrong "not ingestible" dismissal; oracle is an Apache-2.0 LOCAL plugin, extracted its 3…](session_2026-08-25_oracle-rules-baseline.md)

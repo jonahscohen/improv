@@ -1,0 +1,74 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "polish.shadow-hierarchy",
+  "title": "polish/shadow-hierarchy",
+  "disposition": "strengthen-existing",
+  "matchedExisting": "product-rule-registry:polish.shadow-hierarchy",
+  "resembles": null,
+  "rank": 27,
+  "rule": {
+    "ruleId": "polish.shadow-hierarchy",
+    "sourceRuleAliases": [
+      "polish-standard:17",
+      "POLISH_017",
+      "mined:strengthen:polish.shadow-hierarchy"
+    ],
+    "canonicalRuleKey": "polish/shadow-hierarchy",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "polish-extended-antipattern",
+    "sourceSeverity": "high",
+    "severity": "major",
+    "findingClass": "polish",
+    "registryScope": "polished-shadow-hierarchy",
+    "evidenceRequirements": [
+      "css-rule"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "css",
+        "level": "full"
+      },
+      {
+        "kind": "scss",
+        "level": "full"
+      },
+      {
+        "kind": "less",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "partial"
+      },
+      {
+        "kind": "html",
+        "level": "partial"
+      }
+    ],
+    "scope": "file",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "not_applicable"
+  },
+  "provenance": {
+    "source": "recurring-defect",
+    "sourceKind": "measured-audit-history",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "recurring-defect",
+    "rationale": "Rule polish.shadow-hierarchy fired 27x across our own audits (severities {\"warning\":27}); measured recurrence suggests reviewing whether minor is strong enough.",
+    "evidence": [
+      "data/audit-history.jsonl: polish.shadow-hierarchy fired 27x, last 2026-08-25T21:54:39.469Z"
+    ],
+    "suggestedSeverity": "major",
+    "confidence": "high",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

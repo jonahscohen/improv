@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# --- per-project sidecoach opt-out (Jonah 2026-08-27) -------------------------
+# A repo carrying a `.sidecoach-off` file at its root disables sidecoach hooks for
+# that project only. cwd is the project working dir when Claude runs a hook; fall
+# back to $PWD outside a git tree. Other projects (no marker) are unaffected.
+_sc_off_root="$(git rev-parse --show-toplevel 2>/dev/null || printf %s "$PWD")"
+if [ -n "$_sc_off_root" ] && [ -f "$_sc_off_root/.sidecoach-off" ]; then exit 0; fi
+# -----------------------------------------------------------------------------
 # SessionStart + PostCompact hook: inject PRODUCT.md + DESIGN.md content
 # as additionalContext so design constraints are enforced on every prompt,
 # not just on prompts that explicitly invoke a sidecoach flow.

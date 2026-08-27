@@ -1,4 +1,12 @@
 #!/bin/bash
+
+# --- per-project sidecoach opt-out (Jonah 2026-08-27) -------------------------
+# A repo carrying a `.sidecoach-off` file at its root disables sidecoach hooks for
+# that project only. cwd is the project working dir when Claude runs a hook; fall
+# back to $PWD outside a git tree. Other projects (no marker) are unaffected.
+_sc_off_root="$(git rev-parse --show-toplevel 2>/dev/null || printf %s "$PWD")"
+if [ -n "$_sc_off_root" ] && [ -f "$_sc_off_root/.sidecoach-off" ]; then exit 0; fi
+# -----------------------------------------------------------------------------
 # SessionStart hook: self-heal Sidecoach's own hook wiring so the taste layer
 # fires reliably on every machine, every session - the un-strippable counterpart
 # to install.sh's one-shot wiring pass.

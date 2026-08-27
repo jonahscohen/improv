@@ -1,0 +1,65 @@
+{
+  "candidateVersion": 1,
+  "ruleId": "polish.tiny-text",
+  "title": "polish/tiny-text",
+  "disposition": "strengthen-existing",
+  "matchedExisting": "product-rule-registry:polish.tiny-text",
+  "resembles": null,
+  "rank": 26,
+  "rule": {
+    "ruleId": "polish.tiny-text",
+    "sourceRuleAliases": [
+      "rendered-scanner:tiny-text",
+      "mined:strengthen:polish.tiny-text"
+    ],
+    "canonicalRuleKey": "polish/tiny-text",
+    "ownerValidatorId": "polish-standard",
+    "sourceVocabulary": "rendered-scanner",
+    "sourceSeverity": "high",
+    "severity": "major",
+    "findingClass": "polish",
+    "registryScope": "rendered-tiny-text",
+    "evidenceRequirements": [
+      "rendered-scan"
+    ],
+    "supportedSourceKinds": [
+      {
+        "kind": "rendered-scan",
+        "level": "full"
+      },
+      {
+        "kind": "tsx",
+        "level": "none"
+      },
+      {
+        "kind": "html",
+        "level": "none"
+      }
+    ],
+    "scope": "component",
+    "narrowTargetBehavior": "evaluate_expanded_context",
+    "applicability": "inconclusive"
+  },
+  "provenance": {
+    "source": "recurring-defect",
+    "sourceKind": "measured-audit-history",
+    "commit": "f4ff2ceb",
+    "retrieved_utc": "2026-08-26T00:52:07.502Z",
+    "minedBy": "recurring-defect",
+    "rationale": "Rule polish.tiny-text fired 11x across our own audits (severities {\"warning\":11}); measured recurrence suggests reviewing whether minor is strong enough.",
+    "evidence": [
+      "data/audit-history.jsonl: polish.tiny-text fired 11x, last 2026-08-25T21:54:36.752Z"
+    ],
+    "suggestedSeverity": "major",
+    "confidence": "medium",
+    "normalizationWarnings": []
+  },
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "validatedAgainst": "f4ff2ceb",
+    "spec": null
+  },
+  "frozenCorpus": null,
+  "quarantine": "INERT DATA - reviewed by a human before any promotion; imported by no source file."
+}

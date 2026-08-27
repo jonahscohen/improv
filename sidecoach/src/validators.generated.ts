@@ -32,7 +32,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polish.anti-pattern-genericity",
       "polish.tiny-text",
       "polish.marketing-buzzword",
-      "polish.default-typeface"
+      "polish.default-typeface",
+      "motion.no-scale-zero-enter"
     ],
     "registryScope": [
       "polished-press-feedback",
@@ -58,7 +59,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
       "polished-genericity-floor",
       "rendered-tiny-text",
       "rendered-marketing-buzzword",
-      "rendered-default-typeface"
+      "rendered-default-typeface",
+      "mined-motion-enter-origin"
     ],
     "supportedSourceKinds": [
       {
@@ -188,7 +190,8 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         "polish.optical-alignment",
         "polish.shadow-hierarchy",
         "polish.reduced-motion-respect",
-        "polish.state-completeness"
+        "polish.state-completeness",
+        "motion.no-scale-zero-enter"
       ],
       "blockingSeverities": [
         "blocker",
@@ -439,6 +442,20 @@ export const GENERATED_VALIDATORS: GeneratedValidator[] = [
         },
         {
           "ruleId": "polish.state-completeness",
+          "scope": "file",
+          "evidenceAlternativesByRequirement": [
+            [
+              "css",
+              "scss",
+              "less",
+              "tsx",
+              "html"
+            ]
+          ],
+          "requireAllDiscoveredApplicableFiles": true
+        },
+        {
+          "ruleId": "motion.no-scale-zero-enter",
           "scope": "file",
           "evidenceAlternativesByRequirement": [
             [
