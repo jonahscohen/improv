@@ -18,6 +18,9 @@ You can still describe what you're building in natural language and the intent d
 5. **Regression Detection** - Detects when a flow produces worse output than prior runs
 6. **Design Debt Tracking** - Auto-logs deferred issues and surfaces them at session start
 7. **Persona-Based Critique** - Extracts project-specific personas from PRODUCT.md for design review
+8. **Measured Detection** - Runs rendered and static detectors for objective and taste defects, failing closed as `unverified` rather than a false clean
+9. **Human-Gated Enforcement** - A self-learning taste tier that promotes and enforces mined rules only through signed consent tokens, off by default
+10. **Rule Reconciliation** - A consolidation map that reconciles rules across all sources and classifies contradictions by type
 
 ## Architecture
 
@@ -106,6 +109,22 @@ You can still describe what you're building in natural language and the intent d
 | 12 | Responsive Review | Breakpoint and device testing |
 | 13 | Rapid Iteration | Goal-driven refinement cycle |
 | 14 | Migration | API change and component migration |
+
+## The taste layer: detect, learn, enforce
+
+Beyond the flow orchestrator, Sidecoach carries a measurable, self-improving taste system.
+
+**Detection engine.** A live product-rule registry (63 built-in rules) runs against the actually-rendered page and the raw source: objective defects (contrast, heading order, broken images, justified text, hit-target size) and taste defects (marketing-buzzword, tiny-text, nested-cards, shadow hierarchy, anti-pattern bans). It fails closed - when it cannot render, or the engine is not built, it reports `unverified` rather than a false clean. `bin/sidecoach-detect.js` is the engine; `sidecoach-taste-gate.sh` (PostToolUse) auto-runs the static subset on every `.html`/`.css` write under a DESIGN.md project.
+
+**QA gate.** The full review is a three-stage chain - `/sidecoach audit` -> `/sidecoach critique` -> `/sidecoach polish`. `sidecoach-orchestrate-edit.sh` injects the gate directive on a substantive design edit, and `sidecoach-qa-gate-stop.sh` (a finish-boundary Stop hook) blocks reporting the work "done" until all three real Skill invocations are present since the arm. A repo carrying a `.sidecoach-off` marker at its root opts that project out of the sidecoach hooks; other projects are unaffected.
+
+**Self-learning loop (human-gated).** A miner distills candidate rules from a multi-source corpus - the team's own beats, measured audit history, and an ingested library of design pioneers (Emil Kowalski, Jakub Krehel, Leon Lin, Meng To, and more) - deduplicated against the live registry. Candidates are inert proposals. A rule becomes advisory only through a human-signed `promote-confirm` token, and build-blocking only through a second `enforce-confirm` token plus a held-out precision gate (>= 8 positives, P >= 0.90). Every step is HMAC-ledgered and content-bound; the CLIs sign the ledgers themselves and an agent can never mint a token. Enforced rules ship **off by default** behind the per-project `~/.claude/.taste-blocking-enabled` switch - they warn until you turn blocking on.
+
+- `bin/sidecoach-mine.js` - assemble the multi-source corpus and emit candidates (`run --findings <lens-artifact>` for reflect-style net-new discovery).
+- `bin/sidecoach-taste-promote.js` / `bin/sidecoach-taste-enforce.js` - the two human-gated consent gates (promote -> guidance, enforce -> blocking).
+- `sidecoach-schedule on|off|status` - control the daily headless discovery daemon (proposes candidates only; never enforces).
+
+**Consolidation + contradiction map.** `bin/sidecoach-consolidate.js` surveys the whole corpus against the live registry, clusters distilled rules by concept, shows what is covered / additive / single-source, and classifies every contradiction by type - `direction-pair` (an intended menu, never a conflict), `hard-vs-hard` (a real conflict to resolve), `standard-calibration` (measurements to pick), `cross-type`. The direction exemption is provenance-gated, so a bold-vs-restrained pair is never mistyped as a real conflict. Inert report only. `bin/sidecoach-doctor.js` is the self-check that reports unreached or unverified capabilities.
 
 ## How It Works
 
@@ -263,12 +282,12 @@ Each verb routes to a sidecoach flow chain through `VERB_REGISTRY` in `src/verb-
 
 ## Status
 
-- 36 flows implemented (22 flows A-V + 14 legacy 1-14).
-- 21 verb command verbs wired (Sprint 8).
-- Daemon infrastructure complete; sessionstart / postuserprompt / postresponse hooks registered.
-- Slash command router + intent detector both route through the same FlowExecutionEngine.
-- `sprint8-verb-parity` 197/197 PASS; `sprint8-list-and-help` 13/13 PASS; tsc clean.
-- Production ready.
+- 36 flows implemented (22 flows A-V + 14 legacy 1-14); 21 verb command verbs wired.
+- Daemon + slash router + intent detector all route through the same FlowExecutionEngine.
+- Taste layer live: a 63-rule product-rule registry with a rendered + static detection engine, the three-stage QA gate, and its auto-fire hooks.
+- Self-learning loop proven end to end: a reflect-style pass surfaced 13 net-new candidates from the ingested pioneer corpus, and the first learned rule (`motion.no-scale-zero-enter`) was promoted and enforced - off by default - through the two signed consent gates, HMAC-ledgered and precision-verified (P = 1.0 on a held-out corpus).
+- Consolidation + contradiction map and the `sidecoach-schedule` daily-discovery daemon shipped.
+- `npm run build` clean; hook suites green. Production ready.
 
 ## Files
 
@@ -281,5 +300,12 @@ Each verb routes to a sidecoach flow chain through `VERB_REGISTRY` in `src/verb-
 - `src/flow-handlers-extended.ts` - 10 extended handlers
 - `src/sidecoach-orchestrator.ts` - Orchestration engine
 - `bin/sidecoach-monitor.js` - Entry point for daemon
-- `claude/hooks/sidecoach-*.sh` - Hook scripts
+- `src/product-rule-registry.ts` - The 63-rule taste/quality registry
+- `bin/sidecoach-detect.js` - Rendered + static detection engine
+- `bin/sidecoach-mine.js` - Taste miner (corpus -> inert candidates)
+- `bin/sidecoach-taste-promote.js` / `bin/sidecoach-taste-enforce.js` - Human-gated consent gates
+- `bin/sidecoach-consolidate.js` - Consolidation + contradiction map
+- `bin/sidecoach-doctor.js` - Capability self-check
+- `claude/cmux/sidecoach-schedule` - Daily-discovery daemon control (`on`/`off`/`status`)
+- `claude/hooks/sidecoach-*.sh` - Hook scripts (detection, QA gate, consent arm hooks)
 - `dist/` - Compiled JavaScript (ready to run)
