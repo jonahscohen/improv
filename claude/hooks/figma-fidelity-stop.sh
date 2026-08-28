@@ -44,10 +44,14 @@
 #   2. colour equality  (#RRGGBB == rgb()/rgba())
 #   3. numeric equality within Blink's 1/64px layout quantum, compared
 #      element-wise across identical non-numeric skeletons ("a / b" vs "a / b")
-#   4. a non-empty `dom_equivalence` string. This is an ESCAPE HATCH: it declares
-#      that the two sides are not literally equal and says why. Every use is
-#      listed on stderr. A row whose `dom` side is prose rather than a reading
-#      must carry one.
+#   4. a `dom_equivalence` note ON A SERIALISATION EQUIVALENCE THE GATE VERIFIES.
+#      As of 2026-08-28 a free-text note NO LONGER passes a mismatch on its own:
+#      equivalence_holds(property, figma, dom) must INDEPENDENTLY confirm the pair
+#      (today: a zero length a browser serialises as `normal`, and only for the
+#      properties where `normal` genuinely computes to 0 - letter-spacing and
+#      word-spacing, NOT line-height). The note is still required for the surfaced
+#      audit trail; the gate's own check is what passes it. Every honoured use is
+#      listed on stderr. An unverifiable pair BLOCKS.
 #   5. otherwise: BLOCK.
 #
 # WHAT THIS GATE CANNOT DO: it cannot catch fabrication. Setting `dom` := `figma`
@@ -214,6 +218,139 @@ def dom_matches(figma, dom):
     if numeric_match(figma, dom):
         return "numeric"
     return None
+
+
+# A zero-valued length in any of the units a browser may serialise as 0.
+_ZERO_LEN = re.compile(
+    r"[-+]?(?:0(?:\.0+)?|\.0+)(?:px|em|rem|%|vh|vw|vmin|vmax|pt|pc|ex|ch|q|cm|mm|in)?\Z",
+    re.ASCII,
+)
+
+# `normal` computes to 0 ONLY for these properties. For line-height, `normal` is
+# ~1.2x font-size (NOT zero); for anything else `normal` is an unrelated keyword.
+# So the zero<->normal equivalence is property-scoped, not value-only. Widening
+# this set requires proving that `normal` genuinely resolves to 0 for the property.
+_ZERO_NORMAL_PROPS = frozenset({"letter-spacing", "word-spacing"})
+
+
+def is_zero_length(s):
+    return isinstance(s, str) and bool(_ZERO_LEN.match(s.strip()))
+
+
+def _ff_families(s):
+    """Split a font-family list into normalised (lowercased, unquoted, ws-collapsed)
+    family names."""
+    out = []
+    for part in str(s).split(","):
+        p = part.strip().strip('"').strip("'").strip()
+        p = " ".join(p.split()).lower()
+        if p:
+            out.append(p)
+    return out
+
+
+def _expand_box(vals):
+    """Expand a 1-4 value CSS box shorthand to [top, right, bottom, left]."""
+    n = len(vals)
+    if n == 1:
+        return [vals[0]] * 4
+    if n == 2:
+        return [vals[0], vals[1], vals[0], vals[1]]
+    if n == 3:
+        return [vals[0], vals[1], vals[2], vals[1]]
+    if n >= 4:
+        return vals[:4]
+    return vals
+
+
+def _url_path(s):
+    """The asset path inside a background-image/url value, scheme+host stripped."""
+    s = str(s).strip()
+    m = re.match(r"^\s*url\(\s*(.*?)\s*\)\s*$", s, re.I)
+    if m:
+        s = m.group(1)
+    s = s.strip().strip('"').strip("'").strip()
+    s = re.sub(r"^[a-z]+://[^/]+/", "", s, flags=re.I)  # drop scheme://host/
+    return s.lstrip("/")
+
+
+def equivalence_holds(prop, figma, dom):
+    """A `dom_equivalence` note is honoured ONLY when the gate can INDEPENDENTLY
+    confirm the two serialisations denote the same value FOR THIS PROPERTY. This
+    closes the v1 hole (hardened 2026-08-28) where ANY non-empty justification
+    string passed a real figma-vs-dom mismatch: a lazy `dom_equivalence='close
+    enough'` skipped the reading. Colour and numeric equivalences are already
+    computed in dom_matches().
+
+    The SOUND, property-scoped serialisation predicates below each independently
+    confirm the two forms denote the same value (they never accept arbitrary prose;
+    a pair that satisfies no predicate FAILS):
+      - zero-length <-> `normal` for letter/word-spacing (normal computes to 0);
+      - `transparent` <-> `rgba(0, 0, 0, 0)` for colour properties;
+      - font-family: the Figma-named family is an exact member of the DOM stack
+        (the design font is honoured; the stack only adds fallbacks);
+      - transform: scaleX(k)/scaleY(k) equals its matrix() serialisation;
+      - box shorthands (padding/margin/inset/gap/border-radius/border-width):
+        the 1-4 value forms expand to the same [top, right, bottom, left];
+      - asset url properties: the same asset path (scheme/host stripped).
+    Extend with a new SOUND predicate for a genuine equivalence not yet computed -
+    never a hand-wave. Serialisations needing external context the gate does not
+    have (a unitless line-height vs its computed px, a cqw vs px) are NOT verifiable
+    here and must be recorded in matching units in the manifest."""
+    if not isinstance(figma, str) or not isinstance(dom, str):
+        return False
+    p = prop.strip().lower() if isinstance(prop, str) else ""
+    f, d = figma.strip(), dom.strip()
+
+    if p in _ZERO_NORMAL_PROPS:
+        fl, dl = f.lower(), d.lower()
+        if (is_zero_length(fl) and dl == "normal") or (fl == "normal" and is_zero_length(dl)):
+            return True
+
+    if "color" in p:
+        def _transparent(x):
+            x = re.sub(r"\s+", "", str(x).lower())
+            return x in ("transparent", "rgba(0,0,0,0)")
+        if _transparent(f) and _transparent(d):
+            return True
+
+    if p == "font-family":
+        df = set(_ff_families(d))
+        ff = _ff_families(f)
+        if ff and all(x in df for x in ff):
+            return True
+
+    if p == "transform":
+        def _matrix(x):
+            x = re.sub(r"\s+", "", str(x).lower())
+            m = re.match(r"^scalex\((-?[\d.]+)\)$", x)
+            if m:
+                return (float(m.group(1)), 0.0, 0.0, 1.0, 0.0, 0.0)
+            m = re.match(r"^scaley\((-?[\d.]+)\)$", x)
+            if m:
+                return (1.0, 0.0, 0.0, float(m.group(1)), 0.0, 0.0)
+            m = re.match(r"^matrix\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)\)$", x)
+            if m:
+                return tuple(float(g) for g in m.groups())
+            return None
+        mf, md = _matrix(f), _matrix(d)
+        if mf is not None and md is not None and mf == md:
+            return True
+
+    if p in ("padding", "margin", "inset", "gap", "border-radius", "border-width",
+             "scroll-margin", "scroll-padding"):
+        vf = _expand_box([" ".join(t.split()).lower() for t in f.split() if t.strip()])
+        vd = _expand_box([" ".join(t.split()).lower() for t in d.split() if t.strip()])
+        if vf and vd and vf == vd:
+            return True
+
+    if p in ("background-image", "icon-source", "mask-image", "-webkit-mask-image",
+             "list-style-image", "src"):
+        pf, pd = _url_path(f), _url_path(d)
+        if pf and pd and (pd == pf or pd.endswith("/" + pf) or pd.endswith(pf)):
+            return True
+
+    return False
 
 
 # --- Level 2: tamper-evident signed arm ledger -----------------------------
@@ -701,14 +838,19 @@ for idx, chk in enumerate(checks):
             eq = chk.get("dom_equivalence")
             if dom_matches(figma, dom):
                 pass
-            elif isinstance(eq, str) and eq.strip():
+            elif isinstance(eq, str) and eq.strip() and equivalence_holds(chk.get("property"), figma, dom):
                 equivalences.append("%s: figma='%s' dom='%s'\n      because: %s"
                                     % (name(chk, idx), figma[:38], dom[:38], eq))
             else:
                 fails.append(
-                    "%s: figma='%s' does not match dom='%s'. If these are "
-                    "equivalent in a way the gate cannot compute, say so in "
-                    "`dom_equivalence`; do not edit the reading."
+                    "%s: figma='%s' does not match dom='%s'. A `dom_equivalence` "
+                    "note is honoured ONLY when the gate can independently verify "
+                    "the two serialisations denote the same value (today: a zero "
+                    "length the browser reports as 'normal') - a free-text "
+                    "justification no longer passes a real mismatch (hardened "
+                    "2026-08-28). If this is a genuine equivalence the gate cannot "
+                    "yet compute, add a SOUND predicate to equivalence_holds; do "
+                    "not edit the reading."
                     % (name(chk, idx), figma[:60], str(dom)[:60])
                 )
 

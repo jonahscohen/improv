@@ -1,3 +1,4 @@
+- [** ACTIVE ** FIDELITY-GATE ESCAPE HATCH CLOSED + MEASURED-VALUES RULE - dom_equivalence free-text no longer passes a real mismatch (prop…](session_2026-08-28_fidelity-gate-escape-hatch-hardened.md)
 - [** ACTIVE FEEDBACK ** INTERACTION MODEL WINS - design-source interaction model overrides a UI plugin's default presentation; side-by-side must cover…](feedback_2026-08-27_interaction-model-wins.md)
 - [** ACTIVE HOOK-FIX ** VISUAL-VERIFY GATE false-fired on detector corpus - untracked data/taste-corpus/*.css/.html armed+corroborated the…](session_2026-08-25_visual-verify-gate-corpus-falsefire.md)
 - [** ACTIVE ** TASTE MINER built (Phase 1 D) - /sidecoach mine + sidecoach-mine engine: multi-source tagged corpus (beat/measured-audit-history/expert-exter…](session_2026-08-23_taste-miner-built.md)

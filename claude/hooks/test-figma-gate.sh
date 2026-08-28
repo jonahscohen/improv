@@ -54,12 +54,31 @@ r=$(mk "dict($BASE, property='color', figma='#12633E', measured='#12633E', dom='
 report "hex != rgb() by one channel" 2 "$(run "$r")"
 
 echo
-echo "=== rule 4: dom_equivalence is required for a non-equality ==="
+echo "=== rule 4: dom_equivalence must be GATE-VERIFIED, not free text ==="
 r=$(mk "dict($BASE, property='letter-spacing', figma='0px', measured='0px', dom='normal', evidence=dict(file='evidence.css', grep='border-radius'))")
 report "kind mismatch WITHOUT equivalence (the v1 hole)" 2 "$(run "$r")"
 r=$(mk "dict($BASE, property='letter-spacing', figma='0px', measured='0px', dom='normal', dom_equivalence='Chrome serialises 0 as normal', evidence=dict(file='evidence.css', grep='border-radius'))")
-report "kind mismatch WITH equivalence" 0 "$(run "$r")"
-grep -q 'declared dom_equivalence' "$r/err.txt" && echo "       (and the escape hatch is printed, not hidden)"
+report "0px <-> normal WITH equivalence (gate-verified)" 0 "$(run "$r")"
+grep -q 'declared dom_equivalence' "$r/err.txt" && echo "       (and the equivalence is printed, not hidden)"
+r=$(mk "dict($BASE, property='letter-spacing', figma='normal', measured='normal', dom='0px', dom_equivalence='0 serialises to normal, either way', evidence=dict(file='evidence.css', grep='border-radius'))")
+report "normal <-> 0px reverse direction is verified too" 0 "$(run "$r")"
+# THE v2 HOLE-CLOSURE: a bogus free-text justification must NOT rescue a real
+# mismatch. Under the pre-2026-08-28 code every one of these returned 0 (passed).
+r=$(mk "dict($BASE, property='margin', figma='10px', measured='10px', dom='24px', dom_equivalence='these are basically the same', evidence=dict(file='evidence.css', grep='border-radius'))")
+report "REAL mismatch + bogus prose no longer passes" 2 "$(run "$r")"
+r=$(mk "dict($BASE, property='color', figma='#000000', measured='#000000', dom='#ffffff', dom_equivalence='close enough', evidence=dict(file='evidence.css', grep='border-radius'))")
+report "black vs white + 'close enough' blocks" 2 "$(run "$r")"
+r=$(mk "dict($BASE, property='letter-spacing', figma='2px', measured='2px', dom='normal', dom_equivalence='basically normal', evidence=dict(file='evidence.css', grep='border-radius'))")
+report "2px is NOT zero: equivalence is value-sensitive" 2 "$(run "$r")"
+# Codex 2026-08-28: zero<->normal is PROPERTY-scoped. `normal` computes to 0 only
+# for letter-spacing/word-spacing; for line-height normal is ~1.2x (NOT zero), and
+# margin has no `normal` at all. Those pairs must NOT be rescued by the note.
+r=$(mk "dict($BASE, property='word-spacing', figma='0px', measured='0px', dom='normal', dom_equivalence='word-spacing normal is 0', evidence=dict(file='evidence.css', grep='border-radius'))")
+report "word-spacing 0px <-> normal is verified (allowlisted)" 0 "$(run "$r")"
+r=$(mk "dict($BASE, property='line-height', figma='0px', measured='0px', dom='normal', dom_equivalence='0 is normal', evidence=dict(file='evidence.css', grep='border-radius'))")
+report "line-height 0px <-> normal BLOCKS (normal != 0 here)" 2 "$(run "$r")"
+r=$(mk "dict($BASE, property='margin', figma='0px', measured='0px', dom='normal', dom_equivalence='same thing', evidence=dict(file='evidence.css', grep='border-radius'))")
+report "margin 0px <-> normal BLOCKS (margin has no normal)" 2 "$(run "$r")"
 
 echo
 echo "=== dom_status enum ==="
