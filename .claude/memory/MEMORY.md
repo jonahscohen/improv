@@ -1,3 +1,5 @@
+- [** ACTIVE FEEDBACK ** VERIFICATION ITEM 12 - COMB THE WHOLE SURFACE - proactive full-artboard combing before "done" (arm every node, g…](session_2026-08-28_verification-item12-full-surface-comb.md)
+- [** ACTIVE REFERENCE ** PPAI-PM POST-MORTEM (Aug 27-28) - dominant failure = premature "done" without proactive full-surface comb (Jonah as QA loop); ca…](reference_2026-08-28_ppai-pm-postmortem.md)
 - [** ACTIVE ** FIDELITY WEBFONT + THEME-PATH PREDICATES - re-arm surfaced 16 non-UGC equivalence fails; sound font webfont-alias +…](session_2026-08-28_fidelity-webfont-and-theme-path-predicates.md)
 - [** ACTIVE ** FIDELITY PREDICATE SOUNDNESS FIXES - font-family must LEAD the stack (not member), asset-url exact-or-bare-filename (no cros…](session_2026-08-28_fidelity-predicate-soundness-fixes.md)
 - [** ACTIVE DECISION ** PER-REPO FIDELITY DISABLE (.figma-fidelity.disabled) - reversible per-repo gate override; used to disarm ppai on Jonah'…](session_2026-08-28_fidelity-gate-per-repo-disable.md)
