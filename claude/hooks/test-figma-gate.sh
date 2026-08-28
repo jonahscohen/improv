@@ -300,6 +300,14 @@ r=$(mk "$BASE"); rm -f "$r/.figma-fidelity.pending"
 report "no marker => gate is inert (exit 0)" 0 "$(run "$r")"
 
 echo
+echo "=== per-repo disable marker (.figma-fidelity.disabled) short-circuits ==="
+r=$(mk "dict($BASE, dom='10.1px')")   # a check that WOULD block (0.1px drift)
+report "drift BLOCKS without the disable marker" 2 "$(run "$r")"
+: > "$r/.figma-fidelity.disabled"
+report "same drift PASSES with .figma-fidelity.disabled present" 0 "$(run "$r")"
+grep -q 'DISABLED for this repo' "$r/err.txt" && echo "       (and the disarm is announced on stderr)"
+
+echo
 echo "================================================================"
 printf 'passed %d, failed %d\n' "$pass" "$fail"
 [ "$fail" -eq 0 ] || exit 1

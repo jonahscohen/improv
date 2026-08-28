@@ -75,6 +75,17 @@ MARKER="$ROOT/.figma-fidelity.pending"
 MANIFEST="$ROOT/.figma-fidelity.json"
 LEDGER="$ROOT/.figma-fidelity.ledger"
 
+# Per-repo disarm (a deliberate, reversible LEAD override): a `.figma-fidelity.disabled`
+# marker at the repo root turns the gate off for THIS repo only. Honoured BEFORE the
+# armed-check, so it disables even a repo whose marker/ledger is still armed. Unlike
+# deleting the .pending arm (guard-blocked, un-opt-out-able by design), this is a
+# visible, reviewable file - the disarm shows in `git status`, carries its reason
+# inline, and is undone with a single `rm`. Restore the gate by removing the file.
+if [ -f "$ROOT/.figma-fidelity.disabled" ]; then
+  printf 'figma-fidelity-gate: DISABLED for this repo (%s/.figma-fidelity.disabled present). Remove that file to re-arm.\n' "$ROOT" >&2
+  exit 0
+fi
+
 # Not a Figma build in progress -> do nothing. The tamper-evident ledger keeps the
 # gate armed even when the mutable .pending marker has been removed: a signed,
 # still-unresolved arm in the ledger independently demands coverage. So the gate
