@@ -81,6 +81,34 @@ r=$(mk "dict($BASE, property='margin', figma='0px', measured='0px', dom='normal'
 report "margin 0px <-> normal BLOCKS (margin has no normal)" 2 "$(run "$r")"
 
 echo
+echo "=== rule 4b: serialisation predicates (transparent / font / transform / box / url) ==="
+EV="evidence=dict(file='evidence.css', grep='border-radius')"
+r=$(mk "dict($BASE, property='background-color', figma='transparent', measured='transparent', dom='rgba(0, 0, 0, 0)', dom_equivalence='transparent serialises to rgba(0,0,0,0)', $EV)")
+report "transparent <-> rgba(0,0,0,0) verified" 0 "$(run "$r")"
+r=$(mk "dict($BASE, property='background-color', figma='#000000', measured='#000000', dom='rgba(0, 0, 0, 0)', dom_equivalence='black is transparent?', $EV)")
+report "opaque black vs rgba(0,0,0,0) BLOCKS" 2 "$(run "$r")"
+r=$(mk "dict($BASE, property='font-family', figma='Inter', measured='Inter', dom='Inter, sans-serif', dom_equivalence='stack adds fallback', $EV)")
+report "font-family leader Inter <-> 'Inter, sans-serif' verified" 0 "$(run "$r")"
+r=$(mk "dict($BASE, property='font-family', figma='Inter', measured='Inter', dom='Georgia, Inter', dom_equivalence='Inter is in there', $EV)")
+report "font-family NOT-leader (Georgia, Inter) BLOCKS" 2 "$(run "$r")"
+r=$(mk "dict($BASE, property='transform', figma='scaleX(1.5)', measured='scaleX(1.5)', dom='matrix(1.5, 0, 0, 1, 0, 0)', dom_equivalence='scaleX serialises to matrix', $EV)")
+report "scaleX(1.5) <-> matrix verified" 0 "$(run "$r")"
+r=$(mk "dict($BASE, property='transform', figma='scaleX(1.5)', measured='scaleX(1.5)', dom='matrix(2, 0, 0, 1, 0, 0)', dom_equivalence='close', $EV)")
+report "scaleX(1.5) vs matrix(2,...) BLOCKS" 2 "$(run "$r")"
+r=$(mk "dict($BASE, property='padding', figma='10px', measured='10px', dom='10px 10px 10px 10px', dom_equivalence='1-value expands to 4', $EV)")
+report "padding 10px <-> 4-value expansion verified" 0 "$(run "$r")"
+r=$(mk "dict($BASE, property='border-radius', figma='10px', measured='10px', dom='10px 10px 10px 10px', dom_equivalence='expands', $EV)")
+report "border-radius shorthand BLOCKS (corner-order, excluded)" 2 "$(run "$r")"
+r=$(mk "dict($BASE, property='background-image', figma='logo.png', measured='logo.png', dom='url(\"https://cdn.example.com/assets/logo.png\")', dom_equivalence='same asset, cdn host', $EV)")
+report "asset url path match across host verified" 0 "$(run "$r")"
+r=$(mk "dict($BASE, property='background-image', figma='logo.png', measured='logo.png', dom='url(\"https://cdn.example.com/assets/mylogo.png\")', dom_equivalence='ends with logo.png', $EV)")
+report "asset url 'mylogo.png' vs 'logo.png' BLOCKS (suffix boundary)" 2 "$(run "$r")"
+# Codex 2026-08-28: a cross-DIRECTORY suffix is not identity - both sides carry
+# dirs and only the tail matches, so it must BLOCK (only a BARE filename may match a tail).
+r=$(mk "dict($BASE, property='background-image', figma='icons/logo.png', measured='icons/logo.png', dom='url(\"/theme/icons/logo.png\")', dom_equivalence='same tail', $EV)")
+report "asset 'icons/logo.png' vs 'theme/icons/logo.png' BLOCKS (dir suffix != identity)" 2 "$(run "$r")"
+
+echo
 echo "=== dom_status enum ==="
 r=$(mk "{k:v for k,v in $BASE.items() if k!='dom_status'}")
 report "no dom_status at all" 2 "$(run "$r")"

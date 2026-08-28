@@ -1,3 +1,4 @@
+- [** ACTIVE ** FIDELITY PREDICATE SOUNDNESS FIXES - font-family must LEAD the stack (not member), asset-url exact-or-bare-filename (no cros…](session_2026-08-28_fidelity-predicate-soundness-fixes.md)
 - [** ACTIVE DECISION ** PER-REPO FIDELITY DISABLE (.figma-fidelity.disabled) - reversible per-repo gate override; used to disarm ppai on Jonah'…](session_2026-08-28_fidelity-gate-per-repo-disable.md)
 - [** ACTIVE FEEDBACK ** FIDELITY-GATE REGRESSION + UNREVIEWED CONCURRENT COMMIT - shared symlinked hardening blocked ppai's l…](session_2026-08-28_fidelity-gate-concurrent-commit-and-rollout-miss.md)
 - [** ACTIVE ** FIDELITY-GATE ESCAPE HATCH CLOSED + MEASURED-VALUES RULE - dom_equivalence free-text no longer passes a real mismatch (prop…](session_2026-08-28_fidelity-gate-escape-hatch-hardened.md)

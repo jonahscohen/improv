@@ -298,12 +298,16 @@ def equivalence_holds(prop, figma, dom):
     a pair that satisfies no predicate FAILS):
       - zero-length <-> `normal` for letter/word-spacing (normal computes to 0);
       - `transparent` <-> `rgba(0, 0, 0, 0)` for colour properties;
-      - font-family: the Figma-named family is an exact member of the DOM stack
-        (the design font is honoured; the stack only adds fallbacks);
+      - font-family: the Figma families LEAD the DOM stack in order (the design
+        font is honoured first; the stack only adds fallbacks after it). Not a full
+        CSS parser: a quoted family name containing a comma is a known rare edge.
       - transform: scaleX(k)/scaleY(k) equals its matrix() serialisation;
-      - box shorthands (padding/margin/inset/gap/border-radius/border-width):
-        the 1-4 value forms expand to the same [top, right, bottom, left];
-      - asset url properties: the same asset path (scheme/host stripped).
+      - box shorthands (padding/margin/inset/gap/border-width/scroll-*): the 1-4
+        value forms expand to the same [top, right, bottom, left]. border-radius is
+        EXCLUDED - its shorthand is corner-order (TL TR BR BL), not edge-order.
+      - asset url properties: the same asset path (scheme/host stripped) - exact
+        normalised path, or a BARE filename equal to the other side's trailing
+        segment (a cross-directory suffix is NOT accepted: suffix != identity).
     Extend with a new SOUND predicate for a genuine equivalence not yet computed -
     never a hand-wave. Serialisations needing external context the gate does not
     have (a unitless line-height vs its computed px, a cqw vs px) are NOT verifiable
@@ -326,9 +330,11 @@ def equivalence_holds(prop, figma, dom):
             return True
 
     if p == "font-family":
-        df = set(_ff_families(d))
-        ff = _ff_families(f)
-        if ff and all(x in df for x in ff):
+        # SOUND only if the design font LEADS the stack, not merely appears in it:
+        # `Inter` vs `Georgia, Inter` renders Georgia. Require the Figma families to
+        # be the leading entries of the DOM stack, in order (fallbacks come after).
+        dl, fl = _ff_families(d), _ff_families(f)
+        if fl and dl[:len(fl)] == fl:
             return True
 
     if p == "transform":
@@ -348,7 +354,11 @@ def equivalence_holds(prop, figma, dom):
         if mf is not None and md is not None and mf == md:
             return True
 
-    if p in ("padding", "margin", "inset", "gap", "border-radius", "border-width",
+    # border-radius is EXCLUDED: its shorthand is corner-order (TL TR BR BL) with an
+    # optional `/` for elliptical radii, NOT the edge-order (TRBL) model _expand_box
+    # implements. border-width IS edge-order, so it stays. A correct border-radius
+    # verifier is future work; until then such a pair must be recorded in matching form.
+    if p in ("padding", "margin", "inset", "gap", "border-width",
              "scroll-margin", "scroll-padding"):
         vf = _expand_box([" ".join(t.split()).lower() for t in f.split() if t.strip()])
         vd = _expand_box([" ".join(t.split()).lower() for t in d.split() if t.strip()])
@@ -358,8 +368,18 @@ def equivalence_holds(prop, figma, dom):
     if p in ("background-image", "icon-source", "mask-image", "-webkit-mask-image",
              "list-style-image", "src"):
         pf, pd = _url_path(f), _url_path(d)
-        if pf and pd and (pd == pf or pd.endswith("/" + pf) or pd.endswith(pf)):
-            return True
+        # Same asset: exact normalised path, OR a BARE filename on one side equal to
+        # the other's trailing segment (design often names just the file while the
+        # served URL carries directories). A cross-directory suffix is NOT accepted:
+        # `icons/logo.png` must not match `theme/icons/logo.png` - suffix != identity
+        # (Codex 2026-08-28). A bare filename still matches ANY same-named tail, which
+        # is the intended design-names-the-file case.
+        if pf and pd:
+            if pd == pf:
+                return True
+            short, lng = (pf, pd) if len(pf) <= len(pd) else (pd, pf)
+            if "/" not in short and lng.split("/")[-1] == short:
+                return True
 
     return False
 
