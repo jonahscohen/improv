@@ -1,3 +1,4 @@
+- [** ACTIVE ** FIDELITY WEBFONT + THEME-PATH PREDICATES - re-arm surfaced 16 non-UGC equivalence fails; sound font webfont-alias +…](session_2026-08-28_fidelity-webfont-and-theme-path-predicates.md)
 - [** ACTIVE ** FIDELITY PREDICATE SOUNDNESS FIXES - font-family must LEAD the stack (not member), asset-url exact-or-bare-filename (no cros…](session_2026-08-28_fidelity-predicate-soundness-fixes.md)
 - [** ACTIVE DECISION ** PER-REPO FIDELITY DISABLE (.figma-fidelity.disabled) - reversible per-repo gate override; used to disarm ppai on Jonah'…](session_2026-08-28_fidelity-gate-per-repo-disable.md)
 - [** ACTIVE FEEDBACK ** FIDELITY-GATE REGRESSION + UNREVIEWED CONCURRENT COMMIT - shared symlinked hardening blocked ppai's l…](session_2026-08-28_fidelity-gate-concurrent-commit-and-rollout-miss.md)

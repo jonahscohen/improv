@@ -103,10 +103,23 @@ r=$(mk "dict($BASE, property='background-image', figma='logo.png', measured='log
 report "asset url path match across host verified" 0 "$(run "$r")"
 r=$(mk "dict($BASE, property='background-image', figma='logo.png', measured='logo.png', dom='url(\"https://cdn.example.com/assets/mylogo.png\")', dom_equivalence='ends with logo.png', $EV)")
 report "asset url 'mylogo.png' vs 'logo.png' BLOCKS (suffix boundary)" 2 "$(run "$r")"
-# Codex 2026-08-28: a cross-DIRECTORY suffix is not identity - both sides carry
-# dirs and only the tail matches, so it must BLOCK (only a BARE filename may match a tail).
-r=$(mk "dict($BASE, property='background-image', figma='icons/logo.png', measured='icons/logo.png', dom='url(\"/theme/icons/logo.png\")', dom_equivalence='same tail', $EV)")
-report "asset 'icons/logo.png' vs 'theme/icons/logo.png' BLOCKS (dir suffix != identity)" 2 "$(run "$r")"
+# A theme-relative design path is a /-boundary suffix of the served URL - the real
+# ppai case (assets/img/x.svg vs .../themes/ppai/assets/img/x.svg). This ACCEPTS a
+# same-tail different-root collision as a deliberate residual (lazy-not-adversarial).
+r=$(mk "dict($BASE, property='background-image', figma='assets/img/card-arrow.svg', measured='assets/img/card-arrow.svg', dom='url(\"https://yes-ppai.local/wp-content/themes/ppai/assets/img/card-arrow.svg\")', dom_equivalence='theme-relative path is the served tail', $EV)")
+report "asset theme-relative path <-> served URL verified (/-boundary suffix)" 0 "$(run "$r")"
+# but a bare basename that differs still BLOCKS (the / boundary holds)
+r=$(mk "dict($BASE, property='background-image', figma='arrow.svg', measured='arrow.svg', dom='url(\"https://x/assets/down-arrow.svg\")', dom_equivalence='ends with arrow.svg?', $EV)")
+report "asset 'down-arrow.svg' vs 'arrow.svg' BLOCKS (segment boundary)" 2 "$(run "$r")"
+# font-family webfont-alias: design human name behind its slugified webfont id
+r=$(mk "dict($BASE, property='font-family', figma='Freight Sans Condensed', measured='Freight Sans Condensed', dom='freight-sans-condensed-pro, \"Freight Sans Condensed\", Arial, sans-serif', dom_equivalence='webfont id leads the same family', $EV)")
+report "font-family webfont-alias leader verified" 0 "$(run "$r")"
+# but a DIFFERENT typeface leading (not an alias) still BLOCKS
+r=$(mk "dict($BASE, property='font-family', figma='Helvetica', measured='Helvetica', dom='Helvetica Neue, Helvetica, Arial', dom_equivalence='neue is basically helvetica', $EV)")
+report "font-family 'Helvetica Neue' leading vs 'Helvetica' BLOCKS (different face)" 2 "$(run "$r")"
+# an OPTICAL cut (display/text) is a different design, not a format alias -> BLOCKS
+r=$(mk "dict($BASE, property='font-family', figma='Freight Sans Condensed', measured='Freight Sans Condensed', dom='freight-sans-condensed-display, \"Freight Sans Condensed\", Arial', dom_equivalence='display cut', $EV)")
+report "font-family '...-display' optical cut leading BLOCKS (not a format alias)" 2 "$(run "$r")"
 
 echo
 echo "=== dom_status enum ==="

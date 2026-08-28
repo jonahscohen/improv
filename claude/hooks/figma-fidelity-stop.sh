@@ -285,6 +285,31 @@ def _url_path(s):
     return s.lstrip("/")
 
 
+# A CSS font stack often LEADS with a webfont id that is the design family's own
+# name, slugified, with a foundry/FORMAT suffix ("Freight Sans Condensed" ->
+# "freight-sans-condensed-pro"). That leader renders the design font, so it is a
+# sound equivalence - but ONLY when the leader is the SAME typeface name plus a
+# known FORMAT/EDITION suffix, never a different family ("Georgia", "Helvetica
+# Neue"). `display`/`text` are deliberately EXCLUDED: they are optical-size cuts
+# (different glyph designs, like `Neue`), not delivery-format aliases.
+_WEBFONT_SUFFIXES = ("pro", "web", "webfont", "variable", "vf", "std")
+
+
+def _font_slug(s):
+    return re.sub(r"[^a-z0-9]", "", str(s).lower())
+
+
+def _is_webfont_alias(design_fam, other_fam):
+    ds, os_ = _font_slug(design_fam), _font_slug(other_fam)
+    if not ds or not os_:
+        return False
+    if os_ == ds:
+        return True
+    if os_.startswith(ds):
+        return os_[len(ds):] in _WEBFONT_SUFFIXES
+    return False
+
+
 def equivalence_holds(prop, figma, dom):
     """A `dom_equivalence` note is honoured ONLY when the gate can INDEPENDENTLY
     confirm the two serialisations denote the same value FOR THIS PROPERTY. This
@@ -298,16 +323,20 @@ def equivalence_holds(prop, figma, dom):
     a pair that satisfies no predicate FAILS):
       - zero-length <-> `normal` for letter/word-spacing (normal computes to 0);
       - `transparent` <-> `rgba(0, 0, 0, 0)` for colour properties;
-      - font-family: the Figma families LEAD the DOM stack in order (the design
-        font is honoured first; the stack only adds fallbacks after it). Not a full
-        CSS parser: a quoted family name containing a comma is a known rare edge.
+      - font-family: the Figma families LEAD the DOM stack in order (fallbacks come
+        after), OR a single design family is present in the stack led only by that
+        same typeface's webfont id (slug or slug+known-suffix, e.g. `Freight Sans
+        Condensed` behind `freight-sans-condensed-pro`) - never a different family.
+        Not a full CSS parser: a quoted family name with a comma is a known rare edge.
       - transform: scaleX(k)/scaleY(k) equals its matrix() serialisation;
       - box shorthands (padding/margin/inset/gap/border-width/scroll-*): the 1-4
         value forms expand to the same [top, right, bottom, left]. border-radius is
         EXCLUDED - its shorthand is corner-order (TL TR BR BL), not edge-order.
-      - asset url properties: the same asset path (scheme/host stripped) - exact
-        normalised path, or a BARE filename equal to the other side's trailing
-        segment (a cross-directory suffix is NOT accepted: suffix != identity).
+      - asset url properties: the same asset path (scheme/host stripped) - exact,
+        a bare filename equal to the other's last segment, or a `/`-boundary suffix
+        (a theme-relative `assets/img/x.svg` vs the served `.../themes/ppai/assets/
+        img/x.svg`). The `/` boundary blocks `mylogo.png` vs `logo.png`; a same-tail
+        different-root collision is an accepted residual (cannot occur in one project).
     Extend with a new SOUND predicate for a genuine equivalence not yet computed -
     never a hand-wave. Serialisations needing external context the gate does not
     have (a unitless line-height vs its computed px, a cqw vs px) are NOT verifiable
@@ -330,12 +359,21 @@ def equivalence_holds(prop, figma, dom):
             return True
 
     if p == "font-family":
-        # SOUND only if the design font LEADS the stack, not merely appears in it:
-        # `Inter` vs `Georgia, Inter` renders Georgia. Require the Figma families to
-        # be the leading entries of the DOM stack, in order (fallbacks come after).
+        # SOUND base case: the Figma families LEAD the DOM stack in order (fallbacks
+        # come after). `Inter` vs `Georgia, Inter` renders Georgia and correctly fails.
         dl, fl = _ff_families(d), _ff_families(f)
         if fl and dl[:len(fl)] == fl:
             return True
+        # Webfont-alias case: a single Figma family that is PRESENT in the stack, with
+        # every entry before it being that same typeface's webfont id (slug or slug +
+        # a known suffix). Accepts `Freight Sans Condensed` vs
+        # `freight-sans-condensed-pro, "Freight Sans Condensed", Arial`; still rejects
+        # `Inter` vs `Georgia, Inter` (Georgia is not an alias of Inter) and
+        # `Helvetica` vs `Helvetica Neue, Helvetica` (Neue is a different typeface).
+        if len(fl) == 1 and fl[0] in dl:
+            before = dl[:dl.index(fl[0])]
+            if before and all(_is_webfont_alias(fl[0], b) for b in before):
+                return True
 
     if p == "transform":
         def _matrix(x):
@@ -368,17 +406,23 @@ def equivalence_holds(prop, figma, dom):
     if p in ("background-image", "icon-source", "mask-image", "-webkit-mask-image",
              "list-style-image", "src"):
         pf, pd = _url_path(f), _url_path(d)
-        # Same asset: exact normalised path, OR a BARE filename on one side equal to
-        # the other's trailing segment (design often names just the file while the
-        # served URL carries directories). A cross-directory suffix is NOT accepted:
-        # `icons/logo.png` must not match `theme/icons/logo.png` - suffix != identity
-        # (Codex 2026-08-28). A bare filename still matches ANY same-named tail, which
-        # is the intended design-names-the-file case.
+        # Same asset. The design names a theme-relative path ("assets/img/x.svg")
+        # while the served URL carries the site root ("wp-content/themes/ppai/
+        # assets/img/x.svg"), so the design path is a whole trailing PATH of the DOM
+        # path. Match on: exact; a bare filename equal to the other's last segment;
+        # or one path being a `/`-boundary suffix of the other. The `/` boundary
+        # keeps `mylogo.png` from matching `logo.png`. It DOES accept a same-tail
+        # different-root collision (`icons/x` vs `theme/icons/x`) - a deliberate
+        # residual: that cannot happen for one asset in one project, and the real
+        # theme-relative-vs-served-URL case is exactly this shape (lazy-not-adversarial
+        # threat model; recorded 2026-08-28 after over-tightening broke real paths).
         if pf and pd:
             if pd == pf:
                 return True
             short, lng = (pf, pd) if len(pf) <= len(pd) else (pd, pf)
             if "/" not in short and lng.split("/")[-1] == short:
+                return True
+            if pd.endswith("/" + pf) or pf.endswith("/" + pd):
                 return True
 
     return False
