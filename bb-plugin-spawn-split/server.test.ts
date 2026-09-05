@@ -44,8 +44,12 @@ function makeBb(overrides: {
   open?: any;
   environmentsGet?: any;
   hostsList?: any;
+  logError?: any;
 } = {}) {
   return {
+    log: {
+      error: overrides.logError ?? vi.fn(),
+    },
     sdk: {
       threads: {
         get: overrides.get ?? vi.fn(async () => ({ environmentId: null })),
@@ -102,7 +106,7 @@ describe("runSpawnSplit", () => {
       expect(call.file).toBeNull();
     }
     expect(result.isError).toBeFalsy();
-    const text = typeof result === "string" ? result : result.content[0].text;
+    const text = result.content[0].text;
     expect(text).toContain("Spawned 2 split(s): thr_1, thr_2");
   });
 
@@ -152,7 +156,7 @@ describe("runSpawnSplit", () => {
     });
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 2, split: "right" } as any, ctx);
-    const text = typeof result === "string" ? result : result.content[0].text;
+    const text = result.content[0].text;
     expect(text).toContain("Spawned 1 split(s): thr_1");
     expect(text).toContain("Failed 1");
     expect(result.isError).toBeFalsy();
@@ -165,7 +169,7 @@ describe("runSpawnSplit", () => {
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "shared", count: 1, split: "right" } as any, ctx);
     expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
-    const text = typeof result === "string" ? result : result.content[0].text;
+    const text = result.content[0].text;
     expect(text).toContain("Failed 1");
     expect(text).toContain("cannot resolve caller environment");
     expect(result.isError).toBe(true);
@@ -179,7 +183,7 @@ describe("runSpawnSplit", () => {
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 1, split: "right" } as any, ctx);
     expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
-    const text = typeof result === "string" ? result : result.content[0].text;
+    const text = result.content[0].text;
     expect(text).toContain("Failed 1");
     expect(text).toContain("cannot resolve a host for env=worktree");
     expect(result.isError).toBe(true);
@@ -194,7 +198,7 @@ describe("runSpawnSplit", () => {
     });
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 1, split: "right" } as any, ctx);
-    const text = typeof result === "string" ? result : result.content[0].text;
+    const text = result.content[0].text;
     expect(text).not.toContain("Spawned 1 split(s): thr_1");
     expect(text).toContain("Spawned 0 splits");
     expect(text).toContain("Failed 1");
@@ -209,7 +213,21 @@ describe("runSpawnSplit", () => {
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 3, split: "right" } as any, ctx);
     expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    const text = typeof result === "string" ? result : result.content[0].text;
+    const text = result.content[0].text;
+    expect(text).toContain("Spawned 0 splits");
+  });
+
+  it("aborted before the call: threads.get and threads.spawn are never called, zero network calls, isError true", async () => {
+    const bb = makeBb();
+    const ctx = { threadId: "thr_parent", projectId: "proj_1", signal: { aborted: true } as unknown as AbortSignal };
+    const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 3, split: "right" } as any, ctx);
+    expect(bb.sdk.threads.get).not.toHaveBeenCalled();
+    expect(bb.sdk.environments.get).not.toHaveBeenCalled();
+    expect(bb.sdk.hosts.list).not.toHaveBeenCalled();
+    expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
+    expect(bb.sdk.threads.open).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    const text = result.content[0].text;
     expect(text).toContain("Spawned 0 splits");
   });
 
@@ -223,7 +241,7 @@ describe("runSpawnSplit", () => {
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "shared", count: 1, split: "right" } as any, ctx);
     expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    const text = typeof result === "string" ? result : result.content[0].text;
+    const text = result.content[0].text;
     expect(text).toContain("failed to resolve caller environment");
     expect(text).toContain("get boom");
   });

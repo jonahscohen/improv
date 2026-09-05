@@ -62,6 +62,9 @@ export function buildSpawnPlan(args: {
 /** Minimal surface of the SDK this tool needs, kept small and typed so a
  * fake `bb` can be injected in tests without the live daemon. */
 export interface SpawnSplitBb {
+  log: {
+    error(message: string): void;
+  };
   sdk: {
     threads: {
       get(args: { threadId: string }): Promise<{ environmentId?: string | null } | null | undefined>;
@@ -115,6 +118,13 @@ export async function runSpawnSplit(
   args: SpawnSplitArgs,
   ctx: SpawnSplitCtx,
 ): Promise<{ content: [{ type: "text"; text: string }]; isError: boolean }> {
+  // Honor an already-aborted call before doing any work: zero network calls
+  // (no threads.get, no host resolution, no spawn) when the caller cancelled
+  // before this tool even started.
+  if (ctx.signal?.aborted) {
+    return boundedResult([], []);
+  }
+
   const plan = buildSpawnPlan(args);
 
   // One caller fetch serves both env modes: env=shared reuses the caller's
@@ -143,6 +153,7 @@ export async function runSpawnSplit(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    bb.log.error(`spawn_split: failed to resolve caller environment: ${message}`);
     return boundedResult([], [`failed to resolve caller environment: ${message}`]);
   }
 
@@ -167,6 +178,11 @@ export async function runSpawnSplit(
       spawned.push(child.id);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      bb.log.error(
+        childId
+          ? `spawn_split: ${childId} spawned but split open failed: ${message}`
+          : `spawn_split: entry failed: ${message}`,
+      );
       failed.push(childId ? `${childId} spawned but split open failed: ${message}` : message);
     }
   }

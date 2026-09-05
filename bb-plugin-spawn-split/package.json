@@ -2,13 +2,20 @@
   "name": "bb-plugin-spawn-split",
   "version": "0.1.0",
   "type": "module",
+  "license": "MIT",
+  "author": "Jonah Cohen",
+  "keywords": ["bb-plugin", "agents", "threads", "split-pane", "orchestration", "spawn"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jonahscohen/bb-plugin-spawn-split.git"
+  },
   "engines": {
     "bb": ">=0.42",
     "bbPluginSdk": ">=0.4.47"
   },
   "bb": {
     "name": "Spawn Split",
-    "description": "A BB plugin that spawns child threads and opens each as a split pane.",
+    "description": "Spawn child agents from a thread, each opened in its own split pane.",
     "branding": {
       "icon": "Columns2"
     },
