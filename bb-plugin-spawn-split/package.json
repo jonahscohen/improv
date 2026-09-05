@@ -1,0 +1,27 @@
+{
+  "name": "bb-plugin-spawn-split",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "bb": ">=0.42",
+    "bbPluginSdk": ">=0.4.47"
+  },
+  "bb": {
+    "name": "Spawn Split",
+    "description": "A BB plugin that spawns child threads and opens each as a split pane.",
+    "branding": {
+      "icon": "ListTodo"
+    },
+    "server": "./server.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.4.47",
+    "@types/node": "^22.0.0",
+    "cron-parser": "^5.5.0",
+    "hono": "^4.11.9",
+    "typescript": "^5.7.0"
+  }
+}
