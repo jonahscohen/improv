@@ -3,6 +3,7 @@
 - [** ACTIVE DECISION ** EPERM ROOT CAUSE = TCC-PROTECTED ~/Documents (not iCloud); FIX = grant Paseo Full Disk Access + relaunch, relocate as fallba…](decision_2026-09-05_eperm-root-cause-tcc-fda.md)
 - [** ACTIVE ** SIDECOACH READINESS ARTIFACT UPDATED - refreshed 7dae74e0 to drive-to-green-complete (item 3 signed off, loop proven end t…](session_2026-09-05_sidecoach-readiness-artifact-updated.md)
 - [** ACTIVE DECISION ** ICON PRIORITY CASCADE - context-routed icons/logos/illustrations (Figma>animated>reicon>static; logos=Lobehub; illustrations=im…](decision_2026-09-05_icon-priority-cascade.md)
+- [** ACTIVE ** ICON-CASCADE-GUARD WIRED LIVE - 6th safety-cluster hook via cluster-wirings.json + cluster_hooks + browser-tree (NOT app-wirings/commi…](session_2026-09-05_icon-cascade-guard-wired.md)
 - [** ACTIVE FEEDBACK ** AI ICONS FROM LOBEHUB - company/brand/AI-logo tier of the cascade; corrected sourcing paths (@lobehub/icons + static-svg CDN), verified 2026-09…](feedback_ai_icons_lobehub.md)
 - [** ACTIVE ** ENV-CWD EPERM BURST ON RESUME (self-healed) - Stop-hook + node uv_cwd + file-write EPERM at one Stop event after a 5-day idle; s…](session_2026-09-02_env-cwd-eperm-transient-resume.md)
 - [** ACTIVE FEEDBACK ** VERIFICATION ITEM 12 - COMB THE WHOLE SURFACE - proactive full-artboard combing before "done" (arm every node, g…](session_2026-08-28_verification-item12-full-surface-comb.md)

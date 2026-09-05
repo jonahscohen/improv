@@ -2031,7 +2031,7 @@ DESCS+=(
   "Agent routing: classify each prompt's work shape and name a cheaper roster agent that could field it. Advisory only - the session model decides every dispatch and can decline. Installs route-intent.sh + route-intent.json and the ~/.claude/agents/ roster."
 )
 FILES+=(
-  "~/.claude/hooks/ (5 safety hooks)\n~/.claude/settings.json (wiring)"
+  "~/.claude/hooks/ (6 safety hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (11 verification hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (2 question-discipline hooks)\n~/.claude/settings.json (wiring)"
   "~/.claude/hooks/ (10 grounding hooks)\n~/.claude/hooks/grounding-intent.json (gate lexicon)\n~/.claude/settings.json (wiring)"
@@ -2161,7 +2161,7 @@ fi
 
 cluster_hooks() {
   case "$1" in
-    safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh" ;;
+    safety)              echo "bash-guard.sh content-guard.sh content-guard-stop.sh destructive-ops-guard.sh destructive-confirm-detect.sh icon-cascade-guard.sh" ;;
     verification)        echo "verify-before-done.sh verify-before-done-stop.sh verify-clear.sh verify-manual.sh screenshot-open-mandate.sh screenshot-open-clear.sh artifact-open-mandate.sh artifact-open-clear.sh artifact-open-stop.sh artifact-announce-stop.sh second-fix-gate.sh validation-guard.sh" ;;
     # question-enforcement.sh is deliberately NOT in this list. It is a Stop-shaped hook
     # (reads stdin, exits 1 to block) that was never wired to any settings event, so it

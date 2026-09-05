@@ -240,14 +240,15 @@
         {
           "key": "safety",
           "kind": "hooks",
-          "tag": "the 5 safety hooks",
+          "tag": "the 6 safety hooks",
           "desc": "Blocks the shell and file-write mistakes that are hardest to undo: a force-push to main, deleting your saved session notes, committing with an AI-attribution line or an outdated model name, or running a command flagged as genuinely destructive, such as a production deploy or one environment's database overwriting another. None of it can be talked past by wording a request differently - the checks match the real command, not what you called it.",
           "hooks": [
             "bash-guard",
             "content-guard",
             "content-guard-stop",
             "destructive-ops-guard",
-            "destructive-confirm-detect"
+            "destructive-confirm-detect",
+            "icon-cascade-guard"
           ]
         },
         {
@@ -547,6 +548,7 @@
     "frontier-orchestrator-guard": "Blocks file writing and shell commands while an expensive frontier model (Opus 5, Sonnet 5, Fable 5) is running the session, so the actual building is handed to a cheaper preferred model. On the preferred models it does nothing, leaving your choice untouched. A typed 'confirm' lets the frontier model produce once.",
     "bash-guard": "Blocks forbidden shell patterns: attribution in a commit, force-push to main, rm against .claude/memory, and legacy model IDs. It also holds your commit when a session note is owed, a screenshot is unread, or work is unverified.",
     "content-guard": "Blocks emojis, long dashes, AI attribution lines and outdated model names from being written into any file. It also refuses edits to .figma-fidelity.pending, matched by real location so a symlink cannot get around it.",
+    "icon-cascade-guard": "Blocks off-cascade icon-library imports (react-icons, Font Awesome, Iconify, Ant or MUI icons, and the like) and marker-less hand-drawn SVG icons in app source, so every icon is sourced verbatim through the icon-source cascade. Fires only on buildable app source, never on captured corpora, generated fixtures, tests, or docs.",
     "content-guard-stop": "Checks Claude's last chat message, rather than a file, for emojis and long dashes and makes it send the message again cleanly. Chat text is not a file write, so nothing else inspects it before it reaches you.",
     "destructive-ops-guard": "Refuses dangerous infrastructure commands outright: deploying to production, copying one environment's database over another, and merging a pull request. Words inside quotes are ignored, so a commit message naming one is safe.",
     "destructive-confirm-detect": "Watches for you typing a confirmation word and turns a previously refused dangerous command into a single-use approval. It is the only thing that grants that approval and reacts only to you, so Claude cannot approve itself.",
@@ -629,6 +631,7 @@
     "figma-fidelity-arm": "figma",
     "bash-guard": "safety",
     "content-guard": "safety",
+    "icon-cascade-guard": "safety",
     "content-guard-stop": "safety",
     "destructive-ops-guard": "safety",
     "destructive-confirm-detect": "safety",

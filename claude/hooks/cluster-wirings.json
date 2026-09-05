@@ -21,6 +21,17 @@
    }
   }
  ],
+ "icon-cascade-guard.sh": [
+  {
+   "event": "PreToolUse",
+   "matcher": "Write|Edit|MultiEdit",
+   "hook": {
+    "type": "command",
+    "command": "~/.claude/hooks/icon-cascade-guard.sh",
+    "timeout": 5
+   }
+  }
+ ],
  "content-guard-stop.sh": [
   {
    "event": "Stop",
