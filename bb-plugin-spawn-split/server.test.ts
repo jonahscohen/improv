@@ -138,4 +138,66 @@ describe("runSpawnSplit", () => {
     expect(text).toContain("cannot resolve caller environment");
     expect(result.isError).toBe(true);
   });
+
+  it("open() throws: the child is reported as FAILED (not spawned), summary does not claim it opened, isError true", async () => {
+    const bb = {
+      sdk: {
+        threads: {
+          get: vi.fn(),
+          spawn: vi.fn(async () => ({ id: "thr_1" })),
+          open: vi.fn(async () => {
+            throw new Error("pane open boom");
+          }),
+        },
+      },
+    };
+    const ctx = makeCtx();
+    const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 1, split: "right" } as any, ctx);
+    const text = typeof result === "string" ? result : result.content[0].text;
+    expect(text).not.toContain("Spawned 1 split(s): thr_1");
+    expect(text).toContain("Spawned 0 splits");
+    expect(text).toContain("Failed 1");
+    expect(text).toContain("thr_1");
+    expect(text).toContain("pane open boom");
+    expect(result.isError).toBe(true);
+  });
+
+  it("aborted before the loop starts: spawn is never called, isError true", async () => {
+    const bb = {
+      sdk: {
+        threads: {
+          get: vi.fn(),
+          spawn: vi.fn(async () => ({ id: "thr_1" })),
+          open: vi.fn(async () => ({})),
+        },
+      },
+    };
+    const ctx = { threadId: "thr_parent", projectId: "proj_1", signal: { aborted: true } as unknown as AbortSignal };
+    const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 3, split: "right" } as any, ctx);
+    expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    const text = typeof result === "string" ? result : result.content[0].text;
+    expect(text).toContain("Spawned 0 splits");
+  });
+
+  it("threads.get rejects for env=shared: returns a bounded isError result instead of throwing", async () => {
+    const bb = {
+      sdk: {
+        threads: {
+          get: vi.fn(async () => {
+            throw new Error("get boom");
+          }),
+          spawn: vi.fn(async () => ({ id: "thr_1" })),
+          open: vi.fn(async () => ({})),
+        },
+      },
+    };
+    const ctx = makeCtx();
+    const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "shared", count: 1, split: "right" } as any, ctx);
+    expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    const text = typeof result === "string" ? result : result.content[0].text;
+    expect(text).toContain("failed to resolve caller environment");
+    expect(text).toContain("get boom");
+  });
 });
