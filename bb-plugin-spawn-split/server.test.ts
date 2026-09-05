@@ -35,36 +35,63 @@ function makeCtx(overrides: Partial<{ threadId: string; projectId: string }> = {
   };
 }
 
+/** A fully-stubbed bb mock: every worktree-path test needs threads.get plus
+ * (conditionally) environments.get / hosts.list, so build them all here and
+ * let each test override just what it cares about. */
+function makeBb(overrides: {
+  get?: any;
+  spawn?: any;
+  open?: any;
+  environmentsGet?: any;
+  hostsList?: any;
+} = {}) {
+  return {
+    sdk: {
+      threads: {
+        get: overrides.get ?? vi.fn(async () => ({ environmentId: null })),
+        spawn: overrides.spawn ?? vi.fn(async () => ({ id: "thr_1" })),
+        open: overrides.open ?? vi.fn(async () => ({})),
+      },
+      environments: {
+        get: overrides.environmentsGet ?? vi.fn(async () => ({ hostId: null })),
+      },
+      hosts: {
+        list: overrides.hostsList ?? vi.fn(async () => [{ id: "host_default", status: "connected" }]),
+      },
+    },
+  };
+}
+
 describe("runSpawnSplit", () => {
-  it("worktree env: spawns N threads with worktree environment and opens each split, no threads.get call", async () => {
+  it("worktree env: resolves hostId via the caller's own environment, spawns N threads, opens each split", async () => {
     let n = 0;
     const spawnCalls: any[] = [];
     const openCalls: any[] = [];
-    const bb = {
-      sdk: {
-        threads: {
-          get: vi.fn(),
-          spawn: vi.fn(async (args: any) => {
-            spawnCalls.push(args);
-            n += 1;
-            return { id: `thr_${n}` };
-          }),
-          open: vi.fn(async (args: any) => {
-            openCalls.push(args);
-            return {};
-          }),
-        },
-      },
-    };
+    const bb = makeBb({
+      get: vi.fn(async () => ({ environmentId: "env_caller" })),
+      environmentsGet: vi.fn(async () => ({ hostId: "host_1" })),
+      spawn: vi.fn(async (args: any) => {
+        spawnCalls.push(args);
+        n += 1;
+        return { id: `thr_${n}` };
+      }),
+      open: vi.fn(async (args: any) => {
+        openCalls.push(args);
+        return {};
+      }),
+    });
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 2, split: "right" } as any, ctx);
 
-    expect(bb.sdk.threads.get).not.toHaveBeenCalled();
+    expect(bb.sdk.threads.get).toHaveBeenCalledWith({ threadId: "thr_parent" });
+    expect(bb.sdk.environments.get).toHaveBeenCalledWith({ environmentId: "env_caller" });
+    expect(bb.sdk.hosts.list).not.toHaveBeenCalled();
     expect(spawnCalls).toHaveLength(2);
     for (const call of spawnCalls) {
       expect(call.parentThreadId).toBe("thr_parent");
       expect(call.environment).toEqual({
         type: "host",
+        hostId: "host_1",
         workspace: { type: "managed-worktree", baseBranch: { kind: "default" } },
       });
     }
@@ -79,39 +106,50 @@ describe("runSpawnSplit", () => {
     expect(text).toContain("Spawned 2 split(s): thr_1, thr_2");
   });
 
-  it("shared env: calls threads.get and spawns with a reuse environment", async () => {
-    const bb = {
-      sdk: {
-        threads: {
-          get: vi.fn(async () => ({ environmentId: "env_caller" })),
-          spawn: vi.fn(async () => ({ id: "thr_1" })),
-          open: vi.fn(async () => ({})),
-        },
-      },
-    };
+  it("worktree env: caller has no environment, falls back to the primary connected host from hosts.list", async () => {
+    const bb = makeBb({
+      get: vi.fn(async () => ({ environmentId: null })),
+      hostsList: vi.fn(async () => [
+        { id: "host_other", status: "disconnected" },
+        { id: "host_primary", status: "connected" },
+      ]),
+    });
+    const ctx = makeCtx();
+    await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 1, split: "right" } as any, ctx);
+
+    expect(bb.sdk.environments.get).not.toHaveBeenCalled();
+    expect(bb.sdk.hosts.list).toHaveBeenCalled();
+    const spawnArgs = (bb.sdk.threads.spawn as any).mock.calls[0][0];
+    expect(spawnArgs.environment).toEqual({
+      type: "host",
+      hostId: "host_primary",
+      workspace: { type: "managed-worktree", baseBranch: { kind: "default" } },
+    });
+  });
+
+  it("shared env: calls threads.get and spawns with a reuse environment, never touches environments/hosts", async () => {
+    const bb = makeBb({
+      get: vi.fn(async () => ({ environmentId: "env_caller" })),
+    });
     const ctx = makeCtx();
     await runSpawnSplit(bb as any, { prompt: "do x", env: "shared", count: 1, split: "left" } as any, ctx);
 
     expect(bb.sdk.threads.get).toHaveBeenCalledWith({ threadId: "thr_parent" });
+    expect(bb.sdk.environments.get).not.toHaveBeenCalled();
+    expect(bb.sdk.hosts.list).not.toHaveBeenCalled();
     const spawnArgs = (bb.sdk.threads.spawn as any).mock.calls[0][0];
     expect(spawnArgs.environment).toEqual({ type: "reuse", environmentId: "env_caller" });
   });
 
   it("partial failure: reports 1 spawned + 1 failed, isError false", async () => {
     let call = 0;
-    const bb = {
-      sdk: {
-        threads: {
-          get: vi.fn(),
-          spawn: vi.fn(async () => {
-            call += 1;
-            if (call === 2) throw new Error("boom");
-            return { id: `thr_${call}` };
-          }),
-          open: vi.fn(async () => ({})),
-        },
-      },
-    };
+    const bb = makeBb({
+      spawn: vi.fn(async () => {
+        call += 1;
+        if (call === 2) throw new Error("boom");
+        return { id: `thr_${call}` };
+      }),
+    });
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 2, split: "right" } as any, ctx);
     const text = typeof result === "string" ? result : result.content[0].text;
@@ -121,15 +159,9 @@ describe("runSpawnSplit", () => {
   });
 
   it("shared env with no caller environmentId: that entry fails, isError true when all fail", async () => {
-    const bb = {
-      sdk: {
-        threads: {
-          get: vi.fn(async () => ({ environmentId: null })),
-          spawn: vi.fn(async () => ({ id: "thr_1" })),
-          open: vi.fn(async () => ({})),
-        },
-      },
-    };
+    const bb = makeBb({
+      get: vi.fn(async () => ({ environmentId: null })),
+    });
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "shared", count: 1, split: "right" } as any, ctx);
     expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
@@ -139,18 +171,27 @@ describe("runSpawnSplit", () => {
     expect(result.isError).toBe(true);
   });
 
+  it("worktree with no caller environment and no hosts available: that entry fails, isError true", async () => {
+    const bb = makeBb({
+      get: vi.fn(async () => ({ environmentId: null })),
+      hostsList: vi.fn(async () => []),
+    });
+    const ctx = makeCtx();
+    const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 1, split: "right" } as any, ctx);
+    expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
+    const text = typeof result === "string" ? result : result.content[0].text;
+    expect(text).toContain("Failed 1");
+    expect(text).toContain("cannot resolve a host for env=worktree");
+    expect(result.isError).toBe(true);
+  });
+
   it("open() throws: the child is reported as FAILED (not spawned), summary does not claim it opened, isError true", async () => {
-    const bb = {
-      sdk: {
-        threads: {
-          get: vi.fn(),
-          spawn: vi.fn(async () => ({ id: "thr_1" })),
-          open: vi.fn(async () => {
-            throw new Error("pane open boom");
-          }),
-        },
-      },
-    };
+    const bb = makeBb({
+      spawn: vi.fn(async () => ({ id: "thr_1" })),
+      open: vi.fn(async () => {
+        throw new Error("pane open boom");
+      }),
+    });
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 1, split: "right" } as any, ctx);
     const text = typeof result === "string" ? result : result.content[0].text;
@@ -163,15 +204,7 @@ describe("runSpawnSplit", () => {
   });
 
   it("aborted before the loop starts: spawn is never called, isError true", async () => {
-    const bb = {
-      sdk: {
-        threads: {
-          get: vi.fn(),
-          spawn: vi.fn(async () => ({ id: "thr_1" })),
-          open: vi.fn(async () => ({})),
-        },
-      },
-    };
+    const bb = makeBb();
     const ctx = { threadId: "thr_parent", projectId: "proj_1", signal: { aborted: true } as unknown as AbortSignal };
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "worktree", count: 3, split: "right" } as any, ctx);
     expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();
@@ -180,18 +213,12 @@ describe("runSpawnSplit", () => {
     expect(text).toContain("Spawned 0 splits");
   });
 
-  it("threads.get rejects for env=shared: returns a bounded isError result instead of throwing", async () => {
-    const bb = {
-      sdk: {
-        threads: {
-          get: vi.fn(async () => {
-            throw new Error("get boom");
-          }),
-          spawn: vi.fn(async () => ({ id: "thr_1" })),
-          open: vi.fn(async () => ({})),
-        },
-      },
-    };
+  it("threads.get rejects: returns a bounded isError result instead of throwing", async () => {
+    const bb = makeBb({
+      get: vi.fn(async () => {
+        throw new Error("get boom");
+      }),
+    });
     const ctx = makeCtx();
     const result = await runSpawnSplit(bb as any, { prompt: "do x", env: "shared", count: 1, split: "right" } as any, ctx);
     expect(bb.sdk.threads.spawn).not.toHaveBeenCalled();

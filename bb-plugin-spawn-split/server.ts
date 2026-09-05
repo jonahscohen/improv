@@ -76,6 +76,12 @@ export interface SpawnSplitBb {
       }): Promise<{ id: string }>;
       open(args: { threadId: string; split: SpawnSplitDirection; file: null }): Promise<unknown>;
     };
+    environments: {
+      get(args: { environmentId: string }): Promise<{ hostId?: string | null } | null | undefined>;
+    };
+    hosts: {
+      list(): Promise<Array<{ id: string; status?: string }>>;
+    };
   };
 }
 
@@ -111,15 +117,33 @@ export async function runSpawnSplit(
 ): Promise<{ content: [{ type: "text"; text: string }]; isError: boolean }> {
   const plan = buildSpawnPlan(args);
 
+  // One caller fetch serves both env modes: env=shared reuses the caller's
+  // own environmentId directly; env=worktree uses it to find the caller's
+  // host (so the new worktree lands on the same host) and falls back to the
+  // primary connected host when the caller has no environment of its own.
+  // A managed-worktree environment REQUIRES a hostId at runtime (HTTP 400
+  // otherwise - see CONTRACTS.md section 1), so this resolution has to
+  // happen before any entry can spawn.
   let callerEnvironmentId: string | null = null;
-  if (args.env === "shared") {
-    try {
-      const caller = await bb.sdk.threads.get({ threadId: ctx.threadId });
-      callerEnvironmentId = caller?.environmentId ?? null;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return boundedResult([], [`failed to resolve caller environment: ${message}`]);
+  let hostId: string | null = null;
+  try {
+    const caller = await bb.sdk.threads.get({ threadId: ctx.threadId });
+    callerEnvironmentId = caller?.environmentId ?? null;
+
+    if (args.env === "worktree") {
+      if (callerEnvironmentId) {
+        const callerEnv = await bb.sdk.environments.get({ environmentId: callerEnvironmentId });
+        hostId = callerEnv?.hostId ?? null;
+      }
+      if (!hostId) {
+        const hosts = await bb.sdk.hosts.list();
+        const primary = hosts.find((host) => host.status === "connected") ?? hosts[0];
+        hostId = primary?.id ?? null;
+      }
     }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return boundedResult([], [`failed to resolve caller environment: ${message}`]);
   }
 
   const spawned: string[] = [];
@@ -128,7 +152,7 @@ export async function runSpawnSplit(
     if (ctx.signal?.aborted) break;
     let childId: string | undefined;
     try {
-      const environment = resolveEnvironment(entry.env, callerEnvironmentId);
+      const environment = resolveEnvironment(entry.env, callerEnvironmentId, hostId);
       const child = await bb.sdk.threads.spawn({
         projectId: ctx.projectId,
         parentThreadId: ctx.threadId,

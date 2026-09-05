@@ -27,7 +27,7 @@ Confirmed shape:
 ```ts
 {
   type: "host";
-  hostId?: string; // omit to use bb's default host
+  hostId?: string; // OPTIONAL IN THE TYPE, REQUIRED AT RUNTIME - see below
   workspace: {
     type: "managed-worktree";
     baseBranch:
@@ -37,16 +37,51 @@ Confirmed shape:
 }
 ```
 
-Minimal literal to use for "fresh managed worktree off the default branch":
+**Runtime correction (found live, 2026-09-05, fix wave 2):** the type marks
+`hostId` optional, but the daemon does NOT default it for a
+`managed-worktree` workspace. Omitting it makes `bb.sdk.threads.spawn`
+reject with `HTTP 400: hostId is required unless workspace.type is
+personal`. The "omit to use bb's default host" note above was wrong - there
+is no server-side default host for this workspace type. `hostId` must be
+resolved by the caller before spawning.
+
+Resolution strategy this plugin uses (`env.ts` + `server.ts`
+`runSpawnSplit`):
+1. Fetch the calling thread once (`bb.sdk.threads.get({ threadId })`) to
+   get its `environmentId`.
+2. If the caller has an environment, look it up
+   (`bb.sdk.environments.get({ environmentId })`) and read its `hostId`
+   (`Environment.hostId: string`, confirmed at
+   `bb-plugin-sdk.d.ts` line 285, `environmentSchema`) - this puts the new
+   worktree on the SAME host as the caller.
+3. If the caller has no environment (or its host lookup comes back empty),
+   fall back to the primary connected host:
+   `bb.sdk.hosts.list()` (`HostsArea.list`, `HostListResult = Host[]`,
+   `bb-plugin-sdk.d.ts` lines 15594/15600-15607) and pick the first entry
+   with `status === "connected"` (`Host.status: "connected" | "disconnected"`,
+   `hostSchema` line 331), falling back to `hosts[0]` if none report
+   connected. **Note the field name on `Host` is `id`, not `hostId`** -
+   `hostSchema` (line 320-340) has `id: string` and no `hostId` field at
+   all; only `Environment` has a field literally named `hostId`. Reading a
+   `Host` entry's `hostId` instead of its `id` would silently produce
+   `undefined`.
+4. If still unresolved, `resolveEnvironment` throws
+   `"spawn_split: cannot resolve a host for env=worktree"`, which the
+   per-entry try/catch in `runSpawnSplit` turns into a bounded `isError`
+   failure rather than an HTTP 400 surfacing from the daemon.
+
+Minimal literal shape to use for "fresh managed worktree off the default
+branch, on host `hostId`":
 
 ```ts
-const WORKTREE_ENV = {
+const WORKTREE_ENV = (hostId: string) => ({
   type: "host",
+  hostId,
   workspace: {
     type: "managed-worktree",
     baseBranch: { kind: "default" },
   },
-} as const;
+} as const);
 ```
 
 Evidence: `node_modules/@get-bb/plugin-sdk/bundled-types/bb-plugin-sdk.d.ts`,
