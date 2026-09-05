@@ -1439,3 +1439,9 @@
 
 <!-- archived 2026-08-20 (moved from MEMORY.md to stay under load budget) -->
 - [** HANDOFF / NEXT SESSION ** Execute the bare-node hook-PATH ROOT FIX - a SessionStart probe is ARMED to measure the reduced hook PATH; next…](session_2026-08-20_HANDOFF_node-hook-path-rootfix.md)
+
+<!-- archived 2026-09-05 (moved from MEMORY.md to stay under load budget) -->
+- [** PENDING ** SPAWN ICON-CASCADE AGENT AFTER CMUX RELAUNCH - Jonah's 8-rule iconography cascade rebuild (Figma->animated->reicon->static; lobehub…](project_2026-09-05_PENDING-icon-cascade-agent.md)
+
+<!-- archived 2026-09-05 (moved from MEMORY.md to stay under load budget) -->
+- [Paseo split spawning](session_2026-09-05_paseo-split-spawn.md) - spawn splits via $PASEO_CLI run --provider; --background=headless (no visible pane); self-screenshot blocked by macOS TCC (Screen R…

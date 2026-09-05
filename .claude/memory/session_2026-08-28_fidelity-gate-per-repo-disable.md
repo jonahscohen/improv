@@ -25,6 +25,8 @@ Jonah's direct command ("disarm those 5 now. my command. i override you."), over
 
 **Scope caveat (told to Jonah):** this disables fidelity REPO-WIDE for ppai, not just the named items - the blunt instrument the gate's un-opt-out design forces. The ppai `.figma-fidelity.disabled` marker is uncommitted (a local control file); the 3 uncovered arms + 5 equivalence checks remain unresolved and resume the moment the marker is removed.
 
+**RE-ARMED 2026-08-28** on Jonah's command (`rm .figma-fidelity.disabled`). The gate is back on for ppai and now blocks on 4 uncovered arms (1725:14550 / 14490 / 14494 / 14980) - the on-the-rails state: it stays red until ppai-pm covers those nodes (it has the measured values ready) and re-records the cqw checks as verbatim px. Gate code is the soundness-fixed version (see [[session_2026-08-28_fidelity-predicate-soundness-fixes]]).
+
 **Revisit when:** ppai is ready to re-arm - then either cover the 3 nodes + record the cqw/stroke/card/button in a passing form (ppai-pm's data work), or build the sound predicates (the parked infra work, still carrying 2 unfixed soundness bugs in the peer's font-family/asset-url predicates - see the concurrent-commit beat).
 
 Files: claude/hooks/figma-fidelity-stop.sh, claude/hooks/test-figma-gate.sh, ppai/.figma-fidelity.disabled (in the ppai repo), this beat + MEMORY.md.

@@ -35,3 +35,4 @@ __pageprobe.*
 __t.js
 __t.d.ts
 *.tmp.js
+.empryo
