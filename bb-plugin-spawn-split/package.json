@@ -10,7 +10,7 @@
     "name": "Spawn Split",
     "description": "A BB plugin that spawns child threads and opens each as a split pane.",
     "branding": {
-      "icon": "ListTodo"
+      "icon": "Columns2"
     },
     "server": "./server.ts"
   },
