@@ -1,3 +1,4 @@
+- [** ACTIVE ** BB REMOVAL GIT-BRANCH FIX - the bb removal was stranded on feat/bb-cmux-parity and never reached origin/main (bad `push origin main`…](session_2026-09-06_bb-removal-git-branch-fix.md)
 - [** ACTIVE DECISION (DESIGN) ** SPAWN-SPLIT PLUGIN - agent tool spawns child threads into auto-opened true split panes; env arg (worktree default) + real…](decision_2026-09-05_spawn-split-plugin.md)
 - [** ACTIVE ** SPAWN-SPLIT RELEASE POLISH - folded 3 deferred minors (log-on-catch, earlier abort, dead branch removal, 17/17->18/18), MIT LICENSE…](session_2026-09-05_spawn-split-release-polish.md)
 - [** ACTIVE ** ICON CASCADE INTEGRATION - Jonah ruled: illustrations->imagegen + logos->Lobehub accepted, Hugeicons Animated KEPT but flagged unlicen…](session_2026-09-05_icon-cascade-integration.md)
