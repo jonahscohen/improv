@@ -22,7 +22,8 @@ THE FIX (done directly, not delegated - it is the delicate push-to-origin-main I
 - main's ENTIRE non-beat bb footprint (verified by `git grep` across all of main): bb-plugin-spawn-split/, docs/spawn-split-release/, docs/superpowers/plans/2026-09-05-spawn-split.md, docs/superpowers/specs/2026-09-05-spawn-split-plugin-design.md. NO wiring on main referenced spawn-split (cluster-wirings.json / settings.json = 0 matches; browser-tree.json / install.sh / plugin.json / marketplace.json do not exist on main - those were feat-only for the browser/race plugins).
 - `git rm -r` the 4 footprint targets. Staged diff reviewed: 18 files, 3136 deletions, all bb; 0 beats touched, AGENTS.md untouched.
 - 9 spawn-split BEATS on main KEPT (historical record; never rm .claude/memory).
-- Committed on main, pushed origin main clean. origin/main is now bb-free.
+- Committed on main (5598ef07), pushed origin main clean (993148e7..5598ef07). Verified origin/main == the commit I made == 5598ef07; content sweep (excluding beats) empty; 9 spawn-split beats kept. No bb branches on the remote.
+- LOCAL CLEANUP (Jonah chose "Delete all local bb + worktrees"): deleted all 12 bb/* thread branches + feat/bb-cmux-parity (git branch -D). Removed the 4 stale agent worktrees (they backed no live process, unlocked, pointed at old non-bb commit d17c49e0 = artifact-announce-stop hook) + git worktree prune + deleted their 4 worktree-agent-* branches. FINAL: 0 bb branches, 0 worktree branches, only the main worktree remains. Nothing bb on origin.
 
 SELF-ANALYSIS (mandatory - the reporting failure):
 - Why it happened: I ran `git commit` then `git push origin main` without ever running `git branch --show-current`. I ASSUMED HEAD was on main because that is where I usually work, and the session-start gitStatus snapshot said "main" (a stale snapshot - I had since been moved onto feat/bb-cmux-parity, likely by the worktree/teammate setup for the bb work).
